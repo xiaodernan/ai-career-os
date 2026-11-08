@@ -271,7 +271,11 @@ def test_the_501_half_of_the_predicate_has_one_producer_the_browser_never_sees()
     boundary's 501 branch is the defensive rule it was written as.
     """
     java = sorted(p.relative_to(ROOT).as_posix() for p in JAVA.rglob("*.java"))
-    py = sorted(p.relative_to(ROOT).as_posix() for p in PYSRC.rglob("*.py"))
+    py = sorted(
+        p.relative_to(ROOT).as_posix()
+        for p in PYSRC.rglob("*.py")
+        if not any(part.startswith(".") or part == "__pycache__" for part in p.relative_to(PYSRC).as_posix().split("/"))
+    )
     assert len(java) >= 150 and len(py) >= 60, "the server walks read %d java, %d python files" % (len(java), len(py))
     assert status_of("NOT_FOUND"), "control: the enum scan must be able to find a status before it claims an absence"
     assert not status_of("NOT_IMPLEMENTED"), "the enum declares a 501 now, so the browser can be told one"
