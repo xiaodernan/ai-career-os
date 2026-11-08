@@ -151,9 +151,10 @@
   visibility (blocking deferred until controlled remediation). Existing pip-audit gate remains.
   Prod/dev compose pulled images pinned (no `:latest`/untagged); prod compose services define
   `restart:`; service Dockerfiles + prod build contexts exist and run as non-root; `scripts/`
-  shell shebangs + Python syntax; frontend/ai-service CI tooling and core dependency
-  declarations; ai-service requirements pinned; request-id/error-handler and health endpoint
-  wiring gates; backend rate-limit config keys defined.
+  shell shebangs + Python syntax; `scripts/verify_gates.{ps1,sh}` representative offline gate
+  runners; frontend/ai-service CI tooling and core dependency declarations; ai-service
+  requirements pinned; request-id/error-handler and health endpoint wiring gates; backend
+  rate-limit config keys defined.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice
