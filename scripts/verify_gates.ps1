@@ -36,6 +36,7 @@ $tests = @(
   "ai-service/tests/test_quality_gates_doc_exists_and_has_structure.py",
   "ai-service/tests/test_json_log_formatter_carries_request_id.py",
   "ai-service/tests/test_rate_limit_filter_is_wired.py",
+  "ai-service/tests/test_journey_api_propagates_request_id.py",
   "ai-service/tests/test_prod_compose_images_are_not_latest.py",
   "ai-service/tests/test_dockerfiles_run_as_non_root.py"
 )
