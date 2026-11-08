@@ -163,6 +163,14 @@
   `npm audit`: **0 vulnerabilities** (was 26: 2 critical via vitest/tinypool/vite; highs via
   shadcn/zod/registry). vitest.config.ts→.mts with `oxc.jsx=automatic` (vite 8/oxc ignores esbuild
   options), testTimeout 15s; CI node 20→22. Verified 1162 passed (x2 runs), tsc clean.
+- **Observability (Epic 78 done as part of 75/78 slice, `cbbb90f`)**: `/health` reports
+  `buildSha` (backend) / `build_sha` (ai-service) from `APP_BUILD_SHA` env (default "dev");
+  Dockerfiles declare `ARG APP_BUILD_SHA` + `ENV`; dev/prod compose thread the build arg;
+  `journey_api.py` probes `/health` before any station and prints `== build: <sha> ==`; gates
+  `test_health_build_sha_is_wired.py` + journey gate (destructive proofs included). Verified
+  backend non-IT **1210 passed / 0 failures BUILD SUCCESS**; compose/Dockerfile gates 10 passed;
+  **74.1 files untouched**. Live stack serves older image without buildSha; redeploy left to the
+  owning session.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice
