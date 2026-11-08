@@ -20,3 +20,6 @@ def test_require_internal_compares_internal_token_in_constant_time() -> None:
     assert "x_internal_token != s.internal_api_token" not in text, (
         "require_internal must not use plain != for internal token comparison"
     )
+    assert "not expected or" in text, (
+        "require_internal must reject empty/missing configured internal token (misconfiguration defense)"
+    )

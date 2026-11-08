@@ -18,7 +18,8 @@ async def require_internal(
     x_run_id: str = Header(default="", alias="X-Run-Id"),
 ) -> Ctx:
     s = get_settings()
-    if not secrets.compare_digest(x_internal_token, s.internal_api_token):
+    expected = (s.internal_api_token or "").strip()
+    if not expected or not secrets.compare_digest(x_internal_token, expected):
         raise HTTPException(status_code=401, detail="invalid internal token")
     if not x_user_id:
         raise HTTPException(status_code=400, detail="X-User-Id required")
