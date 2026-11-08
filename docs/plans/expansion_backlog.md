@@ -154,7 +154,8 @@
   shell shebangs + Python syntax; `scripts/verify_gates.{ps1,sh}` representative offline gate
   runners; frontend/ai-service CI tooling and core dependency declarations; ai-service
   requirements pinned; request-id/error-handler and health endpoint wiring gates; backend
-  rate-limit config keys defined.
+  rate-limit filter wired (auth/ai/mail/mfa/inbound buckets, 429/`RATE_LIMITED`, registered
+  after JWT) + rate-limit config keys defined.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice
