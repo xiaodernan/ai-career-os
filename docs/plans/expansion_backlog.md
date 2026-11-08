@@ -168,14 +168,16 @@
   in prod; backend `InternalApiFilter` constant-time compare + rejects blank configured token (401)
   and backend `ProductionGuard` guards `INTERNAL_API_TOKEN`; BCrypt `$2B`/12 gate; `.gitignore`
   protects `.env*`/build artifacts.
-- **Observability (Epic 75 foundation, verified 2026-11-08, `0b26a22`)**: browser mints
+- **Observability (Epic 75, verified 2026-11-08, `0b26a22` + `165aea7`)**: browser mints
   `X-Request-Id` per logical request (shared across retries; accepted server alphabet) and sends
-  it on `request`/`postSSE`/`download`/`uploadWithProgress`; backend `HttpAiServiceClient` already
-  forwards the id; ai-service echoes/logs it — completing
+  it on `request`/`postSSE`/`download`/`uploadWithProgress`; backend `HttpAiServiceClient`
+  already forwards the id; ai-service echoes/logs it — completing
   frontend→backend→ai-service correlation. Backend CORS allow-list gained `X-Request-Id`
-  (response already exposes it) so preflight no longer blocks the header. Verified vitest
-  1162 passed, tsc clean, mvn compile clean, python contract gates 2 passed; destructive proof
-  removed the CORS allow entry → gate failed → reapplied; **74.1 files untouched**.
+  (response already exposes it). Verified vitest 1162 passed, tsc clean, mvn compile clean,
+  python contract gates 2 passed; destructive proof removed the CORS allow entry → gate
+  failed → reapplied. JSON logs unit-test (`test_json_log_formatter_carries_request_id`):
+  request id lands as `request_id` in JSON lines; core fields and ctx merge covered.
+  **74.1 files untouched**.
 - **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
   ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind, 667 files,
   large churn) not force-merged over 74.1 in-flight work.
