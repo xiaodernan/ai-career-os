@@ -88,13 +88,11 @@ jobs:
         run: npx vitest run
       - name: Type check
         run: npx tsc --noEmit
-      # Advisory visibility (Epic 77): report known npm vulns without blocking CI.
-      # A hard gate requires a controlled remediation batch (see expansion_backlog
-      # Epic 77) because fixes may be breaking; do not flip to blocking until the
-      # baseline is clean.
-      - name: Dependency advisories (npm audit, non-blocking)
-        continue-on-error: true
-        run: npm audit --audit-level=high
+      # Frontend is at 0 known vulnerabilities (vitest 5 / shadcn 1.0.0 upgrade,
+      # see Epic 77). Keep the gate blocking: any fresh advisory reddens CI until
+      # it is remediated.
+      - name: Dependency advisories (npm audit)
+        run: npm audit
 
   backend:
     name: backend (maven unit tests, offline)
