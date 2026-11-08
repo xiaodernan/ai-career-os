@@ -147,8 +147,8 @@
   BCrypt `$2B`/12 gate.
 - **Schema/CI/ops/build hygiene**: Flyway migration naming/version monotonicity gate; CI/nightly
   referenced paths+ops modules exist and ops modules (`embed_jobs,seed_eval_corpus,check_export,
-  nightly_report`) import cleanly; CI frontend adds non-blocking `npm audit --audit-level=high`
-  visibility (blocking deferred until controlled remediation). Existing pip-audit gate remains.
+  nightly_report`) import cleanly; CI frontend gates on `npm audit` (blocking; baseline is 0
+  vulnerabilities as of 2026-11-09, `30ea1ce`). Existing pip-audit gate remains.
   Prod/dev compose pulled images pinned (no `:latest`/untagged); prod compose services define
   `restart:`; service Dockerfiles + prod build contexts exist and run as non-root; `scripts/`
   shell shebangs + Python syntax; `scripts/verify_gates.{ps1,sh}` representative offline gate
