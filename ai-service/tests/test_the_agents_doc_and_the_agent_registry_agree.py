@@ -140,3 +140,18 @@ def test_memory_read_limit_matches_agents_doc():
     assert re.search(r"get_memories\([^)]*limit\s*=\s*40", mem), (
         "memory.build_memory_context must read up to 40 memories (AGENTS.md §3)"
     )
+
+
+def test_write_tools_match_agents_doc_claim():
+    text = _doc_text()
+    ALL_TOOLS, _, _, _ = _registry()
+    write_tools = {t.name for t in ALL_TOOLS if t.write}
+    # AGENTS.md §4 names the minimal write set and the derived job_matches row
+    # (produced by calculate_match).
+    assert write_tools == {
+        "save_job", "update_application_status", "create_interview",
+        "log_contact_touch", "calculate_match",
+    }, f"write-flagged tools drifted: {sorted(write_tools)}"
+    for name in ("save_job", "update_application_status", "create_interview", "log_contact_touch"):
+        assert f"`{name}`" in text, f"AGENTS.md must name write tool {name}"
+    assert "job_matches" in text, "AGENTS.md must mention the derived job_matches row"
