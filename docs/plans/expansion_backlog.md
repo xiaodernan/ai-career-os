@@ -136,13 +136,19 @@
   covers compose.prod required vars and uses placeholders for sensitive keys; `.env.example`
   covers dev compose vars; `SECURITY.md`/`RUNBOOK.md` required sections/anchors; expansion backlog
   structure gate.
-- **Security/config hardening gates**: frontend `next.config.ts` baseline security headers
+- **Security/config hardening gates (Epic 77)**: frontend `next.config.ts` baseline security headers
   (XFO/XCTO/Referrer/Permissions/COOP/CORP/HSTS, all routes, `poweredByHeader:false`) regression
   gate; prod compose data services (postgres/redis/minio) must not publish host ports; dev compose
-  data services must bind loopback.
-- **Schema/CI hygiene**: Flyway migration naming/version monotonicity gate; CI frontend adds
-  non-blocking `npm audit --audit-level=high` visibility (Epic 77; blocking deferred until
-  controlled remediation). Existing pip-audit gate remains in ai-service CI.
+  data services must bind loopback; `.env.prod.example` sensitive values must be placeholders
+  (no real/dev-default secrets). Backend source-level invariants: `SecurityConfig` keeps
+  `/api/internal/**` permitted but `InternalApiFilter` enforces `X-Internal-Token` before JWT,
+  key public routes preserved; actuator exposure exactly `health,prometheus` and redis health
+  indicator disabled.
+- **Schema/CI/ops hygiene**: Flyway migration naming/version monotonicity gate; CI/nightly
+  referenced paths+ops modules exist and ops modules (`embed_jobs,seed_eval_corpus,check_export,
+  nightly_report`) import cleanly; CI frontend adds non-blocking `npm audit --audit-level=high`
+  visibility (blocking deferred until controlled remediation). Existing pip-audit gate remains.
+- **Doc integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve.
 - **Worktree consolidation (2026-11-08, audited)**: committed detached worktree HEADs are
-  ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind) not force-merged
-  over 74.1 in-flight work.
+  ancestors of `main` (no merge required). Stale dirty `u256/wt` (372 behind, 667 files,
+  large churn) not force-merged over 74.1 in-flight work.
