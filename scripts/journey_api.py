@@ -15,11 +15,15 @@ AI = "http://127.0.0.1:8000"
 EMAIL = f"journey-{uuid.uuid4().hex[:8]}@example.com"
 PASS = "Str0ngPassphrase!23"
 timings: list[tuple[str, float]] = []
+# One id for the whole journey: every call sends it, so a failure report is one
+# grep across frontend (browser), backend and ai-service logs.
+REQUEST_ID = uuid.uuid4().hex
 
 
 def call(name, method, path, token=None, body=None, base=BASE, raw=False):
     req = urllib.request.Request(base + path, method=method)
     req.add_header("Content-Type", "application/json")
+    req.add_header("X-Request-Id", REQUEST_ID)
     if token:
         req.add_header("Authorization", f"Bearer {token}")
     data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -38,7 +42,7 @@ def call(name, method, path, token=None, body=None, base=BASE, raw=False):
         raise SystemExit(1)
 
 
-print("== the golden journey, one API call per station ==")
+print(f"== the golden journey, one API call per station (X-Request-Id: {REQUEST_ID}) ==")
 
 # 1. register / who am I
 me = call("register", "POST", "/auth/register",
