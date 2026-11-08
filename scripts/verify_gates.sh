@@ -18,6 +18,7 @@ fi
 
 TESTS=(
   ai-service/tests/test_every_internal_route_requires_internal_auth.py
+  ai-service/tests/test_every_internal_route_refuses_unauthenticated.py
   ai-service/tests/test_the_route_inventory_is_fully_documented_in_openapi.py
   ai-service/tests/test_every_openapi_operation_is_described.py
   ai-service/tests/test_api_route_paths_are_well_formed.py
