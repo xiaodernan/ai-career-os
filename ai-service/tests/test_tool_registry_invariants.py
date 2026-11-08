@@ -1,9 +1,11 @@
 """Structural invariants the live agent tool registry must satisfy.
 
 These are cheap, import-time checks that catch accidental registry corruption:
-duplicate names, empty metadata, or a handoff surface that disagrees with the
-subagent whitelist the tools module declares.
+duplicate names, empty metadata, async handler contract, or a handoff surface that
+disagrees with the subagent whitelist the tools module declares.
 """
+
+import inspect
 
 from app.agents import orchestrator
 from app.agents.tools import ALL_TOOLS, SUBAGENT_TOOLS, TOOL_INDEX
@@ -32,3 +34,8 @@ def test_transfer_handoff_enum_matches_subagent_tools() -> None:
     assert sorted(enum) == sorted(SUBAGENT_TOOLS), (
         f"transfer_to agent enum {sorted(enum)} != SUBAGENT_TOOLS keys {sorted(SUBAGENT_TOOLS)}"
     )
+
+
+def test_every_tool_handler_is_async() -> None:
+    bad = [t.name for t in ALL_TOOLS if not inspect.iscoroutinefunction(t.handler)]
+    assert not bad, f"tool handlers must be async: {bad}"
