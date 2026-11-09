@@ -32,7 +32,10 @@ your own material; every agent step is recorded and inspectable.
 ## Architecture (summary)
 
 ```
-Next.js 15 (design-system UI, SSE)  ──►  Spring Boot 3 (auth, domain ownership, REST /api/v1)
+Next.js 15 (design-system UI, SSE)  ──►  Spring Cloud Gateway (:8081, /api/**)
+                                              │
+                                              ▼
+                                     Spring Boot 3 (auth, domain ownership, REST /api/v1)
                                               │ X-Internal-Token
                                               ▼
                                      FastAPI ai-service (providers, ingestion,

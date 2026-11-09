@@ -5256,6 +5256,20 @@ cannot fail a request: the same 8-64 character rule the backend uses mints or fo
   `GatewayFallbackTest` 2/2 against a closed loopback port -- the browser gets the fallback
   and the actuator line says `components.backend.status=DOWN`.)
 
+- [x] **88.3** The edge is part of the stack: its own image, probe, restart policy and port (measured 2026-11-09).
+
+  (`gateway/Dockerfile` mirrors the backend's two-stage build; both compose files declare
+  the service behind the `app` profile, wait for `backend: service_healthy`, publish 8081
+  (loopback in development, every interface in production) and probe
+  `/actuator/health`. The frontend still addresses the backend directly by default --
+  pointing `NEXT_PUBLIC_API_BASE_URL` at the gateway is an opt-in deployment decision,
+  documented rather than forced, because the browser bundle inlines that value at build
+  time. DEPLOYMENT.md's two port tables, the monitoring table and the startup-gating table
+  name the new service, and `test_the_stack_waits_for_an_app_that_answers.py` grades four
+  application services with a fixture for each rule. Measured: the deployment-gate set
+  48/48, including the compose parser, restart policy, Dockerfile/build-context, env
+  coverage and port-table gates.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

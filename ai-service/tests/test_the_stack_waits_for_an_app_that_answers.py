@@ -1,4 +1,4 @@
-"""The three application services start when they can answer, not when they have started.
+"""The four application services start when they can answer, not when they have started.
 
 `docker compose ps` prints `running` for a container that started and never answered, and only
 postgres, redis and minio carried a healthcheck. So `--profile app up -d` handed the browser a
@@ -33,8 +33,8 @@ COMPOSE = ROOT / "docker-compose.yml"
 COMPOSE_PROD = ROOT / "docker-compose.prod.yml"
 DOC = ROOT / "docs" / "DEPLOYMENT.md"
 
-APP_SERVICES = ("ai-service", "backend", "frontend")
-DOC_LABELS = {"Backend": "backend", "AI Service": "ai-service", "Frontend": "frontend"}
+APP_SERVICES = ("ai-service", "backend", "gateway", "frontend")
+DOC_LABELS = {"Backend": "backend", "AI Service": "ai-service", "Gateway": "gateway", "Frontend": "frontend"}
 
 SERVICES_HEADING = re.compile(r"^services:\s*$")
 SERVICE = re.compile(r"^  ([a-z][\w-]*):\s*$")
@@ -48,7 +48,7 @@ BINDING = re.compile(
 LOOPBACK_URL = re.compile(
     r"https?://(?:127\.0\.0\.1|localhost):(?P<port>\d+)(?P<path>/[^'\"\s]*)?"
 )
-MONITOR_ROW = re.compile(r"^\|\s*(Backend|AI Service|Frontend)\s*\|\s*`GET\s+([^`\s]+)")
+MONITOR_ROW = re.compile(r"^\|\s*(Backend|AI Service|Gateway|Frontend)\s*\|\s*`GET\s+([^`\s]+)")
 
 CLEAN = """services:
   ai-service:
@@ -68,6 +68,15 @@ CLEAN = """services:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
     depends_on:
       postgres:
+        condition: service_healthy
+  gateway:
+    image: example
+    ports:
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/actuator/health"]
+    depends_on:
+      backend:
         condition: service_healthy
   frontend:
     image: example
@@ -104,6 +113,10 @@ BROKEN = """services:
       - postgres
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
+  gateway:
+    image: example
+    ports:
+      - "127.0.0.1:8081:8081"
   frontend:
     image: example
     ports:
@@ -115,7 +128,7 @@ volumes:
   pgdata:
 """
 
-ROUTES = {"ai-service": "/health", "backend": "/api/v1/health", "frontend": "/"}
+ROUTES = {"ai-service": "/health", "backend": "/api/v1/health", "gateway": "/actuator/health", "frontend": "/"}
 
 
 def read(path: Path) -> str:
@@ -269,13 +282,15 @@ def test_both_compose_files_wait_for_an_answer_on_the_route_the_guide_names():
 
 def test_the_gate_is_green_on_a_stack_that_waits_and_says_which_rule_each_broken_one_broke():
     assert problems(CLEAN, ROUTES) == [], (
-        "the clean fixture -- three probed app services, long-form dependencies, and a data "
+        "the clean fixture -- four probed app services, long-form dependencies, and a data "
         "store whose healthcheck is not an HTTP probe -- must pass the gate, or the gate is "
         "grading something other than what its refusal messages say"
     )
     assert problems(BROKEN, ROUTES) == [
         "ai-service's probe asks port 9000 but the service publishes [8000]",
         "backend waits on postgres with condition none instead of service_healthy",
+        "gateway has 0 loopback HTTP healthcheck probes, not one, so compose proves a "
+        "process started rather than an app answering",
         "frontend has 0 loopback HTTP healthcheck probes, not one, so compose proves a "
         "process started rather than an app answering",
     ], (

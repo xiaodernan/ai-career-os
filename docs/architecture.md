@@ -43,7 +43,7 @@ tracking → career dashboard.
    └────────────────────────┘
 ```
 
-All three app services + infra run via `docker-compose.yml` (target env), while
+All four app services (gateway included) + infra run via `docker-compose.yml` (target env), while
 frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spring-boot:run`,
 `uvicorn`). Database/Redis/MinIO always run in Docker.
 

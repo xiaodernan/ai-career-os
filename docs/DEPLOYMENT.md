@@ -1,7 +1,7 @@
 # Deployment
 
 How to bring AI Career OS up locally and what each knob controls. The stack is
-three application services (backend, ai-service, frontend) plus three stateful
+four application services (gateway, backend, ai-service, frontend) plus three stateful
 dependencies (PostgreSQL + pgvector, Redis, MinIO).
 
 Redis is small but not optional: it backs only the rate limiter and the backend's
@@ -162,22 +162,24 @@ fails if `app/core/config.py`'s published defaults drift from the preflight's co
 
 ### Ports published by the production override
 
-`docker-compose.prod.yml` republishes the three app services, and an entry written as
+`docker-compose.prod.yml` republishes the four app services, and an entry written as
 `HOST:CONTAINER` with no interface prefix is bound on every interface of the host. The
-override therefore opens two ports the development file keeps to the machine:
+override therefore opens three ports the development file keeps to the machine:
 
 | Service    | Host port | Reach           | Notes                                          |
 |------------|-----------|-----------------|------------------------------------------------|
 | ai-service | 8000      | `127.0.0.1`     | Internal-only by design; the override keeps it |
 | backend    | 8080      | every interface | Reachable from the network, not just the host  |
+| gateway    | 8081      | every interface | Optional edge; the browser may use it instead   |
 | frontend   | 3000      | every interface | Reachable from the network, not just the host  |
 
 So in the stack the Quick Start brings up (`docker-compose.yml` together with
-`docker-compose.prod.yml`), `backend` on 8080 and `frontend` on 3000 answer to the
-network as well as through the reverse proxy — the proxy is not the only path in.
+`docker-compose.prod.yml`), `backend` on 8080, `gateway` on 8081 and `frontend` on
+3000 answer to the network as well as through the reverse proxy — the proxy is not
+the only path in.
 Ports the override does not mention, `postgres` 5432, `redis` 16380 and `minio`
 19000/19001, keep the development file's binding. If the host should not answer on
-8080 and 3000 directly, bind them to `127.0.0.1` in your own override or firewall the
+8080, 8081 and 3000 directly, bind them to `127.0.0.1` in your own override or firewall the
 ports; `ai-service` stays reachable for local debugging over loopback and from inside
 the compose network.
 
@@ -288,6 +290,7 @@ the context and is not resumed. See RUNBOOK's "A redeploy finishes what it start
 |------------|---------------------------------|----------------------------|
 | Backend    | `GET /api/v1/health`            | Prometheus at `/actuator/prometheus` (Micrometer); orchestrator probe at `/actuator/health`. The custom `/api/v1/health` is the deployment's dependency report: `db`, `redis`, `storage` and `ai` booleans, with `status: ok` only when all four answer. It answers **200 either way** so a monitor reads which half is down instead of guessing from a refusal; the four probes run together under one 2-second bound. |
 | AI Service | `GET /health`                   | None. The service is internal-only and logs to stdout; there is no `/metrics` route. The dependency report asks this route with a 2-second bound (`ai: true/false`). The body also names the provider halves and whether each can actually serve: `llm_ready` / `embedding_ready` are measured by building the configured provider through the same factories the AI calls use, so a stack that named `openai_compat` without a key reports `status: ok` (the process is alive) alongside `llm_ready: false` (it cannot serve) — the answer a monitor reads instead of a green probe over calls that all 500. |
+| Gateway    | `GET /actuator/health`          | Spring Cloud Gateway's own actuator. The custom `backend` indicator asks the backend's `/api/v1/health` under a 2-second bound and copies its `status` into `components.backend`; the line answers 503 while the backend is unreachable, which is also what the container probe reads. |
 | Frontend   | `GET /` (200 OK)                | —                          |
 | Postgres   | `pg_isready`                    | `pg_stat_statements` (needs `shared_preload_libraries`, which the compose image does not enable) |
 | Redis      | `redis-cli`                     | `INFO`                     |
@@ -416,7 +419,7 @@ which reading answers the operator's question instead of an alarm.
 
 ### Startup gating (healthchecks)
 
-The three application services are probed, not assumed. Each healthcheck fetches the
+The four application services are probed, not assumed. Each healthcheck fetches the
 service's own route on the container's loopback and accepts its 200; `depends_on` then
 waits for `service_healthy`, so `--profile app up -d` no longer returns while a
 dependency is still booting. A degraded dependency does not fail the backend's probe —
@@ -427,6 +430,7 @@ outage is reported in `docker compose ps` rather than restarted by Docker.
 |------------|------------------------------------------------------|------------------------------------------------|
 | ai-service | `python -c` GET `http://127.0.0.1:8000/health`       | postgres healthy                               |
 | backend    | `wget` GET `http://127.0.0.1:8080/api/v1/health`     | postgres, redis, minio and ai-service healthy  |
+| gateway    | `wget` GET `http://127.0.0.1:8081/actuator/health`   | backend healthy                                |
 | frontend   | `node -e` fetch `http://localhost:3000/`             | backend healthy                                |
 
 The production override carries the same probes; `ai-service` there also waits for Redis.
@@ -460,7 +464,7 @@ alarm would count twice.
 ---
 
 How to bring AI Career OS up locally and what each knob controls. The stack is
-three application services (backend, ai-service, frontend) plus three stateful
+four application services (gateway, backend, ai-service, frontend) plus three stateful
 dependencies (PostgreSQL + pgvector, Redis, MinIO).
 
 ## Prerequisites
@@ -499,7 +503,7 @@ then loads `scripts/seed/01_jobs.sql`. It is idempotent and safe on every `up`, 
 skips itself (after ~120s) rather than failing when the schema is not there yet — run
 `docker compose run --rm seed-jobs` to retry it on its own.
 
-Full application stack on top of the infra — the three app services live behind
+Full application stack on top of the infra — the four app services live behind
 the `app` profile:
 
 ```bash
@@ -515,6 +519,7 @@ each one is bound to, so the development stack answers on the machine that runs 
 |------------|-----------|-------------|--------------------------------------------------|
 | frontend   | 3000      | `127.0.0.1` | Next.js; `NEXT_PUBLIC_API_BASE_URL` → backend    |
 | backend    | 8080      | `127.0.0.1` | Public REST API under `/api/v1`                  |
+| gateway    | 8081      | `127.0.0.1` | Optional edge; forwards `/api/**` to `backend:8080` |
 | ai-service | 8000      | `127.0.0.1` | Internal-only; not exposed to browsers           |
 | postgres   | 5432      | `127.0.0.1` | pgvector `pg16` image                            |
 | redis      | 16380     | `127.0.0.1` | host 16380 → container 6379 (avoids local clash) |
@@ -524,6 +529,14 @@ each one is bound to, so the development stack answers on the machine that runs 
 Inside the compose network the services reach each other by name
 (`postgres`, `redis`, `minio`, `ai-service:8000`, `backend:8080`) — see the
 `environment:` overrides in `docker-compose.yml`.
+
+The gateway is optional: the default `NEXT_PUBLIC_API_BASE_URL` still points the
+browser at `backend:8080` directly. To route every API call through the edge, build
+the frontend with `NEXT_PUBLIC_API_BASE_URL=http://localhost:8081/api/v1` (or the
+production host's `/api/v1` behind the reverse proxy) and set `GATEWAY_CORS_ORIGINS`
+to the browser's origin. The gateway answers `GET /actuator/health` with the backend's
+own status in `components.backend`, and a backend that is down is a 503 with
+`{"error":"backend-unavailable"}` rather than a connection error.
 
 ## Run services locally against Docker infra
 

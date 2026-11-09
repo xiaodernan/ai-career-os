@@ -185,6 +185,31 @@ services:
       ai-service:
         condition: service_healthy
 
+  # The edge (Epic 88): one front door for the browser. The backend is still the only
+  # service that holds the internal token; the gateway forwards and answers for the
+  # system when nothing is behind it. Optional -- a deployment may keep pointing the
+  # browser straight at the backend.
+  gateway:
+    profiles: [app]
+    build:
+      context: ./gateway
+    container_name: careeros-gateway
+    restart: unless-stopped
+    environment:
+      GATEWAY_BACKEND_URI: http://backend:8080
+      GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    depends_on:
+      backend:
+        condition: service_healthy
+
   frontend:
     profiles: [app]
     build:
