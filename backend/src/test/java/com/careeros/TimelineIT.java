@@ -87,7 +87,16 @@ class TimelineIT extends ApiIntegrationTest {
         application.put("title", token + " Backend Engineer");
         application.put("company_name", token + " Robotics");
         application.put("status", "applied");
-        postJson(auth, "/api/v1/applications", application);
+        String created = postJson(auth, "/api/v1/applications", application);
+        String applicationId = MAPPER.readTree(created).path("data").path("id").asText();
+        // A second, authoritative dated fact: the move saved -> applied, written by the log itself.
+        Map<String, Object> patch = new LinkedHashMap<>();
+        patch.put("status", "oa");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/v1/applications/" + applicationId)
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(json(patch)))
+                .andExpect(status().isOk());
 
         JsonNode events = timeline(auth);
 
@@ -96,6 +105,13 @@ class TimelineIT extends ApiIntegrationTest {
         assertTrue(kinds.contains("contact"), "the contact never reached the timeline: " + kinds);
         assertTrue(kinds.contains("note"), "the note never reached the timeline: " + kinds);
         assertTrue(kinds.contains("application"), "the application never reached the timeline: " + kinds);
+        // The spine of the loop: the transition log is folded in too -- one entity row plus one
+        // transition row, both bound to the same application id.
+        List<String> titles = new ArrayList<>();
+        events.forEach(e -> titles.add(e.path("title").asText()));
+        assertTrue(titles.stream().anyMatch(ti -> ti.contains("Robotics")),
+                "the entity row never made it: " + titles);
+        assertTrue(titles.contains("→ oa"), "the status transition never folded in: " + titles);
         // Deterministic order: at ascending, engine's own tie-break is (at, kind, refId).
         List<String> stamps = new ArrayList<>();
         events.forEach(e -> stamps.add(e.path("at").asText()));

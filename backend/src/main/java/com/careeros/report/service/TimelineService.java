@@ -2,6 +2,8 @@ package com.careeros.report.service;
 
 import com.careeros.ai.AiServiceClient;
 import com.careeros.application.entity.Application;
+import com.careeros.application.entity.ApplicationEvent;
+import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.common.Paging;
 import com.careeros.interview.entity.InterviewSession;
@@ -24,16 +26,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * One timeline over the whole loop (Epic 81).
+ * One timeline over the whole loop (Epic 81, extended by 83).
  *
  * <p>The product writes six kinds of dated rows about the reader's search --
- * applications, notes, contacts, resume versions, matches and interview
- * rehearsals -- and each is scored to zero readers per screen: the reader has no
- * single place to scroll and see "what happened, in order". This bridge reads the
- * caller's own tables, maps each row to the engine's own field names, hands the
- * whole set to the ai-service's pure deterministic merge, and forwards its
- * answer. Neither the bridge nor the engine invents a date, a kind or a summary
- * the rows do not carry.
+ * applications (and their status-transition log), notes, contacts, resume
+ * versions, matches and interview rehearsals -- and each is scored to zero
+ * readers per screen: the reader has no single place to scroll and see "what
+ * happened, in order". This bridge reads the caller's own tables, maps each
+ * row to the engine's own field names, hands the whole set to the ai-service's
+ * pure deterministic merge, and forwards its answer. Neither the bridge nor
+ * the engine invents a date, a kind or a summary the rows do not carry.
  *
  * <p>The rows are capped per source before they travel: the engine is a pure
  * partition over what it is given, and an unbounded read would make one slow
@@ -44,9 +46,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class TimelineService {
 
     private static final int PER_SOURCE_CAP = 50;
+    /** A note written beside a status change quoted longer than this is a text, not a timeline. */
+    private static final int SUMMARY_MAX = 120;
 
     private final AiServiceClient ai;
     private final ApplicationRepository applications;
+    private final ApplicationEventRepository applicationEvents;
     private final UserNoteRepository notes;
     private final ContactRepository contacts;
     private final ResumeVersionRepository resumeVersions;
@@ -54,11 +59,13 @@ public class TimelineService {
     private final InterviewSessionRepository interviews;
 
     public TimelineService(AiServiceClient ai, ApplicationRepository applications,
+                           ApplicationEventRepository applicationEvents,
                            UserNoteRepository notes, ContactRepository contacts,
                            ResumeVersionRepository resumeVersions, JobMatchRepository matches,
                            InterviewSessionRepository interviews) {
         this.ai = ai;
         this.applications = applications;
+        this.applicationEvents = applicationEvents;
         this.notes = notes;
         this.contacts = contacts;
         this.resumeVersions = resumeVersions;
@@ -71,6 +78,11 @@ public class TimelineService {
         List<Map<String, Object>> events = new ArrayList<>();
         applications.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.first(PER_SOURCE_CAP)).getContent()
                 .forEach(a -> events.add(applicationRow(a)));
+        // The transition log is the spine of the pipeline view, and it carries what no entity row does:
+        // the moment the reader moved an application to oa, the note they wrote beside it, the reminder
+        // they set and cleared, the outcome they recorded. Kept by caller, capped newest-first.
+        applicationEvents.findByUserIdOrderByCreatedAtDesc(userId, Paging.first(PER_SOURCE_CAP))
+                .forEach(e -> events.add(applicationEventRow(e)));
         notes.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.first(PER_SOURCE_CAP)).getContent()
                 .forEach(n -> events.add(noteRow(n)));
         contacts.findByUserIdOrderByUpdatedAtDescIdAsc(userId, Paging.first(PER_SOURCE_CAP)).getContent()
@@ -93,6 +105,59 @@ public class TimelineService {
         row.put("refId", String.valueOf(a.getId()));
         row.put("summary", "status: " + a.getStatus());
         return row;
+    }
+
+    private Map<String, Object> applicationEventRow(ApplicationEvent e) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("at", iso(e.getCreatedAt()));
+        row.put("refId", String.valueOf(e.getApplicationId()));
+        Map<String, Object> payload = e.getPayload();
+        switch (e.getKind()) {
+            case "status" -> {
+                row.put("kind", "application");
+                String to = String.valueOf(payload.getOrDefault("to", ""));
+                String from = String.valueOf(payload.getOrDefault("from", ""));
+                row.put("title", to.isEmpty() ? "status" : "\u2192 " + to);
+                row.put("summary", from.isEmpty() ? "status → " + to
+                        : from + " → " + to);
+            }
+            case "note" -> {
+                row.put("kind", "note");
+                row.put("title", "Note on application");
+                row.put("summary", truncated(String.valueOf(payload.getOrDefault("note", ""))));
+            }
+            case "reminder" -> {
+                row.put("kind", "application");
+                boolean cleared = Boolean.TRUE.equals(payload.get("cleared"));
+                row.put("title", cleared ? "Reminder cleared" : "Reminder set");
+                String when = String.valueOf(payload.getOrDefault("reminder_at", ""));
+                row.put("summary", cleared ? "cleared" : "for " + (when.isEmpty() ? "an unspecified time" : when));
+            }
+            case "outcome" -> {
+                row.put("kind", "application");
+                String field = String.valueOf(payload.getOrDefault("field", ""));
+                if ("offer_compensation".equals(field)) {
+                    row.put("title", "Offer recorded");
+                } else if ("rejection_reason".equals(field)) {
+                    row.put("title", "Rejection recorded");
+                } else {
+                    row.put("title", "Outcome recorded");
+                }
+                row.put("summary", "outcome: " + field);
+            }
+            default -> {
+                row.put("kind", e.getKind());
+                row.put("title", e.getKind());
+                row.put("summary", truncated(String.valueOf(payload)));
+            }
+        }
+        return row;
+    }
+
+    private static String truncated(String text) {
+        if (text == null) return "";
+        String norm = text.strip();
+        return norm.length() <= SUMMARY_MAX ? norm : norm.substring(0, SUMMARY_MAX - 1) + "…";
     }
 
     private Map<String, Object> noteRow(UserNote n) {

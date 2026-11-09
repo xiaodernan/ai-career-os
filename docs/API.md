@@ -688,7 +688,7 @@ renders, so the answer is a partition, not a ranking.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/timeline` | the caller's timeline: the dated facts this account owns merged by the ai-service into one ordered list — read-only, no window, no query string of any kind; the answer carries the engine's own shape, and an account that has not started answers the same list with nothing in it rather than an error |
+| GET | `/timeline` | the caller's timeline: the dated facts this account owns merged by the ai-service into one ordered list — applications (dated by `applied_at` when the application was actually submitted, otherwise by when the row was created), their status-transition log (`→ oa` and friends, read from `application_events`), notes, contacts, resume versions, matches and interview rehearsals. The events travel as `{at, kind, title, refId, summary}`; an unparseable `at` sorts first rather than being dropped; each source contributes at most 50 rows, newest first. The answer is `{timeline: [...]}` — an account that has not started answers the same list with nothing in it rather than an error |
 
 ### Dashboard, activity, search, AI usage
 

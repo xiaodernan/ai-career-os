@@ -31,6 +31,7 @@ const ROWS: TimelineEntry[] = [
   { at: "2026-09-01T09:00:00Z", kind: "application", title: "Backend Engineer · Acme Robotics", refId: "a-1", summary: "status: applied" },
   { at: "2026-09-02T07:30:00Z", kind: "contact", title: "Added Ada Byron", refId: "c-1", summary: "referrer" },
   { at: "2026-09-03T06:00:00Z", kind: "interview", title: "Backend Engineer", refId: "i-1", summary: "mode mixed, active" },
+  { at: "2026-09-04T05:00:00Z", kind: "resume_version", title: "Resume version · tailored-for-mid", refId: "rv-1", summary: "kind: tailored" },
   { at: "2026-09-04T05:00:00Z", kind: "match", title: "Match", refId: "m-1", summary: "overall 82.5" },
   { at: "2026-09-05T00:00:00Z", kind: "something-else", title: "A kind this page has never heard of", refId: "x-1", summary: "still a fact" },
 ];
@@ -80,6 +81,12 @@ describe("the timeline", () => {
     expect(html).toContain("referrer");
     expect(html).toContain("Match");
     expect(html).toContain("status: applied");
+    // The kinds that own a screen turn into doors to it: the application card, the resume
+    // version, the rehearsal. Facts with no screen stay unlinked.
+    expect(html).toContain('href="/applications?application=a-1"');
+    expect(html).toContain('href="/interviews/i-1"');
+    expect(html).toContain('href="/resumes/rv-1"');
+    expect(html).not.toContain('href="/contacts/c-1"');
     // The kind the page does not know still renders, unnamed as itself.
     expect(html).toContain("A kind this page has never heard of");
     expect(html).toContain("Something else");

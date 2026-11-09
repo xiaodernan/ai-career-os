@@ -5068,6 +5068,22 @@ scored to a screen of its own: the reader had no single place to scroll and see
   on the live stack (empty account = honest empty; one reader never sees another's rows; all six
   kinds mapped) and `TimelineServiceTest` 3/3, plus the full suites below.)
 
+## Epic 83 -- the timeline narrates: the pipeline log folds in, rows link to their screens
+
+The loop's spine is the transitions between stages, and 81 left that half of the story outside
+the fold: applications sat in the list as a single row each, but the `saved → applied → oa →
+interview` trail — the very thing the pipeline board is about — never reached the one ordered
+place the reader scrolls. This epic makes the timeline the narration of the whole loop.
+
+- [x] **83** The status-transition log folds into `/timeline`, and rows open their screens (measured 2026-11-09).
+
+  (`TimelineService` now reads `ApplicationEventRepository.findByUserIdOrderByCreatedAtDesc` capped at the same
+  50 newest, maps each transition to an `{at, kind: "application", title: "→ <to>", refId: <application id>, summary: "from → to"}`
+  row — notes written beside a move fold in as `note` rows with `summary` truncated to 120 chars — and the answer travels
+  unchanged. Kind `application`/`resume_version`/`interview` rows deep-link into `/applications?application=<id>`,
+  `/resumes/<id>` and `/interviews/<id>` (the routes already served, the gates unchanged); unlinked kinds stay text.
+  Measured: `TimelineIT` 3/3 against the live stack (PATCH status move folds in, `→ oa` present), `TimelineServiceTest` 4/4.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

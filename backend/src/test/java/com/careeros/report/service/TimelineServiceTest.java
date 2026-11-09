@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.careeros.ai.AiServiceClient;
 import com.careeros.application.entity.Application;
+import com.careeros.application.entity.ApplicationEvent;
+import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.interview.entity.InterviewSession;
 import com.careeros.interview.repository.InterviewSessionRepository;
@@ -45,6 +47,7 @@ class TimelineServiceTest {
 
     private AiServiceClient ai;
     private ApplicationRepository applications;
+    private ApplicationEventRepository applicationEvents;
     private UserNoteRepository notes;
     private ContactRepository contacts;
     private ResumeVersionRepository resumeVersions;
@@ -56,15 +59,18 @@ class TimelineServiceTest {
     void setUp() {
         ai = mock(AiServiceClient.class);
         applications = mock(ApplicationRepository.class);
+        applicationEvents = mock(ApplicationEventRepository.class);
         notes = mock(UserNoteRepository.class);
         contacts = mock(ContactRepository.class);
         resumeVersions = mock(ResumeVersionRepository.class);
         matches = mock(JobMatchRepository.class);
         interviews = mock(InterviewSessionRepository.class);
-        service = new TimelineService(ai, applications, notes, contacts, resumeVersions, matches, interviews);
+        service = new TimelineService(ai, applications, applicationEvents, notes, contacts, resumeVersions, matches, interviews);
 
         when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(USER), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
+        when(applicationEvents.findByUserIdOrderByCreatedAtDesc(eq(USER), any(Pageable.class)))
+                .thenReturn(List.of());
         when(notes.findByUserIdOrderByUpdatedAtDescIdAsc(eq(USER), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(contacts.findByUserIdOrderByUpdatedAtDescIdAsc(eq(USER), any(Pageable.class)))
@@ -76,6 +82,17 @@ class TimelineServiceTest {
         when(interviews.findPage(eq(USER), any(), eq(""), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         when(ai.careerTimeline(eq(USER), any())).thenReturn(Map.of("timeline", List.of()));
+    }
+
+    private ApplicationEvent statusTransition(String from, String to) {
+        ApplicationEvent e = new ApplicationEvent();
+        e.setApplicationId(UUID.fromString("2b1c3c4e-1111-2222-3333-444444444444"));
+        e.setUserId(USER);
+        e.setKind("status");
+        e.setPayload(Map.of("from", from, "to", to));
+        org.springframework.test.util.ReflectionTestUtils.setField(e, "createdAt",
+                OffsetDateTime.parse("2026-09-02T12:00:00+00:00"));
+        return e;
     }
 
     private Application application() {
@@ -148,6 +165,32 @@ class TimelineServiceTest {
         s.setStartedAt(OffsetDateTime.parse("2026-09-07T04:00:00+00:00"));
         org.springframework.test.util.ReflectionTestUtils.setField(s, "id", UUID.fromString("7b1c3c4e-1111-2222-3333-444444444444"));
         return s;
+    }
+
+    @Test
+    void the_status_transition_log_reaches_the_funnel_as_timeline_rows() {
+        when(applications.findByUserIdOrderByUpdatedAtDescIdAsc(eq(USER), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(application())));
+        when(applicationEvents.findByUserIdOrderByCreatedAtDesc(eq(USER), any(Pageable.class)))
+                .thenReturn(List.of(statusTransition("saved", "applied")));
+
+        Map<String, Object> answer = service.timeline(USER);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Map<String, Object>>> events = ArgumentCaptor.forClass(List.class);
+        org.mockito.Mockito.verify(ai).careerTimeline(eq(USER), events.capture());
+        List<Map<String, Object>> rows = events.getValue();
+        // The entity row and the transition are both application events, so the reader sees both.
+        Map<String, Object> transition = rows.stream()
+                .filter(e -> "application".equals(e.get("kind")) && "→ applied".equals(e.get("title")))
+                .findFirst().orElseThrow();
+        assertThat(transition).containsEntry("refId", "2b1c3c4e-1111-2222-3333-444444444444")
+                .containsEntry("summary", "saved → applied")
+                .containsEntry("kind", "application")
+                .containsEntry("at", "2026-09-02T12:00:00Z");
+        assertThat(rows.stream().filter(e -> "application".equals(e.get("kind"))).count())
+                .isEqualTo(2);
+        assertThat(answer).containsEntry("timeline", List.of());
     }
 
     @Test

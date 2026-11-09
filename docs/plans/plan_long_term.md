@@ -1327,12 +1327,21 @@
   列表，确定性分桶 `(at, kind, refId)`，零模型调用；`POST /internal/features/career-timeline` 恒在
   `require_internal` 背后，FORWARD 闸钉住。后端桥（`com.careeros.report`：`TimelineService` +
   `TimelineController`）读取 caller 自己的 applications / notes / contacts / resume versions / matches /
-  interview sessions（每源上限 50 行），映射成引擎的五个字段，/internal 转发一次；`GET /api/v1/timeline`
-  的回答是引擎的形：`{timeline: [...]}`。 frontend 获 `/timeline`（`lib/hooks/timeline.ts`、
+  interview sessions（每源上限 50 行），映射成引擎的五个字段，`/internal` 转发一次；`GET /api/v1/timeline`
+  的回答是引擎的形：`{timeline: [...]}`。frontend 获 `/timeline`（`lib/hooks/timeline.ts`、
   `mapTimelineEntry`、`KIND_VISUALS`、侧边栏条目）与两边语言 i18n（`timeline.kinds.*`）。
-  实测：`TimelineIT` 3/3 全绿（空号答诚实空、两人各见己行、六类映射由 `TimelineServiceTest` 3/3 锁住）、
-  backend 非 IT 1214 run ×0 failures BUILD SUCCESS、ai-service 2286 passed / 2 skipped、
-  frontend 1164/1164（118 files）、`tsc --noEmit` 干净、`npm run build` 32/32、doc census 闸门 54/54 绿。
+  实测：`TimelineIT` 3/3 全绿；backend 非 IT 1214 run ×0 failures BUILD SUCCESS、ai-service 2286 passed / 2 skipped、
+  frontend 1164/1164（118 files）、`tsc --noEmit` 干净、`npm run build` 33/33、doc census 闸门 54/54 绿。
+- **Epic 83 — 时间线把流程日志一并讲清，行链回归属屏幕**（已落地，2026-11-09）：81 之后还『差一步』——
+  应用的那张卡是单行静态事实，`saved → applied → oa → interview` 的每一次流转躺在 `application_events` 里，
+  没有屏幕读它，时间线也读不到。本次把转移日志纳入合并：`TimelineService` 取 `findByUserIdOrderByCreatedAtDesc(userId, Paging.first(50))`，
+  每条变迁映射成 `application` 时间行（title `→ <to>`、summary `from → to`、refId 应用 id）；随流水笔记以 `note` 行截断至 120 字符并列；
+  提醒与结果作为附注行对上号。同时，有屏幕可去的行落成深链：`application` 行 → `/applications?application=<id>`，
+  `resume_version` 行 → `/resumes/<id>`，`interview` 行 → `/interviews/<id>`；没有屏的行（联系人等）保持纯文本，
+  不为谁下编造地址。
+  实测：`TimelineIT` 3/3（一次 PATCH status 恰好多出一行 `→ oa`）；`TimelineServiceTest` 4/4（entity+transition 两个 application 行、summary、refId 绑到具体应用）、
+  backend 非 IT 1215 ×0 failures BUILD SUCCESS；ai-service unaffected（无 ai-service 源文件改动）2289 passed / 2 skipped；
+  frontend 1164/1164（118 files）、`tsc --noEmit` 干净、`npm run build` 33/33、`npm audit --omit=dev` 0。
 
 ## 开发协议
 （每个任务）

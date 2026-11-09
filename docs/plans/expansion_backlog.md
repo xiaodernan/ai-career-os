@@ -191,6 +191,16 @@
   languages, nav entry). Measured green: backend non-IT 1214/1214, `TimelineIT` 3/3, ai-service
   2286 passed / 2 skipped, frontend 1164/1164 (118 files), `tsc` clean, `npm run build` ok,
   doc census gates 54/54 green.
+- **Epic 83 — the timeline narrates — CLOSED 2026-11-09**: the spine of the search — the
+  transition log in `application_events` — folds into the engine's input as of this pass:
+  `TimelineService` reads the same `findByUserIdOrderByCreatedAtDesc(userId, Paging.first(50))`
+  cap the page's activity preview uses, mapping status moves to `application` rows titled `→ <to>`
+  with `from → to` summaries, notes written beside a move to `note` rows truncated to 120 chars,
+  reminders and outcome rows alongside. The frontend turns the kinds that own a served screen into
+  deep links (`/applications?application=<id>`, `/resumes/<id>`, `/interviews/<id>`).
+  Measured green: backend non-IT 1215/1215, `TimelineIT` 3/3 against the live stack, `TimelineServiceTest`
+  4/4, ai-service 2289 passed / 2 skipped (no ai-service source touched), frontend 1164/1164
+  (118 files), `tsc` clean, `npm run build` 33/33, `npm audit --omit=dev` 0.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice

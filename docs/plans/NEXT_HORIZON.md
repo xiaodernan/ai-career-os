@@ -159,6 +159,34 @@ baseline.
 
 ---
 
+## Epic 83 — the timeline narrates: the pipeline log folds in — **CLOSED 2026-11-09**
+
+**Measured.** Epic 81 gave every account one ordered read of what it owns, but the spine of the
+search — the transitions between stages — lived in `application_events` without ever reaching it.
+The reader saw "Backend Engineer · Acme Robotics — status: saved" and nothing of the weeks of
+work between saved and applied.
+
+**Do.** `TimelineService` reads the transition log (capped at the same 50 newest), maps it to
+the engine's five fields — status moves arrive as `application` rows titled `→ <to>` with a
+`from → to` summary, notes written beside a move arrive as `note` rows truncated to 120 chars,
+reminders/outcomes as their own kinds-labeled rows — and leaves the fold's contract untouched.
+Kinds that own a served screen now deep-link into it (`/applications?application=<refId>`,
+`/resumes/<refId>`, `/interviews/<refId>`); facts with no screen stay text.
+
+**Done when** a real status PATCH round-trips into the timeline (`→ oa` appears for the right
+account only), and units pin the five-field mapping plus the transition row.
+
+**Shipped 2026-11-09.** `TimelineService` (`com.careeros.report`) now folds the transition log
+into the engine's input; `TimelineController` unchanged (same `GET /api/v1/timeline` answer
+shape); frontend `KIND_VISUALS` gained per-kind `href` on `application` / `resume_version` /
+`interview` rows only. Measured green: backend non-IT 1215 run ×0 failures; `TimelineIT` 3/3
+against the live stack (row count grows by exactly one transition row per status PATCH, and the
+`→ oa` title is present); `TimelineServiceTest` 4/4 (entity + transition both fold, summary
+`saved → applied`, at carried verbatim); frontend 1164/1164 (118 files), `tsc` clean,
+`npm run build` compiles, `npm audit --omit=dev` 0.
+
+---
+
 ## Rules for whoever picks these up
 
 - This repo is developed **concurrently**: re-read a file immediately before
