@@ -5286,6 +5286,37 @@ they can obey rather than a timeout they cannot explain.
   2/2 with an attempt-counting stub: the flaky read reached the backend twice and then
   answered 200, while the write that answered 500 was attempted exactly once.)
 
+- [x] **89.2** A caller who asks too fast is told when to ask again (measured 2026-11-09).
+
+  (`GatewayRateLimitFilter` is a Resilience4j token bucket keyed by identity: the SHA-256
+  prefix of the bearer token (never the credential itself) and the socket address for an
+  anonymous caller. The default is 1200 tokens per minute -- loose enough that a page load
+  or the golden journey never feels it, tight enough that a script cannot spend the
+  backend twice. A refusal is 429 with `Retry-After` (the configured period in whole
+  seconds) and a JSON sentence; `GATEWAY_RATE_LIMIT_PER_MINUTE=0` turns the filter off.
+  Measured by `GatewayRateLimitTest` 3/3 with a two-token, one-second budget: the third
+  ask was refused with `Retry-After: 1` and never reached the stub (forwarded count 2),
+  a different identity kept its own budget, and the same identity was admitted after the
+  period refilled.)
+
+### Epic 90 -- two doors, one contract
+
+The gateway copies two policies the backend already owns: the CORS answer to a preflight
+and the definition of a quotable request id. Neither process imports the other's
+constants, so the copies can drift silently -- a browser would pass one door and fail
+the other, and each module's own tests would stay green. The gate reads both sources and
+compares the values.
+
+- [x] **90.1** The copies are checked, not trusted (measured 2026-11-09).
+
+  (`ai-service/tests/test_the_two_doors_agree.py` reads the gateway's `application.yml`
+  and the backend's `SecurityConfig` / `RequestIdFilter` as text: the five CORS verbs,
+  the four allowed headers, the one exposed header, the preflight age, and the 8-64
+  character id pattern must be equal on both sides. It also checks that the gateway's
+  `Path=/api/**` route covers the `/api/v1/*` surface `docs/API.md` publishes -- a moved
+  API under a new prefix would otherwise 404 at the edge while every routing test stayed
+  green. 5/5.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

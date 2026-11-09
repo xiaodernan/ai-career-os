@@ -56,6 +56,15 @@
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
     </dependency>
+    <!--
+      89.2: the edge's own limiter. Resilience4j is already on the classpath through
+      the circuit starter; asking for the limiter module directly keeps the dependency
+      explicit rather than relying on a transitively-visible class.
+    -->
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-ratelimiter</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
