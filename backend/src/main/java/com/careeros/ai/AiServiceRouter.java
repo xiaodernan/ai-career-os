@@ -65,12 +65,21 @@ public class AiServiceRouter {
      * their paths as literals -- which is also what the contract gates read.
      */
     public URI rewrite(URI original) {
-        URI origin = base();
+        return rewriteTo(base(), original);
+    }
+
+    /**
+     * The same move onto a door the caller already chose (87.1). The bridge chooses the
+     * door before it enters the guard, because the guard now remembers failure per door
+     * rather than for the fleet: it has to know which node the exchange is addressed to
+     * before the request is built.
+     */
+    public URI rewriteTo(URI door, URI original) {
         try {
-            return new URI(origin.getScheme(), null, origin.getHost(), origin.getPort(),
+            return new URI(door.getScheme(), null, door.getHost(), door.getPort(),
                     original.getPath(), original.getQuery(), null);
         } catch (URISyntaxException e) {
-            throw new IllegalStateException("cannot route " + original + " to " + origin, e);
+            throw new IllegalStateException("cannot route " + original + " to " + door, e);
         }
     }
 }

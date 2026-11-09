@@ -57,6 +57,13 @@ public class HttpAiServiceClient implements AiServiceClient {
     private final AiServiceCircuitBreaker guard;
     private final AiServiceRouter router;
     private final AiServiceDiscoveryClient discovery;
+    /**
+     * The door this thread's exchange was addressed to (87.1). The RestClient's request
+     * factory runs on the caller's thread and moves the literal path onto this origin; the
+     * exchange is already inside this door's breaker, so the two must agree on which node
+     * the failure belongs to.
+     */
+    private final ThreadLocal<URI> door = new ThreadLocal<>();
 
     public HttpAiServiceClient(RestClient.Builder builder, AppProperties props, AiServiceCircuitBreaker guard,
                                AiServiceRouter router, AiServiceDiscoveryClient discovery) {
@@ -81,7 +88,11 @@ public class HttpAiServiceClient implements AiServiceClient {
         // leaves the call sites as literal paths, which is both readable and what the
         // contract gates read; the health line keeps its own client below.
         org.springframework.http.client.ClientHttpRequestFactory routing =
-                (uri, method) -> factory.createRequest(router.rewrite(uri), method);
+                (uri, method) -> factory.createRequest(
+                        door.get() == null
+                                ? router.rewrite(uri)
+                                : router.rewriteTo(door.get(), uri),
+                        method);
         this.restClient = builder.baseUrl("http://" + AiServiceDiscoveryClient.SERVICE_ID)
                 .requestFactory(routing)
                 // The ai-service logs the same id, so one grep follows a turn across both
@@ -350,7 +361,7 @@ public class HttpAiServiceClient implements AiServiceClient {
         // still has to travel the same translation `exchange` applies, so a foreign id answers
         // 404 to the browser instead of the 502 this method's own catch used to flatten it to.
         try {
-            guard.call(() -> {
+            guarded(() -> {
                 restClient.delete()
                         .uri("/internal/memories/" + memoryId)
                         .header("X-Internal-Token", internalToken)
@@ -776,10 +787,26 @@ public class HttpAiServiceClient implements AiServiceClient {
                 .body(Map.class));
     }
 
+    /**
+     * Chooses this call's door, tells the request factory which one it is (the factory runs
+     * on this thread), and enters that door's breaker (87.1). The thread-local is cleared in
+     * a finally: a pooled thread that kept an earlier call's door would address the next
+     * request to the wrong node and blame it for the failure.
+     */
+    private <T> T guarded(java.util.function.Supplier<T> call) {
+        URI chosen = router.base();
+        door.set(chosen);
+        try {
+            return guard.call(chosen.toString(), call);
+        } finally {
+            door.remove();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> exchange(java.util.function.Supplier<Map> call) {
         try {
-            Map raw = guard.call(call::get);
+            Map raw = guarded(call);
             if (raw == null) {
                 throw new ApiException(ApiErrorCode.AI_SERVICE_EMPTY_RESPONSE, "AI service returned empty body");
             }

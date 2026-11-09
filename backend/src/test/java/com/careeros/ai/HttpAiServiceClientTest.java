@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
+import org.springframework.cloud.client.DefaultServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.web.client.RestClient;
 
@@ -290,6 +291,48 @@ class HttpAiServiceClientTest {
         healthStatus = 503;
 
         assertThat(client.healthy()).isFalse();
+    }
+
+    @Test
+    void theRequestLeavesThroughTheDoorItsBreakerWasGiven() throws Exception {
+        HttpServer second = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        List<String> secondPaths = new ArrayList<>();
+        second.createContext("/internal", exchange -> {
+            secondPaths.add(exchange.getRequestURI().getPath());
+            byte[] answer = "{\"embedding\":[]}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, answer.length);
+            exchange.getResponseBody().write(answer);
+            exchange.close();
+        });
+        second.start();
+        try {
+            AppProperties props = new AppProperties();
+            props.getInternal().setToken("test-token");
+            String first = "http://127.0.0.1:" + server.getAddress().getPort();
+            String other = "http://127.0.0.1:" + second.getAddress().getPort();
+            props.getAiService().setInstances(first + "," + other);
+            AiServiceDiscoveryClient discovery = new AiServiceDiscoveryClient(props);
+            LoadBalancerClient loadBalancer = mock(LoadBalancerClient.class);
+            when(loadBalancer.choose(AiServiceDiscoveryClient.SERVICE_ID)).thenReturn(
+                    new DefaultServiceInstance("ai-2", AiServiceDiscoveryClient.SERVICE_ID,
+                            "127.0.0.1", second.getAddress().getPort(), false));
+            Resilience4JCircuitBreakerFactory breakers = new Resilience4JCircuitBreakerFactory(
+                    CircuitBreakerRegistry.ofDefaults(), TimeLimiterRegistry.ofDefaults(), null);
+            new AiServiceResilienceConfig().aiServiceCircuitBreakerCustomizer().customize(breakers);
+            HttpAiServiceClient routed = new HttpAiServiceClient(RestClient.builder(), props,
+                    new AiServiceCircuitBreaker(breakers),
+                    new AiServiceRouter(loadBalancer, discovery), discovery);
+
+            routed.embedQuery("backend", UUID.randomUUID());
+
+            // The door chosen before the guard is the one the exchange used (87.1), and
+            // the configured default -- the first node -- never saw the request.
+            assertThat(secondPaths).containsExactly("/internal/rag/embeddings");
+            assertThat(paths).isEmpty();
+        } finally {
+            second.stop(0);
+        }
     }
 
     @Test

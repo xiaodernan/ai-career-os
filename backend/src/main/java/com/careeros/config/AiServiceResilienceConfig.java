@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.springframework.cloud.client.circuitbreaker.Customizer;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClientResponseException;
@@ -78,15 +79,21 @@ public class AiServiceResilienceConfig {
     public Customizer<Resilience4JCircuitBreakerFactory> aiServiceCircuitBreakerCustomizer() {
         return factory -> {
             factory.configureExecutorService(CALLING_THREAD);
-            factory.configure(builder -> builder
-                    .circuitBreakerConfig(CircuitBreakerConfig.custom()
-                            .slidingWindowSize(SLIDING_WINDOW_SIZE)
-                            .minimumNumberOfCalls(MINIMUM_NUMBER_OF_CALLS)
-                            .failureRateThreshold(FAILURE_RATE_THRESHOLD)
-                            .waitDurationInOpenState(WAIT_DURATION_IN_OPEN_STATE)
-                            .permittedNumberOfCallsInHalfOpenState(PERMITTED_CALLS_IN_HALF_OPEN_STATE)
-                            .ignoreExceptions(RestClientResponseException.class)
-                            .build()),
+            // Default, not a single id (87.1): the guard creates one breaker per ai-service
+            // origin, and every one of them must inherit this shape. The name-config for
+            // NAME stays for the whole-bridge breaker a caller without a door still uses.
+            CircuitBreakerConfig shape = CircuitBreakerConfig.custom()
+                    .slidingWindowSize(SLIDING_WINDOW_SIZE)
+                    .minimumNumberOfCalls(MINIMUM_NUMBER_OF_CALLS)
+                    .failureRateThreshold(FAILURE_RATE_THRESHOLD)
+                    .waitDurationInOpenState(WAIT_DURATION_IN_OPEN_STATE)
+                    .permittedNumberOfCallsInHalfOpenState(PERMITTED_CALLS_IN_HALF_OPEN_STATE)
+                    .ignoreExceptions(RestClientResponseException.class)
+                    .build();
+            factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
+                    .circuitBreakerConfig(shape)
+                    .build());
+            factory.configure(builder -> builder.circuitBreakerConfig(shape),
                     AiServiceCircuitBreaker.NAME);
         };
     }

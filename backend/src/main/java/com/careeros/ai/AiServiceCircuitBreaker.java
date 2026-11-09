@@ -3,6 +3,7 @@ package com.careeros.ai;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
@@ -29,29 +30,47 @@ import org.springframework.stereotype.Component;
  * read timeout, so a second clock in another thread would duplicate the budget and drop
  * the request id out of the MDC; Spring Cloud's wrapper stays on the caller's thread when
  * no executor is configured, and this application configures none.
+ *
+ * <p>Since 87.1 the guard remembers failure per door, not for the fleet. With one breaker
+ * for every instance, a dead replica's refusals opened the circuit for the healthy ones
+ * too -- the bridge rested while most of the engine was answering. Each origin now gets
+ * its own breaker (the same tuned shape), so a quiet node rests alone and the balancer's
+ * next choice is still allowed to work.
  */
 @Component
 public class AiServiceCircuitBreaker {
 
-    /** The id the breaker registers under (and the name actuator health reports). */
+    /** The id the whole-bridge breaker registers under (and the name actuator health reports). */
     public static final String NAME = "ai-service";
 
+    private final CircuitBreakerFactory<?, ?> factory;
     private final CircuitBreaker breaker;
+    /** One breaker per origin, created on first use; the fleet's list is small and fixed. */
+    private final ConcurrentHashMap<String, CircuitBreaker> perNode = new ConcurrentHashMap<>();
 
     public AiServiceCircuitBreaker(CircuitBreakerFactory<?, ?> factory) {
+        this.factory = factory;
         this.breaker = factory.create(NAME);
     }
 
-    /**
-     * Runs the exchange behind the breaker. Failures travel back unchanged -- the
-     * translation to this service's error codes happens where it always did, outside --
-     * except for the one case the breaker owns: while the circuit is open the call is not
-     * attempted at all, and the caller hears the same 502 a failed attempt would have
-     * produced, only immediately.
-     */
+    /** The whole-bridge question, kept for callers that have no door to name. */
     public <T> T call(Supplier<T> exchange) {
+        return call(NAME, exchange);
+    }
+
+    /**
+     * Runs the exchange behind the breaker of the node it is addressed to.
+     *
+     * <p>An unknown or blank origin falls back to the whole-bridge breaker: a caller that
+     * cannot say which door it used is asking the old question, and must not silently get
+     * a fresh breaker per call.
+     */
+    public <T> T call(String node, Supplier<T> exchange) {
+        CircuitBreaker at = node == null || node.isBlank() || NAME.equals(node)
+                ? breaker
+                : perNode.computeIfAbsent(node, factory::create);
         try {
-            return breaker.run(exchange, failure -> {
+            return at.run(exchange, failure -> {
                 throw rethrow(failure);
             });
         } catch (CallNotPermittedException resting) {

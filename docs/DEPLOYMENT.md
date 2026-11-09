@@ -573,13 +573,16 @@ with the offending entry named, rather than surfacing later as a 502.
 
 `GET /api/v1/health` asks every instance and reports `ai: true` when any of them answers;
 one dead replica does not take the line down while the bridge still serves from the others.
+`aiNodes` lists each configured origin with its own `up` flag (86.2), so a quiet replica is
+visible rather than only implied.
 
-A run of failures opens the AI circuit: after five recorded calls in a ten-call window,
-half of them failing, calls stop leaving the backend for thirty seconds and answer
-`502 AI_SERVICE_UNAVAILABLE` immediately; then two half-open calls decide whether it
-closes. Refusals from the engine (4xx) are not failures — the engine answered. The
-thresholds live in `AiServiceResilienceConfig`; raise the thirty-second rest if the engine
-takes longer to come back.
+Failure is counted per node (87.1): the circuit guard keeps one breaker per origin, all in
+the same shape — after five recorded calls in a ten-call window, half of them failing, that
+node rests for thirty seconds. Calls the balancer addresses to other nodes keep leaving, and
+`/health` names the resting one. The whole-bridge breaker still exists, used only by a caller
+that cannot name a door. Refusals from the engine (4xx) are not failures — the engine
+answered. The thresholds live in `AiServiceResilienceConfig`; raise the thirty-second rest
+if the engine takes longer to come back.
 
 ## Email
 

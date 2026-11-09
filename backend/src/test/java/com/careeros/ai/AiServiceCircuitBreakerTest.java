@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -111,13 +112,46 @@ class AiServiceCircuitBreakerTest {
         assertThat(breaker().getState()).isEqualTo(CircuitBreaker.State.CLOSED);
     }
 
+    @Test
+    void oneQuietDoorRestsAloneAndTheFleetKeepsAnswering() {
+        AiServiceCircuitBreaker guard = guard();
+        Supplier<String> dead = () -> {
+            throw new ResourceAccessException("connection refused");
+        };
+
+        assertThatThrownBy(() -> guard.call("http://a:8000", dead))
+                .isInstanceOf(ResourceAccessException.class);
+        assertThatThrownBy(() -> guard.call("http://a:8000", dead))
+                .isInstanceOf(ResourceAccessException.class);
+        assertThat(registry.circuitBreaker("http://a:8000").getState())
+                .isEqualTo(CircuitBreaker.State.OPEN);
+
+        // Nothing was charged to the whole-bridge breaker: the failure belongs to a node.
+        assertThat(registry.circuitBreaker(AiServiceCircuitBreaker.NAME).getState())
+                .isEqualTo(CircuitBreaker.State.CLOSED);
+        assertThat(guard.call("http://b:8000", () -> "parsed")).isEqualTo("parsed");
+        assertThat(guard.call("http://b:8000", () -> "parsed")).isEqualTo("parsed");
+        assertThat(registry.circuitBreaker("http://b:8000").getState())
+                .isEqualTo(CircuitBreaker.State.CLOSED);
+
+        // The quiet door is refused by its own breaker: the supplier is never entered.
+        AtomicInteger attempts = new AtomicInteger();
+        assertThatThrownBy(() -> guard.call("http://a:8000", () -> {
+            attempts.incrementAndGet();
+            return "should not run";
+        })).isInstanceOf(ApiException.class)
+                .hasMessageContaining("resting");
+        assertThat(attempts).hasValue(0);
+    }
+
     /**
      * The production shape, in miniature: four calls in the window, two needed before the
      * rate is trusted. Small numbers keep the test fast; the thresholds themselves are
      * pinned in {@code AiServiceResilienceConfigTest}.
      */
     private AiServiceCircuitBreaker guard() {
-        factory.configure(builder -> builder
+        // Default, because the guard creates a breaker per door from this same shape.
+        factory.configureDefault(id -> new Resilience4JConfigBuilder(id)
                 .circuitBreakerConfig(CircuitBreakerConfig.custom()
                         .slidingWindowSize(4)
                         .minimumNumberOfCalls(2)
@@ -125,8 +159,8 @@ class AiServiceCircuitBreakerTest {
                         .waitDurationInOpenState(Duration.ofSeconds(30))
                         .permittedNumberOfCallsInHalfOpenState(2)
                         .ignoreExceptions(RestClientResponseException.class)
-                        .build()),
-                AiServiceCircuitBreaker.NAME);
+                        .build())
+                .build());
         return new AiServiceCircuitBreaker(factory);
     }
 

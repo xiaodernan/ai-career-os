@@ -5181,6 +5181,32 @@ that owns the task, and the health line reports each node.
   `HttpAiServiceClientTest` 19/19 (one live node and one closed port, order and both answers
   pinned), `HealthIT` full-context 2/2, and the full backend non-IT suite 1234/1234.)
 
+## Epic 87 -- failure belongs to a door: one quiet engine replica rests alone
+
+85.2 spread the bridge across instances, but the circuit guard still counted for the whole
+fleet. Five refusals from one dead replica opened the only breaker, and every call -- including
+the ones the balancer would have sent to the nodes still answering -- answered 502 until the
+thirty-second rest ended. A fleet that fails together is not more available than one node.
+
+- [x] **87.1** The guard remembers failure per origin: every door gets its own breaker of the same shape, and only the quiet door rests (measured 2026-11-09).
+
+  (`HttpAiServiceClient` now chooses the door before it enters the guard and tells the
+  request factory which one it is -- the factory runs on the caller's thread, so a
+  thread-local carries the choice through `AiServiceRouter.rewriteTo`, a new path-preserving
+  overload that `rewrite` delegates to. `AiServiceCircuitBreaker.call(node, ...)` keeps a
+  map of breakers keyed by origin and creates each on first use; a blank or unknown origin
+  still uses the whole-bridge breaker, which is what a caller without a door is asking.
+  `AiServiceResilienceConfig` configures the shape as the factory default rather than only
+  for the named breaker, so every per-node breaker inherits the same window and half-open
+  rules; the named configuration stays for the fallback. The thread-local is cleared in a
+  finally, because a pooled thread that kept an earlier request's door would address the
+  next call to the wrong node and blame it for the failure. Measured by
+  `AiServiceCircuitBreakerTest` 5/5 -- a dead origin opens its own breaker while the
+  whole-bridge breaker stays closed and a second origin answers twice --,
+  `HttpAiServiceClientTest` 20/20 -- one call steered to the second of two real servers
+  proves the door chosen for the breaker is the door the request left through --,
+  `AiServiceResilienceConfigTest` 2/2, and the full backend non-IT suite 1236/1236.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
