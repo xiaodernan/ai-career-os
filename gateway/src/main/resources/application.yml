@@ -35,6 +35,16 @@ spring:
           # own answer and the one both configurations agree on.
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+            # The browser is not a service. A browser-supplied internal token never
+            # reaches the domain backend, and a forged forwarding chain is removed before
+            # the edge writes its own -- otherwise the backend would read an address the
+            # caller chose for itself.
+            - RemoveRequestHeader=X-Internal-Token
+            - RemoveRequestHeader=Forwarded
+            - RemoveRequestHeader=X-Forwarded-For
+            - RemoveRequestHeader=X-Forwarded-Proto
+            - RemoveRequestHeader=X-Forwarded-Host
+            - RemoveRequestHeader=X-Forwarded-Port
           # One route today: the browser's API traffic belongs to the domain backend.
           # The engine stays behind the backend, which owns the internal token and the
           # circuit around it -- the edge should not hold either.

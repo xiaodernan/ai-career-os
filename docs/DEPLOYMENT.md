@@ -551,12 +551,21 @@ the duplicate is removed before the answer leaves this process. A request body a
 `GATEWAY_MAX_REQUEST_SIZE` moves that line, and it should stay above the backend's own
 25 MB multipart cap so the backend remains the authority on files it would accept.
 
-The edge adds `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` and
-`X-Forwarded-Port` so the backend's logs name the browser rather than the gateway.
-4.3 only writes those headers when `trusted-proxies` admits the caller;
-`GATEWAY_TRUSTED_PROXIES` defaults to `.*` (the edge is the trust boundary). If a
-reverse proxy sits in front, set it to the proxy's address pattern instead, or a
-browser that reaches the gateway directly can add its own `X-Forwarded-For`.
+The edge also knows which door is not the browser's. `/api/internal/**` is answered
+`403` here and the backend is never called; a browser-supplied `X-Internal-Token`,
+`Forwarded`, or `X-Forwarded-*` chain is removed before the edge writes its own
+observed values, so an internal credential or a claimed address cannot be smuggled
+through the front door.
+
+The edge writes `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` and
+`X-Forwarded-Port` from the connection it sees, after removing any that arrived, so the
+backend's logs name the caller rather than a value the caller chose. 4.3 only writes
+those headers when `trusted-proxies` admits the caller; `GATEWAY_TRUSTED_PROXIES`
+defaults to `.*` because the edge itself is the trust boundary, and the strip above is
+what keeps that default from becoming "trust the browser". If a reverse proxy sits in
+front, the address the edge records is the proxy's -- that is the cost of not trusting
+a chain the browser can write. A deployment that must preserve the proxied address can
+replace this pair of behaviours explicitly rather than loosening the default.
 
 ## Run services locally against Docker infra
 

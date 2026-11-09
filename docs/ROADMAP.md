@@ -5416,6 +5416,31 @@ by what the backend receives, not by what this process intends.
   `413` **and zero hits** on the stub; a 512-byte body still arrives. The hit counter
   is what separates "stopped here" from "rejected downstream"; 2/2, module 21/21.)
 
+### Epic 95 -- the edge does not lend the internal door
+
+The backend has a second surface whose callers are services, not people: it is
+authenticated by a shared token and the edge routes every `/api/**` path. A routed
+surface that was never meant to leave the network, plus headers a browser can write,
+is the shape of an incident that every module's own tests would call healthy.
+
+- [x] **95.1** The internal surface is refused at the edge (measured 2026-11-09).
+
+  (`EdgeSurfaceGuard` answers `/api/internal` and everything below it with `403` and a
+  JSON body naming the reason, before the route runs. `GatewayInternalSurfaceTest`
+  counts the stub's hits: the refusal is `403` **and zero calls**, so it is this process
+  that closed the door rather than the backend choosing a status; `/api/v1/health`
+  still forwards. 3/3.)
+
+- [x] **95.2** The browser cannot supply the credential or the path (measured 2026-11-09).
+
+  (The route's default filters remove `X-Internal-Token`, `Forwarded` and all four
+  `X-Forwarded-*` headers from what arrived, then the gateway writes its own observed
+  path. `GatewayRequestSanitizerTest` sends a forged internal token and a forged
+  forwarding chain and captures what the stub receives: the token is absent, the
+  chain names `127.0.0.1` and not `203.0.113.9`, while `Authorization` still arrives --
+  the strip is specific, not a blanket drop. The probe was run without the filters
+  first and failed on `forged-internal-token`; 1/1, module 25/25.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
