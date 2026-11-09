@@ -562,6 +562,25 @@ Two offline-only escape hatches for tests and first-run dev: `mock` LLM and
 retrieval quality — use a real embedding provider for anything beyond a smoke
 test.
 
+### Several engine nodes, and the rest state (Epics 85.1-85.2)
+
+The backend reaches ai-service as a service, not an address. By default `AI_SERVICE_BASE_URL`
+is the only instance. Set `AI_SERVICE_INSTANCES` to a comma-separated list of absolute
+http(s) origins (`http://ai-node-1:8000,http://ai-node-2:8000`) and every outbound AI call
+is handed to the next instance by Spring Cloud LoadBalancer, cycling in the configured
+order. Entries are validated at boot: a missing scheme, a path or a query stops the start
+with the offending entry named, rather than surfacing later as a 502.
+
+`GET /api/v1/health` asks every instance and reports `ai: true` when any of them answers;
+one dead replica does not take the line down while the bridge still serves from the others.
+
+A run of failures opens the AI circuit: after five recorded calls in a ten-call window,
+half of them failing, calls stop leaving the backend for thirty seconds and answer
+`502 AI_SERVICE_UNAVAILABLE` immediately; then two half-open calls decide whether it
+closes. Refusals from the engine (4xx) are not failures — the engine answered. The
+thresholds live in `AiServiceResilienceConfig`; raise the thirty-second rest if the engine
+takes longer to come back.
+
 ## Email
 
 Outbound mail (password resets, the Monday letter and the morning signal mail)
