@@ -198,7 +198,7 @@
   with `from → to` summaries, notes written beside a move to `note` rows truncated to 120 chars,
   reminders and outcome rows alongside. The frontend turns the kinds that own a served screen into
   deep links (`/applications?application=<id>`, `/resumes/<id>`, `/interviews/<id>`).
-  Measured green: backend non-IT 1215/1215, `TimelineIT` 3/3 against the live stack, `TimelineServiceTest`
+  Measured green: backend non-IT 1215/1215, `TimelineIT` 3/3 against the live stack (+e2e timeline.spec.ts 1 passed in a real browser), `TimelineServiceTest`
   4/4, ai-service 2289 passed / 2 skipped (no ai-service source touched), frontend 1164/1164
   (118 files), `tsc` clean, `npm run build` 33/33, `npm audit --omit=dev` 0.
 - **Epic 84 — `?kind=` narrows the timeline — CLOSED 2026-11-09**: `useUrlState<{ kind?: string }>`

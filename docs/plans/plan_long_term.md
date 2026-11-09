@@ -1339,7 +1339,7 @@
   提醒与结果作为附注行对上号。同时，有屏幕可去的行落成深链：`application` 行 → `/applications?application=<id>`，
   `resume_version` 行 → `/resumes/<id>`，`interview` 行 → `/interviews/<id>`；没有屏的行（联系人等）保持纯文本，
   不为谁下编造地址。
-  实测：`TimelineIT` 3/3（一次 PATCH status 恰好多出一行 `→ oa`）；`TimelineServiceTest` 4/4（entity+transition 两个 application 行、summary、refId 绑到具体应用）、
+  实测：`TimelineIT` 3/3（一次 PATCH status 恰好多出一行 `→ oa`）、e2e `tests/timeline.spec.ts` 真实浏览器 1 passed；`TimelineServiceTest` 4/4（entity+transition 两个 application 行、summary、refId 绑到具体应用）、
   backend 非 IT 1215 ×0 failures BUILD SUCCESS；ai-service unaffected（无 ai-service 源文件改动）2289 passed / 2 skipped；
   frontend 1164/1164（118 files）、`tsc --noEmit` 干净、`npm run build` 33/33、`npm audit --omit=dev` 0。
 

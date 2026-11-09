@@ -33,7 +33,7 @@ test("the timeline shows the account's own events in order, narrows by kind, and
   await authedPage.goto("/timeline");
 
   // The fold renders through the real locale default (en): heading and all three rows, in order.
-  await expect(authedPage.getByRole("heading", { name: "Timeline" })).toBeVisible({ timeout: 20_000 });
+  await expect(authedPage.getByRole("heading", { level: 1, name: "Timeline" })).toBeVisible({ timeout: 20_000 });
 
   const appRow = authedPage.getByRole("link", { name: /Timeline Engineer/ });
   await expect(appRow).toBeVisible({ timeout: 20_000 });

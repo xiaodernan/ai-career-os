@@ -119,7 +119,8 @@ is behind `require_internal` with its FORWARD pin. The backend bridge
 own applications, notes, contacts, resume versions, matches and interview sessions
 (50 rows per source, capped), maps them to the engine's five fields and forwards
 them to the engine; the answer is the engine's own shape under `GET /api/v1/timeline`
-(`TimelineIT` 3/3 against the live stack: empty account answers an honest empty,
+(`TimelineIT` 3/3 against the live stack (+ e2e `timeline.spec.ts` 1 passed in a real
+browser on this stack): empty account answers an honest empty,
 one account's rows never reach another, all six kinds mapped and pinned by units).
 The frontend gains `/timeline` (`lib/hooks/timeline.ts`, `mapTimelineEntry`,
 `KIND_VISUALS`) and its nav row; i18n has both languages. Measured green: backend
