@@ -172,11 +172,16 @@ def public_paths() -> dict[str, set[str]]:
 # -------------------------------------------------------------------- the docs, as claims
 
 def prose_units(text: str) -> list[str]:
-    """Blank-line blocks, bullet lists split per bullet, fenced code removed.
+    """Blank-line blocks, bullet lists split per bullet, table rows split per row, fences removed.
 
     A unit is the smallest thing that can hold one claim: the activity sentence wraps across four
     lines and a bullet's continuation line belongs to its bullet, while `proxy_pass` inside an
     nginx block is not a claim about this product's routes.
+
+    A table needs its own split. A port table names every service in the header and puts the
+    verb in one gateway row; read as one block it says "gateway forwards /api/**" while
+    `ai-service` sits three rows away, and the reader invents a relay claim no writer made.
+    Each row is the unit, and the delimiter row (`|---|---|`) holds no words to grade.
     """
     text = re.sub(r"```.*?```", "\n", text, flags=re.S)
     out = []
@@ -185,6 +190,18 @@ def prose_units(text: str) -> list[str]:
         if not block.strip():
             continue
         lines = block.split("\n")
+        table = [line for line in lines if line.lstrip().startswith("|")]
+        if len(table) >= 2:
+            rest: list[str] = []
+            for line in lines:
+                if line.lstrip().startswith("|"):
+                    if not re.fullmatch(r"\|[\s:|-]+\|", line.strip()):
+                        out.append(line)
+                else:
+                    rest.append(line)
+            if rest:
+                out.append("\n".join(rest))
+            continue
         if sum(1 for line in lines if line.lstrip().startswith(("- ", "* "))) >= 2:
             current: list[str] = []
             for line in lines:

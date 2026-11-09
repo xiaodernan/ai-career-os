@@ -5363,6 +5363,34 @@ one is asserted against a stub rather than promised in a comment.
   `/actuator/metrics/http.server.requests` after a routed call and expects the meter by
   name. Measured 3/3 in the operations class and 17/17 across the module.)
 
+### Epic 93 -- the edge streams, and the docs keep their claims apart
+
+The copilot answers are server-sent events. A proxy that buffered a response would
+still deliver the right final string, so "it works" needs a shape the assembler cannot
+fake: several frames, each flushed before the next exists. The same change exposed a
+reader defect worth fixing rather than wording around: a markdown port table was being
+graded as one paragraph, so the gateway row's verb met the ai-service row's name and
+the suite invented a relay claim no writer made.
+
+- [x] **93.1** The stream survives the edge (measured 2026-11-09).
+
+  (`GatewayStreamingTest` points `GATEWAY_BACKEND_URI` at a stub that writes three
+  `text/event-stream` frames with a 40 ms pause and a flush between them, then asserts
+  one joined body carries all three. The body arrives as a `Flux` of frames --
+  `blockLast()` sees only the last element, which is exactly how a passing test can
+  hide two lost frames; the test joins the collected elements instead. Verified 1/1 and
+  the module's full suite 18/18.)
+
+- [x] **93.2** A table row is a claim; a table is not (measured 2026-11-09).
+
+  (`prose_units()` now splits markdown tables per row and drops the delimiter row.
+  Without it the development port table -- header naming every service, gateway row
+  saying "forwards `/api/**`", ai-service row three lines below -- was read as one
+  sentence and failed the reconciliation with "`/api/{}` is proxied, but no controller
+  registers it". The reader now sees the gateway row alone (no ai-service name, no
+  claim) and the three genuine relay claims in `architecture.md` / `ROADMAP.md` stay
+  graded. 3/3 in the relay-contract file; full ai-service suite green.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
