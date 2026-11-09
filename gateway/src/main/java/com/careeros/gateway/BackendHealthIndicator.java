@@ -2,9 +2,9 @@ package com.careeros.gateway;
 
 import java.time.Duration;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.ReactiveHealthIndicator;
+import org.springframework.cloud.client.loadbalancer.reactive.ReactorLoadBalancerExchangeFilterFunction;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -18,20 +18,29 @@ import reactor.core.publisher.Mono;
  * into this indicator's fields rather than turned into a red light here. That keeps one
  * place (the backend's line) deciding what its dependencies mean, while the edge reports
  * only the one thing it can know for itself.
+ *
+ * <p>Epic 99.1: the probe resolves `backend` through the same load balancer the route
+ * does, not through a second fixed address. A fixed address is a second answer to
+ * "where is the backend": under the registry it is the laptop default, so the edge
+ * would report itself down while forwarding traffic perfectly. One resolution path
+ * means the health line describes the routing table the edge actually uses.
  */
 @Component
 public class BackendHealthIndicator implements ReactiveHealthIndicator {
 
+    /** The service id the route and the probe share. */
+    static final String SERVICE_ID = "backend";
+
     private final WebClient client;
 
     public BackendHealthIndicator(WebClient.Builder builder,
-            @Value("${GATEWAY_BACKEND_URI:http://localhost:8080}") String backend) {
-        this.client = builder.baseUrl(backend).build();
+            ReactorLoadBalancerExchangeFilterFunction loadBalancer) {
+        this.client = builder.filter(loadBalancer).build();
     }
 
     @Override
     public Mono<Health> health() {
-        return client.get().uri("/api/v1/health")
+        return client.get().uri("http://" + SERVICE_ID + "/api/v1/health")
                 .retrieve()
                 .bodyToMono(Map.class)
                 .timeout(Duration.ofSeconds(2))

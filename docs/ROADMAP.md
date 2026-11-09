@@ -5508,6 +5508,19 @@ to keep passing -- when no registry exists.
   declare the six variables the backend reads. 5/5; ai-service full suite 2305 passed /
   2 skipped; backend 1367/1367.)
 
+### Epic 99 -- the health line describes the routing table, not a second address
+
+- [x] **99.1** The probe and the route resolve the same instance (measured 2026-11-10).
+
+  (`BackendHealthIndicator` now resolves `backend` through the load balancer instead of
+  a fixed `GATEWAY_BACKEND_URI`. Removing that variable from the compose gateway made
+  the old probe ask `localhost:8080` inside a container whose backend is
+  `backend:8080` -- a health line that would read DOWN while every request succeeded.
+  `BackendHealthIndicatorTest` points the discovery list at a random-port stub and
+  requires UP; `BackendHealthWithoutARegistryTest` empties the list under the `eureka`
+  profile, keeps the stub alive, and requires DOWN -- a fixed-address probe reads UP in
+  exactly that state. Gateway 31/31.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
