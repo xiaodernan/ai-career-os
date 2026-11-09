@@ -5449,6 +5449,30 @@ is the shape of an incident that every module's own tests would call healthy.
   own module noticing; together they say the credential the backend accepts is one a
   browser cannot hand it. The file is 7/7.)
 
+### Epic 97 -- the edge is safe to read, and its refusals can be counted
+
+An edge that answers before the application does is also an edge that can answer with
+things a browser misreads. The refusals are the interesting population: a 403, a 429
+or a 413 is exactly the page a reader might see rendered as HTML, and exactly the
+event an operator needs a number for when the flood is happening.
+
+- [x] **97.1** The refusal is guarded like the answer (measured 2026-11-09).
+
+  (`EdgeSecurityHeadersFilter` sets `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY` and `Referrer-Policy: no-referrer` before the chain runs,
+  so the headers survive every early answer. `GatewaySecurityHeadersTest` reads them
+  from a forwarded 200 **and** from the internal-surface 403; a filter that decorated
+  only successes would pass the first and fail the second. HSTS is deliberately left
+  to the TLS layer. 2/2.)
+
+- [x] **97.2** A refusal is a number, and the number has no names in it (measured 2026-11-09).
+
+  (`GatewayRateLimitFilter` increments `gateway.ratelimit.refused`. The new assertion
+  spends a fresh identity's budget, expects exactly one 429 and reads a delta of
+  exactly `1.0` from the `MeterRegistry`; it also asserts the meter carries no tags,
+  because tagging by the token hash or address would create one series per caller --
+  highest cardinality during the flood the counter exists to describe. Module 28/28.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

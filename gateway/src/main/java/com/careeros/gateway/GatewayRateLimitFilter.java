@@ -2,6 +2,8 @@ package com.careeros.gateway;
 
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -50,14 +52,23 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
     private final int tokensPerPeriod;
     private final Duration period;
     private final String retryAfter;
+    private final Counter refusals;
     private final Map<String, RateLimiter> limiters = new ConcurrentHashMap<>();
 
     public GatewayRateLimitFilter(
             @Value("${GATEWAY_RATE_LIMIT_PER_MINUTE:1200}") int tokensPerPeriod,
-            @Value("${GATEWAY_RATE_LIMIT_PERIOD:60s}") Duration period) {
+            @Value("${GATEWAY_RATE_LIMIT_PERIOD:60s}") Duration period,
+            MeterRegistry meterRegistry) {
         this.tokensPerPeriod = tokensPerPeriod;
         this.period = period;
         this.retryAfter = String.valueOf(Math.max(1, period.toSeconds()));
+        // No identity tag: the identity is a caller's token hash or address, and a metric
+        // tagged by either grows one series per caller -- the cardinality accident that
+        // makes a metrics backend fall over precisely during the flood this counter exists
+        // to describe.
+        this.refusals = Counter.builder("gateway.ratelimit.refused")
+                .description("Requests refused by the edge token bucket")
+                .register(meterRegistry);
     }
 
     @Override
@@ -74,6 +85,7 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
         if (limiter.acquirePermission()) {
             return chain.filter(exchange);
         }
+        refusals.increment();
         return refuse(exchange.getResponse());
     }
 

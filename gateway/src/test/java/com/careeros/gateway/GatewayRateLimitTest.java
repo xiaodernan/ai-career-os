@@ -3,6 +3,8 @@ package com.careeros.gateway;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -60,6 +62,9 @@ class GatewayRateLimitTest {
     @Autowired
     private WebTestClient client;
 
+    @Autowired
+    private MeterRegistry meterRegistry;
+
     @BeforeEach
     void resetForwarded() {
         FORWARDED.set(0);
@@ -95,6 +100,25 @@ class GatewayRateLimitTest {
         Thread.sleep(1_100);
 
         ask("Bearer gamma").expectStatus().isOk();
+    }
+
+    @Test
+    void countsTheRefusalWithoutNamingTheCaller() {
+        double before = refusals();
+
+        ask("Bearer delta").expectStatus().isOk();
+        ask("Bearer delta").expectStatus().isOk();
+        ask("Bearer delta").expectStatus().isEqualTo(429);
+
+        assertThat(refusals() - before).isEqualTo(1.0);
+        assertThat(meterRegistry.find("gateway.ratelimit.refused").meter().getId().getTags())
+                .as("a counter tagged by token hash or address grows one series per caller")
+                .isEmpty();
+    }
+
+    private double refusals() {
+        Counter counter = meterRegistry.find("gateway.ratelimit.refused").counter();
+        return counter == null ? 0.0 : counter.count();
     }
 
     private WebTestClient.ResponseSpec ask(String authorization) {
