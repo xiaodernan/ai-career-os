@@ -1343,6 +1343,14 @@
   backend 非 IT 1215 ×0 failures BUILD SUCCESS；ai-service unaffected（无 ai-service 源文件改动）2289 passed / 2 skipped；
   frontend 1164/1164（118 files）、`tsc --noEmit` 干净、`npm run build` 33/33、`npm audit --omit=dev` 0。
 
+- **Epic 84 — 时间线地址承载类型：`/timeline?kind=application` 收窄整条记录**（已落地，2026-11-09）：
+  URL 保留一条 `kind`，面板按答案自身渲染 chip 行（每种一次、带计数，空种不提供），`aria-pressed` 反映是否窄住；
+  无空种设定 bogus `?kind=x` 时渲染的是诚实的『该类型还没有记录』（`timeline.noKindRows`），
+  不是整个工作区的空态；`全部类型`收起收窄。
+  实测：7 个 page 用例全绿（chip 计数／aria-pressed／All kinds 摘写 URL／缺席种与 bogus 种的诚实空态）、
+  frontend 1169/1169（118 files）、`tsc --noEmit` 干净、`npm run build` 33/33、`npm audit --omit=dev` 0；
+  83 行的深链在窄住下依旧可达。
+
 ## 开发协议
 （每个任务）
 

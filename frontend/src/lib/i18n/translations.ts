@@ -98,6 +98,9 @@ export const translations = {
       emptyTitle: "Nothing written down yet",
       emptyDescription:
         "Every step you take feeds this list: keep a job, write a note, add a contact, or rehearse an interview — they show up here in the order they happened.",
+      kindFilter: "Narrow the timeline by kind",
+      filterAll: "All kinds",
+      noKindRows: "No {kind} rows yet for this account.",
       kinds: {
         application: "Application",
         note: "Note",
@@ -3225,6 +3228,9 @@ export const translations = {
       emptyTitle: "还没有记录",
       emptyDescription:
         "每走一步都会记在这里：收藏一个职位、写一条笔记、加一个联系人、模拟一场面试，按时间一条条出现。",
+      kindFilter: "按类型收窄时间线",
+      filterAll: "全部类型",
+      noKindRows: "这个账号下还没有「{kind}」类型的记录。",
       kinds: {
         application: "投递",
         note: "笔记",

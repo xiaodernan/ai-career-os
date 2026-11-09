@@ -201,6 +201,14 @@
   Measured green: backend non-IT 1215/1215, `TimelineIT` 3/3 against the live stack, `TimelineServiceTest`
   4/4, ai-service 2289 passed / 2 skipped (no ai-service source touched), frontend 1164/1164
   (118 files), `tsc` clean, `npm run build` 33/33, `npm audit --omit=dev` 0.
+- **Epic 84 — `?kind=` narrows the timeline — CLOSED 2026-11-09**: `useUrlState<{ kind?: string }>`
+  carries the one narrowing the fold accepts; chips and counts are computed from the engine's own
+  answer (absent kinds are never offered), `aria-pressed` reflects the narrowed chip, a pasted bogus
+  kind narrows to the page's own honest empty (`timeline.noKindRows`, both languages) instead of the
+  workspace's default empty, and `All kinds` takes it back out of the URL. No API parameter: a view
+  over one capped fold. Measured green: 7 page tests (chip counts, `aria-pressed`, All-kinds URL clear,
+  absent-kind and bogus-kind honest empties), frontend 1169/1169 (118 files), `tsc` clean,
+  `npm run build` 33/33.
 - **Doc/service integrity**: `README.md`/`docs/DEPLOYMENT.md` relative markdown doc links resolve;
   `docs/architecture.md` key sections gate; `docs/QUALITY_GATES.md` factual gate index + structure gate;
   every `ai-service/app/api` `APIRouter` declares `tags=`; ai-service `main.py` forbids mock LLM/voice

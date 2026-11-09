@@ -5084,6 +5084,22 @@ place the reader scrolls. This epic makes the timeline the narration of the whol
   `/resumes/<id>` and `/interviews/<id>` (the routes already served, the gates unchanged); unlinked kinds stay text.
   Measured: `TimelineIT` 3/3 against the live stack (PATCH status move folds in, `→ oa` present), `TimelineServiceTest` 4/4.)
 
+## Epic 84 -- the timeline URL carries a kind: `/timeline?kind=application` narrows the fold
+
+The chips the registry taught (Epic 80) had nowhere to go on the timeline, and the URL had
+nowhere to say "one kind only". The reader wanted `?kind=application` as a way to look at the spine
+without the rest — the same reason the replies page's filters are URL state.
+
+- [x] **84** `/timeline?kind=<kind>` narrows the fold; the URL is the narrowing's memory (measured 2026-11-09).
+
+  (`useUrlState<{kind?: string}>` carries one key, `kind`; the page computes per-kind counts from the
+  engine's answer and renders a chip per non-empty kind, exactly the Epic-80 chip pattern but derived
+  client-side — the fold is one capped read, so narrowing is a view, not a query. A pasted
+  `?kind=bogus` narrows to nothing and renders the page's own honest empty sentence (`timeline.noKindRows`)
+  instead of the workspace's default empty. `All kinds` removes the narrowing. The nav and the API row unchanged.
+  Measured by the seven page tests (chip counts, `aria-pressed`, URL clearing via All kinds, absent-kind and
+  unknown-kind honest empties); full suites green below.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

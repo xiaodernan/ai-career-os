@@ -187,6 +187,26 @@ against the live stack (row count grows by exactly one transition row per status
 
 ---
 
+## Epic 84 — /timeline?kind= narrows the fold — **CLOSED 2026-11-09**
+
+The timeline was the one page where the narrowing had no URL. With Epic 80's chips as the pattern
+and Epic 70's URL-state rule as the convention, the fold became `/timeline?kind=application`.
+
+**Do.** `useUrlState<{ kind?: string }>(PAGE_DEFAULTS)` carries one key; chips and counts are
+computed from the engine's own answer (an absent kind is not offered); a bogus `?kind=` narrows to
+its own honest empty (`timeline.noKindRows`, both languages) rather than the workspace's default empty.
+`All kinds` clears it. No param on the API row — narrowing is a view over one capped read.
+
+**Done when** the page tests pin the chip counts, `aria-pressed`, the URL write on chip/deselect, the
+absent-kind and unknown-kind honest empties, and the row links from 83 still render.
+
+**Shipped 2026-11-09.** `./timeline/page.tsx` renders `KIND_VISUALS` per non-empty kind with the
+count as a tabulated adornment; `useUrlState` restores a pasted link; `timeline.kindFilter` /
+`filterAll` / `noKindRows` i18n in both languages. Measured: 7 page tests green, frontend 1169/1169
+(118 files), `tsc --noEmit` clean, `npm run build` 33/33, `npm audit --omit=dev` 0.
+
+---
+
 ## Rules for whoever picks these up
 
 - This repo is developed **concurrently**: re-read a file immediately before
