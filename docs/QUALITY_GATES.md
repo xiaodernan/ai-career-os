@@ -32,7 +32,8 @@
 - Secrets/hygiene: `.env.prod.example` covers compose vars and uses placeholders for sensitive keys; `.gitignore` protects `.env*`/build artifacts.
 
 ### Deploy / config / runtime reality
-- `docs/DEPLOYMENT.md` host ports ↔ dev/prod compose; prod data services not published; dev data services loopback-bound; prod/dev pulled images pinned (no `:latest`/untagged); prod services define `restart:`; Dockerfiles + prod build contexts exist.
+- `docs/DEPLOYMENT.md` host ports ↔ dev/prod compose; prod data services not published; dev data services loopback-bound; prod/dev pulled images pinned (no `:latest`/untagged); prod services define `restart:`; Dockerfiles + prod build contexts exist; `test_the_compose_files_parse.py` holds the compose files YAML-parseable, scalar `build.args`, args backed by each Dockerfile's `ARG`, and the Epic 78 `APP_BUILD_SHA` bake to its declared services.
+- `docs/DEPLOYMENT.md` §"Running the stack without Docker (host) — the escape hatch": the exact procedure used to verify `e2e/tests/timeline.spec.ts` on this machine, with the honesty limits stated.
 - `.env.example` covers dev compose vars; backend `application.yml` safety invariants (`ddl-auto:none`, `open-in-view:false`, graceful shutdown, Flyway enabled, docs paths); backend/ai-service/frontend dependency/tooling contracts.
 
 ### CI / schema / ops / docs integrity

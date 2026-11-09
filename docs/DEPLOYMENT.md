@@ -719,6 +719,50 @@ subscriber's phone rings even with push turned off.
   upload a resume from the `/resumes` screen; ingestion is queued and streamed
   over SSE.
 
+## Running the stack without Docker (host) — the escape hatch
+
+The canonical bring-up is `docker compose --profile app build` on the committed images. This
+section exists for the case where that path is blocked *for this machine* — network to docker.io
+or PyPI unreachable, or the daemon wedge — and someone must still reproduce verification. The
+[timeline e2e run](../e2e/tests/timeline.spec.ts) was verified this way.
+
+What the running containers may not be is patched in place — rebuild an image or run the service
+directly from source; do not edit a running container to paper over drift.
+
+Procedure used here (verified 2026-11-09):
+
+1. **Postgres / Redis / MinIO live in the dev compose services** (`careeros-postgres`,
+   `careeros-redis` at `127.0.0.1:5432` / `127.0.0.1:16380`, MinIO at `19000/19001`; the
+   dev database is `career_os`, the same one `*IT` classes use with `IMAGE_IT` rules — never
+   touched in production shape).
+2. **ai-service** runs from the checkout with the existing venv:
+   `env DATABASE_URL=postgresql://<user>:<pass>@127.0.0.1:5432/career_os \
+     BACKEND_BASE_URL=http://127.0.0.1:8081 LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash \
+     APP_ENV=dev APP_BUILD_SHA=$(git rev-parse HEAD) \
+     .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001`.
+3. **backend** runs as the packaged jar:
+   `SERVER_PORT=8081 AI_SERVICE_BASE_URL=http://127.0.0.1:8001 REDIS_URL=redis://127.0.0.1:16380/0 \
+    MINIO_ENDPOINT=http://127.0.0.1:19000 APP_BUILD_SHA=$(git rev-parse HEAD) \
+    RATELIMIT_AUTH_PER_MINUTE=100 \
+    java -jar backend/target/career-os-backend-*.jar`,
+   keeping the committed `.env` values. `APP_BUILD_SHA` is the commit hash — the `/health` answer names it.
+4. **frontend standalone** built with
+   `NEXT_STANDALONE=1 NEXT_PUBLIC_API_BASE_URL=http://localhost:8081/api/v1 npm run build`,
+   then `node .next/standalone/server.js` with `PORT=3001`.
+5. **e2e** runs against the host services via `E2E_BASE_URL=http://localhost:3001
+   E2E_API_URL=http://127.0.0.1:8081/api/v1 E2E_AI_URL=http://127.0.0.1:8001
+   npx playwright test tests/timeline.spec.ts` — this exact procedure proved the fold
+   end-to-end (1 passed).
+
+Known limits of this escape hatch, stated honestly:
+
+- `*IT` classes still require the Docker dev infra; they do NOT use this procedure.
+- The host-run frontend and backend do NOT share the compose file's env wiring; drift between
+  the two configs is a risk the escape hatch does not cover.
+- A wedged daemon or a corrupted compose file is a defect to file (and this repository had
+  one — the literal-`\n` build args that broke every `docker compose` invocation until
+  `feat(build): make the stack buildable again` landed), not a permanent state to route around.
+
 ## Tests
 
 See the [README](../README.md) Tests section: frontend `vitest`, ai-service
