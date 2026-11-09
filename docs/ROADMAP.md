@@ -5391,6 +5391,31 @@ the suite invented a relay claim no writer made.
   claims in `architecture.md` / `ROADMAP.md` stay graded. 3/3 in the relay-contract
   file; full ai-service suite green.)
 
+### Epic 94 -- the edge answers once, and stops what it can stop early
+
+Two doors mean two writers. The gateway and the backend both own a CORS answer, and
+both wrote it onto the same response; the edge is also the only place that can refuse
+an oversized body before a downstream parser spends anything on it. Both are measured
+by what the backend receives, not by what this process intends.
+
+- [x] **94.1** The browser sees one origin, not two (measured 2026-11-09).
+
+  (A routed GET with an `Origin` header reaches a stub that sets
+  `Access-Control-Allow-Origin` itself, and `GatewayCorsDedupeTest` reads the header
+  values the browser would receive: without the edge's `DedupeResponseHeader` filter
+  the list is `[origin, origin]`, which is a CORS failure in a browser while both
+  modules' own tests stay green; with it the list is one value. The probe was run in
+  both shapes before the entry was written.)
+
+- [x] **94.2** An oversized body is refused before the backend sees it (measured 2026-11-09).
+
+  (`RequestSize` runs before the circuit breaker and the retry, with
+  `GATEWAY_MAX_REQUEST_SIZE` defaulting to 30 MB -- above the backend's 25 MB
+  multipart cap, so a file the backend would reject still receives the backend's own
+  answer. `GatewayRequestSizeTest` lowers the cap to 1 KB, posts 2 KB and expects
+  `413` **and zero hits** on the stub; a 512-byte body still arrives. The hit counter
+  is what separates "stopped here" from "rejected downstream"; 2/2, module 21/21.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

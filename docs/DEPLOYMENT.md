@@ -544,6 +544,13 @@ second backend is a configuration change rather than a code change: give
 `spring.cloud.discovery.client.simple.instances.backend[1].uri` (or a `[1].host` /
 `[1].port` pair) and the load-balancer spreads reads across both.
 
+The edge also answers once. Both it and the backend write
+`Access-Control-Allow-Origin`, and a browser rejects a response carrying it twice, so
+the duplicate is removed before the answer leaves this process. A request body above
+30 MB is refused with `413` before it reaches a backend parser;
+`GATEWAY_MAX_REQUEST_SIZE` moves that line, and it should stay above the backend's own
+25 MB multipart cap so the backend remains the authority on files it would accept.
+
 The edge adds `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` and
 `X-Forwarded-Port` so the backend's logs name the browser rather than the gateway.
 4.3 only writes those headers when `trusted-proxies` admits the caller;

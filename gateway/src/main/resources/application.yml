@@ -29,6 +29,12 @@ spring:
             host-enabled: true
             port-enabled: true
             proto-enabled: true
+          # The edge and the backend both answer CORS. Two `Access-Control-Allow-Origin`
+          # values make a browser reject the response it asked for, so the duplicate is
+          # removed before the headers leave this process; the first value is the edge's
+          # own answer and the one both configurations agree on.
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
           # One route today: the browser's API traffic belongs to the domain backend.
           # The engine stays behind the backend, which owns the internal token and the
           # circuit around it -- the edge should not hold either.
@@ -38,6 +44,13 @@ spring:
               predicates:
                 - Path=/api/**
               filters:
+                # An oversized body is refused before a byte reaches the backend: the
+                # edge is the only place that can say no without spending the downstream's
+                # parser. The default sits above the backend's 25 MB multipart cap, so a
+                # file the backend would reject still gets the backend's own answer.
+                - name: RequestSize
+                  args:
+                    maxSize: ${GATEWAY_MAX_REQUEST_SIZE:30MB}
                 # A backend that is down should answer as "the system is unavailable",
                 # not as a stack trace the browser cannot use. The fallback route is
                 # served by this process, so it works while nothing behind it does.
