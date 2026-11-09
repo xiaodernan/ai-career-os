@@ -49,6 +49,7 @@ ALIASES = {
     "command palette": "command-palette",
     "networking": "networking",
     "stored-jd rehydrate": "jd-rehydrate",
+    "timeline": "timeline",
 }
 
 UNNAMED_CLAUSE = "the pagination suite"

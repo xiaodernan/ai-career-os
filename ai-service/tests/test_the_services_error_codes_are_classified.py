@@ -126,6 +126,14 @@ SAME_MEANING: frozenset[str] = frozenset({
     # answered with nothing." -- is true of both, and the reader's next step
     # is the same either way: try again.
     "AI_SERVICE_EMPTY_RESPONSE",
+    # Since 85.1 the bridge answers this code from two places: a failed
+    # exchange ("AI service request failed") and the circuit breaker's rest
+    # state ("AI service is resting after repeated failures"). To the reader
+    # they are one event -- the engine did not answer -- and the answer is
+    # the same: try again in a moment. The distinction stays in the two
+    # sentences for an operator reading logs; the translated sentence is
+    # about the reader's next step, which both share.
+    "AI_SERVICE_UNAVAILABLE",
     # "Invalid email change token" and "Email change token used or expired"
     # are one refusal on purpose: the controller's own doc comment says the
     # public route must not tell a forger which half of a guess was right,

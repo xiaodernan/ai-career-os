@@ -36,8 +36,9 @@ than re-checked: a note request whose path arrives from a variable or a shared h
 `writes` or `reads`, which is the same red a second writer would cost, so the equalities are the
 warning and no separate clause is needed to say so.
 
-Measured on the shapes the ledgers now hold: eighteen speakers, four path coincidences, three non-Java
-speakers all in `e2e`, and four readable calls over them -- three POSTs to the collection and one GET.
+Measured on the shapes the ledgers now hold: twenty-seven speakers, four path coincidences, six non-Java
+speakers (`scripts/journey_api.py` and five `e2e` specs), and the writes/reads tables below pin every
+verb they use -- every one a POST to the collection, or a GET of it.
 """
 
 from __future__ import annotations
@@ -122,6 +123,8 @@ SPEAKERS: dict[str, str] = {
     "e2e/tests/redaction.spec.ts":
         "POSTs three notes: so the bundle the reader exports has the reader's own words in it, "
         "so the anonymized export has to forget them, and so the printable document has to carry them",
+    "e2e/tests/timeline.spec.ts":
+        "POSTs one note so the timeline has a dated note to fold (81)",
     NOTES_PANEL:
         "the panel's docstring spells the four verbs it calls",
     "frontend/src/lib/api/endpoints.test.ts":
@@ -366,7 +369,8 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
                               "e2e/tests/forward-surfaces.spec.ts",
                               "e2e/tests/golden-journey.spec.ts",
                               "e2e/tests/pagination.spec.ts",
-                              "e2e/tests/redaction.spec.ts"], (
+                              "e2e/tests/redaction.spec.ts",
+                              "e2e/tests/timeline.spec.ts"], (
         f"the notes route now has a different set of non-Java speakers ({route_speakers}): read each one's "
         "verbs before this gate claims again that one handler authors every row")
 
@@ -383,6 +387,7 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
         # words, the anonymized export has to forget them, and the printable
         # document has to carry them. One POST each.
         "e2e/tests/redaction.spec.ts": [("post", NOTE_ROUTE), ("post", NOTE_ROUTE), ("post", NOTE_ROUTE)],
+        "e2e/tests/timeline.spec.ts": [("post", NOTE_ROUTE)],
     }, (f"a note row is now authored by a path that is not the collection POST ({writes}): the panel writes "
         "through POST /knowledge/notes, and that is the only verb the Java clause above accounts for")
     assert reads == {"scripts/journey_api.py": [f"{NOTE_ROUTE}/tags"],

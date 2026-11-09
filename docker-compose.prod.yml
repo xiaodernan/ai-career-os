@@ -86,7 +86,7 @@ services:
     build:
       context: ./ai-service
       args:
-        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
+        APP_BUILD_SHA: ${APP_BUILD_SHA:?APP_BUILD_SHA is required -- pass --env-file .env.prod to compose}
     container_name: careeros-ai-prod
     restart: unless-stopped
     env_file: .env.prod
@@ -124,7 +124,7 @@ services:
     build:
       context: ./backend
       args:
-        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
+        APP_BUILD_SHA: ${APP_BUILD_SHA:?APP_BUILD_SHA is required -- pass --env-file .env.prod to compose}
     container_name: careeros-backend-prod
     restart: unless-stopped
     # Above the JVM's 30-second graceful-shutdown phase (application.yml); Docker's
