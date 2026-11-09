@@ -16,6 +16,20 @@ spring:
               uri: ${GATEWAY_BACKEND_URI:http://localhost:8080}
               predicates:
                 - Path=/api/**
+              filters:
+                # A backend that is down should answer as "the system is unavailable",
+                # not as a stack trace the browser cannot use. The fallback route is
+                # served by this process, so it works while nothing behind it does.
+                - name: CircuitBreaker
+                  args:
+                    name: backend
+                    fallbackUri: forward:/_fallback/backend
+          httpclient:
+            # A browser should not wait a minute for a connect that will not happen;
+            # the response budget is above the backend's 180-second AI read budget,
+            # because the edge must not cut a turn the backend still expects to finish.
+            connect-timeout: 3000
+            response-timeout: 300s
           # Same origins, verbs and headers the backend answers with (SecurityConfig);
           # a browser that passes one door and fails the other would be a bug report
           # nobody can reproduce.

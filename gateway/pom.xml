@@ -47,6 +47,15 @@
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
     </dependency>
+    <!--
+      88.2: the route gets a circuit around the backend. The reactive starter is the
+      one that composes with the gateway's own chain; the servlet-era factory the
+      backend uses would sit on the wrong side of the exchange.
+    -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>

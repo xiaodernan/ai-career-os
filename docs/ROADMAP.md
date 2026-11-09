@@ -5244,6 +5244,18 @@ cannot fail a request: the same 8-64 character rule the backend uses mints or fo
   kept, a short one replaced, a non-API path never reaching the backend, and the
   preflight answered without an upstream call.)
 
+- [x] **88.2** A missing backend answers as a product sentence, and the health line names it (measured 2026-11-09).
+
+  (`CircuitBreaker` on the route forwards to `/_fallback/backend`, a controller served by the
+  gateway itself: 503 `{error: "backend-unavailable", message: ...}`, no stack trace and no
+  upstream hop. The breaker is the reactive Resilience4j factory with the backend's own shape
+  (10-call window, 5-call floor, 50%, 30-second rest, 3 half-open probes), so both processes
+  use one vocabulary for "quiet neighbour". `BackendHealthIndicator` asks `/api/v1/health`
+  under a two-second bound and copies the backend's `status` detail: reaching the backend is
+  the edge's own question, and a `degraded` backend is still reachable. Measured by
+  `GatewayFallbackTest` 2/2 against a closed loopback port -- the browser gets the fallback
+  and the actuator line says `components.backend.status=DOWN`.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
