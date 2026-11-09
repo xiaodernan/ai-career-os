@@ -5270,6 +5270,22 @@ cannot fail a request: the same 8-64 character rule the backend uses mints or fo
   48/48, including the compose parser, restart policy, Dockerfile/build-context, env
   coverage and port-table gates.)
 
+### Epic 89 -- the edge keeps its promises under failure and load
+
+The gateway is a proxy, so every promise it makes is about someone else's work. Two
+of those promises are cheap to state and expensive to get wrong: never repeat a write
+that may already have landed, and answer a caller who is asking too fast with a number
+they can obey rather than a timeout they cannot explain.
+
+- [x] **89.1** A read may be asked twice; a write is asked once (measured 2026-11-09).
+
+  (`Retry` sits inside the circuit on the backend route: one retry for GET on a 5xx or
+  an `IOException`, with a 50ms-first backoff capped at 200ms. The order matters -- the
+  breaker wraps one logical call rather than each attempt, and a fallback answer is never
+  repeated, so an unreachable backend is not asked twice. Measured by `GatewayRetryTest`
+  2/2 with an attempt-counting stub: the flaky read reached the backend twice and then
+  answered 200, while the write that answered 500 was attempted exactly once.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

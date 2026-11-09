@@ -20,10 +20,28 @@ spring:
                 # A backend that is down should answer as "the system is unavailable",
                 # not as a stack trace the browser cannot use. The fallback route is
                 # served by this process, so it works while nothing behind it does.
+                # It sits outside the retry: one logical call may try twice, but the
+                # breaker counts the call, not each attempt, and a fallback answer is
+                # never repeated.
                 - name: CircuitBreaker
                   args:
                     name: backend
                     fallbackUri: forward:/_fallback/backend
+                # A GET is safe to repeat: if the backend answered a server error or
+                # the connection never opened, one more attempt costs nothing a user
+                # would notice. POST and the rest are never repeated -- their work may
+                # already have started, and the backend cannot undo it for us.
+                - name: Retry
+                  args:
+                    retries: 1
+                    methods: GET
+                    series: SERVER_ERROR
+                    exceptions: java.io.IOException
+                    backoff:
+                      firstBackoff: 50ms
+                      maxBackoff: 200ms
+                      factor: 2
+                      basedOnPreviousValue: false
           httpclient:
             # A browser should not wait a minute for a connect that will not happen;
             # the response budget is above the backend's 180-second AI read budget,
