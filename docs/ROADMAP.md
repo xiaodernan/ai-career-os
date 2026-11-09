@@ -5221,6 +5221,29 @@ thirty-second rest ended. A fleet that fails together is not more available than
   without the first being entered --, `AiServiceCircuitBreakerTest` 5/5, and the full
   backend non-IT suite 1238/1238.)
 
+## Epic 88 -- the edge answers for the system: a Spring Cloud Gateway in front
+
+One front door. The browser addresses `:8081`, and the gateway forwards `/api/**` to the
+domain backend; the engine stays behind the backend, which owns the internal token and
+the circuit around it -- the edge should not hold either. A malformed trace header
+cannot fail a request: the same 8-64 character rule the backend uses mints or forwards
+`X-Request-Id`, and the CORS policy names the same origins, verbs and headers as
+`SecurityConfig`, so a browser that passes one door cannot fail the other.
+
+- [x] **88.1** The gateway module exists: one route, one id, one CORS policy (measured 2026-11-09).
+
+  (`gateway/` is a Boot 3.5.16 / Spring Cloud 2025.0.3 process -- the offline repository
+  carries the reactive starter only at the later patch -- and shares no classpath with
+  the backend. `RequestIdFilter` is a `GlobalFilter` ordered first: it forwards a valid
+  inbound id or mints a UUID, writes it on the request, the response and the access line,
+  and copies the backend's validation rule so the two processes agree on what a quotable
+  id is. `application.yml` routes `/api/**` to `GATEWAY_BACKEND_URI` (default
+  `http://localhost:8080`) and answers preflights with the backend's own policy. Measured
+  by `GatewayRoutingTest` 6/6 against a real JDK HTTP server: path + query + Authorization
+  forwarded, a minted id seen by both the backend and the browser, a valid inbound id
+  kept, a short one replaced, a non-API path never reaching the backend, and the
+  preflight answered without an upstream call.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -1,0 +1,44 @@
+server:
+  port: ${GATEWAY_PORT:8081}
+
+spring:
+  application:
+    name: career-os-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # One route today: the browser's API traffic belongs to the domain backend.
+          # The engine stays behind the backend, which owns the internal token and the
+          # circuit around it -- the edge should not hold either.
+          routes:
+            - id: backend
+              uri: ${GATEWAY_BACKEND_URI:http://localhost:8080}
+              predicates:
+                - Path=/api/**
+          # Same origins, verbs and headers the backend answers with (SecurityConfig);
+          # a browser that passes one door and fails the other would be a bug report
+          # nobody can reproduce.
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: ${GATEWAY_CORS_ORIGINS:http://localhost:3000}
+                allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+                allowed-headers: [Authorization, Content-Type, X-Internal-Token, X-Request-Id]
+                exposed-headers: [X-Request-Id]
+                max-age: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    # The backend already carries this slot; the edge should be quotable the same way.
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:--}] %logger{36} - %msg%n"
