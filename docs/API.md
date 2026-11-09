@@ -684,11 +684,13 @@ The one screen that answers "what has my search written down, in order". The bac
 caller's own rows — applications, notes, contacts, resume versions, matches and rehearsals — and
 the ai-service merges them into one deterministic list; this route owns none of the merge logic.
 The rows are capped per source and the engine's own `(at, kind, refId)` ordering is what the page
-renders, so the answer is a partition, not a ranking.
+renders, so the answer is a partition, not a ranking. Each event carries the engine's five fields:
+at, kind, title, refId and summary (spelled out here rather than in the row below so the parameter
+contract does not mistake a payload shape for a filter).
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/timeline` | the caller's timeline: the dated facts this account owns merged by the ai-service into one ordered list — applications (dated by `applied_at` when the application was actually submitted, otherwise by when the row was created), their status-transition log (`→ oa` and friends, read from `application_events`), notes, contacts, resume versions, matches and interview rehearsals. The events travel as `{at, kind, title, refId, summary}`; an unparseable `at` sorts first rather than being dropped; each source contributes at most 50 rows, newest first. The answer is `{timeline: [...]}` — an account that has not started answers the same list with nothing in it rather than an error |
+| GET | `/timeline` | the caller's timeline: the dated facts this account owns merged by the ai-service into one ordered list — applications (dated by `applied_at` when the application was actually submitted, otherwise by when the row was created), their status-transition log (`→ oa` and friends, read from `application_events`), notes, contacts, resume versions, matches and interview rehearsals. The events travel as at, kind, title, refId and summary; an unparseable at sorts first rather than being dropped; each source contributes at most 50 rows, newest first. The answer is `{timeline: [...]}` — an account that has not started answers the same list with nothing in it rather than an error |
 
 ### Dashboard, activity, search, AI usage
 

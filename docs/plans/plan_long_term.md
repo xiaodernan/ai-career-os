@@ -7,14 +7,15 @@
 薪酬 → 数据可携带，全部闭环；并且从"问了才答"进化为"替你先做"——定时摄取、
 主动提醒、通知中心、每周摘要、语音面试、移动端与生产级交付。
 
-## 当前状态 (2026-11-08)
+## 当前状态 (2026-11-09)
 
 - **前端**: **1158 个 vitest 通过（116 个文件，70.4 落地后 2026-11-08 复测全绿）**；`tsc --noEmit` 干净（2026-11-08 实测）。2026-11-08 中转态曾有一个红——`endpoints.test.ts` 的绑定参数普查随 70.4 的 `q` 过滤参数落地重钉到 59（c220af0），红已结清。
-- **后端**: 非 IT 选集 **1205 条全绿，Failures/Errors/Skipped 均为 0，BUILD SUCCESS（2026-11-08 实测，`mvn -B "-Dtest=!*IT" test`）**；*IT 需真实栈，未假装通过。2026-11-08 01:03 的一次同命令运行退出码 1，但事后逐份核对 159 份 surefire 报告：全部 `Failures: 0`，dumpstream 为仓库既有的良性 Windows Manifest 警告；同机并行两套他项目完整 pytest 后重跑，干净 BUILD SUCCESS。异常未复现，原因不写成定论。
+- **后端**: 非 IT 选集 **1221 条全绿，Failures/Errors/Skipped 均为 0，BUILD SUCCESS（2026-11-09 实测，Epic 85.1 的 6 条熔断测试在内，`mvn -o -B -Dtest="!*IT" test`）**；*IT 需真实栈，未假装通过。2026-11-08 01:03 的一次同命令运行退出码 1，但事后逐份核对 159 份 surefire 报告：全部 `Failures: 0`，dumpstream 为仓库既有的良性 Windows Manifest 警告；同机并行两套他项目完整 pytest 后重跑，干净 BUILD SUCCESS。异常未复现，原因不写成定论。
 - **ai-service**: **2032 passed, 2 skipped**（2026-11-07 实测）。**2026-11-08 全量（c220af0 落地后复测）：2051 passed、2 skipped、0 failed（381s，`pytest ai-service/tests -q`）**——70.4 的红已结清；本轮提交的 roadmap 台账闸门（3）与旅程闸门（2）包含在内。**依赖安全波复测（pypdf 6.21.2→6.21.4，含进行中的 70.5 测试改动）：2056 passed、2 skipped、0 failed（412s）**；pip-audit（2026-11-08）报无已知漏洞。
 - **E2E**: 24/24 golden journey（最近一次真实栈验证）。
 - **分支**: main 与 origin 同步（本次推送后）。
 - **已完成**: Epics 69–73 收口（2026-11-06 → 11-08）：tag 计数、看板答词（70.4：重演列表以 `q` 按公司/职位/模式回答一个词，随 c220af0 收口）、无界面路由审计、联系人窗口翻页、跨栈契约再测量、roadmap 台账闸门、e2e 体检闸门（`tests/test_the_e2e_readme_keeps_its_own_arithmetic.py`，分项计数与标粗总数都对真实 spec 文件对账，三条变异探针实测变红）。
+- **新增（2026-11-09）**: **Epic 85.1** —— ai-service 桥接接上 Spring Cloud CircuitBreaker（Spring Cloud 2025.0.3 + resilience4j）：10 次滑动窗口 / 5 次门槛 / 50% 失败率 / 30 秒休息 / 半开 2 次试探；上游 4xx 视为“引擎在工作”不计失败，连接拒绝与超时计入；熔断打开时不再发起请求，直接回答同一个 `AI_SERVICE_UNAVAILABLE`。工厂默认的缓存线程池换成直连执行器，保住 MDC 里的 request id 与 RestClient 的 180 秒读超时。顺带把 `/timeline` 文档行的事件字段移出表格，API 参数契约闸门恢复全绿。
 - **已完成（历史）**: Epic 0–38 全部勾选，Epic 39 进行中（39.1–39.2 已勾选）；38（账号够到自己的动词）在 38.5 收口。36（登录的第二道门）在 36.4 收口：设置页
   安全卡、登录第二步、种子与丢手机的 SECURITY 说明、runbook 的锁门处置。
   最近一段是 19.1–19.9（保存的搜索、定时摄取、通知中心、语音面试、离线壳、

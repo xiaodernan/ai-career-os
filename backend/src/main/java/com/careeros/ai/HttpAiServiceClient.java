@@ -47,8 +47,10 @@ public class HttpAiServiceClient implements AiServiceClient {
     private final String internalToken;
     private final String baseUrl;
     private final HttpClient healthClient;
+    private final AiServiceCircuitBreaker guard;
 
-    public HttpAiServiceClient(RestClient.Builder builder, AppProperties props) {
+    public HttpAiServiceClient(RestClient.Builder builder, AppProperties props, AiServiceCircuitBreaker guard) {
+        this.guard = guard;
         this.internalToken = props.getInternal().getToken();
         this.baseUrl = props.getAiService().getBaseUrl().replaceAll("/+$", "");
         this.healthClient = HttpClient.newBuilder()
@@ -279,12 +281,15 @@ public class HttpAiServiceClient implements AiServiceClient {
         // still has to travel the same translation `exchange` applies, so a foreign id answers
         // 404 to the browser instead of the 502 this method's own catch used to flatten it to.
         try {
-            restClient.delete()
-                    .uri("/internal/memories/" + memoryId)
-                    .header("X-Internal-Token", internalToken)
-                    .header("X-User-Id", userId.toString())
-                    .retrieve()
-                    .toBodilessEntity();
+            guard.call(() -> {
+                restClient.delete()
+                        .uri("/internal/memories/" + memoryId)
+                        .header("X-Internal-Token", internalToken)
+                        .header("X-User-Id", userId.toString())
+                        .retrieve()
+                        .toBodilessEntity();
+                return null;
+            });
         } catch (RestClientResponseException e) {
             throw translateStatus(e);
         } catch (RestClientException e) {
@@ -705,7 +710,7 @@ public class HttpAiServiceClient implements AiServiceClient {
     @SuppressWarnings("unchecked")
     private Map<String, Object> exchange(java.util.function.Supplier<Map> call) {
         try {
-            Map raw = call.get();
+            Map raw = guard.call(call::get);
             if (raw == null) {
                 throw new ApiException(ApiErrorCode.AI_SERVICE_EMPTY_RESPONSE, "AI service returned empty body");
             }

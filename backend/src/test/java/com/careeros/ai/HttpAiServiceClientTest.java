@@ -7,8 +7,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import com.careeros.common.RequestIdFilter;
+import com.careeros.config.AiServiceResilienceConfig;
 import com.careeros.config.AppProperties;
 import com.sun.net.httpserver.HttpServer;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -87,7 +91,11 @@ class HttpAiServiceClientTest {
         AppProperties props = new AppProperties();
         props.getInternal().setToken("test-token");
         props.getAiService().setBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
-        client = new HttpAiServiceClient(RestClient.builder(), props);
+        Resilience4JCircuitBreakerFactory breakers = new Resilience4JCircuitBreakerFactory(
+                CircuitBreakerRegistry.ofDefaults(), TimeLimiterRegistry.ofDefaults(), null);
+        new AiServiceResilienceConfig().aiServiceCircuitBreakerCustomizer().customize(breakers);
+        client = new HttpAiServiceClient(RestClient.builder(), props,
+                new AiServiceCircuitBreaker(breakers));
     }
 
     @AfterEach

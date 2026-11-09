@@ -5098,7 +5098,35 @@ without the rest — the same reason the replies page's filters are URL state.
   `?kind=bogus` narrows to nothing and renders the page's own honest empty sentence (`timeline.noKindRows`)
   instead of the workspace's default empty. `All kinds` removes the narrowing. The nav and the API row unchanged.
   Measured by the seven page tests (chip counts, `aria-pressed`, URL clearing via All kinds, absent-kind and
-  unknown-kind honest empties); full suites green below.)
+  unknown-kind honest empties); full suites green below. The API row's payload shape moved into the section
+  prose, because the parameter contract read the quoted `{at, kind, title, refId, summary}` as four filters
+  no endpoint binds (fixed 2026-11-09).
+
+## Epic 85 -- the bridge stops knocking: Spring Cloud CircuitBreaker in front of the ai-service
+
+Every call toward the ai-service used to wait out its own timeout. A dead engine was therefore
+rediscovered by every request: each visitor paid the full connect/read budget, the backend's
+threads piled up behind a process that was not there, and the same 502 was learned over and over.
+The bridge should remember instead -- a handful of failures in a row means "the engine is gone",
+and while that is true a call should fail immediately with the shape the caller already knows.
+This is also the project's first Spring Cloud element: the release train is 2025.0.3 (built for
+Boot 3.5.x), and the circuit breaker arrives through the same `Customizer` seam Spring Cloud uses.
+
+- [x] **85.1** The ai-service bridge carries a circuit breaker: ten calls of memory, five before the rate is trusted, half failing opens it, thirty seconds of rest, then a two-call probe (measured 2026-11-09).
+
+  (`AiServiceCircuitBreaker` wraps only the raw exchange; translation stays outside. The
+  configured `ignoreExceptions(RestClientResponseException.class)` keeps an engine that
+  answered -- even "no" -- from opening the circuit, while a refused socket or a timed-out
+  read counts. While open, the supplier is not entered: the caller receives the same
+  `AI_SERVICE_UNAVAILABLE` 502 directly. Spring Cloud's factory defaults to a cached thread
+  pool, which would lose the request id in the MDC and re-time the RestClient's 180-second
+  read budget against a one-second limiter, so `AiServiceResilienceConfig` installs a direct
+  executor that runs the exchange on the calling thread. The starter's Gradle-scoped
+  `spring-boot-configuration-processor` entry is excluded because Maven cannot honour that
+  scope offline and nothing here reads the metadata. Measured by `AiServiceCircuitBreakerTest`
+  4/4, `AiServiceResilienceConfigTest` 2/2, the updated `HttpAiServiceClientTest` 18/18 --
+  including the request-id ride-along that caught the default pool -- and the full backend
+  non-IT suite 1221/1221 on 2026-11-09.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

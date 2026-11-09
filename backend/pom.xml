@@ -24,7 +24,21 @@
     <jjwt.version>0.13.0</jjwt.version>
     <springdoc.version>2.8.9</springdoc.version>
     <minio.version>8.5.13</minio.version>
+    <!-- Spring Cloud 2025.0.x is the release train built against Boot 3.5.x (Epic 85). -->
+    <spring-cloud.version>2025.0.3</spring-cloud.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -102,6 +116,24 @@
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
+    </dependency>
+    <!-- Epic 85.1: the ai-service bridge gets a circuit breaker (Spring Cloud CircuitBreaker). -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-resilience4j</artifactId>
+      <exclusions>
+        <!--
+          The artifact's pom declares the annotation processor with Gradle's
+          "annotationProcessor" scope. Maven does not know that scope, treats the
+          entry as a hard dependency and then cannot run offline without the jar.
+          The processor only writes metadata for Spring's own module; nothing at
+          runtime reads it here. (It is also not this project's to inherit.)
+        -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-configuration-processor</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- test -->
