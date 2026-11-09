@@ -116,6 +116,10 @@ export const endpoints = {
   copilotChatStream: "/copilot/chat/stream",
   aiUsage: "/ai-usage/summary",
 
+  /* ---------------- One timeline over the whole loop (Epic 81) -------------- */
+  /** The reader's whole search as one ordered list of what already happened — groups, not screens. */
+  timeline: "/timeline",
+
   /* ---------------- Activity / reports / search / chat history ----------- */
   activityRuns: "/activity/runs",
   activityRun: (id: string) => `/activity/runs/${seg(id)}`,

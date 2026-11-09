@@ -678,6 +678,18 @@ strings, and `lastTouchAt` is the user's claim about when contact last happened.
 | GET / PATCH / DELETE | `/conversations/{id}` | |
 | GET | `/conversations/{id}/messages` | transcript with artifacts/sources/actions |
 
+### The timeline (`/timeline`)
+
+The one screen that answers "what has my search written down, in order". The backend reads the
+caller's own rows — applications, notes, contacts, resume versions, matches and rehearsals — and
+the ai-service merges them into one deterministic list; this route owns none of the merge logic.
+The rows are capped per source and the engine's own `(at, kind, refId)` ordering is what the page
+renders, so the answer is a partition, not a ranking.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/timeline` | the caller's timeline: the dated facts this account owns merged by the ai-service into one ordered list — read-only, no window, no query string of any kind; the answer carries the engine's own shape, and an account that has not started answers the same list with nothing in it rather than an error |
+
 ### Dashboard, activity, search, AI usage
 
 | Method | Path | Notes |
@@ -750,6 +762,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/pipeline-funnel` | Epic 15.1 -- how many applications reached each stage, and where they stall (backend `pipelineFunnel`) |
 | POST | `/internal/features/response-rate` | Epic 15.2 -- reply / interview / offer rates and per-stage durations (backend `responseRate`) |
 | POST | `/internal/features/company-brief` | Epic 4.8 -- what the corpus says about one company (backend `companyBrief`) |
+| POST | `/internal/features/career-timeline` | Epic 81 -- one timeline over the whole loop: the caller's event rows (applications, notes, contacts, resume versions, matches, interview rehearsals) merged into a single deterministic `{at, kind, title, refId, summary}` list, no LLM (backend `careerTimeline`) |
 | GET | `/internal/memories` | the copilot's own memories, `?kinds` filtered, for the settings panel (backend `listMemories`) |
 | PATCH | `/internal/memories/{memory_id}` | correct one memory's text, or lower the weight it is quoted at (backend `patchMemory`) |
 | DELETE | `/internal/memories/{memory_id}` | forget one memory; the row is gone, not hidden (backend `deleteMemory`) |
@@ -798,13 +811,11 @@ Seven routes that no backend caller builds do sit in section 3, and each says so
 Purpose cell; the gate that partitions the unreached surface charges those seven with
 carrying the marker and every other row with not carrying it.
 
-Every engine now has a backend caller before Epic 81 landed ahead of its bridge, so this
-table is empty no more — `/internal/features/career-timeline` is registered and waiting for
-the backend's `GET /api/v1/timeline` bridge to exist and call it.
+Every engine now has a backend caller, so this table is empty — a new engine that ships
+ahead of its bridge joins it again, and the split is re-measured.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/internal/features/career-timeline` | Epic 81 -- one timeline over the whole loop: merges the per-user event rows the bridge reads (applications, notes, contacts, tailored materials, interviews, matches, digests) into a single `{at, kind, title, refId, summary}` list, deterministic sort, no LLM. The bridge that calls it does not exist yet, so the route waits here. |
 
 ## 4. Worked examples
 

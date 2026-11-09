@@ -618,6 +618,12 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> careerTimeline(UUID userId, List<Map<String, Object>> events) {
+        // Epic 81: the engine's whole input is the events the backend already read; no other state.
+        return post("/internal/features/career-timeline", userId, Map.of("events", events));
+    }
+
+    @Override
     public Map<String, Object> pipelineFunnel(UUID userId, List<Map<String, Object>> applications) {
         return post("/internal/features/pipeline-funnel", userId, Map.of("applications", applications));
     }

@@ -26,6 +26,7 @@ export const translations = {
       monitoring: "Monitoring",
       rateLimit: "Rate limit",
       activity: "Activity",
+      timeline: "Timeline",
       settings: "Settings",
       ingestion: "Ingestion",
       yourData: "Your data",
@@ -59,6 +60,7 @@ export const translations = {
       ingestion: "Import jobs from feeds and boards",
       yourData: "Export, restore and redact your data",
       activity: "AI agent runs and traces",
+      timeline: "One ordered read of the whole loop",
       settings: "Account and preferences",
     },
     /**
@@ -83,6 +85,28 @@ export const translations = {
       save: "Save this job",
       saved: "Saved",
       saveShort: "Save",
+    },
+    /**
+     * The one screen that answers "what has my search written down, in order" (Epic 81):
+     * applications, notes, contacts, resume versions, matches and rehearsals — merged by the
+     * engine, never by this page. Only the words here; the rows come from the read.
+     */
+    timeline: {
+      title: "Timeline",
+      description:
+        "Everything your search has written down, in order — applications, notes, contacts, resume versions, matches and rehearsals.",
+      emptyTitle: "Nothing written down yet",
+      emptyDescription:
+        "Every step you take feeds this list: keep a job, write a note, add a contact, or rehearse an interview — they show up here in the order they happened.",
+      kinds: {
+        application: "Application",
+        note: "Note",
+        contact: "Contact",
+        resume_version: "Resume version",
+        match: "Match",
+        interview: "Rehearsal",
+        unknown: "Something else",
+      },
     },
     // Common actions
     common: {
@@ -3146,6 +3170,7 @@ export const translations = {
       monitoring: "监控",
       rateLimit: "限流",
       activity: "活动",
+      timeline: "时间线",
       settings: "设置",
       ingestion: "职位导入",
       yourData: "你的数据",
@@ -3176,6 +3201,7 @@ export const translations = {
       ingestion: "从订阅源和招聘板导入职位",
       yourData: "导出、恢复与删减你的数据",
       activity: "AI 代理运行与轨迹",
+      timeline: "一条时间线看懂整个求职闭环",
       settings: "账号与偏好",
     },
     theme: {
@@ -3187,6 +3213,27 @@ export const translations = {
       save: "收藏这个职位",
       saved: "已收藏",
       saveShort: "收藏",
+    },
+    /**
+     * 一屏看懂整个求职闭环（Epic 81）：投递、笔记、联系人、简历版本、匹配与模拟面试，
+     * 由服务端合并排好序，不在这一页里拼。这里只有文案，行数据都来自那次读。
+     */
+    timeline: {
+      title: "时间线",
+      description:
+        "你的求职过程写下的每一件事，按时间排好——投递、笔记、联系人、简历版本、匹配和模拟面试。",
+      emptyTitle: "还没有记录",
+      emptyDescription:
+        "每走一步都会记在这里：收藏一个职位、写一条笔记、加一个联系人、模拟一场面试，按时间一条条出现。",
+      kinds: {
+        application: "投递",
+        note: "笔记",
+        contact: "联系人",
+        resume_version: "简历版本",
+        match: "匹配",
+        interview: "模拟面试",
+        unknown: "其他",
+      },
     },
     // Common actions
     common: {

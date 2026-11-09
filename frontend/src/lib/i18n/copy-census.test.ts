@@ -98,8 +98,11 @@ describe("the browser's copy", () => {
     // shared click, and `better-answer-note-button.tsx`, the card that keeps a stronger answer;
     // 157 with `components/interviews/gap-note-button.tsx`, the gap card's keep action (63.1),
     // and 158 with `components/interviews/prepare-note-button.tsx`, the same for the questions
-    // the grader said to prepare (63.2).
-    expect(browserSources().length).toBe(158);
+    // the grader said to prepare (63.2), and 160 with the timeline page and its layout (81):
+    // `app/(app)/timeline/page.tsx` and `app/(app)/timeline/layout.tsx` — the English words in them are
+    // the whole page's copy, so they are browser sources. (`lib/hooks/timeline.ts` is the `.ts` half
+    // and was never part of this walk.)
+    expect(browserSources().length).toBe(160);
   });
 
   it("finds a sentence, however long it is", () => {

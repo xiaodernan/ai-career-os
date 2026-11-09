@@ -55,6 +55,7 @@ BOUNDARY_SCREENS = [
     "frontend/src/app/(app)/interviews/page.tsx",
     "frontend/src/app/(app)/jobs/page.tsx",
     "frontend/src/app/(app)/resumes/page.tsx",
+    "frontend/src/app/(app)/timeline/page.tsx",
 ]
 # Screens that hand their query to the second shell, module-view.tsx.
 MODULE_VIEW_SCREENS = [
@@ -65,6 +66,7 @@ MODULE_VIEW_SCREENS = [
     "frontend/src/app/(app)/networking/page.tsx",
 ]
 # The remaining screens: neither shell, so they branch on their own query flags.
+# (81 brought the timeline in on the boundary shell, 6/27.)
 # The growth page joined with 10.3: its report is a mutation's answer, so it branches
 # on its own `isPending` rather than either shell.
 OWN_FLAG_SCREENS = [
@@ -126,7 +128,7 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 33, "app/%s page.tsx files, not the 33 this file walks" % len(out)
+    assert len(out) == 34, "app/%s page.tsx files, not the 34 this file walks (Epic 81 joined the walk)" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
@@ -179,9 +181,9 @@ def status_of(status: str) -> list:
 # ------------------------------------------------------------------ cases
 
 
-def test_the_contract_called_single_is_used_by_five_of_the_twenty_six_app_screens():
+def test_the_contract_called_single_is_used_by_six_of_the_twenty_seven_app_screens():
     screens = app_screens()
-    assert len(screens) == 26, "%d screens under app/(app), not 26" % len(screens)
+    assert len(screens) == 27, "%d screens under app/(app), not 27" % len(screens)
     users = boundary_users()
     assert users == BOUNDARY_SCREENS, "the boundary is used by %s" % [u.split("app/")[-1] for u in users]
     assert stmt(read(BOUNDARY), "single async contract used by every surface") == \
@@ -192,7 +194,7 @@ def test_the_contract_called_single_is_used_by_five_of_the_twenty_six_app_screen
     assert len(non) == 21, "%d screens render without the contract this file calls single" % len(non)
 
 
-def test_twenty_one_of_the_twenty_six_screens_decide_the_async_state_somewhere_else():
+def test_twenty_one_of_the_twenty_seven_screens_decide_the_async_state_somewhere_else():
     screens = app_screens()
     b, mv = boundary_users(), module_view_users()
     assert mv == MODULE_VIEW_SCREENS, "ModuleView is spent by %s" % [u.split("app/")[-1] for u in mv]
@@ -202,7 +204,7 @@ def test_twenty_one_of_the_twenty_six_screens_decide_the_async_state_somewhere_e
     flags = set(own_flag_screens())
     bare = [s for s in neither if s not in flags]
     assert bare == [], "%s render a query with no failure branch at all -- this file used to claim so" % bare
-    assert len(b) + len(mv) + len(neither) == len(screens) == 26, "the three sets stopped covering the app"
+    assert len(b) + len(mv) + len(neither) == len(screens) == 27, "the three sets stopped covering the app"
     assert stmt(read(MODULE_VIEW), "shared async list shell for every") == \
         "* ModuleView \u2014 the shared async list shell for every (app) resource page.", (
         "the second shell's own universality claim moved, so the 5/5/15 split above needs re-measuring")
@@ -391,5 +393,5 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     assert "items: arr.map(map)," in read(NORMALIZE), "the page builder no longer writes items"
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
-    assert len(not_found_codes()) == 36 and len(boundary_users()) == 5
+    assert len(not_found_codes()) == 36 and len(boundary_users()) == 6
     assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 16

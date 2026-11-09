@@ -1695,6 +1695,26 @@ export interface ContactRelation {
 }
 
 /* ------------------------------------------------------------------ */
+/* The timeline over the whole loop (Epic 81)                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One event on the timeline (`TimelineService.row` / the engine's own merge):
+ * a dated fact the caller's own data recorded. The kinds are owned by the
+ * backend's row builders (`application`, `note`, `contact`, `resume_version`,
+ * `match`, `interview`); anything else is `unknown`, never a screen of its own.
+ * `at` is whatever the row recorded, which may be unparseable on a bad row —
+ * the engine sorts those first rather than dropping the fact.
+ */
+export interface TimelineEntry {
+  at: string;
+  kind: string;
+  title: string;
+  refId: string;
+  summary: string;
+}
+
+/* ------------------------------------------------------------------ */
 /* Growth report                                                       */
 /* ------------------------------------------------------------------ */
 

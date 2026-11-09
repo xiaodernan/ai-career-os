@@ -5049,6 +5049,25 @@ answer to it. `/networking` had a chip for nothing. This epic gives the chips a 
   row taught it: the chips show the server's count, not the count of the rows in hand.
   Measured against the live stack by `ContactRelationIT` (2/2 green: word ∩ relation ∩ page compose,
   chip and word narrow together, counts agree with the narrowing) and the full suites listed below.)
+## Epic 81 -- one timeline over the whole loop
+
+The product writes six kinds of dated rows about the reader's search and each was
+scored to a screen of its own: the reader had no single place to scroll and see
+"what happened, in order". This epic builds the fold any screen can not.
+
+- [x] **81** Every account's own windows merge into one `GET /api/v1/timeline` (measured 2026-11-09).
+
+  (The ai-service engine `app/features/career_timeline.py` merges the caller's event rows into
+  one deterministic `{at, kind, title, refId, summary}` list — sorted by `(at, kind, refId)`, at
+  unparseable sorts first rather than crashing the page — with zero model call; `POST
+  /internal/features/career-timeline` stays behind `require_internal` under its forward-features
+  pin. The backend bridge (`TimelineService` + `TimelineController`) reads the caller's own
+  applications, notes, contacts, resume versions, matches and interview sessions (50 rows per
+  source), maps them to the engine's five fields and forwards them to the engine; the page
+  (`/timeline`) renders the engine's file, not a fold of its own. Measured by `TimelineIT` 3/3
+  on the live stack (empty account = honest empty; one reader never sees another's rows; all six
+  kinds mapped) and `TimelineServiceTest` 3/3, plus the full suites below.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

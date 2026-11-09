@@ -73,5 +73,10 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
      */
     List<Contact> findByUserIdOrderByUpdatedAtDesc(UUID userId);
 
+    /**
+     * Epic 81: the caller's people, most recently touched first, ties broken by id, paged by the cap.
+     */
+    Page<Contact> findByUserIdOrderByUpdatedAtDescIdAsc(UUID userId, Pageable pageable);
+
     Optional<Contact> findByIdAndUserId(UUID id, UUID userId);
 }

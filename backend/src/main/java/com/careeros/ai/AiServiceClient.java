@@ -293,6 +293,15 @@ public interface AiServiceClient {
     Map<String, Object> classifyReply(UUID userId, String text);
 
     /**
+     * Epic 81 -- one timeline over the whole loop: merges the caller's event rows
+     * (the account's own timestamps, nothing else) into a single ordered list. The
+     * engine is pure and deterministic -- no LLM, no second read -- so the bridge
+     * hands it only rows that already exist and owns none of the merge. The answer
+     * is {@code {timeline: [...]}} in the engine's own shape.
+     */
+    Map<String, Object> careerTimeline(UUID userId, List<Map<String, Object>> events);
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is.
      */

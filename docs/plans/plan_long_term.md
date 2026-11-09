@@ -1322,6 +1322,17 @@
   实测：`ContactRelationIT` 2/2 全绿（word ∩ relation ∩ page，chip 与 word 同时收窄、counts 与 narrowing 一致）、
   `ContactNeedleIT` 4/4 共6/6、backend 1211 全绿、ai-service 2185 全绿（含 209 record 规尺 + 8 个原生查询 +
   64/66/127/56 扫描尺）、frontend 117/1157、typecheck 干净、i18n 59 键零出入。
+- **Epic 81 — 一条时间线看整个闭环**（已落地，2026-11-09，路线已排通）：ai-service 纯函数引擎
+  `app/features/career_timeline.py` 把阅读者自己的事件行合并成一条 `{at, kind, title, refId, summary}` 有序
+  列表，确定性分桶 `(at, kind, refId)`，零模型调用；`POST /internal/features/career-timeline` 恒在
+  `require_internal` 背后，FORWARD 闸钉住。后端桥（`com.careeros.report`：`TimelineService` +
+  `TimelineController`）读取 caller 自己的 applications / notes / contacts / resume versions / matches /
+  interview sessions（每源上限 50 行），映射成引擎的五个字段，/internal 转发一次；`GET /api/v1/timeline`
+  的回答是引擎的形：`{timeline: [...]}`。 frontend 获 `/timeline`（`lib/hooks/timeline.ts`、
+  `mapTimelineEntry`、`KIND_VISUALS`、侧边栏条目）与两边语言 i18n（`timeline.kinds.*`）。
+  实测：`TimelineIT` 3/3 全绿（空号答诚实空、两人各见己行、六类映射由 `TimelineServiceTest` 3/3 锁住）、
+  backend 非 IT 1214 run ×0 failures BUILD SUCCESS、ai-service 2286 passed / 2 skipped、
+  frontend 1164/1164（118 files）、`tsc --noEmit` 干净、`npm run build` 32/32、doc census 闸门 54/54 绿。
 
 ## 开发协议
 （每个任务）

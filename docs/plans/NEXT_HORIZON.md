@@ -94,14 +94,7 @@ eight). Full suites green incl. `ContactRelationIT` 2/2 against the live stack.
 
 ---
 
-## Epic 81 — one timeline over the whole loop — **STARTED 2026-11-09, engine-only**
-
-**Shipped 2026-11-09.** `POST /internal/features/career-timeline` exists and pins the
-contract in `test_forward_features_contract.py`; the engine is pure and deterministic
-(`app/features/career_timeline.py`, sorted by `(at, kind, refId)`); api-doc §3.2 records it
-as forward-not-yet-called. Backend bridge + frontend page not landed yet — the epic stays
-open until then.
-
+## Epic 81 — one timeline over the whole loop — **CLOSED 2026-11-09**
 
 **Measured.** The product stores resume versions, JD analyses, matches, tailored
 materials, interview sessions, applications, notes, contacts, offers and digests,
@@ -117,6 +110,22 @@ with a `/timeline` page. Pin the new internal route in
 
 **Done when** a journey-created account sees its own events in order, an empty
 account sees an honest empty, and no other account's row can appear.
+
+**Shipped 2026-11-09.** The engine (`app/features/career_timeline.py`) merges the
+caller's event rows into one deterministic `{at, kind, title, refId, summary}` list,
+sorted by `(at, kind, refId)`, no LLM; `POST /internal/features/career-timeline`
+is behind `require_internal` with its FORWARD pin. The backend bridge
+(`com.careeros.report`: `TimelineService` + `TimelineController`) reads the caller's
+own applications, notes, contacts, resume versions, matches and interview sessions
+(50 rows per source, capped), maps them to the engine's five fields and forwards
+them to the engine; the answer is the engine's own shape under `GET /api/v1/timeline`
+(`TimelineIT` 3/3 against the live stack: empty account answers an honest empty,
+one account's rows never reach another, all six kinds mapped and pinned by units).
+The frontend gains `/timeline` (`lib/hooks/timeline.ts`, `mapTimelineEntry`,
+`KIND_VISUALS`) and its nav row; i18n has both languages. Measured green: backend
+non-IT 1214 run / 0 failures incl. `TimelineServiceTest` 3/3; ai-service 2286
+passed / 2 skipped; frontend 1164/1164 (118 files) + `tsc --noEmit` + `npm run
+build`; doc census gates 54/54.
 
 ---
 

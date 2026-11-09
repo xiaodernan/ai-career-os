@@ -392,7 +392,8 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
         "GrowthService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
-        "ResumeService.java", "ScheduledIngestionService.java", "VoiceService.java",
+        "ResumeService.java", "ScheduledIngestionService.java",
+        "TimelineService.java", "VoiceService.java",
     ]
 
 

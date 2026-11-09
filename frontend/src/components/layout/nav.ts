@@ -6,6 +6,7 @@ import {
   Database,
   FileText,
   Gauge,
+  History,
   Handshake,
   LayoutDashboard,
   Library,
@@ -72,6 +73,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/ingestion", label: "Ingestion", labelKey: "nav.ingestion", descriptionKey: "navDescriptions.ingestion", icon: Layers, description: "Import jobs from feeds and boards" },
   { href: "/data", label: "Your data", labelKey: "nav.yourData", descriptionKey: "navDescriptions.yourData", icon: Database, description: "Export, restore and redact your data" },
   { href: "/activity", label: "Activity", labelKey: "nav.activity", descriptionKey: "navDescriptions.activity", icon: ActivityIcon, description: "AI agent runs and traces" },
+  { href: "/timeline", label: "Timeline", labelKey: "nav.timeline", descriptionKey: "navDescriptions.timeline", icon: History, description: "One ordered read of the whole loop" },
   { href: "/settings", label: "Settings", labelKey: "nav.settings", descriptionKey: "navDescriptions.settings", icon: Settings, description: "Account and preferences" },
 ];
 

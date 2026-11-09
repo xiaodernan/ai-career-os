@@ -442,6 +442,32 @@ public class FakeAiServiceClientConfig {
         }
 
         /**
+         * The timeline bridge's answer (Epic 81): the same merge the engine performs,
+         * so an integration test can assert both that the events travelled and that the
+         * fold is deterministic. Well-formed ISO `at` strings sort ascending;
+         * unparseable ones sort first, matching the engine's contract.
+         */
+        @Override
+        public Map<String, Object> careerTimeline(UUID userId, List<Map<String, Object>> events) {
+            record("careerTimeline");
+            List<Map<String, Object>> merged = new java.util.ArrayList<>();
+            for (Map<String, Object> e : events == null ? List.<Map<String, Object>>of() : events) {
+                Map<String, Object> row = new java.util.LinkedHashMap<>();
+                row.put("at", String.valueOf(e.getOrDefault("at", "")));
+                row.put("kind", String.valueOf(e.getOrDefault("kind", "unknown")));
+                row.put("title", String.valueOf(e.getOrDefault("title", "")));
+                row.put("refId", String.valueOf(e.getOrDefault("refId", e.getOrDefault("ref_id", ""))));
+                row.put("summary", String.valueOf(e.getOrDefault("summary", "")));
+                merged.add(row);
+            }
+            merged.sort(java.util.Comparator.comparing(
+                    (Map<String, Object> r) -> String.valueOf(r.get("at")))
+                    .thenComparing(r -> String.valueOf(r.get("kind")))
+                    .thenComparing(r -> String.valueOf(r.get("refId"))));
+            return map("timeline", merged);
+        }
+
+        /**
          * What the export bridge answers with (13.1): a bundle whose manifest carries
          * the content hash the redaction path recomputes.
          */

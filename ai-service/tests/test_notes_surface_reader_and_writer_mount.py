@@ -132,6 +132,8 @@ SPEAKERS: dict[str, str] = {
         "69.2's counts read names the route in its docstring; it asks endpoints.knowledgeNoteTags",
     "frontend/src/lib/note-tags.ts":
         "prose: the NoteTagCount type is described as one row of GET /knowledge/notes/tags",
+    "backend/src/test/java/com/careeros/TimelineIT.java":
+        "81 seeds a note through the route so the timeline has one dated note to fold",
 }
 
 # Files whose text contains the route's characters without mentioning the route, because the panel
