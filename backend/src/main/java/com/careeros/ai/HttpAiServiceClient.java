@@ -45,14 +45,17 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     private final RestClient restClient;
     private final String internalToken;
-    private final String baseUrl;
     private final HttpClient healthClient;
     private final AiServiceCircuitBreaker guard;
+    private final AiServiceRouter router;
+    private final AiServiceDiscoveryClient discovery;
 
-    public HttpAiServiceClient(RestClient.Builder builder, AppProperties props, AiServiceCircuitBreaker guard) {
+    public HttpAiServiceClient(RestClient.Builder builder, AppProperties props, AiServiceCircuitBreaker guard,
+                               AiServiceRouter router, AiServiceDiscoveryClient discovery) {
         this.guard = guard;
+        this.router = router;
+        this.discovery = discovery;
         this.internalToken = props.getInternal().getToken();
-        this.baseUrl = props.getAiService().getBaseUrl().replaceAll("/+$", "");
         this.healthClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(HEALTH_TIMEOUT)
@@ -65,7 +68,7 @@ public class HttpAiServiceClient implements AiServiceClient {
                 .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(Duration.ofSeconds(180));
-        this.restClient = builder.baseUrl(props.getAiService().getBaseUrl())
+        this.restClient = builder
                 .requestFactory(factory)
                 // The ai-service logs the same id, so one grep follows a turn across both
                 // services. Calls made outside a request (the nightly sweep) have none and
@@ -86,22 +89,31 @@ public class HttpAiServiceClient implements AiServiceClient {
      * secret to a door that never asks for one. Anything that is not a 2xx -- a refusal, a
      * timeout, a socket that never opened -- is false; a failed probe is a report, not an
      * exception.
+     *
+     * <p>Every configured instance is asked and the line is up when any of them answers
+     * (Epic 85.2). One replica being down must not report the whole engine down while the
+     * bridge is still serving from the others.
      */
     @Override
     public boolean healthy() {
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/health"))
-                    .timeout(HEALTH_TIMEOUT)
-                    .GET()
-                    .build();
-            return healthClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() / 100 == 2;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-        } catch (Exception e) {
-            return false;
+        for (URI target : discovery.targets()) {
+            try {
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(target.toString().replaceAll("/+$", "") + "/health"))
+                        .timeout(HEALTH_TIMEOUT)
+                        .GET()
+                        .build();
+                if (healthClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() / 100 == 2) {
+                    return true;
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            } catch (Exception e) {
+                // The next instance may still be there; only "none answered" is false.
+            }
         }
+        return false;
     }
 
     @Override
@@ -283,7 +295,7 @@ public class HttpAiServiceClient implements AiServiceClient {
         try {
             guard.call(() -> {
                 restClient.delete()
-                        .uri("/internal/memories/" + memoryId)
+                        .uri(router.url("/internal/memories/" + memoryId))
                         .header("X-Internal-Token", internalToken)
                         .header("X-User-Id", userId.toString())
                         .retrieve()
@@ -673,7 +685,7 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     private Map<String, Object> post(String path, UUID userId, Map<String, Object> body) {
         return exchange(() -> restClient.post()
-                .uri(path)
+                .uri(router.url(path))
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Internal-Token", internalToken)
                 .header("X-User-Id", userId.toString())
@@ -689,7 +701,7 @@ public class HttpAiServiceClient implements AiServiceClient {
      */
     private Map<String, Object> patch(String path, UUID userId, Map<String, Object> body) {
         return exchange(() -> restClient.patch()
-                .uri(path)
+                .uri(router.url(path))
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Internal-Token", internalToken)
                 .header("X-User-Id", userId.toString())
@@ -700,7 +712,7 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     private Map<String, Object> get(String path, UUID userId) {
         return exchange(() -> restClient.get()
-                .uri(path)
+                .uri(router.url(path))
                 .header("X-Internal-Token", internalToken)
                 .header("X-User-Id", userId.toString())
                 .retrieve()

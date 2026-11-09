@@ -135,6 +135,26 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- Epic 85.2: ai-service instances are a discovery list, and calls round-robin across them. -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-configuration-processor</artifactId>
+        </exclusion>
+        <!--
+          The starter pins Boot's cache starter at a version this offline build does not
+          have. Nothing here needs it: the cache autoconfiguration only wants a
+          CacheManager, which Boot still provides from spring-context.
+        -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-cache</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
 
     <!-- test -->
     <dependency>

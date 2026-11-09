@@ -246,6 +246,13 @@ public class AppProperties {
 
     public static class AiService {
         private String baseUrl = "http://localhost:8000";
+        /**
+         * Epic 85.2: a comma-separated list of absolute http(s) origins. When it is set the
+         * engine is a service with several doors and calls round-robin across them; when it
+         * is empty the base URL is the only instance, which is what every single-node run
+         * has always been.
+         */
+        private String instances = "";
 
         public String getBaseUrl() {
             return baseUrl;
@@ -253,6 +260,14 @@ public class AppProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
+        }
+
+        public String getInstances() {
+            return instances;
+        }
+
+        public void setInstances(String instances) {
+            this.instances = instances;
         }
     }
 

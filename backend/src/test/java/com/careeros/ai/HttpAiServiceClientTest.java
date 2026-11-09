@@ -3,6 +3,9 @@ package com.careeros.ai;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
@@ -24,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
+import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -94,8 +98,13 @@ class HttpAiServiceClientTest {
         Resilience4JCircuitBreakerFactory breakers = new Resilience4JCircuitBreakerFactory(
                 CircuitBreakerRegistry.ofDefaults(), TimeLimiterRegistry.ofDefaults(), null);
         new AiServiceResilienceConfig().aiServiceCircuitBreakerCustomizer().customize(breakers);
+        AiServiceDiscoveryClient discovery = new AiServiceDiscoveryClient(props);
+        LoadBalancerClient loadBalancer = mock(LoadBalancerClient.class);
+        // This test drives one literal server; the router's configured-door fallback is the
+        // path under test, and the round-robin itself is exercised in AiServiceRouterTest.
+        when(loadBalancer.choose(anyString())).thenReturn(null);
         client = new HttpAiServiceClient(RestClient.builder(), props,
-                new AiServiceCircuitBreaker(breakers));
+                new AiServiceCircuitBreaker(breakers), new AiServiceRouter(loadBalancer, discovery), discovery);
     }
 
     @AfterEach

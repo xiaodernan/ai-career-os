@@ -138,6 +138,9 @@ app:
     bucket: ${MINIO_BUCKET:careeros-files}
   ai-service:
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    # Epic 85.2: comma-separated origins for a multi-instance engine. Empty means the
+    # base URL above is the only door, so single-node deployments need no new setting.
+    instances: ${AI_SERVICE_INSTANCES:}
   ratelimit:
     enabled: true
     auth-per-minute: ${RATELIMIT_AUTH_PER_MINUTE:10}

@@ -5128,6 +5128,22 @@ Boot 3.5.x), and the circuit breaker arrives through the same `Customizer` seam 
   including the request-id ride-along that caught the default pool -- and the full backend
   non-IT suite 1221/1221 on 2026-11-09.)
 
+- [x] **85.2** The ai-service is a service with doors, not an address: `AI_SERVICE_INSTANCES` turns comma-separated origins into discovery instances and the bridge asks Spring Cloud LoadBalancer for one on every call (measured 2026-11-09).
+
+  (`AiServiceDiscoveryClient` implements `DiscoveryClient`; an empty list keeps the base
+  URL as the only door, so every single-node deployment needs no new setting. Entries are
+  validated at boot -- absolute http(s) origins, no path or query -- so a typo names
+  itself instead of becoming a mysterious 502 hours later. `AiServiceRouter` asks the
+  blocking load balancer per call and resolves the path against the chosen origin; the
+  choice is never pinned here, so a node going quiet is skipped on the next request. The
+  health line asks every instance and is up when any answers -- one dead replica must not
+  report the engine down while the bridge still serves. The loadbalancer starter's Boot
+  cache starter is excluded: the offline tree pins a version this build does not have,
+  and the cache autoconfiguration only needs a `CacheManager`, which Boot still provides.
+  Measured by `AiServiceDiscoveryClientTest` 5/5, `AiServiceRouterTest` 3/3, the updated
+  `HttpAiServiceClientTest` 18/18, a full-context boot in `HealthIT`, and the full backend
+  non-IT suite 1229/1229.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
