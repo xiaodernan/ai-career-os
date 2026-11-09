@@ -43,9 +43,9 @@ tracking → career dashboard.
    └────────────────────────┘
 ```
 
-All four app services (gateway included) + infra run via `docker-compose.yml` (target env), while
-frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spring-boot:run`,
-`uvicorn`). Database/Redis/MinIO always run in Docker.
+All five app services (discovery and gateway included) + infra run via `docker-compose.yml`
+(target env), while the services can also run natively for dev (`pnpm dev`,
+`mvn spring-boot:run`, `uvicorn`). Database/Redis/MinIO always run in Docker.
 
 ### Why this split
 - **Spring Boot** owns the domain: authentication, authorization, ownership checks,
@@ -55,6 +55,10 @@ frontend/backend/ai-service can also run natively for dev (`pnpm dev`, `mvn spri
 - **Python AI service** owns everything probabilistic: parsing, embeddings, retrieval,
   reranking, LLM orchestration, evaluation. Python is the only sane place for the
   LLM/RAG ecosystem.
+- **Eureka registry** owns discovery. It is a separate process because a registry that
+  shares a JVM with the service it describes cannot report that service's death; the
+  edge and the backend treat it as a profile-gated option, never a boot dependency
+  (roadmap 98).
 - Postgres + pgvector as one store keeps the vector/keyword/metadata layers
   transactional with the domain (no sync problems), and hybrid search is one SQL query.
 - Query vectors are fetched once per query text and shared: `QueryEmbeddingService`

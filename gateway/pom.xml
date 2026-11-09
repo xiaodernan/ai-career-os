@@ -81,6 +81,16 @@
       <groupId>io.github.resilience4j</groupId>
       <artifactId>resilience4j-ratelimiter</artifactId>
     </dependency>
+    <!--
+      98.1: `lb://backend` can be answered by a registry instead of a configuration
+      list. The client stays inert until `eureka.client.enabled` is true, so a laptop
+      with no registry still starts and routes through the simple list; the `eureka`
+      profile is what turns the registry into the answer.
+    -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>

@@ -5473,6 +5473,41 @@ event an operator needs a number for when the flood is happening.
   because tagging by the token hash or address would create one series per caller --
   highest cardinality during the flood the counter exists to describe. Module 28/28.)
 
+### Epic 98 -- the registry becomes a process, and the stack survives without it
+
+A service address in a configuration file is a fact the operator typed. A registry is
+the same fact published by the process that owns it, which is what lets a second
+instance join a rolling deploy without editing every caller. The interesting part is
+not the registry but the switch: the stack has to keep running -- and every suite has
+to keep passing -- when no registry exists.
+
+- [x] **98.1** The edge is discovered rather than configured (measured 2026-11-10).
+
+  (`discovery/` is a Spring Cloud Netflix Eureka server on 8761.
+  `GatewayRegistryProfileTest` proves the `eureka` profile empties the simple instance
+  list instead of adding to it, so the edge cannot split its decisions between the
+  registry and a stale address; the probe was run with the override removed and failed
+  on the configured instance. The base documents keep `eureka.client.enabled` false, so
+  the gateway's suite runs with no registry at all. Gateway module 29/29.)
+
+- [x] **98.2** The registry keeps what is registered and forgets what is withdrawn
+  (measured 2026-11-10).
+
+  (`DiscoveryApplicationTests` registers an `InstanceInfo` through the same
+  `PeerAwareInstanceRegistry` the HTTP endpoint feeds, reads it back from
+  `/eureka/apps`, cancels it, and asserts it is gone; the dashboard and health routes
+  are read too, so the servlet stack is proven to have started. Discovery module 4/4.)
+
+- [x] **98.3** Every citizen names the registry the stack runs (measured 2026-11-10).
+
+  (`test_the_registry_and_its_citizens_agree.py` parses the registry's own default
+  port out of its yml and compares both `defaultZone`s against it; it then requires
+  both compose files to name the same zone, activate the profile, and probe the new
+  service. Changing the gateway's zone to 9999 makes it fail by name. The gateway and
+  backend default to off, so a laptop keeps the configured topology; both env examples
+  declare the six variables the backend reads. 5/5; ai-service full suite 2305 passed /
+  2 skipped; backend 1367/1367.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

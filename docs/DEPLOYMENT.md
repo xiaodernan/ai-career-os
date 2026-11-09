@@ -1,7 +1,7 @@
 # Deployment
 
 How to bring AI Career OS up locally and what each knob controls. The stack is
-four application services (gateway, backend, ai-service, frontend) plus three stateful
+five application services (discovery, gateway, backend, ai-service, frontend) plus three stateful
 dependencies (PostgreSQL + pgvector, Redis, MinIO).
 
 Redis is small but not optional: it backs only the rate limiter and the backend's
@@ -162,7 +162,7 @@ fails if `app/core/config.py`'s published defaults drift from the preflight's co
 
 ### Ports published by the production override
 
-`docker-compose.prod.yml` republishes the four app services, and an entry written as
+`docker-compose.prod.yml` republishes the five app services, and an entry written as
 `HOST:CONTAINER` with no interface prefix is bound on every interface of the host. The
 override therefore opens three ports the development file keeps to the machine:
 
@@ -172,6 +172,7 @@ override therefore opens three ports the development file keeps to the machine:
 | backend    | 8080      | every interface | Reachable from the network, not just the host  |
 | gateway    | 8081      | every interface | Optional edge; the browser may use it instead   |
 | frontend   | 3000      | every interface | Reachable from the network, not just the host  |
+| discovery  | —         | compose network | Registry; the override publishes no port for it |
 
 So in the stack the Quick Start brings up (`docker-compose.yml` together with
 `docker-compose.prod.yml`), `backend` on 8080, `gateway` on 8081 and `frontend` on
@@ -291,6 +292,7 @@ the context and is not resumed. See RUNBOOK's "A redeploy finishes what it start
 | Backend    | `GET /api/v1/health`            | Prometheus at `/actuator/prometheus` (Micrometer); orchestrator probe at `/actuator/health`. The custom `/api/v1/health` is the deployment's dependency report: `db`, `redis`, `storage` and `ai` booleans, with `status: ok` only when all four answer. It answers **200 either way** so a monitor reads which half is down instead of guessing from a refusal; the four probes run together under one 2-second bound. |
 | AI Service | `GET /health`                   | None. The service is internal-only and logs to stdout; there is no `/metrics` route. The dependency report asks this route with a 2-second bound (`ai: true/false`). The body also names the provider halves and whether each can actually serve: `llm_ready` / `embedding_ready` are measured by building the configured provider through the same factories the AI calls use, so a stack that named `openai_compat` without a key reports `status: ok` (the process is alive) alongside `llm_ready: false` (it cannot serve) — the answer a monitor reads instead of a green probe over calls that all 500. |
 | Gateway    | `GET /actuator/health`          | Spring Cloud Gateway's own actuator; `/actuator/metrics/gateway.ratelimit.refused` counts token-bucket refusals without a caller tag. The custom `backend` indicator asks the backend's `/api/v1/health` under a 2-second bound and copies its `status` into `components.backend`; the line answers 503 while the backend is unreachable, which is also what the container probe reads. |
+| Discovery  | `GET /actuator/health`          | Eureka's own actuator. The dashboard at `/` is the operator's view of the same lease table the edge consumes; the production override publishes no port, so it is reachable only inside the compose network. |
 | Frontend   | `GET /` (200 OK)                | —                          |
 | Postgres   | `pg_isready`                    | `pg_stat_statements` (needs `shared_preload_libraries`, which the compose image does not enable) |
 | Redis      | `redis-cli`                     | `INFO`                     |
@@ -419,7 +421,7 @@ which reading answers the operator's question instead of an alarm.
 
 ### Startup gating (healthchecks)
 
-The four application services are probed, not assumed. Each healthcheck fetches the
+The five application services are probed, not assumed. Each healthcheck fetches the
 service's own route on the container's loopback and accepts its 200; `depends_on` then
 waits for `service_healthy`, so `--profile app up -d` no longer returns while a
 dependency is still booting. A degraded dependency does not fail the backend's probe —
@@ -429,9 +431,10 @@ outage is reported in `docker compose ps` rather than restarted by Docker.
 | Service    | Probe (inside the container)                         | Starts after                                   |
 |------------|------------------------------------------------------|------------------------------------------------|
 | ai-service | `python -c` GET `http://127.0.0.1:8000/health`       | postgres healthy                               |
-| backend    | `wget` GET `http://127.0.0.1:8080/api/v1/health`     | postgres, redis, minio and ai-service healthy  |
-| gateway    | `wget` GET `http://127.0.0.1:8081/actuator/health`   | backend healthy                                |
+| backend    | `wget` GET `http://127.0.0.1:8080/api/v1/health`     | postgres, redis, minio, ai-service, discovery healthy |
+| gateway    | `wget` GET `http://127.0.0.1:8081/actuator/health`   | backend and discovery healthy                  |
 | frontend   | `node -e` fetch `http://localhost:3000/`             | backend healthy                                |
+| discovery  | `wget` GET `http://127.0.0.1:8761/actuator/health`   | nothing; its state is the leases it receives   |
 
 The production override carries the same probes; `ai-service` there also waits for Redis.
 A probe's port is a container port the service publishes, and its path is the route in
@@ -464,7 +467,7 @@ alarm would count twice.
 ---
 
 How to bring AI Career OS up locally and what each knob controls. The stack is
-four application services (gateway, backend, ai-service, frontend) plus three stateful
+five application services (discovery, gateway, backend, ai-service, frontend) plus three stateful
 dependencies (PostgreSQL + pgvector, Redis, MinIO).
 
 ## Prerequisites
@@ -503,7 +506,7 @@ then loads `scripts/seed/01_jobs.sql`. It is idempotent and safe on every `up`, 
 skips itself (after ~120s) rather than failing when the schema is not there yet — run
 `docker compose run --rm seed-jobs` to retry it on its own.
 
-Full application stack on top of the infra — the four app services live behind
+Full application stack on top of the infra — the five app services live behind
 the `app` profile:
 
 ```bash
@@ -520,6 +523,7 @@ each one is bound to, so the development stack answers on the machine that runs 
 | frontend   | 3000      | `127.0.0.1` | Next.js; `NEXT_PUBLIC_API_BASE_URL` → backend    |
 | backend    | 8080      | `127.0.0.1` | Public REST API under `/api/v1`                  |
 | gateway    | 8081      | `127.0.0.1` | Optional edge; forwards `/api/**` to `backend:8080` |
+| discovery  | 8761      | `127.0.0.1` | Registry; lease dashboard at `/`                  |
 | ai-service | 8000      | `127.0.0.1` | Internal-only; not exposed to browsers           |
 | postgres   | 5432      | `127.0.0.1` | pgvector `pg16` image                            |
 | redis      | 16380     | `127.0.0.1` | host 16380 → container 6379 (avoids local clash) |
@@ -527,7 +531,7 @@ each one is bound to, so the development stack answers on the machine that runs 
 | minio      | 19001     | `127.0.0.1` | S3 web console                                   |
 
 Inside the compose network the services reach each other by name
-(`postgres`, `redis`, `minio`, `ai-service:8000`, `backend:8080`) — see the
+(`postgres`, `redis`, `minio`, `ai-service:8000`, `backend:8080`, `discovery:8761`) — see the
 `environment:` overrides in `docker-compose.yml`.
 
 The gateway is optional: the default `NEXT_PUBLIC_API_BASE_URL` still points the
@@ -538,11 +542,14 @@ to the browser's origin. The gateway answers `GET /actuator/health` with the bac
 own status in `components.backend`, and a backend that is down is a 503 with
 `{"error":"backend-unavailable"}` rather than a connection error.
 
-The route addresses `lb://backend` through Spring Cloud's simple discovery client;
-`GATEWAY_BACKEND_URI` is instance zero and the address the health indicator asks. A
-second backend is a configuration change rather than a code change: give
+The route addresses `lb://backend` through Spring Cloud's discovery abstraction. In the
+development default (and any laptop without the registry) the simple client holds the
+list: `GATEWAY_BACKEND_URI` is instance zero and the address the health indicator asks,
+and a second backend is a configuration change -- give
 `spring.cloud.discovery.client.simple.instances.backend[1].uri` (or a `[1].host` /
-`[1].port` pair) and the load-balancer spreads reads across both.
+`[1].port` pair) and the load-balancer spreads reads across both. In the compose stack
+the `eureka` profile hands the same route to the registry instead; see
+[Service registry (Eureka)](#service-registry-eureka).
 
 The edge also answers once. Both it and the backend write
 `Access-Control-Allow-Origin`, and a browser rejects a response carrying it twice, so
@@ -566,6 +573,41 @@ what keeps that default from becoming "trust the browser". If a reverse proxy si
 front, the address the edge records is the proxy's -- that is the cost of not trusting
 a chain the browser can write. A deployment that must preserve the proxied address can
 replace this pair of behaviours explicitly rather than loosening the default.
+
+## Service registry (Eureka)
+
+The edge and the backend can learn addresses from a registry instead of their own
+configuration lists. The registry is its own process (`discovery/`, Spring Cloud
+Netflix Eureka on 8761); the compose stack runs it under the `app` profile and both
+citizens register with it.
+
+The switch is one profile: `SPRING_PROFILES_ACTIVE=eureka`. Outside it,
+`eureka.client.enabled` is false and nothing contacts a registry -- the gateway keeps
+its simple instance list and the backend its `AI_SERVICE_BASE_URL` list, which is what
+every laptop and every unit test use. Inside it:
+
+- the gateway empties its simple list, so the registry is the only answer for
+  `backend`; a configured address left beside it is an address the operator cannot
+  see, and roughly half the edge's decisions would ignore the registry;
+- the backend registers itself (`BACKEND`), and the gateway appears as
+  `CAREER-OS-GATEWAY`;
+- `EUREKA_DEFAULT_ZONE` names the registry (`http://discovery:8761/eureka/` in
+  compose).
+
+Open `http://localhost:8761/` in the development stack to see the leases. The
+production override publishes no port for it, so the dashboard is reachable only from
+the compose network (port-forward, or `docker compose exec`).
+
+A single-node registry disables self-preservation (`EUREKA_SELF_PRESERVATION=false`):
+with no peers it cannot tell a dead service from a network partition, and keeping dead
+leases would route traffic to a process that is gone. Eviction runs every five seconds
+rather than the default minute, so a redeploy is a short gap instead of a minute of
+refusals.
+
+The registry holds no durable data -- its state is the set of live leases -- so a
+restart costs one registration round. Losing it does not stop the stack: the edge
+keeps its last answer and the backend keeps serving; new instances are simply not
+discovered until it returns.
 
 ## Run services locally against Docker infra
 

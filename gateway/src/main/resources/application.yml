@@ -104,6 +104,21 @@ spring:
                 exposed-headers: [X-Request-Id]
                 max-age: 3600
 
+eureka:
+  client:
+    # Inert unless the `eureka` profile asks for it. The local stack's simple instance
+    # list is one backend and no extra process; a registry earns its keep when a second
+    # instance exists and the edge should learn about it without a redeploy.
+    enabled: ${GATEWAY_EUREKA_ENABLED:false}
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    # The edge is worth seeing on the dashboard: it answers traffic and its health is
+    # part of what an operator wants to read there.
+    register-with-eureka: ${GATEWAY_EUREKA_REGISTER:true}
+    fetch-registry: ${GATEWAY_EUREKA_FETCH:true}
+  instance:
+    hostname: ${GATEWAY_HOSTNAME:localhost}
+
 management:
   endpoints:
     web:
@@ -118,3 +133,22 @@ logging:
   pattern:
     # The backend already carries this slot; the edge should be quotable the same way.
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:--}] %logger{36} - %msg%n"
+---
+# `SPRING_PROFILES_ACTIVE=eureka` is the switch that makes the registry authoritative.
+# The simple instance list is emptied in the same document: leaving it populated would
+# merge the configured address into every load-balancing decision, so half the traffic
+# would keep going to the laptop's backend while the registry was reporting a fleet.
+spring:
+  config:
+    activate:
+      on-profile: eureka
+  cloud:
+    discovery:
+      client:
+        simple:
+          instances:
+            backend: []
+
+eureka:
+  client:
+    enabled: true

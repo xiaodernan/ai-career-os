@@ -31,8 +31,13 @@ BACKEND_SECURITY = ROOT / "backend/src/main/java/com/careeros/config/SecurityCon
 API_DOC = ROOT / "docs/API.md"
 
 
+def _gateway_document() -> dict:
+    """The base document: the `eureka` profile is a second one (Epic 98)."""
+    return next(iter(yaml.safe_load_all(GATEWAY_YML.read_text(encoding="utf-8"))))
+
+
 def _gateway_cors() -> dict:
-    document = yaml.safe_load(GATEWAY_YML.read_text(encoding="utf-8"))
+    document = _gateway_document()
     global_cors = document["spring"]["cloud"]["gateway"]["server"]["webflux"]["globalcors"]
     configurations = global_cors["cors-configurations"]
     assert "[/**]" in configurations, f"unexpected CORS paths: {sorted(configurations)}"
@@ -101,7 +106,7 @@ def test_the_two_doors_share_one_definition_of_a_quotable_id():
 
 
 def test_the_edge_covers_every_route_the_api_documents():
-    document = yaml.safe_load(GATEWAY_YML.read_text(encoding="utf-8"))
+    document = _gateway_document()
     route = document["spring"]["cloud"]["gateway"]["server"]["webflux"]["routes"][0]
     assert "Path=/api/**" in route["predicates"]
 
@@ -121,7 +126,7 @@ def test_the_edge_strips_the_credential_the_backend_accepts():
     reads it would turn the browser into a service. The strip is asserted by the same
     text the gateway actually runs, not by a comment claiming it.
     """
-    document = yaml.safe_load(GATEWAY_YML.read_text(encoding="utf-8"))
+    document = _gateway_document()
     filters = document["spring"]["cloud"]["gateway"]["server"]["webflux"]["default-filters"]
     headers = _backend_lists()[1]
     assert "X-Internal-Token" in headers, (

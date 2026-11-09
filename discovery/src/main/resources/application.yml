@@ -1,0 +1,46 @@
+server:
+  port: ${EUREKA_PORT:8761}
+
+spring:
+  application:
+    name: career-os-discovery
+
+eureka:
+  client:
+    # A single-node registry does not register with or read from itself: the round-trip
+    # would only describe a map this process already holds. Set both to true when a
+    # second peer joins and this node must gossip with it.
+    register-with-eureka: ${EUREKA_SELF_REGISTER:false}
+    fetch-registry: ${EUREKA_SELF_FETCH:false}
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    # The registry is not itself a service the edge routes to; keeping it out of the
+    # answer means a reader of the dashboard sees only the workloads.
+    healthcheck:
+      enabled: false
+  server:
+    # A peer-less registry cannot tell "the service died" from "the network hiccuped".
+    # Self-preservation would keep a dead instance in every answer until the network
+    # heals -- which is never, when there is no network to heal.
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:false}
+    # The default 60s eviction is a minute of a dead instance still being routed to.
+    eviction-interval-timer-in-ms: ${EUREKA_EVICTION_INTERVAL_MS:5000}
+    # The dashboard is the operator's view of the same answer the edge consumes; if it
+    # is behind an authenticated proxy the proxy owns the login, not this process.
+    response-cache-update-interval-ms: ${EUREKA_RESPONSE_CACHE_MS:5000}
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:--}] %logger{36} - %msg%n"

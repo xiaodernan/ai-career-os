@@ -160,6 +160,12 @@ services:
       MINIO_ENDPOINT: http://minio:9000
       AI_SERVICE_BASE_URL: http://ai-service:8000
       APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
+      # 98.1: the `eureka` profile turns registration on and names the compose registry.
+      # Outside it the backend never contacts a registry, so a laptop without this
+      # service still boots and serves.
+      SPRING_PROFILES_ACTIVE: eureka
+      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+      BACKEND_HOSTNAME: backend
       # The console email transport withholds the message body (reset links carry
       # a usable token) unless this is on; the dev stack wants the link in the log
       # so the flow can be walked by hand. Stacks without this entry keep it off.
@@ -184,6 +190,30 @@ services:
         condition: service_healthy
       ai-service:
         condition: service_healthy
+      discovery:
+        condition: service_healthy
+
+  # The registry (Epic 98): the edge learns service addresses from here instead of a
+  # configuration list. It is deliberately its own process -- a registry sharing a JVM
+  # with the service it describes cannot report that service's death -- and it holds no
+  # data of its own, so losing it costs the current answer and nothing durable.
+  discovery:
+    profiles: [app]
+    build:
+      context: ./discovery
+    container_name: careeros-discovery
+    restart: unless-stopped
+    environment:
+      EUREKA_HOSTNAME: discovery
+    # Loopback only: the dashboard is an operator view, not a public surface.
+    ports:
+      - "127.0.0.1:8761:8761"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
 
   # The edge (Epic 88): one front door for the browser. The backend is still the only
   # service that holds the internal token; the gateway forwards and answers for the
@@ -196,7 +226,12 @@ services:
     container_name: careeros-gateway
     restart: unless-stopped
     environment:
-      GATEWAY_BACKEND_URI: http://backend:8080
+      # 98.1: this profile empties the simple instance list, so the registry is the
+      # only answer for `backend`; a half-configured edge that kept both would send
+      # roughly half its traffic to an address the registry does not know about.
+      SPRING_PROFILES_ACTIVE: eureka
+      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+      GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
     ports:
       - "127.0.0.1:8081:8081"
@@ -208,6 +243,8 @@ services:
       start_period: 30s
     depends_on:
       backend:
+        condition: service_healthy
+      discovery:
         condition: service_healthy
 
   frontend:

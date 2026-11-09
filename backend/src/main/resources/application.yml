@@ -169,6 +169,25 @@ app:
     retired-document-days: ${RETENTION_RETIRED_DOCUMENT_DAYS:180}
     unnamed-object-days: ${RETENTION_UNNAMED_OBJECT_DAYS:7}
 
+eureka:
+  client:
+    # Inert unless the deployment asks for a registry (Epic 98). The single-node local
+    # stack already round-robins ai-service from the load-balancer's configured list;
+    # registration is what lets a second instance join without editing every caller.
+    enabled: ${BACKEND_EUREKA_ENABLED:false}
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}
+    register-with-eureka: ${BACKEND_EUREKA_REGISTER:true}
+    # The backend asks the registry for nobody today: ai-service is reached through the
+    # load balancer's list. Fetching stays off until a second consumer exists.
+    fetch-registry: ${BACKEND_EUREKA_FETCH:false}
+  instance:
+    # The address the edge would dial after discovering this process. In compose the
+    # service name is the address; on a laptop it is localhost.
+    hostname: ${BACKEND_HOSTNAME:localhost}
+    health-check-url-path: /actuator/health
+    prefer-ip-address: ${BACKEND_EUREKA_PREFER_IP:false}
+
 springdoc:
   api-docs.path: /api-docs
   swagger-ui.path: /api-docs/ui
@@ -194,3 +213,17 @@ logging:
   # Every request logs under the id `RequestIdFilter` puts on its answer; boot lines have none.
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level [%thread] [%X{requestId:-}] %logger{28} - %msg%n"
+---
+# `SPRING_PROFILES_ACTIVE=eureka` makes the registry authoritative for this process too.
+# The application's own configuration list for ai-service is left alone: it describes a
+# different service, and emptying it would break the bridge in the same deployment that
+# turned discovery on.
+spring:
+  config:
+    activate:
+      on-profile: eureka
+
+eureka:
+  client:
+    enabled: true
+

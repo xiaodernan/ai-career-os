@@ -144,6 +144,12 @@ services:
       AI_SERVICE_BASE_URL: http://ai-service:8000
       APP_CORS_ORIGINS: ${APP_CORS_ORIGINS:?required -- fill .env.prod and pass --env-file .env.prod}
       APP_ENV: prod
+      # 98.1: register with the compose registry. A production deploy that does not
+      # want a registry simply removes this service and these three lines; the backend
+      # boots either way, because the profile is what turns Eureka on.
+      SPRING_PROFILES_ACTIVE: eureka
+      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+      BACKEND_HOSTNAME: backend
     ports:
       - "8080:8080"
     healthcheck:
@@ -161,6 +167,8 @@ services:
         condition: service_healthy
       ai-service:
         condition: service_healthy
+      discovery:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -168,13 +176,40 @@ services:
         reservations:
           memory: 512M
 
+  # The registry (Epic 98). No published port: only the compose network may read the
+  # dashboard, and the services reach it by name. Its state is a cache of live leases,
+  # so it needs no volume -- a restart means one registration round, not lost data.
+  discovery:
+    build:
+      context: ./discovery
+    container_name: careeros-discovery-prod
+    restart: unless-stopped
+    environment:
+      EUREKA_HOSTNAME: discovery
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
   gateway:
     build:
       context: ./gateway
     container_name: careeros-gateway-prod
     restart: unless-stopped
     environment:
-      GATEWAY_BACKEND_URI: http://backend:8080
+      # 98.1: the registry is the only answer for `backend`; the simple list is emptied
+      # by the same profile, so a stale address cannot keep taking half the traffic.
+      SPRING_PROFILES_ACTIVE: eureka
+      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+      GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:?required -- fill .env.prod and pass --env-file .env.prod}
     ports:
       - "8081:8081"
@@ -186,6 +221,8 @@ services:
       start_period: 30s
     depends_on:
       backend:
+        condition: service_healthy
+      discovery:
         condition: service_healthy
     deploy:
       resources:

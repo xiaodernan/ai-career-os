@@ -18,6 +18,7 @@ out/
 # java
 backend/target/
 gateway/target/
+discovery/target/
 *.class
 .mvn/wrapper/maven-wrapper.jar
 
