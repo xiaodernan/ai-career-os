@@ -957,6 +957,20 @@ export interface ResponseRate {
 /* ------------------------------------------------------------------ */
 
 /**
+ * The discovery answer an operator reads (roadmap 100): which mode the deployment runs
+ * and what the load balancer can see. The backend sorts the services, so the page shows
+ * the fleet's answer rather than re-ordering it.
+ */
+export interface ServiceTopology {
+  /** "eureka" when the deployment activated that profile, "configuration" otherwise. */
+  registry: string;
+  services: Array<{
+    name: string;
+    instances: Array<{ instanceId: string; uri: string }>;
+  }>;
+}
+
+/**
  * Production monitoring (16.1): agent health, cost, and regression detection.
  * The report is composed by the ai-service's monitoring engine.
  */

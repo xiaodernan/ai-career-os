@@ -97,6 +97,7 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 │       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)
 │       ├── search/               # global search (⌘K) aggregation
 │       ├── storage/              # MinIO private bucket, magic-byte validation
+│       ├── system/               # service topology: the discovery client's fleet answer (100)
 │       └── user/                 # users, profiles, preferences, memories
 ├── ai-service/                   # FastAPI
 │   └── app/

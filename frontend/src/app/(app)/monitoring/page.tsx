@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart } from "@/components/common/bar-chart";
 import { NightlyHistory } from "@/components/monitoring/nightly-history";
+import { ServiceTopology } from "@/components/monitoring/service-topology";
 import { useHealthReport } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
@@ -179,6 +180,10 @@ export default function MonitoringPage() {
           read from its own endpoint and answers its own states, so a failed health
           report does not hide the nights that passed. */}
       <NightlyHistory />
+
+      {/* The deployment's fleet, read from the discovery answer the load balancer
+          consumes rather than from a second inventory. */}
+      <ServiceTopology />
     </div>
   );
 }

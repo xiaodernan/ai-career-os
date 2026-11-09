@@ -154,7 +154,7 @@ READERS = {
     # 85.2's list of engine nodes: the discovery client is its only reader, and an empty
     # value is the documented meaning "use base-url as the one instance".
     "ai-service.instances": ("AiService", "instances", "getInstances",
-                             ("ai/AiServiceDiscoveryClient.java",)),
+                             ("ai/AiServiceDiscoveryClient.java", "system/ServiceTopologyService.java")),
     # The rate-limit knobs are read by the filter that enforces them and, since
     # 16.2, by the status route that reports them — a knob with two readers
     # still has to be the one the operator edits, and the table names both so

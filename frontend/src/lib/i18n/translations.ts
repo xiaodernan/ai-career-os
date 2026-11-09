@@ -922,6 +922,15 @@ export const translations = {
       nightlyOpenRun: "Open the run",
       nightlyPagination: "Nightly reports pagination",
       nightlyRecords: "{count} nights recorded",
+      topologyTitle: "Service topology",
+      topologyDescription:
+        "The fleet this deployment can route to, from the same discovery answer the load balancer reads.",
+      topologyRegistry: "Registry",
+      topologyRegistryEureka: "Eureka",
+      topologyRegistryConfiguration: "Configuration list",
+      topologyInstances: "{count} instance(s)",
+      topologyEmpty: "The discovery client knows no service yet.",
+      topologyUnavailable: "The topology could not be read.",
     },
     // Rate limit
     rateLimit: {
@@ -3974,6 +3983,14 @@ export const translations = {
       nightlyOpenRun: "打开该次运行",
       nightlyPagination: "夜间报告分页",
       nightlyRecords: "已记录 {count} 个夜晚",
+      topologyTitle: "服务拓扑",
+      topologyDescription: "本次部署可路由到的服务集合，取自负载均衡器读取的同一份服务发现答案。",
+      topologyRegistry: "注册中心",
+      topologyRegistryEureka: "Eureka",
+      topologyRegistryConfiguration: "配置列表",
+      topologyInstances: "{count} 个实例",
+      topologyEmpty: "服务发现还不知道任何服务。",
+      topologyUnavailable: "无法读取服务拓扑。",
     },
     // Rate limit
     rateLimit: {

@@ -9,7 +9,7 @@ import {
   normalizePage,
   type NormalizedPage,
 } from "@/lib/api/normalize";
-import type { HealthReport, NightlyReport, NightlyVerdict } from "@/lib/api/types";
+import type { HealthReport, NightlyReport, NightlyVerdict, ServiceTopology } from "@/lib/api/types";
 
 /**
  * Production monitoring (16.1): agent health, cost, and regression detection.
@@ -47,5 +47,20 @@ export function useNightlyVerdict() {
     queryKey: ["monitoring", "nightly-verdict"],
     queryFn: async (): Promise<NightlyVerdict> =>
       normalizeNightlyVerdict(await api.get<unknown>(endpoints.monitoringNightlyVerdict)),
+  });
+}
+
+/**
+ * The fleet the backend can see (roadmap 100). It answers the same `DiscoveryClient` the
+ * load balancer reads, so the card describes the routing table rather than a second
+ * inventory. Deployment-wide, not per user; a short stale window is enough because the
+ * registry itself answers from a lease cache.
+ */
+export function useServiceTopology() {
+  return useQuery({
+    queryKey: ["system", "topology"],
+    queryFn: async (): Promise<ServiceTopology> =>
+      (await api.get<unknown>(endpoints.systemTopology)) as ServiceTopology,
+    staleTime: 30_000,
   });
 }

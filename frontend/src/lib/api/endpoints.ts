@@ -134,6 +134,9 @@ export const endpoints = {
   monitoringHealthReport: "/monitoring/health-report",
   monitoringNightlyReports: "/monitoring/nightly-reports",
   monitoringNightlyVerdict: "/monitoring/nightly-reports/verdict",
+  /* The discovery answer: which registry mode the deployment runs and what the load
+     balancer can see (roadmap 100). Authenticated, unlike the public health route. */
+  systemTopology: "/system/topology",
   rateLimitStatus: "/rate-limit/status",
   conversations: "/conversations",
   conversation: (id: string) => `/conversations/${seg(id)}`,
