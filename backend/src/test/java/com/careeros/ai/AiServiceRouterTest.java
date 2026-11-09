@@ -44,14 +44,14 @@ class AiServiceRouterTest {
     }
 
     @Test
-    void aPathBecomesAnAbsoluteUrlOnTheChosenDoor() {
+    void aPathIsMovedOntoTheChosenDoorAndKeepsItsShape() {
         LoadBalancerClient loadBalancer = mock(LoadBalancerClient.class);
         when(loadBalancer.choose(AiServiceDiscoveryClient.SERVICE_ID))
                 .thenReturn(instance("http://10.0.0.2:8000"));
         AiServiceRouter router = new AiServiceRouter(loadBalancer, discovery("http://localhost:8000", ""));
 
-        assertThat(router.url("/internal/features/match"))
-                .isEqualTo(URI.create("http://10.0.0.2:8000/internal/features/match"));
+        assertThat(router.rewrite(URI.create("http://ai-service/internal/features/match?x=1")))
+                .isEqualTo(URI.create("http://10.0.0.2:8000/internal/features/match?x=1"));
     }
 
     private static DefaultServiceInstance instance(String origin) {

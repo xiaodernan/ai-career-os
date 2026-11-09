@@ -68,8 +68,14 @@ public class HttpAiServiceClient implements AiServiceClient {
                 .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(Duration.ofSeconds(180));
-        this.restClient = builder
-                .requestFactory(factory)
+        // Every call is addressed to the service id, then moved onto the instance the
+        // router chose at the last moment (Epic 85.2). Keeping the address in one place
+        // leaves the call sites as literal paths, which is both readable and what the
+        // contract gates read; the health line keeps its own client below.
+        org.springframework.http.client.ClientHttpRequestFactory routing =
+                (uri, method) -> factory.createRequest(router.rewrite(uri), method);
+        this.restClient = builder.baseUrl("http://" + AiServiceDiscoveryClient.SERVICE_ID)
+                .requestFactory(routing)
                 // The ai-service logs the same id, so one grep follows a turn across both
                 // services. Calls made outside a request (the nightly sweep) have none and
                 // send none; the ai-service mints its own and logs that.
@@ -295,7 +301,7 @@ public class HttpAiServiceClient implements AiServiceClient {
         try {
             guard.call(() -> {
                 restClient.delete()
-                        .uri(router.url("/internal/memories/" + memoryId))
+                        .uri("/internal/memories/" + memoryId)
                         .header("X-Internal-Token", internalToken)
                         .header("X-User-Id", userId.toString())
                         .retrieve()
@@ -685,7 +691,7 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     private Map<String, Object> post(String path, UUID userId, Map<String, Object> body) {
         return exchange(() -> restClient.post()
-                .uri(router.url(path))
+                .uri(path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Internal-Token", internalToken)
                 .header("X-User-Id", userId.toString())
@@ -701,7 +707,7 @@ public class HttpAiServiceClient implements AiServiceClient {
      */
     private Map<String, Object> patch(String path, UUID userId, Map<String, Object> body) {
         return exchange(() -> restClient.patch()
-                .uri(router.url(path))
+                .uri(path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Internal-Token", internalToken)
                 .header("X-User-Id", userId.toString())
@@ -712,7 +718,7 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     private Map<String, Object> get(String path, UUID userId) {
         return exchange(() -> restClient.get()
-                .uri(router.url(path))
+                .uri(path)
                 .header("X-Internal-Token", internalToken)
                 .header("X-User-Id", userId.toString())
                 .retrieve()

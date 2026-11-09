@@ -68,7 +68,9 @@ public class AiServiceCircuitBreaker {
         if (failure instanceof Error error) {
             throw error;
         }
-        return new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE,
-                failure.getMessage() == null ? "AI service request failed" : failure.getMessage());
+        // A checked throwable cannot come out of the RestClient, but the guard is a
+        // boundary and must still answer in this service's vocabulary. One literal
+        // sentence per code is also what the error-code gate measures.
+        return new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE, "AI service request failed");
     }
 }
