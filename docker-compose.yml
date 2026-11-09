@@ -107,7 +107,8 @@ services:
     build:
       context: ./ai-service
       args:
-        APP_BUILD_SHA: \n    container_name: careeros-ai
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
+    container_name: careeros-ai
     restart: unless-stopped
     env_file: .env
     environment:
@@ -143,7 +144,8 @@ services:
     build:
       context: ./backend
       args:
-        APP_BUILD_SHA: \n    container_name: careeros-backend
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
+    container_name: careeros-backend
     restart: unless-stopped
     # Longer than the JVM's 30-second graceful-shutdown phase (application.yml):
     # Docker's 10-second default would SIGKILL the backend mid-drain. 40s leaves the
