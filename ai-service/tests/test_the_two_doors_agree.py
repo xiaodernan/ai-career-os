@@ -25,6 +25,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 GATEWAY_YML = ROOT / "gateway/src/main/resources/application.yml"
 GATEWAY_ID = ROOT / "gateway/src/main/java/com/careeros/gateway/RequestIdFilter.java"
+GATEWAY_GUARD = ROOT / "gateway/src/main/java/com/careeros/gateway/EdgeSurfaceGuard.java"
 BACKEND_ID = ROOT / "backend/src/main/java/com/careeros/common/RequestIdFilter.java"
 BACKEND_SECURITY = ROOT / "backend/src/main/java/com/careeros/config/SecurityConfig.java"
 API_DOC = ROOT / "docs/API.md"
@@ -108,4 +109,45 @@ def test_the_edge_covers_every_route_the_api_documents():
     assert public, "docs/API.md no longer publishes a Public surface row"
     assert public.group(1).startswith("/api/"), (
         f"the documented API surface {public.group(1)!r} is not under the edge's /api/** route"
+    )
+
+
+def test_the_edge_strips_the_credential_the_backend_accepts():
+    """The backend's CORS list admits `X-Internal-Token`; the edge must not relay it.
+
+    The header is a service-to-service credential. The backend accepts it on
+    `/api/internal/**`, and that prefix is refused at the edge (below), but a header a
+    browser can write must not even arrive at the backend's door: one future route that
+    reads it would turn the browser into a service. The strip is asserted by the same
+    text the gateway actually runs, not by a comment claiming it.
+    """
+    document = yaml.safe_load(GATEWAY_YML.read_text(encoding="utf-8"))
+    filters = document["spring"]["cloud"]["gateway"]["server"]["webflux"]["default-filters"]
+    headers = _backend_lists()[1]
+    assert "X-Internal-Token" in headers, (
+        "the backend stopped accepting the internal token; this gate is now describing a "
+        "credential that no longer exists"
+    )
+    assert any(item.strip() == "RemoveRequestHeader=X-Internal-Token" for item in filters), (
+        "the backend accepts a header the edge lets a browser write; the edge must remove "
+        "it before forwarding"
+    )
+
+
+def test_the_edge_refuses_the_surface_the_backend_declares_internal():
+    """The door the edge closes is the door the backend marks internal.
+
+    Two independently edited files agree on one prefix. If the backend moves its
+    service-to-service surface and the guard keeps the old one, the new surface is routed
+    to the browser while both modules' own tests stay green.
+    """
+    backend = BACKEND_SECURITY.read_text(encoding="utf-8")
+    declared = re.search(r'requestMatchers\("(/api/internal)/\*\*"\)', backend)
+    assert declared, "SecurityConfig no longer declares an /api/internal/** surface"
+
+    guard = re.search(r'INTERNAL_PREFIX\s*=\s*"([^"]+)"', GATEWAY_GUARD.read_text(encoding="utf-8"))
+    assert guard, "EdgeSurfaceGuard no longer names the prefix it refuses"
+    assert guard.group(1) == declared.group(1), (
+        f"the edge refuses {guard.group(1)!r} while the backend reserves "
+        f"{declared.group(1)!r}: one of the two doors is answering about the other's surface"
     )

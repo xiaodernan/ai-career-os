@@ -5441,6 +5441,14 @@ is the shape of an incident that every module's own tests would call healthy.
   the strip is specific, not a blanket drop. The probe was run without the filters
   first and failed on `forged-internal-token`; 1/1, module 25/25.)
 
+- [x] **95.3** Both doors agree on which door is internal (measured 2026-11-09).
+
+  (Two assertions in `test_the_two_doors_agree.py`: the edge's `INTERNAL_PREFIX` equals
+  the prefix `SecurityConfig` marks internal, and the edge's default filters remove the
+  `X-Internal-Token` the backend's CORS list admits. Each half can go stale without its
+  own module noticing; together they say the credential the backend accepts is one a
+  browser cannot hand it. The file is 7/7.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
