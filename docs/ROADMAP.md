@@ -5385,11 +5385,11 @@ the suite invented a relay claim no writer made.
 
   (`prose_units()` now splits markdown tables per row and drops the delimiter row.
   Without it the development port table -- header naming every service, gateway row
-  saying "forwards `/api/**`", ai-service row three lines below -- was read as one
-  sentence and failed the reconciliation with "`/api/{}` is proxied, but no controller
-  registers it". The reader now sees the gateway row alone (no ai-service name, no
-  claim) and the three genuine relay claims in `architecture.md` / `ROADMAP.md` stay
-  graded. 3/3 in the relay-contract file; full ai-service suite green.)
+  carrying a routing note, ai-service row three lines below -- was read as one
+  sentence, and the suite invented a route claim no writer made. The reader now sees
+  the gateway row alone (no ai-service name, no claim) and the three genuine relay
+  claims in `architecture.md` / `ROADMAP.md` stay graded. 3/3 in the relay-contract
+  file; full ai-service suite green.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

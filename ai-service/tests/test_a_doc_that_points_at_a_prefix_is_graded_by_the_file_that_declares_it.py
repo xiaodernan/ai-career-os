@@ -16,6 +16,12 @@ filter whose `startsWith(...)` decides whether it is guarded, the springdoc prop
 serves the OpenAPI at it. So the carriers this gate reads are every `/api`-shaped string the
 backend declares, plus the shared prefix the controllers actually live under.
 
+The edge is a carrier too. `Path=/api/**` is the gateway's route predicate, and a deployment
+doc that says the front door forwards that prefix is describing a real declaration in
+`gateway/src/main/resources/application.yml` -- not a controller path, because no controller
+owns a wildcard. Reading the gateway's own routes keeps the front door's documented surface
+graded instead of forcing the docs to spell around it.
+
 The direction the tables never check is the other one, and it is the one SECURITY.md is written
 for: its "Public (unauthenticated) routes" bullet is the audit answer to "what can an
 anonymous caller reach". A matcher added to SecurityConfig and not written into that bullet
@@ -36,6 +42,7 @@ ROOT = TESTS.parent.parent
 DOCS = ROOT / "docs"
 JAVA = ROOT / "backend" / "src" / "main" / "java"
 RESOURCES = ROOT / "backend" / "src" / "main" / "resources"
+GATEWAY = ROOT / "gateway" / "src" / "main"
 SECURITY_DOC = DOCS / "SECURITY.md"
 
 INTERNAL_PREFIX = "/api/internal"
@@ -87,12 +94,20 @@ def controller_routes() -> set[str]:
 
 
 def declared_paths() -> set[str]:
-    """Every `/api`-shaped string the backend declares: matchers, guards, config values."""
+    """Every `/api`-shaped string the backend or the gateway declares: matchers, guards, routes.
+
+    The gateway's route predicate is written `Path=/api/**`, not as a value after a colon,
+    so it gets its own read rather than being mistaken for prose the yml regex skips.
+    """
     out: set[str] = set()
     for java in sorted(JAVA.rglob("*.java")):
         out.update(re.findall(r'"(/api[^"]*)"', read(java)))
     for yml in sorted(RESOURCES.glob("application*.yml")):
         out.update(re.findall(r":\s*(/api\S*)", read(yml)))
+    for yml in sorted((GATEWAY / "resources").glob("application*.yml")):
+        out.update(re.findall(r"Path=([^,\s]+)", read(yml)))
+    for java in sorted((GATEWAY / "java").rglob("*.java")):
+        out.update(re.findall(r'"(/api[^"]*)"', read(java)))
     return {norm(p) for p in out}
 
 
