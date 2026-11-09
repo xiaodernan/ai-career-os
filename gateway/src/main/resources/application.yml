@@ -18,6 +18,17 @@ spring:
     gateway:
       server:
         webflux:
+          # The backend's logs and address-based decisions should see the browser, not
+          # the edge. 4.3 leaves the header filter off unless told; this turns it on.
+          # The edge is the trust boundary here, so every address that reaches it is
+          # allowed to contribute the forwarded chain.
+          trusted-proxies: ${GATEWAY_TRUSTED_PROXIES:.*}
+          x-forwarded:
+            enabled: true
+            for-enabled: true
+            host-enabled: true
+            port-enabled: true
+            proto-enabled: true
           # One route today: the browser's API traffic belongs to the domain backend.
           # The engine stays behind the backend, which owns the internal token and the
           # circuit around it -- the edge should not hold either.
@@ -74,7 +85,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,gateway,metrics
   endpoint:
     health:
       probes:

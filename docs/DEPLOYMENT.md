@@ -544,6 +544,13 @@ second backend is a configuration change rather than a code change: give
 `spring.cloud.discovery.client.simple.instances.backend[1].uri` (or a `[1].host` /
 `[1].port` pair) and the load-balancer spreads reads across both.
 
+The edge adds `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host` and
+`X-Forwarded-Port` so the backend's logs name the browser rather than the gateway.
+4.3 only writes those headers when `trusted-proxies` admits the caller;
+`GATEWAY_TRUSTED_PROXIES` defaults to `.*` (the edge is the trust boundary). If a
+reverse proxy sits in front, set it to the proxy's address pattern instead, or a
+browser that reaches the gateway directly can add its own `X-Forwarded-For`.
+
 ## Run services locally against Docker infra
 
 Useful when iterating on one service. Start the infra (above), then:

@@ -5336,6 +5336,33 @@ Spring Cloud load-balancer the rest of the stack already rides.
   across two stubs hit each exactly twice, and every routing/fallback/retry/limit test
   stayed green -- 14/14.)
 
+### Epic 92 -- the edge is easy to operate
+
+Someone will open the gateway's root, scrape it, or read the backend's log for a
+request that passed through it. Those three readers need three small facts, and each
+one is asserted against a stub rather than promised in a comment.
+
+- [x] **92.1** The root names the process, not a 404 (measured 2026-11-09).
+
+  (`GET /` answers `{service: "career-os-gateway", status: "ok", api: "/api/**",
+  health: "/actuator/health"}`: a person who opened the front door sees what answered,
+  and a naive probe sees a 200 with a sentence instead of a missing-page error.)
+
+- [x] **92.2** The backend sees how the browser arrived (measured 2026-11-09).
+
+  (4.3's `X-Forwarded-*` filter only writes headers when `trusted-proxies` admits the
+  caller; the edge is the trust boundary, so `GATEWAY_TRUSTED_PROXIES` defaults to `.*`
+  and the filter is explicitly enabled with every part. The stub asserts
+  `X-Forwarded-For`, `X-Forwarded-Proto: http` and `X-Forwarded-Host` arrive, so the
+  backend's logs and address-based decisions can name the browser. DEPLOYMENT.md says
+  to narrow the pattern when a reverse proxy sits in front.)
+
+- [x] **92.3** The HTTP metric is exposed for scraping (measured 2026-11-09).
+
+  (The actuator exposure adds `metrics`; `GatewayOperationsTest` reads
+  `/actuator/metrics/http.server.requests` after a routed call and expects the meter by
+  name. Measured 3/3 in the operations class and 17/17 across the module.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

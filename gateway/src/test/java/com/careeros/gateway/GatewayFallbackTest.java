@@ -3,6 +3,7 @@ package com.careeros.gateway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
         "GATEWAY_BACKEND_URI=http://127.0.0.1:1",
         "management.endpoint.health.show-details=always"
 })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class GatewayFallbackTest {
 
     @Autowired
