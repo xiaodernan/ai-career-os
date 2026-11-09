@@ -251,7 +251,7 @@ export function PreparationCard({ items, className }: { items: PreparationItem[]
                 )}
                 {typeof item.hours === "number" && (
                   <Badge variant="secondary" className="text-2xs font-normal tabular-nums">
-                    ~{item.hours}h
+                    {t("jobs.match.prepHours", { hours: item.hours })}
                   </Badge>
                 )}
               </p>

@@ -29,8 +29,8 @@ vi.mock("@/lib/i18n/locale-context", async () => {
   };
 });
 
-import { MatchPanel } from "./match-panel";
-import type { JobMatch } from "@/lib/api/types";
+import { MatchPanel, PreparationCard } from "./match-panel";
+import type { JobMatch, PreparationItem } from "@/lib/api/types";
 
 /**
  * The "computed <when>" line under a match score.
@@ -67,5 +67,32 @@ describe("the match panel's computed stamp", () => {
     const html = renderToStaticMarkup(<MatchPanel match={match} />);
     expect(html).toMatch(/Oct 28, 02:05\sPM/);
     expect(html, "an en reader got a Chinese date under an English card").not.toContain("10月28日");
+  });
+});
+
+/**
+ * The preparation card's effort estimate.
+ *
+ * The badge printed `~{hours}h` -- a bare English unit. A Chinese reader saw
+ * "~6h" beside Chinese titles; the unit belongs in the table like every other word.
+ */
+describe("the preparation card's effort estimate", () => {
+  const item: PreparationItem = { title: "Practice system design", hours: 6 };
+
+  it("words the hours in a Chinese reader's unit", () => {
+    reader.locale = "zh";
+    try {
+      const html = renderToStaticMarkup(<PreparationCard items={[item]} />);
+      expect(html).toContain("~6小时");
+      expect(html).not.toContain("6h");
+    } finally {
+      reader.locale = "en";
+    }
+  });
+
+  it("keeps the compact English estimate", () => {
+    const html = renderToStaticMarkup(<PreparationCard items={[item]} />);
+    expect(html).toContain("~6h");
+    expect(html).not.toContain("小时");
   });
 });

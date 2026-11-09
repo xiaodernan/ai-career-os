@@ -157,6 +157,19 @@ describe("the analysis page speaks the reader's language", () => {
     expect(en).toContain("2 of 4 submitted applications got a reply.");
     expect(en).not.toContain("个投递中有");
   });
+
+  it("words the stalled badge's unit in the table's language", () => {
+    // The badge printed `{days}d` -- a bare English unit the copy census
+    // cannot read because it is one letter. The same quantity on the weekly
+    // letter already says "已 9 天"; the stalled list must agree.
+    const zh = render("zh");
+    expect(zh).toContain(">3天<");
+    expect(zh).not.toContain(">3d<");
+
+    const en = render("en");
+    expect(en).toContain(">3d<");
+    expect(en).not.toContain(">3天<");
+  });
 });
 
 /**

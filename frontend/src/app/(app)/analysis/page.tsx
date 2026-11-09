@@ -213,7 +213,7 @@ export default function AnalysisPage() {
                         </p>
                       </div>
                       <Badge variant="warning" className="shrink-0">
-                        {s.daysSinceLastActivity}d
+                        {t("analysis.stalledDays", { days: s.daysSinceLastActivity ?? 0 })}
                       </Badge>
                     </li>
                   ))}
