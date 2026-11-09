@@ -57,6 +57,22 @@
       <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
     </dependency>
     <!--
+      91.1: `lb://backend` needs a load-balancer; the gateway starter's webflux module
+      does not pull it by default in this release train. The cache starter it would
+      drag in is not used by this process, and the local repository only carries the
+      later patch, so excluding it keeps the offline build honest.
+    -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-cache</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!--
       89.2: the edge's own limiter. Resilience4j is already on the classpath through
       the circuit starter; asking for the limiter module directly keeps the dependency
       explicit rather than relying on a transitively-visible class.

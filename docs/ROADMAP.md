@@ -5317,6 +5317,25 @@ compares the values.
   API under a new prefix would otherwise 404 at the edge while every routing test stayed
   green. 5/5.)
 
+### Epic 91 -- the edge discovers, not assumes
+
+The route has to name the backend somehow. A literal URL works until there is a second
+backend; an instance list is the same configuration with one more entry, and it uses the
+Spring Cloud load-balancer the rest of the stack already rides.
+
+- [x] **91.1** The backend is an instance list, not a literal URL (measured 2026-11-09).
+
+  (`lb://backend` replaces the literal route URI: Spring Cloud's simple discovery client
+  holds `spring.cloud.discovery.client.simple.instances.backend[*]`, and the gateway's
+  load-balancer filter chooses one per request. `GATEWAY_BACKEND_URI` remains instance
+  zero and the address the health indicator asks, so existing deployments keep one
+  instance with no extra configuration. The starter is added explicitly -- the webflux
+  gateway module does not pull it in this release train -- with the cache starter it
+  would drag in excluded because this process does not use it and the offline repository
+  carries only the later patch. Measured by `GatewayLoadBalancingTest` 1/1: four reads
+  across two stubs hit each exactly twice, and every routing/fallback/retry/limit test
+  stayed green -- 14/14.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

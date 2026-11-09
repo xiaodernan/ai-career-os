@@ -5,6 +5,16 @@ spring:
   application:
     name: career-os-gateway
   cloud:
+    # The backend is addressed through Spring Cloud's discovery abstraction, not a
+    # literal URL: the simple client holds the configured instance list, and the
+    # load-balancer filter turns `lb://backend` into one of them. Today the list has
+    # one entry; adding a second is a configuration change, not a code change.
+    discovery:
+      client:
+        simple:
+          instances:
+            backend:
+              - uri: ${GATEWAY_BACKEND_URI:http://localhost:8080}
     gateway:
       server:
         webflux:
@@ -13,7 +23,7 @@ spring:
           # circuit around it -- the edge should not hold either.
           routes:
             - id: backend
-              uri: ${GATEWAY_BACKEND_URI:http://localhost:8080}
+              uri: lb://backend
               predicates:
                 - Path=/api/**
               filters:

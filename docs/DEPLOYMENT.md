@@ -538,6 +538,12 @@ to the browser's origin. The gateway answers `GET /actuator/health` with the bac
 own status in `components.backend`, and a backend that is down is a 503 with
 `{"error":"backend-unavailable"}` rather than a connection error.
 
+The route addresses `lb://backend` through Spring Cloud's simple discovery client;
+`GATEWAY_BACKEND_URI` is instance zero and the address the health indicator asks. A
+second backend is a configuration change rather than a code change: give
+`spring.cloud.discovery.client.simple.instances.backend[1].uri` (or a `[1].host` /
+`[1].port` pair) and the load-balancer spreads reads across both.
+
 ## Run services locally against Docker infra
 
 Useful when iterating on one service. Start the infra (above), then:
