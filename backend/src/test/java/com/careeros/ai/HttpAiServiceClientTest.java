@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,7 @@ import org.slf4j.MDC;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
 import org.springframework.cloud.client.DefaultServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 /**
@@ -295,17 +297,8 @@ class HttpAiServiceClientTest {
 
     @Test
     void theRequestLeavesThroughTheDoorItsBreakerWasGiven() throws Exception {
-        HttpServer second = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         List<String> secondPaths = new ArrayList<>();
-        second.createContext("/internal", exchange -> {
-            secondPaths.add(exchange.getRequestURI().getPath());
-            byte[] answer = "{\"embedding\":[]}".getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, answer.length);
-            exchange.getResponseBody().write(answer);
-            exchange.close();
-        });
-        second.start();
+        HttpServer second = aiServerOn(secondPaths);
         try {
             AppProperties props = new AppProperties();
             props.getInternal().setToken("test-token");
@@ -333,6 +326,87 @@ class HttpAiServiceClientTest {
         } finally {
             second.stop(0);
         }
+    }
+
+    @Test
+    void aDoorThatRefusesTheConnectionHandsTheCallToTheNextOne() throws Exception {
+        int closed;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            closed = socket.getLocalPort(); // bound, then released: nothing listens
+        }
+        AppProperties props = new AppProperties();
+        props.getInternal().setToken("test-token");
+        props.getAiService().setInstances("http://127.0.0.1:" + closed
+                + ",http://127.0.0.1:" + server.getAddress().getPort());
+        AiServiceDiscoveryClient discovery = new AiServiceDiscoveryClient(props);
+        LoadBalancerClient loadBalancer = mock(LoadBalancerClient.class);
+        when(loadBalancer.choose(AiServiceDiscoveryClient.SERVICE_ID)).thenReturn(null);
+        Resilience4JCircuitBreakerFactory breakers = new Resilience4JCircuitBreakerFactory(
+                CircuitBreakerRegistry.ofDefaults(), TimeLimiterRegistry.ofDefaults(), null);
+        new AiServiceResilienceConfig().aiServiceCircuitBreakerCustomizer().customize(breakers);
+        HttpAiServiceClient routed = new HttpAiServiceClient(RestClient.builder(), props,
+                new AiServiceCircuitBreaker(breakers),
+                new AiServiceRouter(loadBalancer, discovery), discovery);
+
+        routed.embedQuery("backend", UUID.randomUUID());
+
+        // The first door never answered the socket; the second carried the call (87.2).
+        assertThat(paths).containsExactly("/internal/rag/embeddings");
+    }
+
+    @Test
+    void aRestingDoorHandsTheCallToTheNextOne() throws Exception {
+        List<String> secondPaths = new ArrayList<>();
+        HttpServer second = aiServerOn(secondPaths);
+        try {
+            AppProperties props = new AppProperties();
+            props.getInternal().setToken("test-token");
+            String first = "http://127.0.0.1:" + server.getAddress().getPort();
+            String other = "http://127.0.0.1:" + second.getAddress().getPort();
+            props.getAiService().setInstances(first + "," + other);
+            AiServiceDiscoveryClient discovery = new AiServiceDiscoveryClient(props);
+            LoadBalancerClient loadBalancer = mock(LoadBalancerClient.class);
+            when(loadBalancer.choose(AiServiceDiscoveryClient.SERVICE_ID)).thenReturn(
+                    new DefaultServiceInstance("ai-1", AiServiceDiscoveryClient.SERVICE_ID,
+                            "127.0.0.1", server.getAddress().getPort(), false));
+            Resilience4JCircuitBreakerFactory breakers = new Resilience4JCircuitBreakerFactory(
+                    CircuitBreakerRegistry.ofDefaults(), TimeLimiterRegistry.ofDefaults(), null);
+            new AiServiceResilienceConfig().aiServiceCircuitBreakerCustomizer().customize(breakers);
+            AiServiceCircuitBreaker guard = new AiServiceCircuitBreaker(breakers);
+            Supplier<String> refused = () -> {
+                throw new ResourceAccessException("connection refused");
+            };
+            // Five counted failures in the window open this door's breaker (the shipped
+            // shape), and the sixth call is refused without entering the supplier.
+            for (int attempt = 0; attempt < 5; attempt++) {
+                assertThatThrownBy(() -> guard.call(first, refused))
+                        .isInstanceOf(ResourceAccessException.class);
+            }
+            HttpAiServiceClient routed = new HttpAiServiceClient(RestClient.builder(), props,
+                    guard, new AiServiceRouter(loadBalancer, discovery), discovery);
+
+            routed.embedQuery("backend", UUID.randomUUID());
+
+            assertThat(secondPaths).containsExactly("/internal/rag/embeddings");
+            assertThat(paths).isEmpty(); // the resting door is not entered at all
+        } finally {
+            second.stop(0);
+        }
+    }
+
+    /** A second ai-service, answering the one route these calls read. */
+    private static HttpServer aiServerOn(List<String> received) throws Exception {
+        HttpServer other = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        other.createContext("/internal", exchange -> {
+            received.add(exchange.getRequestURI().getPath());
+            byte[] answer = "{\"embedding\":[]}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, answer.length);
+            exchange.getResponseBody().write(answer);
+            exchange.close();
+        });
+        other.start();
+        return other;
     }
 
     @Test

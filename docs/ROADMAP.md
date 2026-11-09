@@ -5207,6 +5207,20 @@ thirty-second rest ended. A fleet that fails together is not more available than
   proves the door chosen for the breaker is the door the request left through --,
   `AiServiceResilienceConfigTest` 2/2, and the full backend non-IT suite 1236/1236.)
 
+- [x] **87.2** A resting or unreachable door hands the call to the next one instead of failing the request (measured 2026-11-09).
+
+  (`HttpAiServiceClient.guarded` walks `router.doors()`: when a door's breaker is open, or
+  the connection was refused, unroutable or timed out before sending, the same exchange is
+  tried on the next configured origin. The check is deliberately narrow -- a read timeout is
+  NOT retried, because the engine may already have started the work and a second node would
+  repeat it; that failure stays with the door it was addressed to. The loop is bounded by the
+  fleet, and the last failure is rethrown unchanged, so a fleet with nothing answering still
+  produces the error the single-node path always did. Measured by
+  `HttpAiServiceClientTest` 22/22 -- one test puts a closed port first and a live node
+  second, another opens the first door's breaker and watches the second serve the call
+  without the first being entered --, `AiServiceCircuitBreakerTest` 5/5, and the full
+  backend non-IT suite 1238/1238.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

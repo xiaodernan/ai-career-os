@@ -5,8 +5,11 @@ import com.careeros.common.ApiException;
 import com.careeros.common.EnvelopeJson;
 import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -28,6 +31,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -788,19 +792,52 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     /**
-     * Chooses this call's door, tells the request factory which one it is (the factory runs
-     * on this thread), and enters that door's breaker (87.1). The thread-local is cleared in
-     * a finally: a pooled thread that kept an earlier call's door would address the next
-     * request to the wrong node and blame it for the failure.
+     * Chooses this call's doors, tells the request factory which one it is (the factory runs
+     * on this thread), and enters that door's breaker (87.1). A door that is resting, or
+     * that never received the request because the connection was refused, is not the end of
+     * the call while another node is configured: the next door is tried with the same
+     * exchange (87.2). The thread-local is cleared in a finally, because a pooled thread
+     * that kept an earlier request's door would address the next call to the wrong node and
+     * blame it for the failure.
      */
     private <T> T guarded(java.util.function.Supplier<T> call) {
-        URI chosen = router.base();
-        door.set(chosen);
-        try {
-            return guard.call(chosen.toString(), call);
-        } finally {
-            door.remove();
+        List<URI> doors = router.doors();
+        RuntimeException last = null;
+        for (URI candidate : doors) {
+            door.set(candidate);
+            try {
+                return guard.call(candidate.toString(), call);
+            } catch (ApiException resting) {
+                if (resting.code() != ApiErrorCode.AI_SERVICE_UNAVAILABLE) {
+                    throw resting;
+                }
+                last = resting;
+            } catch (ResourceAccessException unreachable) {
+                // Only a failure before the request left may be repeated on another node:
+                // a refused connection, an unroutable host or a connect timeout. A read
+                // timeout is not here -- the engine may have started the work, and moving
+                // it under a second node would repeat that work (87.2).
+                boolean neverSent = false;
+                for (Throwable cause = unreachable.getCause(); cause != null;
+                        cause = cause.getCause()) {
+                    if (cause instanceof ConnectException
+                            || cause instanceof NoRouteToHostException
+                            || cause instanceof HttpConnectTimeoutException) {
+                        neverSent = true;
+                        break;
+                    }
+                }
+                if (!neverSent) {
+                    throw unreachable;
+                }
+                last = unreachable;
+            } finally {
+                door.remove();
+            }
         }
+        // doors() always names at least the configured base URL, so one of the branches
+        // above has run and last is set.
+        throw last;
     }
 
     @SuppressWarnings("unchecked")

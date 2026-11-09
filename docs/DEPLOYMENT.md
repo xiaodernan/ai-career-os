@@ -579,10 +579,15 @@ visible rather than only implied.
 Failure is counted per node (87.1): the circuit guard keeps one breaker per origin, all in
 the same shape — after five recorded calls in a ten-call window, half of them failing, that
 node rests for thirty seconds. Calls the balancer addresses to other nodes keep leaving, and
-`/health` names the resting one. The whole-bridge breaker still exists, used only by a caller
-that cannot name a door. Refusals from the engine (4xx) are not failures — the engine
-answered. The thresholds live in `AiServiceResilienceConfig`; raise the thirty-second rest
-if the engine takes longer to come back.
+`/health` shows that node down while the others stay up. The whole-bridge breaker still
+exists, used only by a caller that cannot name a door. Refusals from the engine (4xx) are not
+failures — the engine answered. The thresholds live in `AiServiceResilienceConfig`; raise the
+thirty-second rest if the engine takes longer to come back.
+
+Failover is one hop at a time (87.2): a door whose breaker is resting, or whose connection
+was refused before the request left, hands the same call to the next configured origin.
+A read timeout is never retried — the engine may have started the work, and repeating it on
+a second node would repeat the work.
 
 ## Email
 
