@@ -38,7 +38,9 @@ class HealthIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data.db").value(true))
                 .andExpect(jsonPath("$.data.redis").value(true))
                 .andExpect(jsonPath("$.data.storage").value(true))
-                .andExpect(jsonPath("$.data.ai").value(true));
+                .andExpect(jsonPath("$.data.ai").value(true))
+                .andExpect(jsonPath("$.data.aiNodes[0].url").value("http://fake-ai-service:8000"))
+                .andExpect(jsonPath("$.data.aiNodes[0].up").value(true));
     }
 
     @Test
@@ -51,6 +53,7 @@ class HealthIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data.db").value(true))
                 .andExpect(jsonPath("$.data.redis").value(true))
                 .andExpect(jsonPath("$.data.storage").value(true))
-                .andExpect(jsonPath("$.data.ai").value(false));
+                .andExpect(jsonPath("$.data.ai").value(false))
+                .andExpect(jsonPath("$.data.aiNodes[0].up").value(false));
     }
 }

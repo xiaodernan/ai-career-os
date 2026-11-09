@@ -12,6 +12,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,10 +33,13 @@ public class SseRelayService {
 
     private final HttpClient httpClient;
     private final AppProperties props;
+    private final AiServiceRouter router;
     private final TaskExecutor taskExecutor;
 
-    public SseRelayService(AppProperties props, TaskExecutor applicationTaskExecutor) {
+    public SseRelayService(AppProperties props, TaskExecutor applicationTaskExecutor,
+                           AiServiceRouter router) {
         this.props = props;
+        this.router = router;
         this.taskExecutor = applicationTaskExecutor;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
@@ -79,8 +83,29 @@ public class SseRelayService {
      * through {@link #relay}. One parser, so the two paths cannot disagree about what a frame is.
      */
     public void consume(UUID taskId, UUID userId, FrameListener listener) throws Exception {
+        // A stream follows a task, and the task lives in the node that started it: the
+        // router names the door to try first, then the rest of the fleet (86.1). A task
+        // unknown on one node is not an error while another node may own it -- the refusal
+        // is the signal to move on.
+        List<URI> doors = router.doors();
+        for (int index = 0; index < doors.size(); index++) {
+            HttpResponse<InputStream> response = open(doors.get(index), taskId, userId);
+            if (response.statusCode() != 200) {
+                response.body().close();
+                if (index == doors.size() - 1) {
+                    listener.onFrame("error", "upstream status " + response.statusCode());
+                }
+                continue;
+            }
+            readFrames(response.body(), listener);
+            return;
+        }
+    }
+
+    private HttpResponse<InputStream> open(URI door, UUID taskId, UUID userId)
+            throws IOException, InterruptedException {
         HttpRequest.Builder upstream = HttpRequest.newBuilder()
-                .uri(URI.create(props.getAiService().getBaseUrl() + "/internal/stream/" + taskId))
+                .uri(URI.create(door + "/internal/stream/" + taskId))
                 .timeout(RELAY_TIMEOUT)
                 .header("X-Internal-Token", props.getInternal().getToken())
                 .header("X-User-Id", userId.toString())
@@ -90,13 +115,7 @@ public class SseRelayService {
         if (requestId != null) {
             upstream.header(RequestIdFilter.HEADER, requestId);
         }
-        HttpResponse<InputStream> response = httpClient.send(upstream.build(),
-                HttpResponse.BodyHandlers.ofInputStream());
-        if (response.statusCode() != 200) {
-            listener.onFrame("error", "upstream status " + response.statusCode());
-            return;
-        }
-        readFrames(response.body(), listener);
+        return httpClient.send(upstream.build(), HttpResponse.BodyHandlers.ofInputStream());
     }
 
     private void pump(UUID taskId, UUID userId, SseEmitter emitter) {

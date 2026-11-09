@@ -1,11 +1,14 @@
 package com.careeros.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +37,7 @@ class SseRelayServiceTest {
     private ExecutorService upstreamServerThread;
     private ExecutorService worker;
     private SseRelayService service;
+    private AppProperties props;
     private final List<String> requestIds = new CopyOnWriteArrayList<>();
     private final AtomicInteger handled = new AtomicInteger();
 
@@ -55,9 +59,15 @@ class SseRelayServiceTest {
 
         AppProperties props = new AppProperties();
         props.getInternal().setToken("test-token");
-        props.getAiService().setBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
+        // Deliberately a closed port: the relay must take the router's door (86.1), and a
+        // regression that reaches for the configured base URL again fails here, on a socket.
+        props.getAiService().setBaseUrl("http://127.0.0.1:1");
+        this.props = props;
+        AiServiceRouter router = mock(AiServiceRouter.class);
+        when(router.doors()).thenReturn(List.of(
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort())));
         worker = Executors.newSingleThreadExecutor();
-        service = new SseRelayService(props, worker::execute);
+        service = new SseRelayService(props, worker::execute, router);
     }
 
     @AfterEach
@@ -96,5 +106,33 @@ class SseRelayServiceTest {
         service.consume(UUID.randomUUID(), UUID.randomUUID(), (event, data) -> { });
         awaitUpstream();
         assertThat(requestIds).hasSize(1).containsOnlyNulls();
+    }
+
+    @Test
+    void aDoorThatDoesNotKnowTheTaskHandsTheStreamToTheNextOne() throws Exception {
+        // The balancer's next choice need not be the process that started the task, so the
+        // relay knocks past a 404 instead of showing the reader "upstream status 404".
+        HttpServer stranger = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        stranger.createContext("/internal/stream", exchange -> {
+            exchange.sendResponseHeaders(404, -1);
+            exchange.close();
+        });
+        stranger.start();
+        try {
+            AiServiceRouter router = mock(AiServiceRouter.class);
+            when(router.doors()).thenReturn(List.of(
+                    URI.create("http://127.0.0.1:" + stranger.getAddress().getPort()),
+                    URI.create("http://127.0.0.1:" + server.getAddress().getPort())));
+            SseRelayService routed = new SseRelayService(props, worker::execute, router);
+
+            List<String> frames = new CopyOnWriteArrayList<>();
+            routed.consume(UUID.randomUUID(), UUID.randomUUID(),
+                    (event, data) -> frames.add(event + ":" + data));
+
+            awaitUpstream();
+            assertThat(frames).containsExactly("done:{}");
+        } finally {
+            stranger.stop(0);
+        }
     }
 }

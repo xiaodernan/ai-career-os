@@ -145,12 +145,12 @@ READERS = {
     "storage.bucket": ("Storage", "bucket", "getBucket",
                        ("boot/BootReport.java", "storage/MinioStorageService.java")),
     # 39.3's boot line adds a reader that prints the host of this URL and never the
-    # URL: the relay forwards to it, the report says which ai-service the process
-    # actually became, and since 85.2 the discovery client parses it as the single
-    # instance when no list is configured -- the HTTP client itself no longer reads it.
+    # URL: the report says which ai-service the process actually became, and since 85.2
+    # the discovery client parses it as the single instance when no list is configured.
+    # The HTTP client and, since 86.1, the SSE relay both ask the router for a door
+    # instead, so neither reads the base URL any more.
     "ai-service.base-url": ("AiService", "baseUrl", "getBaseUrl",
-                            ("ai/AiServiceDiscoveryClient.java", "ai/SseRelayService.java",
-                             "boot/BootReport.java")),
+                            ("ai/AiServiceDiscoveryClient.java", "boot/BootReport.java")),
     # 85.2's list of engine nodes: the discovery client is its only reader, and an empty
     # value is the documented meaning "use base-url as the one instance".
     "ai-service.instances": ("AiService", "instances", "getInstances",

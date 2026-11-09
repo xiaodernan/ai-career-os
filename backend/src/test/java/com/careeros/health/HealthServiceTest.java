@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,6 +14,8 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.storage.StorageService;
 import java.sql.Connection;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -60,6 +63,10 @@ class HealthServiceTest {
 
         ai = mock(AiServiceClient.class);
         when(ai.healthy()).thenReturn(true);
+        // A mock returns null from a default method; the shipped client always names at
+        // least one node, so the fleet answer is stubbed here and the fallback is a test
+        // of its own.
+        when(ai.healthyNodes()).thenReturn(Map.of("http://ai-service:8000", true));
     }
 
     private HealthService service() {
@@ -70,7 +77,8 @@ class HealthServiceTest {
     void allFourAnsweringReportsOk() {
         Map<String, Object> report = service().report();
 
-        assertThat(report.keySet()).containsExactly("status", "db", "redis", "storage", "ai", "buildSha");
+        assertThat(report.keySet())
+                .containsExactly("status", "db", "redis", "storage", "ai", "aiNodes", "buildSha");
         assertThat(report)
                 .containsEntry("buildSha", "dev") // untagged image default; the Dockerfile bakes the commit
                 .containsEntry("status", "ok")
@@ -78,8 +86,38 @@ class HealthServiceTest {
                 .containsEntry("redis", true)
                 .containsEntry("storage", true)
                 .containsEntry("ai", true);
+        assertThat(report.get("aiNodes")).isEqualTo(
+                List.of(Map.of("url", "http://ai-service:8000", "up", true)));
         verify(storage).available();
-        verify(ai).healthy();
+        verify(ai).healthyNodes();
+    }
+
+    @Test
+    void theLineNamesEveryNodeAndStaysUpWhileOneAnswers() {
+        Map<String, Boolean> fleet = new LinkedHashMap<>();
+        fleet.put("http://engine-a:8000", false);
+        fleet.put("http://engine-b:8000", true);
+        when(ai.healthyNodes()).thenReturn(fleet);
+
+        Map<String, Object> report = service().report();
+
+        assertThat(report)
+                .containsEntry("ai", true)
+                .containsEntry("status", "ok");
+        assertThat(report.get("aiNodes")).isEqualTo(List.of(
+                Map.of("url", "http://engine-a:8000", "up", false),
+                Map.of("url", "http://engine-b:8000", "up", true)));
+        // One quiet replica must not send the line back to the single-node question.
+        verify(ai, never()).healthy();
+    }
+
+    @Test
+    void aFleetWithNoAnsweringNodeDegradesTheLine() {
+        when(ai.healthyNodes()).thenReturn(Map.of("http://engine-a:8000", false));
+
+        assertThat(service().report())
+                .containsEntry("ai", false)
+                .containsEntry("status", "degraded");
     }
 
     @Test
@@ -94,15 +132,19 @@ class HealthServiceTest {
 
     @Test
     void anAiHalfThatIsGoneDegradesTheLine() {
+        // A client that cannot name its nodes: the empty map falls back to 39.1's question.
+        when(ai.healthyNodes()).thenReturn(Map.of());
         when(ai.healthy()).thenReturn(false);
 
         assertThat(service().report())
                 .containsEntry("status", "degraded")
-                .containsEntry("ai", false);
+                .containsEntry("ai", false)
+                .containsEntry("aiNodes", List.of());
     }
 
     @Test
     void anAiProbeThatThrowsIsAFalseRatherThanAnException() {
+        when(ai.healthyNodes()).thenReturn(Map.of());
         when(ai.healthy()).thenThrow(new IllegalStateException("socket closed"));
 
         assertThat(service().report())

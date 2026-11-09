@@ -64,7 +64,7 @@ screen. A malformed inbound value is replaced, never refused.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/health` | dependency report; no auth, always **200**. Answers {status, db, redis, storage, ai}: status is ok only when all four answered true, otherwise degraded. The four probes run together under one 2-second bound, so a hung dependency is reported false rather than hanging the route; storage is false when no object store is configured. |
+| GET | `/health` | dependency report; no auth, always **200**. Answers {status, db, redis, storage, ai, aiNodes, buildSha}: status is ok only when all four answered true, otherwise degraded. The aiNodes array is the engine's fleet — one {url, up} row per configured ai-service origin, in configured order, all probed at once (Epic 86.2); ai is true when any of them answered, so one quiet replica is visible in the detail without claiming the engine is gone. The probes run together under one 2-second bound, so a hung dependency is reported false rather than hanging the route; storage is false when no object store is configured. buildSha is the image's commit, or dev for an untagged run. |
 
 ### Auth (`/auth`)
 

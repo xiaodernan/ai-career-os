@@ -54,6 +54,22 @@ class AiServiceRouterTest {
                 .isEqualTo(URI.create("http://10.0.0.2:8000/internal/features/match?x=1"));
     }
 
+    @Test
+    void aStreamsDoorsStartAtTheChosenOneAndNameTheRestOfTheFleetOnce() {
+        LoadBalancerClient loadBalancer = mock(LoadBalancerClient.class);
+        when(loadBalancer.choose(AiServiceDiscoveryClient.SERVICE_ID))
+                .thenReturn(instance("http://10.0.0.2:8000"));
+        AiServiceRouter router = new AiServiceRouter(loadBalancer,
+                discovery("http://localhost:8000",
+                        "http://10.0.0.1:8000,http://10.0.0.2:8000,http://10.0.0.3:8000"));
+
+        // Chosen first, then the configured order; the chosen node is not named twice.
+        assertThat(router.doors()).containsExactly(
+                URI.create("http://10.0.0.2:8000"),
+                URI.create("http://10.0.0.1:8000"),
+                URI.create("http://10.0.0.3:8000"));
+    }
+
     private static DefaultServiceInstance instance(String origin) {
         URI uri = URI.create(origin);
         return new DefaultServiceInstance(uri.getHost(), AiServiceDiscoveryClient.SERVICE_ID,

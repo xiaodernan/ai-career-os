@@ -130,6 +130,13 @@ public class FakeAiServiceClientConfig {
             return aiHealthy;
         }
 
+        /** 86.2 -- the same flag, per node: this double names one door. */
+        @Override
+        public Map<String, Boolean> healthyNodes() {
+            record("healthyNodes");
+            return Map.of("http://fake-ai-service:8000", aiHealthy);
+        }
+
         @Override
         public Map<String, Object> ingestDocument(UUID documentId, UUID userId) {
             record("ingestDocument");

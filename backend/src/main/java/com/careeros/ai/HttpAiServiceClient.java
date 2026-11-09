@@ -10,10 +10,18 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -102,24 +110,67 @@ public class HttpAiServiceClient implements AiServiceClient {
      */
     @Override
     public boolean healthy() {
-        for (URI target : discovery.targets()) {
-            try {
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(target.toString().replaceAll("/+$", "") + "/health"))
-                        .timeout(HEALTH_TIMEOUT)
-                        .GET()
-                        .build();
-                if (healthClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() / 100 == 2) {
-                    return true;
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            } catch (Exception e) {
-                // The next instance may still be there; only "none answered" is false.
+        return healthyNodes().containsValue(true);
+    }
+
+    /**
+     * Every configured node asked at once, answer kept in configured order (86.2).
+     *
+     * <p>The probes run concurrently on virtual threads and share one {@link #HEALTH_TIMEOUT}
+     * budget: a node that is hung must not delay the report of the nodes that answered, and
+     * the whole fleet must fit inside what a single-node probe used to take. A node that
+     * times out is false, not absent -- an operator reading the line needs the count.
+     */
+    @Override
+    public Map<String, Boolean> healthyNodes() {
+        List<URI> targets = discovery.targets();
+        Map<String, Boolean> nodes = new LinkedHashMap<>();
+        if (targets.isEmpty()) {
+            return nodes;
+        }
+        long deadline = System.nanoTime() + HEALTH_TIMEOUT.toNanos();
+        List<Future<Boolean>> probes = new ArrayList<>(targets.size());
+        try (ExecutorService fleet = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (URI target : targets) {
+                probes.add(fleet.submit(() -> probe(target)));
+            }
+            for (int index = 0; index < targets.size(); index++) {
+                nodes.put(targets.get(index).toString(), awaitProbe(probes.get(index), deadline));
             }
         }
-        return false;
+        return nodes;
+    }
+
+    /** One node's health route; every failure is a false because the caller is reporting, not calling. */
+    private boolean probe(URI target) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(target.toString().replaceAll("/+$", "") + "/health"))
+                    .timeout(HEALTH_TIMEOUT)
+                    .GET()
+                    .build();
+            return healthClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() / 100 == 2;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean awaitProbe(Future<Boolean> probe, long deadlineNanos) {
+        try {
+            return probe.get(Math.max(deadlineNanos - System.nanoTime(), 0), TimeUnit.NANOSECONDS);
+        } catch (TimeoutException e) {
+            probe.cancel(true);
+            return false;
+        } catch (InterruptedException e) {
+            probe.cancel(true);
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (ExecutionException e) {
+            return false;
+        }
     }
 
     @Override

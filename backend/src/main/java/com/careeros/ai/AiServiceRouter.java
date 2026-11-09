@@ -2,6 +2,8 @@ package com.careeros.ai;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerClient;
 import org.springframework.stereotype.Component;
@@ -35,6 +37,26 @@ public class AiServiceRouter {
     public URI base() {
         ServiceInstance chosen = loadBalancer.choose(AiServiceDiscoveryClient.SERVICE_ID);
         return chosen != null ? chosen.getUri() : discovery.targets().get(0);
+    }
+
+    /**
+     * The doors a stream may knock on, the chosen one first (86.1).
+     *
+     * <p>An ordinary request can be served by any node because its answer is computed per
+     * call. A stream is different: the task it follows lives in the process that started
+     * it, and the balancer's next choice need not be that process. The relay therefore
+     * asks the chosen door first and then the remaining configured instances, stopping at
+     * the one that knows the task; a single-node deployment answers on the first knock.
+     */
+    public List<URI> doors() {
+        List<URI> doors = new ArrayList<>();
+        doors.add(base());
+        for (URI target : discovery.targets()) {
+            if (!doors.contains(target)) {
+                doors.add(target);
+            }
+        }
+        return List.copyOf(doors);
     }
 
     /**

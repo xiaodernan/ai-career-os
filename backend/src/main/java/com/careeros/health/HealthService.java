@@ -4,14 +4,16 @@ import com.careeros.ai.AiServiceClient;
 import com.careeros.storage.StorageService;
 import java.sql.Connection;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BooleanSupplier;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,22 +69,35 @@ public class HealthService {
     }
 
     /**
-     * Four booleans and one verdict, in the order a reader asks them: the store every page
-     * needs, the cache every login touches, the bucket every file lands in, the engine every
-     * feature calls. {@code status} is {@code ok} only when all four answered; otherwise
-     * {@code degraded}, because a deployment that cannot see one of its halves is not whole.
+     * Four booleans, the fleet behind the last of them, and one verdict, in the order a
+     * reader asks them: the store every page needs, the cache every login touches, the
+     * bucket every file lands in, the engine every feature calls. {@code status} is
+     * {@code ok} only when all four answered; otherwise {@code degraded}, because a
+     * deployment that cannot see one of its halves is not whole.
+     *
+     * <p>Since 86.2 {@code ai} is backed by a per-node answer: {@code aiNodes} lists every
+     * configured engine origin and whether it answered, so a deployment with one quiet
+     * replica can be read at a glance. {@code ai} stays "any node answered" -- the same
+     * sentence 39.1 wrote -- and a client that cannot name its nodes still answers the
+     * single {@code healthy()} question.
      */
     public Map<String, Object> report() {
         FutureTask<Boolean> db = startProbe("db", this::dbUp);
         FutureTask<Boolean> redis = startProbe("redis", this::redisUp);
         FutureTask<Boolean> store = startProbe("storage", this::storageUp);
-        FutureTask<Boolean> ai = startProbe("ai", this::aiUp);
+        FutureTask<Map<String, Boolean>> nodes = startProbe("ai-nodes", this::aiNodes);
 
         long deadline = System.nanoTime() + probeTimeout.toNanos();
         boolean dbUp = await(db, deadline);
         boolean redisUp = await(redis, deadline);
         boolean storageUp = await(store, deadline);
-        boolean aiUp = await(ai, deadline);
+        Map<String, Boolean> aiNodes = awaitValue(nodes, deadline, Map.of());
+        boolean aiUp;
+        if (aiNodes.isEmpty()) {
+            aiUp = await(startProbe("ai", this::aiUp), deadline);
+        } else {
+            aiUp = aiNodes.containsValue(true);
+        }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("status", dbUp && redisUp && storageUp && aiUp ? "ok" : "degraded");
@@ -90,14 +105,15 @@ public class HealthService {
         body.put("redis", redisUp);
         body.put("storage", storageUp);
         body.put("ai", aiUp);
+        body.put("aiNodes", aiNodeRows(aiNodes));
         // The commit this process was built from: a probe that cannot name the code it
         // measured cannot tell a stale image from a fixed one (Epic 78).
         body.put("buildSha", buildSha);
         return body;
     }
 
-    private static FutureTask<Boolean> startProbe(String name, BooleanSupplier probe) {
-        FutureTask<Boolean> task = new FutureTask<>(probe::getAsBoolean);
+    private static <T> FutureTask<T> startProbe(String name, Callable<T> probe) {
+        FutureTask<T> task = new FutureTask<>(probe);
         Thread.ofVirtual().name("health-" + name).start(task);
         return task;
     }
@@ -109,19 +125,23 @@ public class HealthService {
      * not this report's to swallow.
      */
     private static boolean await(FutureTask<Boolean> task, long deadlineNanos) {
+        return awaitValue(task, deadlineNanos, false);
+    }
+
+    private static <T> T awaitValue(FutureTask<T> task, long deadlineNanos, T fallback) {
         long remaining = deadlineNanos - System.nanoTime();
         try {
             return task.get(Math.max(remaining, 0), TimeUnit.NANOSECONDS);
         } catch (TimeoutException e) {
             task.cancel(true);
-            return false;
+            return fallback;
         } catch (ExecutionException e) {
             log.warn("Health probe failed: {}", e.getCause() == null ? e.toString() : e.getCause().toString());
-            return false;
+            return fallback;
         } catch (InterruptedException e) {
             task.cancel(true);
             Thread.currentThread().interrupt();
-            return false;
+            return fallback;
         }
     }
 
@@ -157,5 +177,26 @@ public class HealthService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** The per-node answer; a client that cannot name its nodes answers an empty map (86.2). */
+    private Map<String, Boolean> aiNodes() {
+        try {
+            return aiService.healthyNodes();
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /** The map as a list of rows, in the fleet's configured order. */
+    private static List<Map<String, Object>> aiNodeRows(Map<String, Boolean> nodes) {
+        List<Map<String, Object>> rows = new ArrayList<>(nodes.size());
+        nodes.forEach((url, up) -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("url", url);
+            row.put("up", up);
+            rows.add(row);
+        });
+        return rows;
     }
 }

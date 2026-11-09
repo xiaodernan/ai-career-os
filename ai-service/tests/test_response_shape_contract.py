@@ -3145,7 +3145,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "listed so a claim cannot escape the census above by losing its number -- the eleven Java rows "
         "are the other clocks that share the word, kept here so a twelfth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
-        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 136),
+        # 86.1's door walk grew `consume` by the retry loop, so the parser's trailing
+        # comment moved 136 -> 155; the sentence itself did not change.
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 155),
         ("frontend/src/lib/sse/use-sse.ts", 253),
     ], ("the other spelling -- a comment after code, which a span scan cannot see -- and neither states "
         "an interval: both say a line beginning with `:` is a keep-alive the parser skips, so the "
@@ -3404,8 +3406,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "name -- the relay forwards to the browser, so a default that differs on one side is a frame "
          "that reaches the client as an event its router has never heard of")
     assert [(row["file"], row["line"], row["language"], row["default"]) for row in rows] == [
-        ("SseRelayService.java", 129, "java", "message"),
-        ("SseRelayService.java", 149, "java", "message"),
+        # Both Java sites moved with 86.1's door walk: 129 -> 148 and 149 -> 168.
+        ("SseRelayService.java", 148, "java", "message"),
+        ("SseRelayService.java", 168, "java", "message"),
         ("use-sse.ts", 250, "ts", "message"),
     ], ("where each parser invents the name: the Java pair is the in-stream frame and the stream's tail, "
         "and losing either half means one of the two exit paths stops defaulting")
@@ -3923,7 +3926,9 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
     # the `newRequestId()` helper joined client.ts above postSSE, moving its Accept line down
     # again -- same line, same meaning, counted again rather than assumed unmoved.
     assert [(row["file"], row["line"]) for row in senders] == [
-        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 87),
+        # 112 rather than 87 since 86.1's door walk and its retry loop moved the request
+        # builder down -- same line, same meaning, counted again rather than assumed unmoved.
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 112),
         ("frontend/src/lib/api/client.ts", 347),
         ("frontend/src/lib/sse/use-sse.ts", 92)], \
         (f"{[(r['file'], r['line']) for r in senders]}: three senders arm the stream -- the relay, the "

@@ -5144,6 +5144,43 @@ Boot 3.5.x), and the circuit breaker arrives through the same `Customizer` seam 
   `HttpAiServiceClientTest` 18/18, a full-context boot in `HealthIT`, and the full backend
   non-IT suite 1229/1229.)
 
+## Epic 86 -- the fleet is visible: the stream follows its task and the health line names every node
+
+85.2 made the ai-service a service with doors, but two callers still behaved as if there were
+one. The SSE relay read the configured base URL directly, so a task opened through the router
+could be followed on a process that had never heard of it; and the health line collapsed the
+whole fleet into one boolean, so "one replica is quiet" and "the engine is gone" read the same.
+This epic closes both: the relay knocks on the doors in a defined order and stops at the node
+that owns the task, and the health line reports each node.
+
+- [x] **86.1** The SSE relay follows the task: the router names the doors, the relay knocks on the chosen one first and moves on past a 404 (measured 2026-11-09).
+
+  (`SseRelayService.consume` no longer reads `app.ai-service.base-url`; it asks
+  `AiServiceRouter.doors()` for the chosen origin followed by the rest of the configured
+  fleet, and a non-200 from one node is the signal to try the next instead of an error frame.
+  The task bus is in-process on the engine side, so a stream must reach the node that started
+  the task -- round-robin alone would hand it to a stranger half the time. The internal
+  token, the user header, the request id and the frame parser are unchanged, and the
+  `/internal/stream/` path is still a literal, so the contract gates keep their census.
+  A single-node deployment answers on the first knock. Measured by `SseRelayServiceTest`
+  3/3 -- one case points the configured base URL at a closed port and another puts a
+  404 node in front of the owner -- `AiServiceRouterTest` 4/4, and the knob census gate,
+  whose base-url reader list no longer names the relay.)
+
+- [x] **86.2** The health line names every engine node: aiNodes carries `{url, up}` per configured origin, probed at once under the line's existing budget (measured 2026-11-09).
+
+  (`AiServiceClient.healthyNodes()` is a default method returning an empty map, which a
+  caller reads as "this client cannot name its nodes" and answers with 39.1's `healthy()`
+  -- no fake or alternate bridge breaks, and an empty map never means "nothing is up".
+  `HttpAiServiceClient` asks every `discovery.targets()` entry on virtual threads and keeps
+  configured order; the whole fleet shares the same two-second `HEALTH_TIMEOUT`, and a node
+  that times out is false rather than absent. `healthy()` is now "any node answered", the
+  sentence 85.2 wrote. `HealthService.report()` adds aiNodes between ai and buildSha; status
+  stays ok while any node answers, so a quiet replica is visible in the detail without
+  pretending the engine is gone. Measured by `HealthServiceTest` 10/10,
+  `HttpAiServiceClientTest` 19/19 (one live node and one closed port, order and both answers
+  pinned), `HealthIT` full-context 2/2, and the full backend non-IT suite 1234/1234.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

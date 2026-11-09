@@ -15,6 +15,19 @@ public interface AiServiceClient {
      */
     boolean healthy();
 
+    /**
+     * The same question per node (86.2): every configured ai-service origin mapped to
+     * whether it answered its health route, in configured order. The health line reports
+     * the map so an operator can see which replica is quiet instead of only that one is.
+     *
+     * <p>An empty map is a client that cannot name its nodes -- the answer then means
+     * nothing about the fleet, and a caller falls back to {@link #healthy()}. It never
+     * means "nothing is up".
+     */
+    default Map<String, Boolean> healthyNodes() {
+        return Map.of();
+    }
+
     Map<String, Object> ingestDocument(UUID documentId, UUID userId);
 
     Map<String, Object> ingestText(UUID userId, String title, String text, String kind, UUID refId);

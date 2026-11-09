@@ -17,6 +17,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -289,6 +290,29 @@ class HttpAiServiceClientTest {
         healthStatus = 503;
 
         assertThat(client.healthy()).isFalse();
+    }
+
+    @Test
+    void theFleetProbeNamesEveryNodeInConfiguredOrder() throws Exception {
+        int closed;
+        try (ServerSocket socket = new ServerSocket(0)) {
+            closed = socket.getLocalPort(); // bound, then released: nothing listens
+        }
+        String up = "http://127.0.0.1:" + server.getAddress().getPort();
+        String down = "http://127.0.0.1:" + closed;
+        AppProperties props = new AppProperties();
+        props.getInternal().setToken("test-token");
+        props.getAiService().setInstances(up + "," + down);
+        AiServiceDiscoveryClient discovery = new AiServiceDiscoveryClient(props);
+        HttpAiServiceClient fleet = new HttpAiServiceClient(RestClient.builder(), props,
+                mock(AiServiceCircuitBreaker.class),
+                new AiServiceRouter(mock(LoadBalancerClient.class), discovery), discovery);
+
+        Map<String, Boolean> nodes = fleet.healthyNodes();
+
+        assertThat(nodes.keySet()).containsExactly(up, down);
+        assertThat(nodes.values()).containsExactly(true, false);
+        assertThat(fleet.healthy()).isTrue();
     }
 
     /** The refusal bodies the fake upstream answers, keyed by payload marker. */
