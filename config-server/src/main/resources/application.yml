@@ -22,6 +22,14 @@ management:
     health:
       probes:
         enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    build-sha: ${APP_BUILD_SHA:dev}
 
 logging:
   pattern:

@@ -5674,6 +5674,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `info.app` publishes service name and build SHA (env-driven). Documented in `docs/DEPLOYMENT.md`
   and `docs/SECURITY.md`. Measured: `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
 
+- [x] **108.2** Consistent service info metadata across Spring Cloud components (measured 2026-11-10).
+
+  (Added `info.app` (name/build-sha) and env info contributor to gateway, discovery and config-server
+  for consistent microservice instance identification. Measured: `mvn -f gateway/pom.xml -DskipTests -o compile`
+  BUILD SUCCESS, `mvn -f discovery/pom.xml -o test` 4/4, `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test` 4/4.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
