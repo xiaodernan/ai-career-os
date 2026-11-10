@@ -100,3 +100,20 @@ def test_a_log_line_outside_any_request_has_no_id():
         logging.LogRecord("careeros.test.correlation", logging.INFO, __file__, 1, "boot", None, None)
     )
     assert "request_id" not in json.loads(formatted)
+
+
+def test_the_answer_echoes_a_valid_traceparent():
+    tp = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+    response = _answer({**AUTH, "traceparent": tp})
+    assert response.status_code == 422
+    assert response.headers["traceparent"] == tp
+
+
+def test_a_malformed_traceparent_is_replaced_rather_than_refused():
+    response = _answer({**AUTH, "traceparent": "bad"})
+    assert response.status_code == 422
+    assert "traceparent" in response.headers
+    assert response.headers["traceparent"].startswith("00-")
+    assert response.headers["traceparent"] != "bad"
+    parts = response.headers["traceparent"].split("-")
+    assert len(parts) == 4 and len(parts[1]) == 32 and len(parts[2]) == 16

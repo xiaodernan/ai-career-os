@@ -2,7 +2,14 @@ import json
 import logging
 import sys
 
-from app.core.request_id import request_id
+from app.core.request_id import request_id, traceparent
+
+
+def _trace_id(tp: str | None) -> str | None:
+    if not tp:
+        return None
+    parts = tp.split("-")
+    return parts[1] if len(parts) >= 2 else None
 
 
 class JsonFormatter(logging.Formatter):
@@ -16,6 +23,10 @@ class JsonFormatter(logging.Formatter):
         rid = request_id.get()
         if rid:
             payload["request_id"] = rid
+        tp = traceparent.get()
+        tid = _trace_id(tp)
+        if tid:
+            payload["trace_id"] = tid
         ctx = getattr(record, "ctx", None)
         if isinstance(ctx, dict):
             payload.update(ctx)

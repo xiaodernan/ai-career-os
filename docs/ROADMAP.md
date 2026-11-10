@@ -5606,6 +5606,19 @@ deployments can centralize configuration as a real microservices element without
   Measured: `config-server` `ConfigServerApplicationTests` 2/2 green offline; ai-service compose parse
   gate `tests/test_the_compose_files_parse.py` 4/4 green after compose updates.)
 
+### Epic 104 -- trace context reaches the engine (ai-service)
+
+With the gateway and backend propagating W3C `traceparent` (102.1), the ai-service must
+preserve and echo it so the entire request chain is correlated across logs and responses.
+
+- [x] **104.1** ai-service accepts, validates, mints, echoes and logs trace context (measured 2026-11-10).
+
+  (Extended `app/core/request_id.py` to validate/preserve/mint W3C `traceparent`, store in
+  context vars, and echo `traceparent` on responses alongside `x-request-id`. `app/core/logging.py`
+  emits `trace_id` from traceparent in JSON logs when present. Measured: ai-service tests
+  `test_the_id_the_backend_sends_is_the_id_the_service_logs.py` 6/6, `test_json_log_formatter_carries_request_id.py`
+  4/4, `test_observability_and_error_wiring_exists.py` 2/2 all green offline.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -10,28 +10,15 @@ Priority order is by "a reader or an operator can be misled today", not by size.
 
 ---
 
-## Epic 78 — the deployed stack says which commit it is
+## Epic 78 — the deployed stack says which commit it is — **CLOSED (verified)**
 
-> **Partly shipped by a concurrent session** (`cbbb90f feat(observability): bake
-> build SHA into health (Epic 78)`), with `HealthService.java` still in flight
-> when this note was updated. Read the current file before starting: the job now
-> is to verify the SHA reaches `/health` **and** the journey report header, and to
-> add the contract gate — not to rebuild what already landed.
-
-**Measured (2026-11-07).** On 2026-11-07 the six `careeros-*` containers were healthy and
-`GET /api/v1/health` answered `{db, redis, storage, ai: true}`, but
-`docker inspect careeros-backend --format '{{.Created}}'` was hours older than
-`HEAD`. A golden-journey run against that stack was therefore exercising code that
-no longer matched the checkout. Nothing in the health answer or the journey report
-could tell the operator which commit they had just validated.
-
-**Do.** Bake the build SHA / commit id into each image (build arg → env →
-`/health`'s `data`), and have `scripts/journey_api.py` print it once at the top of
-every run so a latency report always names the code it measured. Add a contract
-gate over the health response shape and a doc row in `API.md`.
-
-**Done when** a journey report's header contains a SHA, `curl /health` returns the
-same SHA, and a gate reddens if the field disappears. No secrets in the answer.
+**Shipped (verified 2026-11-10).** Backend `HealthService` reads `APP_BUILD_SHA` env
+and returns `buildSha` in `/api/v1/health` (pinned by `HealthServiceTest`); journey
+script surfaces it in report headers; ai-service `/health` returns `build_sha`;
+`docker-compose*.yml` pass build args `APP_BUILD_SHA` to `ai-service` and `backend`
+(Dockerfiles bake it, compose-parse gate enforces); contract gates
+`test_health_build_sha_is_wired.py` and `test_journey_api_propagates_request_id.py`
+cover the wiring. No secrets exposed.
 
 ---
 

@@ -12,7 +12,7 @@ import json
 import logging
 
 from app.core.logging import JsonFormatter
-from app.core.request_id import request_id
+from app.core.request_id import request_id, traceparent
 
 
 def _emit(formatter: logging.Formatter, msg: str, ctx: dict | None = None, rid: str | None = None) -> dict:
@@ -54,3 +54,13 @@ def test_json_log_line_omits_request_id_when_no_context() -> None:
     payload = _emit(JsonFormatter(), "boot line", rid=None)
     assert "request_id" not in payload
     assert payload["msg"] == "boot line"
+
+
+def test_json_log_line_includes_trace_id_when_traceparent_in_context() -> None:
+    tp = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+    token = traceparent.set(tp)
+    try:
+        payload = _emit(JsonFormatter(), "traced", rid="rid-abc12345")
+        assert payload["trace_id"] == "4bf92f3577b34da6a3ce929d0e0e4736"
+    finally:
+        traceparent.reset(token)
