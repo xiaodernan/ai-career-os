@@ -104,6 +104,9 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     `/actuator/prometheus` are public probe/scrape endpoints; `/actuator/info` and Resilience4j
     actuator endpoints require authentication.
   - Gateway/Discovery/Config Server expose actuator endpoints appropriate to their role.
+  - A cross-service contract gate (`test_the_spring_cloud_actuator_surface_contract.py`, Epic 108.20) asserts every
+    service exposes `health`, `info` and `prometheus`, and that Breaker-heavy and wiring-debug endpoints
+    (`circuitbreakers`/`circuitbreakerevents`/`conditions`) live where the breakers live.
   - The edge carries an optional shared-secret gate for its operations surface: set `GATEWAY_ACTUATOR_TOKEN`
     and every `/actuator/**` needs the `X-Actuator-Token` header (`/actuator/health` stays open for the
     container probe); `GatewayActuatorGuard` refuses at the edge with 403 (`actuator-surface-not-exposed`)

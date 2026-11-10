@@ -5700,6 +5700,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.17** Spring Cloud readiness runbook + contract gate (measured 2026-11-10).
 - [x] **108.18** Backend Spring Cloud wiring debug behind existing auth (measured 2026-11-10).
 - [x] **108.19** Fleet page renders per-instance build-sha (measured 2026-11-10).
+- [x] **108.20** Cross-service Spring Cloud actuator surface contract (measured 2026-11-10).
+
+  (New `test_the_spring_cloud_actuator_surface_contract.py` reads the four application.yml files together
+  and asserts the shared actuator promises: every service exposes `health`/`info`/`prometheus`; the breaker/
+  wiring-debug endpoints (`circuitbreakers`/`circuitbreakerevents`/`conditions`) are present where breakers live.
+  This is a drift guard, not a security audit — the security chain still limits who can call them.
+  Measured: gate 3/3 passing offline.)
 
   (The monitoring topology card renders each instance row's `build-sha` from the discovery metadata
   alongside its URI, wired through `monitoring.topologyInstanceSha` (i18n, both languages). Frontend fixture
