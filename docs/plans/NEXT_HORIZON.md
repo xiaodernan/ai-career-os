@@ -1,10 +1,9 @@
 # Next horizon — backlog beyond Epic 77
 
-This file is the forward backlog while `docs/ROADMAP.md` and
-`docs/plans/plan_long_term.md` are being edited by another session (Epic 74.1/74.2
-is in flight). Each item below comes from something **measured in this repo**, not
-from a wish list. Pick the top one, read the current files, implement, and move the
-entry into ROADMAP when it lands.
+**All items below are CLOSED and verified (78–84). The file is kept as history; the in-flight
+story about Epic 74.1/74.2 is stale — those epics shipped and the forward plan now lives in
+`docs/ROADMAP.md` and `docs/plans/plan_long_term.md`.** Each original item came from something
+**measured in this repo**, not from a wish list.
 
 Priority order is by "a reader or an operator can be misled today", not by size.
 

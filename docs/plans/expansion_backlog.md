@@ -1,10 +1,14 @@
 # Expansion Backlog — AI Career OS (集大成路线)
 
-> Living backlog of **new** epics beyond the current shipped/active line (Epics 0–74).  
+> Living backlog of **new** epics beyond the current shipped/active line (Epics 0–74).
 > Purpose: make the system comprehensive, resilient, and production-grade across product,
 > engineering, operations, and governance dimensions. Pick work in priority order when
 > unblocked; each epic must ship with a gate, destructive proof, and real verification
 > (no read-only “inspection” claims). Update this file only by adding measured outcomes.
+>
+> **Status (2026-11-10):** Epics 74.1/74.2 shipped and the forward plan beyond Epic 77
+> is tracked in `docs/ROADMAP.md` (Epics 78+). The P-epics below are design sketches
+> kept for reference; the operative ledger is `docs/ROADMAP.md`.
 
 ## Status & rules
 - This file is additive planning content; it does not override `docs/plans/plan_long_term.md`
@@ -12,9 +16,9 @@
   measured verification in the relevant canonical docs.
 - Verification rule: typecheck/tests/e2e where applicable; Docker-dependent `*IT`/Playwright
   require a real stack and must be recorded honestly if unavailable.
-- Worktree/branch consolidation: committed history on detached worktrees audited as ancestors
-  of `main` (2026-11-08) — no merge required; do not force-merge stale dirty worktrees over
-  in-flight work.
+- Worktree/branch consolidation: all worktrees and branches other than `main` were audited
+  and merged on 2026-10; the repo lives on `main` only. Do not force-merge stale dirty
+  worktrees over landed work.
 
 ## P0 — Reliability, safety, and operability (foundation for scale)
 
@@ -119,13 +123,12 @@
 - **Acceptance**: budget gate or recorded benchmark report; regressions flagged.
 
 ## Next concrete picks (when 74.x unblocks verification flow)
-1. Keep shipping independent gates/hardening on `main` (no 74.1 conflicts).
-2. After 74.1 lands: full verification → measured status update → 74.2 → then select Epic 75/77
-   slices that can be delivered with real gates in the current environment.
+1. Keep shipping independent gates/hardening on `main` (74.x shipped 2026-11-09).
+2. Next slices: pick P0/P1 items that can ship with real gates in the current environment.
 
 ## Measured progress (additive, verified)
 > Recorded 2026-11-08 (this session chain, `origin/main` advancing). Each item shipped with
-> a gate and destructive proof where applicable; 74.1 in-flight files were not touched.
+> a gate and destructive proof where applicable; Epics 74.1/74.2 shipped 2026-11-09.
 
 - **OpenAPI/agent/internal contract gates** (ai-service, pytest): route inventory fully
   documented in OpenAPI; every OpenAPI operation has summary/description; route path hygiene;
