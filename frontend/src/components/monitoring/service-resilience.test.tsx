@@ -66,4 +66,10 @@ describe("ServiceResilience", () => {
     const html = renderToStaticMarkup(<ServiceResilience />);
     expect(html).toContain("[monitoring.resilienceUnavailable]");
   });
+
+  it("shows a loading skeleton while pending", () => {
+    state.resilience = { data: undefined, isPending: true, isError: false };
+    const html = renderToStaticMarkup(<ServiceResilience />);
+    expect(html).toContain("shimmer");
+  });
 });
