@@ -5699,6 +5699,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.16** Wiring debug behind the ops gate for the edge (measured 2026-11-10).
 - [x] **108.17** Spring Cloud readiness runbook + contract gate (measured 2026-11-10).
 - [x] **108.18** Backend Spring Cloud wiring debug behind existing auth (measured 2026-11-10).
+- [x] **108.19** Fleet page renders per-instance build-sha (measured 2026-11-10).
+
+  (The monitoring topology card renders each instance row's `build-sha` from the discovery metadata
+  alongside its URI, wired through `monitoring.topologyInstanceSha` (i18n, both languages). Frontend fixture
+  aligned to the backend's `build-sha` key; copy-census 162 with the resilience card; service-topology vitest 3/3,
+  used-keys/translations green. Measured 2026-11-10.)
 
   (`/actuator/conditions` is exposed on the backend behind the same authenticated actuator surface previously used
   for Eureka/CircuitBreaker wiring debug — adding the `conditions` endpoint alongside `info`/`circuitbreakers`/`circuitbreakerevents`)

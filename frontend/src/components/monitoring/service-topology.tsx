@@ -64,9 +64,19 @@ export function ServiceTopology() {
                     {service.instances.map((instance) => (
                       <li
                         key={instance.instanceId}
-                        className="truncate font-mono text-xs text-muted-foreground"
+                        className="font-mono text-xs text-muted-foreground"
                       >
-                        {instance.uri}
+                        <div className="truncate">{instance.uri}</div>
+                        {instance.metadata?.["build-sha"] && (
+                          <div
+                            className="text-[10px] text-muted-foreground/80"
+                            title={t("monitoring.topologyInstanceSha", {
+                              sha: instance.metadata["build-sha"],
+                            })}
+                          >
+                            {instance.metadata["build-sha"]}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>

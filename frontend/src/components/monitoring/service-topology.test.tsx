@@ -47,14 +47,14 @@ describe("ServiceTopology", () => {
           {
             name: "ai-service",
             instances: [
-              { instanceId: "ai-1", uri: "http://10.0.0.4:8000", metadata: { buildSha: "dev" } },
+              { instanceId: "ai-1", uri: "http://10.0.0.4:8000", metadata: { "build-sha": "unit-ai1" } },
             ],
           },
           {
             name: "backend",
             instances: [
-              { instanceId: "b-1", uri: "http://10.0.0.2:8080", metadata: { buildSha: "abc" } },
-              { instanceId: "b-2", uri: "http://10.0.0.3:8080", metadata: { buildSha: "def" } },
+              { instanceId: "b-1", uri: "http://10.0.0.2:8080", metadata: { "build-sha": "unit-a1" } },
+              { instanceId: "b-2", uri: "http://10.0.0.3:8080", metadata: { "build-sha": "unit-b2" } },
             ],
           },
         ],
@@ -70,6 +70,8 @@ describe("ServiceTopology", () => {
     expect(html).toContain("http://10.0.0.3:8080");
     expect(html).toContain("[monitoring.topologyRegistryEureka]");
     expect(html).toContain("[monitoring.topologyInstances|2]");
+    expect(html).toContain("unit-a1");
+    expect(html).toContain("unit-b2");
   });
 
   it("says the client knows no service rather than drawing an empty box", () => {

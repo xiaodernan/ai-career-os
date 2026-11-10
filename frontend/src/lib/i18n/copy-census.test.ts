@@ -102,8 +102,10 @@ describe("the browser's copy", () => {
     // `app/(app)/timeline/page.tsx` and `app/(app)/timeline/layout.tsx` — the English words in them are
     // the whole page's copy, so they are browser sources. (`lib/hooks/timeline.ts` is the `.ts` half
     // and was never part of this walk.) 161 with `components/monitoring/service-topology.tsx`,
-    // the card that draws the fleet the discovery client reports (100).
-    expect(browserSources().length).toBe(161);
+    // the card that draws the fleet the discovery client reports (100); 162 with
+    // `components/monitoring/service-resilience.tsx`, the circuit-breaker card for the
+    // ai-service bridge (105.2).
+    expect(browserSources().length).toBe(162);
   });
 
   it("finds a sentence, however long it is", () => {
