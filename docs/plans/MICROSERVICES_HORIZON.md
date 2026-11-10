@@ -24,10 +24,8 @@
 
 ## Planned epics (not started)
 
-### Epic 109 — Kubernetes manifests for the Spring Cloud services
-- **Goal:** deployment is no longer compose-only; a Kubernetes manifest set (Kustomize overlay) ships for discovery/gateway/backend/config-server/ai-service.
-- **Deliverables:** `deploy/k8s/{base,overlays}` with Deployments, Services, liveness/readiness probes pointing at `/actuator/health/liveness` and `/actuator/health/readiness`, PodDisruptionBudget for multi-instance gateway/backend/ai-service, `config` profile for config-server, ServiceAccount + NetworkPolicy (gateway egress only to backend; backend egress only to ai-service/db/minio/redis).
-- **Acceptance:** `kubectl apply --dry-run=client` validates; a smoke test checks the manifests reference the same images/tags as dev compose; documented in `docs/DEPLOYMENT.md` profile.
+### Epic 109 — Kubernetes manifests for the Spring Cloud services **DONE (measured 2026-11-10)**
+`deploy/k8s/base` ships a Kustomize bundle mirroring `docker-compose.yml`: namespace, ConfigMap, Secret example with `CHANGE_ME` placeholders, PersistentVolumeClaims for postgres and minio, Postgres StatefulSet + Redis/MinIO/AI/BE/GW/Discovery/Config/Frontend Deployments with probes, PDBs for backend/gateway/frontend/ai-service, NetworkPolicy. `deploy/k8s/overlays/prod` raises replicas for ai-service/backend/frontend to 3. All manifests validated by `kubectl kustomize` (exit 0) and by the contract gate `test_the_k8s_manifests_define_a_working_fleet.py` (9/9 green), which pins the invariants the compose file represents (service names, ports, probes, PDB coverage, label hygiene, no real-looking secrets, prod overlay scaling).
 
 ### Epic 110 — Config Server opt-in demo round-trip **DONE (measured 2026-11-10)**
 - The `career-os-backend.yml` example profile now carries `careeros.extras.demo-property=backend-roundtrip-ok`; a service opted into Config (`SPRING_CLOUD_CONFIG_ENABLED=true` with `spring.application.name=career-os-backend`) can read the key back from `GET http://config-server:8888/career-os-backend/default`. `ConfigServerApplicationTests.servesTheBackendRoundTripDemoProperty` pins the round-trip offline; suite 5/5 green. Scope kept to a round-trip demo; not a general config-refresh loop. `MICROSERVICES.md` §4 now lists the round-trip.

@@ -46,6 +46,7 @@ flowchart LR
 
 Stateful dependencies (PostgreSQL+pgvector, Redis, MinIO) remain shared infrastructure services
 as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
+A `deploy/k8s/base` Kustomize bundle mirrors the same topology for Kubernetes (namespace, ConfigMap, optional Secret with placeholders only, PersistentVolumeClaims, PDBs for the HTTP-facing deployments); a gate `test_the_k8s_manifests_define_a_working_fleet.py` pins its invariants, and `deploy/k8s/overlays/prod` raises replicas for the three public-facing deployments (Epic 109).
 
 ## 2. Service discovery (Eureka, opt-in)
 

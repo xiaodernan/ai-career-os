@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+  namespace: careeros
+  labels:
+    app: ai-service
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-service
+  template:
+    metadata:
+      labels:
+        app: ai-service
+        app.kubernetes.io/part-of: ai-career-os
+    spec:
+      containers:
+        - name: ai-service
+          image: ghcr.io/xiaodernan/careeros-ai-service:latest # replace with pinned tag in prod
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: careeros-secrets
+                  key: DATABASE_URL
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: careeros-config
+                  key: APP_ENV
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+      restartPolicy: Always
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-service
+  namespace: careeros
+  labels:
+    app: ai-service
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ai-service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-service
+  namespace: careeros
+  labels:
+    app: ai-service
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  selector:
+    app: ai-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+

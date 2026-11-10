@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: careeros
+  labels:
+    app: gateway
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+        app.kubernetes.io/part-of: ai-career-os
+    spec:
+      containers:
+        - name: gateway
+          image: ghcr.io/xiaodernan/careeros-gateway:latest # replace with pinned digest in prod
+          ports:
+            - name: http
+              containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: careeros-config
+            - secretRef:
+                name: careeros-secrets
+          env:
+            - name: GATEWAY_HOSTNAME
+              value: gateway
+            - name: GATEWAY_CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: careeros-config
+                  key: APP_CORS_ORIGINS
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 300m
+            limits:
+              memory: 1Gi
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: careeros
+  labels:
+    app: gateway
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  type: LoadBalancer
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway
+  namespace: careeros
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: gateway

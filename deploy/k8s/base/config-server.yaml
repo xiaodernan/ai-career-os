@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: careeros
+  labels:
+    app: config-server
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+        app.kubernetes.io/part-of: ai-career-os
+    spec:
+      containers:
+        - name: config-server
+          image: ghcr.io/xiaodernan/careeros-config-server:latest # replace with pinned digest in prod
+          ports:
+            - name: http
+              containerPort: 8888
+          env:
+            - name: CONFIG_SERVER_PORT
+              value: "8888"
+            - name: CONFIG_SERVER_PROFILE
+              value: native
+            - name: CONFIG_SERVER_SEARCH_LOCATIONS
+              value: classpath:/config-repo,file:/config
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 1Gi
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: careeros
+  labels:
+    app: config-server
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  selector:
+    app: config-server
+  ports:
+    - name: http
+      port: 8888
+      targetPort: http

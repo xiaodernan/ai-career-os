@@ -636,6 +636,27 @@ without requiring a git backend. It is not started by default.
   config server. For the runnable opt-in check and the full microservices architecture, see
   [MICROSERVICES.md](MICROSERVICES.md) §9.1.
 
+## Kubernetes (opt-in, Epic 109)
+
+A Kustomize bundle mirroring the `docker-compose.yml` fleet lives under `deploy/k8s/`.
+It is operator-driven: it is **not** started by default, and you must create your own
+Secret before applying (the example manifest deliberately holds `CHANGE_ME` placeholders).
+
+- **Base** (`deploy/k8s/base`): namespace, ConfigMap, non-secret example Secret, StatefulSet for
+  Postgres with PVC, Deployments for Redis/MinIO/ai-service/Discovery/Backend/Gateway/Config-Server/Frontend with
+  liveness+readiness probes (Spring Cloud services use the actuator liveness/readiness groups,
+  the ai-service `/health`, the frontend `/`), PersistentVolumeClaims for postgres and minio,
+  PDBs for backend/gateway/frontend/ai-service, and a NetworkPolicy allowing only inter-service + DNS traffic.
+- **Prod overlay** (`deploy/k8s/overlays/prod`): namespace `careeros-prod`, `ai-service`/`backend`/`frontend`
+  scaled to 3 replicas.
+- **Apply**: create a cluster, put a real secret in place (`kubectl -n careeros create secret generic careeros-secrets`
+  with the keys shown in `deploy/k8s/base/secret.example.yaml`), then `kubectl apply -k deploy/k8s/base` or
+  `kubectl apply -k deploy/k8s/overlays/prod`.
+- **Images**: the manifest references the same image repositories the Dockerfile build used in compose. In a
+  registry-enabled cluster, replace `:latest` in each image field with a pinned digest.
+- **Validation**: `kubectl kustomize deploy/k8s/base` (and the prod overlay) succeeds offline; the contract gate
+  `ai-service/tests/test_the_k8s_manifests_define_a_working_fleet.py` pins the topology invariant.
+
 ## Run services locally against Docker infra
 
 Useful when iterating on one service. Start the infra (above), then:

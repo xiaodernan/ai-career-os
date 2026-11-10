@@ -54,6 +54,7 @@ TESTS=(
   ai-service/tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
   ai-service/tests/test_the_spring_cloud_services_publish_build_sha_in_info.py
   ai-service/tests/test_the_spring_cloud_services_expose_liveness_and_readiness_probes.py
+  ai-service/tests/test_the_k8s_manifests_define_a_working_fleet.py
 )
 
 echo "== verify_gates: representative offline contract gates =="

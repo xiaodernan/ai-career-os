@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: careeros
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+        app.kubernetes.io/part-of: ai-career-os
+    spec:
+      containers:
+        - name: minio
+          image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+          command: ["server", "/data", "--console-address", ":9001"]
+          ports:
+            - name: minio
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: careeros-secrets
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: careeros-secrets
+                  key: MINIO_ROOT_PASSWORD
+          readinessProbe:
+            exec:
+              command: ["mc", "ready", "local"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["mc", "ready", "local"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 2Gi
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: careeros
+  labels:
+    app: minio
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  selector:
+    app: minio
+  ports:
+    - name: minio
+      port: 9000
+      targetPort: minio
+    - name: console
+      port: 9001
+      targetPort: console
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: careeros
+  labels:
+    app.kubernetes.io/part-of: ai-career-os
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard

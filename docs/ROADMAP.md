@@ -5710,6 +5710,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.27** Kubernetes-shaped liveness/readiness probes on every Spring Cloud service (measured 2026-11-10).
 - [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
 - [x] **111** Spring Cloud Gateway route-latency histograms in Prometheus (measured 2026-11-10).
+- [x] **109** Kubernetes manifests for the Spring Cloud fleet (measured 2026-11-10).
+
+  (`deploy/k8s/base`: Kustomize bundle mirroring `docker-compose.yml` — namespace, ConfigMap, Secret example
+  with `CHANGE_ME` placeholders, StatefulSet/Deployments for postgres/redis/minio/ai-service/discovery/backend/
+  gateway/frontend/config-server with liveness+readiness probes (actuator liveness/readiness for the Spring Cloud
+  services, `/health` for the engine, `/` for the frontend), PDBs for backend/gateway/frontend/ai-service,
+  NetworkPolicy, `deploy/k8s/overlays/prod` scales the three public-facing deployments to 3 replicas.
+  `kubectl kustomize` exit 0; new gate `test_the_k8s_manifests_define_a_working_fleet.py` (9/9).)
 
   (The gateway enables `management.metrics.distribution.percentiles-histogram.spring.cloud.gateway.requests: true`
   in addition to `http.server.requests`, so Prometheus sees the route-tagged buckets (not just the mean).
