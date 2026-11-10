@@ -635,6 +635,10 @@ without requiring a git backend. It is not started by default.
 - **Health/actuator**: `GET /actuator/health` (and `info`, `env`) are exposed by the
   config server. For the runnable opt-in check and the full microservices architecture, see
   [MICROSERVICES.md](MICROSERVICES.md) §9.1.
+- **Optional shared-secret gate (Epic 114)**: set `CONFIG_SERVER_TOKEN` and the server refuses
+  any request not carrying `X-Config-Token` — `/actuator/health` stays open so the container
+  probe still works. Leaving the token unset keeps the dev posture (nothing is served that an
+  operator hasn't otherwise chosen to hold in `/config`).
 
 ## Kubernetes (opt-in, Epic 109)
 

@@ -102,6 +102,9 @@ A `deploy/k8s/base` Kustomize bundle mirrors the same topology for Kubernetes (n
     `fail-fast` defaults to `false` to preserve startup resilience and existing deployments.
   - A contract gate (`ai-service/tests/test_the_config_client_stays_opt_in.py`) asserts the opt-in
     posture and the config-server's `config` compose profile.
+  - Optional shared-secret gate (Epic 114, verified 2026-11-10): set `CONFIG_SERVER_TOKEN` and the
+    server requires the matching `X-Config-Token` header on everything except
+    `/actuator/health`. `ConfigServerTokenGateTest` covers refusal/admission/wrong-token/health-open.
   - Round-trip (Epic 110, verified 2026-11-10): the `career-os-backend` profile in the
     native repo carries `careeros.extras.demo-property=backend-roundtrip-ok`, so a service
     opted in can read the same value back; `ConfigServerApplicationTests`

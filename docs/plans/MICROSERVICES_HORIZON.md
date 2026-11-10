@@ -19,6 +19,7 @@
 | Observability | `info.app`/build-sha; `metrics.tags.application`; `http.server.requests` histograms; `circuitbreakers[events]` + `conditions` auth-only; `/api/v1/system/resilience` + `ServiceResilience` card; `careeros.circuitbreaker.open` gauge + `CareerOSCircuitBreakerOpen` alarm | `test_the_spring_cloud_*` 8 gates; `GatewayActuatorSurfaceTest` 5/5 |
 | Kubernetes probes | `probes.enabled=true` on all four services (`/actuator/health/liveness` + `/readiness`) | `test_the_spring_cloud_services_expose_liveness_and_readiness_probes.py` |
 | Config round-trip (110) | native repo `career-os-backend.yml` carries `careeros.extras.demo-property=backend-roundtrip-ok` | `ConfigServerApplicationTests.servesTheBackendRoundTripDemoProperty` |
+| Config Server security (114) | optional `X-Config-Token` gate gated by `CONFIG_SERVER_TOKEN`; `/actuator/health` stays open | `ConfigServerTokenGateTest` |
 
 ---
 
@@ -43,10 +44,12 @@
 - **Deliverables:** `discovery` profile-driven `eureka.client.register-with-eureka=true/fetch-registry=true`; `EUREKA_PEER_ZONES` wiring; docs explain split-horizon; no default behavior change.
 - **Acceptance:** two-node overlay boots (documented as manual verification; not in CI); `DiscoveryApplicationTests` covers the profile properties.
 
-### Epic 114 — Config Server security (opaque token or mTLS)
-- **Goal:** the config endpoint refuses anonymous reads; native backend serves only behind a shared token.
-- **Deliverables:** `spring.cloud.config.server.native....` + a filter (`X-Config-Token`) or mTLS in front; config examples sanitized; a test asserts 401 without the token; docs updated; `.env.prod.example` handles it via an env placeholder (same pattern as `GATEWAY_ACTUATOR_TOKEN`).
-- **Acceptance:** gate refuses anonymous config fetch; docs show how to enable.
+### Epic 114 — Config Server security (opaque token) **DONE (measured 2026-11-10)**
+`ConfigTokenFilter`+`ConfigTokenConfig` add an optional `X-Config-Token` header check gated by
+`CONFIG_SERVER_TOKEN`: set it and every request except `/actuator/health` is refused without it;
+unset keeps dev behavior. `ConfigServerTokenGateTest` proves refusal, admission, wrong-token refusal
+and anonymous health probe (suite 9/9 green). Honest scope: a single opaque shared token (sufficient
+for a single-node native server), not mTLS; mTLS and per-service client identity remain next-horizon.
 
 ## Sequencing notes
 - 109 and 112 unblock real-world operability questions; 110–111 tighten the observability loop; 113–114 are advanced and only worth doing when a second instance is needed.

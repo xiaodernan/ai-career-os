@@ -5711,6 +5711,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
 - [x] **111** Spring Cloud Gateway route-latency histograms in Prometheus (measured 2026-11-10).
 - [x] **109** Kubernetes manifests for the Spring Cloud fleet (measured 2026-11-10).
+- [x] **114** Optional shared-secret gate for the Config Server (measured 2026-11-10).
+
+  (`ConfigTokenFilter`/`ConfigTokenConfig`: set `CONFIG_SERVER_TOKEN` and every request except
+  `/actuator/health` must carry `X-Config-Token`; unset keeps dev behavior. New test
+  `ConfigServerTokenGateTest` (refusal, admission, wrong-token refusal, open health probe) —
+  config-server suite 9/9 green offline.)
 
   (`deploy/k8s/base`: Kustomize bundle mirroring `docker-compose.yml` — namespace, ConfigMap, Secret example
   with `CHANGE_ME` placeholders, StatefulSet/Deployments for postgres/redis/minio/ai-service/discovery/backend/
