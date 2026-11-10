@@ -5701,7 +5701,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   every actuator path except `/actuator/health` with 403 (`actuator-surface-not-exposed`) before the actuator
   answers. `GatewayActuatorGuard` runs as a WebFilter ahead of routing (routed paths also refuse via
   GlobalFilter before spending a rate-limit token). Unset keeps the previous posture unchanged; prod now
-  requires it (`.env.prod.example`, `docker-compose.prod.yml`). Measured: `GatewayActuatorSurfaceTest` 4/4,
+  requires it (`docs/EDGE_OPERATIONS_LOCKDOWN.md`, `docker-compose.prod.yml`). Measured: `GatewayActuatorSurfaceTest` 4/4,
   `GatewayRateLimitTest` updated to expect the one allowed application tag, full gateway suite 38/38,
   compose parse gate 4/4.)
 

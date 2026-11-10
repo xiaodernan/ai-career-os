@@ -115,7 +115,7 @@ passwords is no longer a reachable state.
   counts the proxy's socket address and every client shares one bucket; with the
   backend exposed directly, leave it off (see [SECURITY.md](SECURITY.md#findings))
 - [ ] `/actuator/prometheus` restricted at the proxy to the scraper's address (public by default)
-- [ ] edge operations surface locked in prod: `GATEWAY_ACTUATOR_TOKEN` required (`.env.prod.example`); edge `/actuator/**` (except `/actuator/health`) refuses without `X-Actuator-Token` (Epic 108.15)
+- [ ] edge operations surface locked in prod: `GATEWAY_ACTUATOR_TOKEN` required (`docs/EDGE_OPERATIONS_LOCKDOWN.md`); edge `/actuator/**` (except `/actuator/health`) refuses without `X-Actuator-Token` (Epic 108.15)
 - [ ] DNS records point to the reverse proxy
 - [ ] TLS certificates configured and auto-renewing (Let's Encrypt recommended)
 - [ ] Nightly backups on a cron/timer (`scripts/backup.sh`: one `pg_dump`, one

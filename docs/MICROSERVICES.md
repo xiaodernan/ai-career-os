@@ -108,7 +108,7 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     and every `/actuator/**` needs the `X-Actuator-Token` header (`/actuator/health` stays open for the
     container probe); `GatewayActuatorGuard` refuses at the edge with 403 (`actuator-surface-not-exposed`)
     before the actuator is reached. When unset the surface stays open, as before (compose binds loopback;
-    a production proxy must authenticate what it publishes).
+    a production proxy must authenticate what it publishes). Runbook: `docs/EDGE_OPERATIONS_LOCKDOWN.md`.
 - **Build identity**:
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.
