@@ -27,7 +27,23 @@ class ConfigServerApplicationTests {
         ResponseEntity<String> response = rest.getForEntity(
                 "http://localhost:" + port + "/career-os-backend/default", String.class);
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody()).contains("career-os-backend").contains("careeros.config-server.managed");
+        assertThat(response.getBody())
+                .contains("career-os-backend")
+                .contains("careeros.config-server.managed")
+                .contains("careeros.config-server.service");
+    }
+
+    @Test
+    void servesPerServiceExampleProfiles() {
+        ResponseEntity<String> gateway = rest.getForEntity(
+                "http://localhost:" + port + "/career-os-gateway/default", String.class);
+        assertThat(gateway.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(gateway.getBody()).contains("career-os-gateway");
+
+        ResponseEntity<String> discovery = rest.getForEntity(
+                "http://localhost:" + port + "/career-os-discovery/default", String.class);
+        assertThat(discovery.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(discovery.getBody()).contains("career-os-discovery");
     }
 
     @Test

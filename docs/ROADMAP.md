@@ -5646,8 +5646,9 @@ has clear, overridable defaults.
 
   (Added `career-os-backend.yml`, `career-os-gateway.yml`, and `career-os-discovery.yml` example
   profiles under `config-server/src/main/resources/config-repo/` with non-secret service markers,
-  keeping the native backend and opt-in behavior unchanged. Measured: config-server
-  `ConfigServerApplicationTests` 2/2 green offline with `mvn -f config-server/pom.xml -o test`.)
+  keeping the native backend and opt-in behavior unchanged. Contract tests assert per-service
+  profiles are served. Measured: config-server `ConfigServerApplicationTests` 3/3 green offline
+  with `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test`.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
