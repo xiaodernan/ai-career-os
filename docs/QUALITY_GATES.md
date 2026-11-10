@@ -40,6 +40,7 @@
 - Flyway migration naming/version monotonicity; CI/nightly referenced paths + ops modules exist/importable.
 - `SECURITY.md`/`RUNBOOK.md`/`architecture.md` structure; README/DEPLOYMENT markdown links resolve; expansion backlog structure.
 - Observability wiring (request-id/error handlers) and health endpoints present; ai-service JSON logs carry `request_id` (unit-tested).
+- Spring Cloud surfaces: backend/gateway/discovery/config-server share actuator, build info, metrics/distribution and Prometheus contracts (cross-service gates); edge ops surface gated by `GATEWAY_ACTUATOR_TOKEN` (docs/EDGE_OPERATIONS_LOCKDOWN.md).
 - `scripts/verify_gates.{ps1,sh}` run a representative offline gate set in one command.
 
 ## Rules for adding gates
@@ -48,4 +49,4 @@
 - Stage only files created/modified for the batch; commit with `git commit -F <msgfile> -- <explicit paths>`; push `origin main`.
 
 ## Status note
-- Measured progress is recorded additively in `docs/plans/expansion_backlog.md` (dated). 74.x roadmap execution and settled full-suite counts follow `docs/plans/plan_long_term.md` once in-flight work lands.
+- Measured progress is recorded additively in `docs/plans/expansion_backlog.md` (dated). 74.x shipped; the operative forward plan beyond Epic 77 is `docs/ROADMAP.md` (Epics 78–108). Spring Cloud microservices gates live in `ai-service/tests/` and are wired into `scripts/verify_gates.{ps1,sh}` (measured 2026-11-10).
