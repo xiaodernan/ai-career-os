@@ -5704,6 +5704,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.21** Blocking load balancer evicts dead engine replicas (measured 2026-11-10).
 - [x] **108.22** Request-latency histograms on every Spring Cloud service (measured 2026-11-10).
 - [x] **108.23** Monitoring engine-fleet card (measured 2026-11-10).
+- [x] **108.24** Circuit-breaker-open gauge and the alarm it feeds (measured 2026-11-10).
+
+  (New `AiServiceCircuitBreakerMetrics` exposes `careeros.circuitbreaker.open` (exported
+  `careeros_circuitbreaker_open`), an untagged gauge: 1 while any Resilience4j breaker the
+  ai-service bridge owns is open, 0 otherwise — including FORCED_OPEN. New `CareerOSCircuitBreakerOpen`
+  alarm in `ops/prometheus/alerts.yml` fires on `max(...) == 1` for ten minutes (a redeploy-shaped
+  flap does not page). Unit test `AiServiceCircuitBreakerMetricsTest` (2/2); alarm/meter gate extended
+  (`careeros_circuitbreaker_open` in METRICS, `CareerOSCircuitBreakerOpen` in ALERT_NAMES);
+  RUNBOOK alarm table + a new page `an-ai-service-circuit-breaker-sits-open`; DEPLOYMENT roster row;
+  "thirteen rules" → "fourteen rules". Measured: alarm gate 12/12 (with every new artifact),
+  AiServiceCircuitBreakerMetricsTest 2/2, backend compile green offline.)
 
   (New `ServiceEngines` card on the monitoring page reads the backend's public `/api/v1/health` and renders
   one row per configured ai-service replica from `aiNodes` ({url, up}), with a ready count; i18n keys in both

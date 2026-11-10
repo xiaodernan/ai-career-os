@@ -74,6 +74,7 @@ NIGHTLY_VERDICT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros"
 DIGEST_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "WeeklyDigestDeliveryMetrics.java"
 SIGNAL_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "NotificationDeliveryMetrics.java"
 PUSH_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "push" / "service" / "PushDeliveryMetrics.java"
+AI_CIRCUIT_BREAKER_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" / "AiServiceCircuitBreakerMetrics.java"
 REMINDER_CLOCK = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notification" / "service" / "ReminderScheduler.java"
 RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "RetentionMetrics.java"
 UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
@@ -111,6 +112,7 @@ METRICS = {
     # bucket has to read a number that says only "the store would not answer", once per pass.
     "careeros_storage_bucket_reads_total": (UNNAMED_RECLAIMER, "careeros.storage.bucket_reads"),
     "careeros_storage_objects_reclaimed_total": (STORED_OBJECT_RECLAIMER, "careeros.storage.objects_reclaimed"),
+    "careeros_circuitbreaker_open": (AI_CIRCUIT_BREAKER_METRICS, "careeros.circuitbreaker.open"),
     "careeros_storage_objects_judged_total": (UNNAMED_RECLAIMER, "careeros.storage.objects_judged"),
 }
 
@@ -128,6 +130,7 @@ ALERT_NAMES = frozenset({
     "CareerOSRetentionSweepStale",
     "CareerOSBucketListingRefused",
     "CareerOSPushDeliveryFailing",
+    "CareerOSCircuitBreakerOpen",
 })
 
 # The columns the budget query sums, each one a column of the ledger migration.

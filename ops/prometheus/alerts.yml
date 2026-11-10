@@ -302,3 +302,25 @@ groups:
             service expects. A refused wake is a browser that did not ring, not a reminder
             that was lost -- the inbox, the morning letter and the calendar still carry it.
           runbook: "docs/RUNBOOK.md#the-wake-a-push-service-refused"
+# The bridge's refusal as a signal, not a paging condition: sustained, the breaker open means
+# the backend stopped believing any ai-service replica. One open window of ten minutes is far
+# longer than any transient eviction -- the breaker's window is ten calls, its wait is thirty
+# seconds, and a fleet that is mid-redeploy flaps once every half minute. Fire only after ten
+# of those minutes, and let the untagged max gauge say whether it is an open door somewhere
+# or every door. The operator names the door with /api/v1/system/resilience.
+      - alert: CareerOSCircuitBreakerOpen
+        expr: max(careeros_circuitbreaker_open) == 1
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "An ai-service circuit breaker has been open for ten minutes"
+          description: >-
+            The backend's Resilience4j bridge to ai-service is refusing engine calls -- at
+            least one breaker (door or whole-bridge) has been open long enough to outlast a
+            redeploy. Call /api/v1/system/resilience to see which circuit breaker is open and
+            its metrics, then check /api/v1/health for the engine fleet's own answer. The guard
+            ignores 400/404 engine answers; an open door means connections and timeouts, not a
+            bad file.
+          runbook: "docs/RUNBOOK.md#an-ai-service-circuit-breaker-sits-open"

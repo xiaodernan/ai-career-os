@@ -31,6 +31,7 @@ The surfaces this document is about:
 | `CareerOSRetentionSweepStale` | warning | No credential-retention sweep finished in 36 hours | [The retention sweep stopped](#the-retention-sweep-stopped) |
 | `CareerOSBucketListingRefused` | warning | The nightly sweep asked the object store for its whole listing in the last day and was refused | [The bucket was not swept](#the-bucket-was-not-swept) |
 | `CareerOSPushDeliveryFailing` | warning | Three or more browser wakes were refused by a push service in a day | [The wake a push service refused](#the-wake-a-push-service-refused) |
+| `CareerOSCircuitBreakerOpen` | warning | An ai-service circuit breaker has been open for ten minutes | [An ai-service circuit breaker sits open](#an-ai-service-circuit-breaker-sits-open) |
 
 ## A night that never succeeded
 
@@ -909,3 +910,54 @@ line is running configuration older than this change.
 refuses a compose file whose backend grace does not exceed the YAML phase by at least
 five seconds. If a deployment needs a longer drain, raise both numbers in the same
 change.
+
+## An ai-service circuit breaker sits open
+
+**What the alert looks like.** `CareerOSCircuitBreakerOpen` fires when
+`max(careeros_circuitbreaker_open) == 1` has held for ten minutes: the gauge is 1 while any
+Resilience4j circuit breaker the bridge to ai-service owns is in OPEN (or FORCED_OPEN), 0 otherwise.
+The backend's door-level breaker watches each configured engine replica's calls; the whole-bridge
+breaker watches the door chosen for a turn. Sustained for ten minutes, the refusal is structural —
+connections refused, timeouts, TLS/handshake failures — not an error body from the engine, because
+the guard ignores 400/404 answers the engine itself produced.
+
+**What the gauge is.** `careeros.circuitbreaker.open` is one untagged gauge, registered by the
+backend process that routes the calls. Prometheus scrapes it as
+`careeros_circuitbreaker_open`. A breaker in HALF_OPEN does not raise it — the backend gives the
+door a probe turn before declaring it gone, and the alarm is for "the backend stopped believing
+every configured replica can serve", not for "a replica answered wrong once".
+
+**What you need for the fix, in order.**
+
+1. `/actuator/circuitbreakers` on the backend (or the authenticated `/api/v1/system/resilience`
+   JSON — same breakers, same names, one per door plus the whole-bridge one). Note which door the
+   open breaker watches.
+2. `/api/v1/health` — the deployment's dependency report, `aiNodes` array one row per configured
+   engine replica in configured order. Every row shows up/down as the backend probed it. All false
+   means the whole engine is unreachable from the backend; some true/some false means a single door
+   fell, and the health check eviction in the load balancer should be routing around it without a
+   restart.
+3. The ai-service container's own logs — the first connect error tells whether the door is crashed,
+   the network path is broken, or the container is up but refusing the shared token at the network
+   layer (e.g. the engine and backend were restarted with different `INTERNAL_API_TOKEN` values — a
+   door that does not answer the probe is not a door, but a door that answers 401 to the bridge is
+   exactly the kind that looks silent from the outside).
+
+**What the fix is, in order.**
+
+1. If every replica is false in `aiNodes`: restart or scale the ai-service container. The backend
+   keeps serving the non-AI `/api/v1` surface; the AI routes refuse until a door answers.
+2. If one replica is false: check the engine replica's container logs for a crash, an OOM, or a
+   bind failure. The health check the LB uses (`/health` on the engine) can also fail for a
+   replica that is answering HTTP but unhealthy in `ai` state — in which case the LB eviction
+   should still route around it; if the eviction loop is fighting you, the door is in a worse state
+   than its health line reports and a restart is usually the fastest honest fix.
+3. If the engine answers HTTP but the breaker still reads open — look at the bridge's config, not
+   the engine: the backend's `AI_SERVICE_INSTANCES` and `INTERNAL_API_TOKEN` must agree across the
+   deploy; a token mismatch is a door that speaks HTTP and never lets the bridge in, which the
+   breaker (rightly) reads as unreachable.
+
+**If the alarm cleared on its own after the engine redeployed:** that is the alarm's interval
+doing its job — wait ten minutes of evidence, not one, before paging. If it comes back the next
+time traffic ramps after a deploy, the engine is not healthy fast enough to satisfy the probe and
+should start on a longer `start_period` / `initial-delay` than the default lets it.

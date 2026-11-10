@@ -312,7 +312,7 @@ recomputed from `ai_usage_events` every minute — the install's own verdict —
 boot — and the weekly letter's —
 `careeros_digest_delivery_total{outcome}`, `sent` or `refused` per attempt, and
 `careeros_digest_last_delivered_timestamp`, moved only by an accepted letter.
-`ops/prometheus/alerts.yml` carries the thirteen rules and each one links its page in
+`ops/prometheus/alerts.yml` carries the fourteen rules and each one links its page in
 [RUNBOOK.md](RUNBOOK.md).
 
 The limiter exports one more family for dashboards rather than alarms:
@@ -405,6 +405,7 @@ which reading answers the operator's question instead of an alarm.
 | `careeros_ai_cost_usd_24h` | `CareerOSAiBudgetBurn` | The trailing 24 hours of the AI ledger, recomputed every minute from `ai_usage_events`; above 5 USD for 15 minutes the budget rule fires (warning). |
 | `careeros_ai_tokens_24h` | — | The dollar figure this gauge decomposes is the alarmed half. A raw token count has no threshold of its own, because a busy day inside the budget is not a fault. |
 | `careeros_digest_delivery_total` | `CareerOSDigestDeliveryFailing` | One reading per weekly-letter attempt, tagged `sent` or `refused`; the first refusal inside six hours fires, because the relay is the fault an operator has to fix rather than one the retry clock can outlast. |
+| `careeros_circuitbreaker_open` | `CareerOSCircuitBreakerOpen` | One untagged gauge: 1 while any Resilience4j breaker in the ai-service bridge is open, 0 otherwise. The exhausted queue is the only shape of an engine-door refusal that does not look like a bad request; alarming on it is the bridge telling the operator the door is gone, not the client. |
 | `careeros_digest_last_delivered_timestamp` | — | Moved only by an accepted letter, so a week with no applications leaves it flat and that is healthy. `CareerOSDigestSweepStale` watches the compose clock; the delivery rule watches the relay. |
 | `careeros_digest_last_sweep_timestamp` | `CareerOSDigestSweepStale` | The Monday compose's own pass marker, moved by every completed pass. Eight days of silence fires, because a week that never ran cannot be recomposed through any route. |
 | `careeros_ingestion_last_success_timestamp` | `CareerOSIngestionNightMissed` | The last run that ended `completed`; 26 hours (93600 seconds) without one fires critical, whether the night never started or every feed in it failed. |
