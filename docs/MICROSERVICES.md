@@ -79,8 +79,9 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     `/actuator/circuitbreakerevents` (Spring Cloud/Resilience4j observability), while
     `/actuator/health` and `/actuator/prometheus` remain the public probe/scrape endpoints.
   - Authenticated `/actuator/info` publishes build identity (and backend ai-service breaker shape).
+  - Gateway, discovery and config-server expose authenticated `/actuator/prometheus` (Meter registry
+    pinned to the offline repository's 1.15.3); they remain behind authentication and are not permitAll.
   - Frontend monitoring page displays topology and resilience cards.
-- **Gateway edge** also applies circuit-breaker/retry policies on routed traffic as configured.
 
 ## 6. Distributed tracing and correlation
 

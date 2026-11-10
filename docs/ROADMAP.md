@@ -5725,6 +5725,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `circuitbreakers` and `circuitbreakerevents` alongside health/info/gateway/metrics. Documented in
   `docs/DEPLOYMENT.md` and `docs/MICROSERVICES.md`. Measured: `mvn -f gateway/pom.xml -o -Dtest=GatewayOperationsTest,GatewayRoutingTest test` 12/12 passing, BUILD SUCCESS.)
 
+- [x] **108.10** Authenticated Prometheus metrics on Spring Cloud edge services (measured 2026-11-10).
+
+  (Gateway, discovery and config-server now expose authenticated `/actuator/prometheus` via a
+  `micrometer-registry-prometheus` pinned to 1.15.3 (the offline repository's Spring Boot 3.5.5-managed version;
+  Boot 3.5.16's managed 1.15.12 is unavailable offline). Measured: `mvn -f gateway/pom.xml -o -Dtest=GatewayOperationsTest,GatewayRoutingTest test` 12/12, `mvn -f discovery/pom.xml -o test` 4/4, `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test` 4/4.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
