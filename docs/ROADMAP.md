@@ -5707,6 +5707,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   from `docs/README.md` and `docs/DEPLOYMENT.md`. Measured: documentation consistency review against
   implemented configs/code paths for discovery, gateway, config-server, backend resilience/trace APIs.)
 
+- [x] **108.7** Publish ai-service circuit breaker shape on actuator info (measured 2026-11-10).
+
+  (Added `AiServiceResilienceInfoContributor` to expose non-secret ai-service circuit breaker
+  configuration details under authenticated `/actuator/info` (`aiServiceCircuitBreaker`). Measured:
+  `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
