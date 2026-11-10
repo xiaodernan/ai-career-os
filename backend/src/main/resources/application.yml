@@ -58,6 +58,20 @@ spring:
       # so env-driven deployments and offline tests keep their current behavior.
       enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
       fail-fast: ${SPRING_CLOUD_CONFIG_FAIL_FAST:false}
+    loadbalancer:
+      # Epic 108.21 — the blocking load balancer pings each engine's /health while
+      # ai-service replicas exist, so a node that stops answering is skipped at the
+      # routing door before the circuit breaker has to remember it. The blocking
+      # RestClient health-check supplier is enabled for every LB client (the backend
+      # only balances ai-service); it needs no WebFlux, uses the ai-service's own
+      # `/health` (a 2-second-bound answer), and when *no* instance is healthy the
+      # router still falls back to the configured first door, so a mis-wired engine
+      # surfaces as 502 with the ai-service's own answer instead of an empty door.
+      configurations: health-check
+      health-check:
+        path:
+          ai-service: /health
+        interval: 10s
   config:
     import: "optional:configserver:"
 

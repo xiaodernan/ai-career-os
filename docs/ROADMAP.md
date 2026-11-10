@@ -5701,6 +5701,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.18** Backend Spring Cloud wiring debug behind existing auth (measured 2026-11-10).
 - [x] **108.19** Fleet page renders per-instance build-sha (measured 2026-11-10).
 - [x] **108.20** Cross-service Spring Cloud actuator surface contract (measured 2026-11-10).
+- [x] **108.21** Blocking load balancer evicts dead engine replicas (measured 2026-11-10).
+
+  (`spring.cloud.loadbalancer.configurations=health-check` and `health-check.path.ai-service=/health` on the
+  backend: the blocking Spring Cloud LoadBalancer now pings each configured ai-service replica on its own bounded
+  `/health` and stops offering a dead one, instead of the bridge circuit breaker absorbing every slow failure.
+  Falls back to the first configured door when nothing is healthy; re-adds a recovering replica on its next
+  answer. `test_the_load_balancer_health_check_stays_on.py` pins both properties. Measured: targeted backend
+  suite 49/49 green offline (`mvn -o`, AI/health packages); new gate plus the other Spring Cloud gates 7/7 green.)
 
   (New `test_the_spring_cloud_actuator_surface_contract.py` reads the four application.yml files together
   and asserts the shared actuator promises: every service exposes `health`/`info`/`prometheus`; the breaker/

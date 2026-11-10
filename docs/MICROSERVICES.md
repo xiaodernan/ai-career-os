@@ -35,6 +35,15 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     updates in opt-in discovery setups.
 - **Topology visibility**: backend exposes authenticated `GET /api/v1/system/topology` (registry mode
   and instances as seen by the backend discovery client), surfaced in the frontend monitoring UI.
+- **Load balancing with health-check eviction (108.21)**: the backend's `AiServiceRouter` hands the
+  service-id's instance list to Spring Cloud LoadBalancer each call. With
+  `spring.cloud.loadbalancer.configurations=health-check` (and `health-check.path.ai-service=/health`),
+  the blocking LB evicts an ai-service replica that stops answering its own 2-second-bounded `/health`
+  before the circuit breaker has to remember it, and re-adds it when it answers again (`repeat-health-check`).
+  If no replica is healthy the router still falls back to the configured first door, so a mis-wired engine
+  surfaces as 502 with the ai-service's own sentence instead of an empty route. A contract gate
+  (`ai-service/tests/test_the_load_balancer_health_check_stays_on.py`) pins both properties in the backend's
+  `application.yml` so this cannot silently drift off.
 
 ## 3. API Gateway (Spring Cloud Gateway)
 
