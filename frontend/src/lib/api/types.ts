@@ -970,6 +970,22 @@ export interface ServiceTopology {
   }>;
 }
 
+/** One Spring Cloud Resilience4j circuit breaker as the backend reports it (Epic 105). */
+export interface CircuitBreakerStatus {
+  name: string;
+  state: string;
+  failureRate?: number;
+  numberOfBufferedCalls?: number;
+  numberOfFailedCalls?: number;
+  numberOfSuccessfulCalls?: number;
+  numberOfNotPermittedCalls?: number;
+}
+
+/** The ai-service bridge resilience answer (Epic 105). */
+export interface ServiceResilience {
+  circuitBreakers: CircuitBreakerStatus[];
+}
+
 /**
  * Production monitoring (16.1): agent health, cost, and regression detection.
  * The report is composed by the ai-service's monitoring engine.

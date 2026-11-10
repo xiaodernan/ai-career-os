@@ -5631,6 +5631,12 @@ operators need a read model of breaker state.
   breaker name, state and key metrics sorted by name. Documented in `docs/API.md`. Measured: backend
   `ResilienceStatusServiceTest` 1/1 green offline with `mvn -f backend/pom.xml -Dtest=ResilienceStatusServiceTest -o test`.)
 
+- [x] **105.2** Surface resilience state on the monitoring UI (measured 2026-11-10).
+
+  (Added frontend endpoint/type/hook and a `ServiceResilience` card on the monitoring page showing
+  breaker states and call counts, with i18n keys in both languages and component tests. Measured:
+  `frontend` vitest `service-resilience.test.tsx` + `service-topology.test.tsx` 6/6 passing.)
+
 ### Epic 106 -- per-service config-repo examples for opt-in Config Server
 
 Provide concrete native config-repo examples per Spring Cloud service so enabling the Config Server

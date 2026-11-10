@@ -931,6 +931,12 @@ export const translations = {
       topologyInstances: "{count} instance(s)",
       topologyEmpty: "The discovery client knows no service yet.",
       topologyUnavailable: "The topology could not be read.",
+      resilienceTitle: "Service resilience",
+      resilienceDescription:
+        "Spring Cloud circuit breaker states for the ai-service bridge, as the backend reports them.",
+      resilienceCalls: "Failed {failed} · OK {ok} · Rejected {rejected}",
+      resilienceEmpty: "No circuit breakers are registered yet.",
+      resilienceUnavailable: "Resilience status could not be read.",
     },
     // Rate limit
     rateLimit: {
@@ -3991,6 +3997,11 @@ export const translations = {
       topologyInstances: "{count} 个实例",
       topologyEmpty: "服务发现还不知道任何服务。",
       topologyUnavailable: "无法读取服务拓扑。",
+      resilienceTitle: "服务韧性",
+      resilienceDescription: "后端报告的 ai-service 桥接 Spring Cloud 断路器状态。",
+      resilienceCalls: "失败 {failed} · 成功 {ok} · 拒绝 {rejected}",
+      resilienceEmpty: "尚未注册任何断路器。",
+      resilienceUnavailable: "无法读取韧性状态。",
     },
     // Rate limit
     rateLimit: {

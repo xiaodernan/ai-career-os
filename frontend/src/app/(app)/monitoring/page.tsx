@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart } from "@/components/common/bar-chart";
 import { NightlyHistory } from "@/components/monitoring/nightly-history";
+import { ServiceResilience } from "@/components/monitoring/service-resilience";
 import { ServiceTopology } from "@/components/monitoring/service-topology";
 import { useHealthReport } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -184,6 +185,9 @@ export default function MonitoringPage() {
       {/* The deployment's fleet, read from the discovery answer the load balancer
           consumes rather than from a second inventory. */}
       <ServiceTopology />
+
+      {/* Spring Cloud circuit breaker states for the ai-service bridge (Epic 105). */}
+      <ServiceResilience />
     </div>
   );
 }

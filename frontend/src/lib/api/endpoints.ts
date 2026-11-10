@@ -137,6 +137,8 @@ export const endpoints = {
   /* The discovery answer: which registry mode the deployment runs and what the load
      balancer can see (roadmap 100). Authenticated, unlike the public health route. */
   systemTopology: "/system/topology",
+  /* Spring Cloud Resilience4j circuit breaker states for the ai-service bridge (Epic 105). */
+  systemResilience: "/system/resilience",
   rateLimitStatus: "/rate-limit/status",
   conversations: "/conversations",
   conversation: (id: string) => `/conversations/${seg(id)}`,

@@ -9,7 +9,13 @@ import {
   normalizePage,
   type NormalizedPage,
 } from "@/lib/api/normalize";
-import type { HealthReport, NightlyReport, NightlyVerdict, ServiceTopology } from "@/lib/api/types";
+import type {
+  HealthReport,
+  NightlyReport,
+  NightlyVerdict,
+  ServiceResilience,
+  ServiceTopology,
+} from "@/lib/api/types";
 
 /**
  * Production monitoring (16.1): agent health, cost, and regression detection.
@@ -61,6 +67,16 @@ export function useServiceTopology() {
     queryKey: ["system", "topology"],
     queryFn: async (): Promise<ServiceTopology> =>
       (await api.get<unknown>(endpoints.systemTopology)) as ServiceTopology,
+    staleTime: 30_000,
+  });
+}
+
+/** Spring Cloud circuit breaker states for the ai-service bridge (Epic 105). */
+export function useServiceResilience() {
+  return useQuery({
+    queryKey: ["system", "resilience"],
+    queryFn: async (): Promise<ServiceResilience> =>
+      (await api.get<unknown>(endpoints.systemResilience)) as ServiceResilience,
     staleTime: 30_000,
   });
 }
