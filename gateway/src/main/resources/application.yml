@@ -125,6 +125,8 @@ eureka:
   instance:
     hostname: ${GATEWAY_HOSTNAME:localhost}
     instance-id: ${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}
+    lease-renewal-interval-in-seconds: ${GATEWAY_EUREKA_LEASE_RENEWAL_SECONDS:10}
+    lease-expiration-duration-in-seconds: ${GATEWAY_EUREKA_LEASE_EXPIRATION_SECONDS:30}
     metadata-map:
       build-sha: ${APP_BUILD_SHA:dev}
       service: ${spring.application.name}

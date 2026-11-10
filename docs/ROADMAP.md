@@ -5693,6 +5693,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   in the registry and topology views. Measured: `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS,
   `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f discovery/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
 
+- [x] **108.5** Faster Eureka lease defaults and gateway load-balancer config hints (measured 2026-11-10).
+
+  (Tuned backend/gateway Eureka lease intervals (renewal 10s, expiration 30s, env-overridable) for
+  more responsive registry updates in opt-in discovery setups, and added commented Spring Cloud
+  LoadBalancer health-check hints to gateway config-server example. Measured: `mvn -f backend/pom.xml -DskipTests -o compile`
+  BUILD SUCCESS, `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test` 4/4.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

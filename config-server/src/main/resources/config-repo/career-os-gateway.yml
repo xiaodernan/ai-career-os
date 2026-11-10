@@ -18,3 +18,11 @@ careeros:
 #         locator:
 #           enabled: false
 #           lower-case-service-id: true
+#     loadbalancer:
+#       health-check:
+#         # Enable to avoid routing to instances that fail health checks (discovery-backed lb://).
+#         # initial-delay: 0
+#         # interval: 25s
+#         # refetch-instances-interval: 25s
+#         # path:
+#           backend: /api/v1/health

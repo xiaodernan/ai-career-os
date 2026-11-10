@@ -196,6 +196,8 @@ eureka:
     instance-id: ${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}
     health-check-url-path: /actuator/health
     prefer-ip-address: ${BACKEND_EUREKA_PREFER_IP:false}
+    lease-renewal-interval-in-seconds: ${BACKEND_EUREKA_LEASE_RENEWAL_SECONDS:10}
+    lease-expiration-duration-in-seconds: ${BACKEND_EUREKA_LEASE_EXPIRATION_SECONDS:30}
     metadata-map:
       build-sha: ${APP_BUILD_SHA:dev}
       service: ${spring.application.name}
