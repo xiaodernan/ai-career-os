@@ -631,7 +631,8 @@ without requiring a git backend. It is not started by default.
   `http://config-server:8888`) or `spring.config.import=configserver:http://config-server:8888`;
   `fail-fast` defaults to `false`. Existing env-driven deployments remain unchanged.
 - **Health/actuator**: `GET /actuator/health` (and `info`, `env`) are exposed by the
-  config server.
+  config server. For the runnable opt-in check and the full microservices architecture, see
+  [MICROSERVICES.md](MICROSERVICES.md) §8.1.
 
 ## Run services locally against Docker infra
 

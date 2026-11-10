@@ -5738,6 +5738,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `fail-fast` default false, and that the Config Server stays behind the compose `config` profile. The opt-in posture
   is documented in `docs/MICROSERVICES.md`. Measured: `test_the_config_client_stays_opt_in.py` 2/2 passing offline.)
 
+- [x] **108.12** Runnable opt-in Config Server enablement guide (measured 2026-11-10).
+
+  (Added a runnable opt-in check in `docs/MICROSERVICES.md` §8.1 (`compose --profile config up -d config-server`, curl
+  `career-os-backend/default`, actuator health, enabling the client, and the fail-safe optional import) and linked it
+  from `docs/DEPLOYMENT.md`'s Config Server section. Documentation-only.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

@@ -119,6 +119,28 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
 | Resilience actuator endpoints (backend) | Exposed but authenticated | Access with valid credentials/proxy controls; `health`/`prometheus` remain permitAll |
 | Trace propagation/correlation | Enabled in request path | No opt-in required; clients/proxies should forward/allow correlation headers |
 
+### 8.1 Runnable opt-in check (no secrets, no live services)
+
+With the `config` profile up, the Config Server serves the shared and per-service examples:
+
+```bash
+docker compose --profile config up -d config-server
+curl -s http://127.0.0.1:8888/career-os-backend/default    # shared + career-os-backend.yml, must contain `careeros.config-server.service`
+curl -s http://127.0.0.1:8888/actuator/health             # {"status":"UP"...}
+```
+
+Enable a client the same way (the example is inert by default, so this is opt-in only):
+
+```bash
+SPRING_CLOUD_CONFIG_ENABLED=true \
+SPRING_CLOUD_CONFIG_URI=http://127.0.0.1:8888 \
+< run backend|gateway|discovery as usual >
+```
+
+If Config Server is not up, the client keeps the `optional:` import and continues with env-driven
+defaults (the contract gate `test_the_config_client_stays_opt_in.py` pins this posture).
+
+
 ## 9. Compatibility and safety notes
 
 - Opt-in features must not break existing env-driven deployments, local development, or offline tests.
