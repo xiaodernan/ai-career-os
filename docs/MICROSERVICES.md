@@ -70,12 +70,15 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
 - **Backend ai-service bridge** is protected by Resilience4j circuit breakers (per-origin and aggregate
   behavior as implemented in `HttpAiServiceClient` / resilience configuration), preventing cascading
   waits when the engine is unavailable and returning fast failures per existing error semantics.
+- **Gateway edge** also applies circuit-breaker/retry policies on routed traffic as configured in
+  `GatewayResilienceConfig` and the route definitions.
 - **Operator visibility**:
   - Authenticated API: `GET /api/v1/system/resilience` reports breaker name, state and key metrics
     (sorted, deployment-wide view) for monitoring/UI and troubleshooting.
-  - Authenticated actuator endpoints (backend): `/actuator/circuitbreakers`, `/actuator/circuitbreakerevents`
-    (Spring Cloud/Resilience4j observability), while `/actuator/health` and `/actuator/prometheus`
-    remain the only permitAll actuator endpoints.
+  - Authenticated actuator endpoints (backend and gateway): `/actuator/circuitbreakers`,
+    `/actuator/circuitbreakerevents` (Spring Cloud/Resilience4j observability), while
+    `/actuator/health` and `/actuator/prometheus` remain the public probe/scrape endpoints.
+  - Authenticated `/actuator/info` publishes build identity (and backend ai-service breaker shape).
   - Frontend monitoring page displays topology and resilience cards.
 - **Gateway edge** also applies circuit-breaker/retry policies on routed traffic as configured.
 

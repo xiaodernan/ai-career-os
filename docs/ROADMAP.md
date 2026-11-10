@@ -5719,6 +5719,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   dev and prod compose pass `APP_BUILD_SHA` build arg for `gateway`/`discovery` and `docker-compose.prod.yml` includes
   config-server build arg. Measured: `ai-service` `test_the_compose_files_parse.py` 4/4 passing offline.)
 
+- [x] **108.9** Expose authenticated Resilience4j actuator endpoints on gateway (measured 2026-11-10).
+
+  (Gateway actuator exposure now includes authenticated Spring Cloud observability endpoints
+  `circuitbreakers` and `circuitbreakerevents` alongside health/info/gateway/metrics. Documented in
+  `docs/DEPLOYMENT.md` and `docs/MICROSERVICES.md`. Measured: `mvn -f gateway/pom.xml -o -Dtest=GatewayOperationsTest,GatewayRoutingTest test` 12/12 passing, BUILD SUCCESS.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

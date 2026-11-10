@@ -135,7 +135,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway,metrics
+        # Authenticated Spring Cloud observability for the edge; health remains the probe.
+        include: health,info,gateway,metrics,circuitbreakers,circuitbreakerevents
   endpoint:
     health:
       probes:
