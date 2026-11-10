@@ -170,7 +170,18 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
   Resilience4j breaker in the ai-service bridge is open, with a bound `CareerOSCircuitBreakerOpen` alarm in
   `ops/prometheus/alerts.yml` and a page in `docs/RUNBOOK.md`.
 
-## 8. Opt-in enablement summary
+## 8. CI: every Spring Cloud contract runs on push (Epic 108.26)
+
+The `springcloud` job in `.github/workflows/ci.yml` runs these eleven contract gates on every
+push/PR: the actuator surface parity (`…actuator_surface_contract`), config client stays opt-in,
+`metrics.tags.application`, latency histograms, `info.app` build-sha shape, the readiness runbook's
+sync with `docker-compose.yml`, topology/resilience vocabulary parity, the LB health-check
+requirement, the compose files parse, and the alarms gate. The `offline-gate` job waits for
+`ai-service`, `frontend`, `backend` and `springcloud` — a gate red blocks the merge. Measured here:
+all eleven gates pass (31 tests), workflow YAML structurally valid (not executed on GitHub in this
+environment).
+
+## 9. Opt-in enablement summary
 
 | Capability | Default | How to enable |
 |---|---|---|
@@ -202,7 +213,7 @@ If Config Server is not up, the client keeps the `optional:` import and continue
 defaults (the contract gate `test_the_config_client_stays_opt_in.py` pins this posture).
 
 
-## 9. Compatibility and safety notes
+## 10. Compatibility and safety notes
 
 - Opt-in features must not break existing env-driven deployments, local development, or offline tests.
 - Security boundaries remain unchanged: internal tokens/ownership checks stay enforced, actuator

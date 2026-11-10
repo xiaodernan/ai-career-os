@@ -5706,6 +5706,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.23** Monitoring engine-fleet card (measured 2026-11-10).
 - [x] **108.24** Circuit-breaker-open gauge and the alarm it feeds (measured 2026-11-10).
 - [x] **108.25** Every Spring Cloud service publishes the same info.app shape (measured 2026-11-10).
+- [x] **108.26** Dedicated CI job runs the Spring Cloud contract gates (measured 2026-11-10).
+
+  (`.github/workflows/ci.yml` gains a `springcloud` job running the eleven Spring Cloud contract
+  gates on push/PR; `offline-gate` now requires ai-service, frontend, backend and springcloud before
+  granting. Verified in-place: the same eleven gates pass locally (31 tests) and the workflow YAML is
+  structurally valid and wired. Not run on GitHub in this environment.)
 
   (All four Spring Cloud services (`backend`, `gateway`, `discovery`, `config-server`) publish
   `info.app` with `name=${spring.application.name}` and `build-sha=${APP_BUILD_SHA:dev}` — the fleet,

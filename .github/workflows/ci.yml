@@ -2,7 +2,10 @@
 #
 # Epic 16.3: run all three suites + both eval harnesses.
 #
-# - On every PR / push to main: the *offline* suites only. These need no Docker
+# - On every PR / push to main: the *offline* suites only.
+#   Includes the `springcloud` job (Epic 108.26) which runs the Spring
+#   Cloud microservices contract gates on every push.
+#   These need no Docker
 #   and no external API keys — ai-service runs with LLM_PROVIDER=mock /
 #   EMBEDDING_PROVIDER=hash, the backend runs unit tests (*Test, not *IT), and
 #   the frontend runs vitest + tsc. This is the fast gate a contributor waits on.
@@ -112,9 +115,44 @@ jobs:
       - name: Unit tests
         run: ./mvnw -q -B test -Dtest='*Test' || mvn -q -B test -Dtest='*Test'
 
+  # --------------------------------------------------------------------------- #
+  # Spring Cloud microservices contracts — fast, push-only visibility
+  # --------------------------------------------------------------------------- #
+  springcloud:
+    name: springcloud (microservices contract gates)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ai-service/requirements*.txt
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Spring Cloud contract gates
+        run: |
+          python -m pytest -q \
+            tests/test_the_spring_cloud_actuator_surface_contract.py \
+            tests/test_the_config_client_stays_opt_in.py \
+            tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py \
+            tests/test_the_spring_cloud_services_publish_latency_histograms.py \
+            tests/test_the_spring_cloud_services_publish_build_sha_in_info.py \
+            tests/test_the_spring_cloud_readiness_runbook_exists.py \
+            tests/test_the_topology_page_reads_the_fleet_the_backend_writes.py \
+            tests/test_the_resilience_page_reads_the_breakers_the_backend_writes.py \
+            tests/test_the_load_balancer_health_check_stays_on.py \
+            tests/test_the_compose_files_parse.py \
+            tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
+
   offline-gate:
     name: offline suites green
-    needs: [ai-service, frontend, backend]
+    needs: [ai-service, frontend, backend, springcloud]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -122,8 +160,9 @@ jobs:
         run: |
           if [ "${{ needs.ai-service.result }}" != "success" ] || \
              [ "${{ needs.frontend.result }}" != "success" ] || \
-             [ "${{ needs.backend.result }}" != "success" ]; then
-            echo "One or more offline suites failed."; exit 1
+             [ "${{ needs.backend.result }}" != "success" ] || \
+             [ "${{ needs.springcloud.result }}" != "success" ]; then
+            echo "One or more offline suites failed (incl. Spring Cloud contract gates)."; exit 1
           fi
 
   # --------------------------------------------------------------------------- #
