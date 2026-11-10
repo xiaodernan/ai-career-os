@@ -62,6 +62,8 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     with `spring.config.import=optional:configserver:`.
   - Enable explicitly via environment/config (e.g. `SPRING_CLOUD_CONFIG_ENABLED=true` and Config Server URI);
     `fail-fast` defaults to `false` to preserve startup resilience and existing deployments.
+  - A contract gate (`ai-service/tests/test_the_config_client_stays_opt_in.py`) asserts the opt-in
+    posture and the config-server's `config` compose profile.
 - **Design constraint**: configuration centralization is additive and opt-in; env-driven and offline
   workflows remain valid defaults.
 

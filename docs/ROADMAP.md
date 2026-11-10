@@ -5731,6 +5731,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `micrometer-registry-prometheus` pinned to 1.15.3 (the offline repository's Spring Boot 3.5.5-managed version;
   Boot 3.5.16's managed 1.15.12 is unavailable offline). Measured: `mvn -f gateway/pom.xml -o -Dtest=GatewayOperationsTest,GatewayRoutingTest test` 12/12, `mvn -f discovery/pom.xml -o test` 4/4, `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test` 4/4.)
 
+- [x] **108.11** Contract gate for opt-in Spring Cloud Config clients (measured 2026-11-10).
+
+  (Added `ai-service/tests/test_the_config_client_stays_opt_in.py`: asserts `gateway`/`discovery`/`backend`
+  keep the disabled-by-default Config client (`${SPRING_CLOUD_CONFIG_ENABLED:false}`), an `optional:configserver:` import,
+  `fail-fast` default false, and that the Config Server stays behind the compose `config` profile. The opt-in posture
+  is documented in `docs/MICROSERVICES.md`. Measured: `test_the_config_client_stays_opt_in.py` 2/2 passing offline.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
