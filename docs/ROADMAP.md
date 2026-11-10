@@ -5702,6 +5702,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.19** Fleet page renders per-instance build-sha (measured 2026-11-10).
 - [x] **108.20** Cross-service Spring Cloud actuator surface contract (measured 2026-11-10).
 - [x] **108.21** Blocking load balancer evicts dead engine replicas (measured 2026-11-10).
+- [x] **108.22** Request-latency histograms on every Spring Cloud service (measured 2026-11-10).
+
+  (`management.metrics.distribution.percentiles-histogram.http.server.requests: true` on backend/gateway/
+  discovery/config-server: Prometheus now gets the `_bucket{le=...}` series it needs to compute p50/p95 per
+  application, not just a mean. New gate `test_the_spring_cloud_services_publish_latency_histograms.py`
+  asserts the distribution in all four services. Measured: gate + related micrometer gates 5/5; all four
+  modules compile offline; discovery and config-server test suites 4/4 green.)
 
   (`spring.cloud.loadbalancer.configurations=health-check` and `health-check.path.ai-service=/health` on the
   backend: the blocking Spring Cloud LoadBalancer now pings each configured ai-service replica on its own bounded

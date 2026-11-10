@@ -130,10 +130,12 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.
 - **Monitoring UI**: fleet topology (with each instance's registry-published build-sha) and circuit-breaker state are surfaced in the authenticated monitoring experience.
-- **Metrics**: every Spring Cloud service pins \management.metrics.tags.application=\,
-  so a shared scraper can aggregate \/actuator/prometheus\ by application
-  (backend/gateway/discovery/config-server). A contract gate
-  (\i-service/tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py\) enforces it.
+- **Metrics**: every Spring Cloud service pins `management.metrics.tags.application=${spring.application.name}`,
+  so a shared scraper can aggregate `/actuator/prometheus` by application (backend/gateway/discovery/config-server).
+  A contract gate (`ai-service/tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py`) enforces it.
+  All four services also publish `http.server.requests` latency histograms (108.22) - a second contract gate
+  (`ai-service/tests/test_the_spring_cloud_services_publish_latency_histograms.py`) enforces those, so Prometheus
+  can compute p50/p95 per application, not only a mean.
 
 ## 8. Opt-in enablement summary
 
