@@ -1,0 +1,6 @@
+# Per-service externalized config example for career-os-gateway (opt-in Config Server).
+# Applied when a client uses spring.application.name=career-os-gateway and Config Server is enabled.
+careeros:
+  config-server:
+    service: career-os-gateway
+    profile-note: "Example gateway profile served by native Config Server; override in mounted /config."

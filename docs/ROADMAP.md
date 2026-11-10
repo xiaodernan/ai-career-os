@@ -5631,6 +5631,18 @@ operators need a read model of breaker state.
   breaker name, state and key metrics sorted by name. Documented in `docs/API.md`. Measured: backend
   `ResilienceStatusServiceTest` 1/1 green offline with `mvn -f backend/pom.xml -Dtest=ResilienceStatusServiceTest -o test`.)
 
+### Epic 106 -- per-service config-repo examples for opt-in Config Server
+
+Provide concrete native config-repo examples per Spring Cloud service so enabling the Config Server
+has clear, overridable defaults.
+
+- [x] **106.1** Add per-service example configs (measured 2026-11-10).
+
+  (Added `career-os-backend.yml`, `career-os-gateway.yml`, and `career-os-discovery.yml` example
+  profiles under `config-server/src/main/resources/config-repo/` with non-secret service markers,
+  keeping the native backend and opt-in behavior unchanged. Measured: config-server
+  `ConfigServerApplicationTests` 2/2 green offline with `mvn -f config-server/pom.xml -o test`.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

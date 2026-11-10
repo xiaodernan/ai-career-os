@@ -1,0 +1,7 @@
+# Per-service externalized config example for career-os-backend (opt-in Config Server).
+# Applied when a client uses spring.application.name=career-os-backend and Config Server is enabled.
+# Keep values non-secret and environment-agnostic; use env vars/secrets for credentials.
+careeros:
+  config-server:
+    service: career-os-backend
+    profile-note: "Example backend profile served by native Config Server; override in mounted /config."
