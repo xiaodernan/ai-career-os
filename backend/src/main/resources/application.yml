@@ -195,6 +195,9 @@ eureka:
     hostname: ${BACKEND_HOSTNAME:localhost}
     health-check-url-path: /actuator/health
     prefer-ip-address: ${BACKEND_EUREKA_PREFER_IP:false}
+    metadata-map:
+      build-sha: ${APP_BUILD_SHA:dev}
+      service: ${spring.application.name}
 
 springdoc:
   api-docs.path: /api-docs

@@ -5680,6 +5680,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   for consistent microservice instance identification. Measured: `mvn -f gateway/pom.xml -DskipTests -o compile`
   BUILD SUCCESS, `mvn -f discovery/pom.xml -o test` 4/4, `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test` 4/4.)
 
+- [x] **108.3** Eureka instance metadata for build identification (measured 2026-11-10).
+
+  (Added `eureka.instance.metadata-map` (`build-sha`, `service`) to backend, gateway and discovery so
+  registry-visible instances carry build identity when discovery is enabled. Measured: `mvn -f backend/pom.xml -DskipTests -o compile`
+  BUILD SUCCESS, `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f discovery/pom.xml -o test` 4/4.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
