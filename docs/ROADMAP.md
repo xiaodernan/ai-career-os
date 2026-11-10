@@ -5752,6 +5752,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are in the gateway log), DEPLOYMENT's meter roster gained the row, and the gate's service-label
   pin widened from the backend alone to the fleet's MeterRegistry users. Gate 12/12; gateway
   `GatewayRateLimitTest` 4/4 on the renamed meter.)
+- [x] **116** The patience ladder is a contract (measured 2026-11-11).
+
+  (The browser's longest turn walks three patience budgets — the engine's LLM call (120s), the
+  backend's read timeout on the engine's answer (180s), the gateway's response timeout on the
+  whole turn (300s) — and the ladder only works if each hop outlasts the hop behind it. The
+  gateway's comment stated the relationship ("the edge must not cut a turn the backend still
+  expects to finish") but nothing held it: lowering the edge's patience would ship 504s on long
+  AI turns with every unit test green. `test_the_edge_is_more_patient_than_the_domain.py` reads
+  all three budgets off the sources that promise them, pins the ladder's order and its exact
+  numbers, and pins the edge's connect budget (3s) as the deliberately short "the backend is
+  gone" answer. Honest scope recorded: `llm_timeout_s` budgets one LLM call; an engine response
+  that chains several must fit the domain's 180s itself — the orchestrator owns that sequencing,
+  the gate holds the hops' relationship. Gate 2/2.)
 
   (`ConfigTokenFilter`/`ConfigTokenConfig`: set `CONFIG_SERVER_TOKEN` and every request except
   `/actuator/health` must carry `X-Config-Token`; unset keeps dev behavior. New test
