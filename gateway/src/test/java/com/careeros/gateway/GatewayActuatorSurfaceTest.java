@@ -55,6 +55,20 @@ class GatewayActuatorSurfaceTest {
     }
 
     @Test
+    void letsAnAdmittedOperatorSeeTheWiringDetails() {
+        // Spring Boot wiring answers (condition matchers) only when the actuator token is present;
+        // otherwise the edge refuses before they exist.
+        client.get().uri("/actuator/conditions")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        client.get().uri("/actuator/conditions")
+                .headers(headers -> headers.set("X-Actuator-Token", "edge-operations-secret"))
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
     void servesTheOperationsSurfaceWhenTheTokenIsPresent() {
         client.get().uri("/actuator/info")
                 .headers(headers -> headers.set("X-Actuator-Token", "edge-operations-secret"))

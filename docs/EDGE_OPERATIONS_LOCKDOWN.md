@@ -23,6 +23,16 @@ GATEWAY_ACTUATOR_TOKEN=<random-strong-token>
 `docker-compose.prod.yml` requires the value with `:?` so the stack fails fast instead of
 booting the edge with the operations surface open.
 
+## Wiring debug (Spring Cloud)
+
+The edge also exposes `/actuator/conditions` behind the same gate, so an operator can see
+why a Eureka/Config bean did or did not bind without opening the network -- e.g. the Eureka
+client, the circuit breaker, or the config client. Same token as the rest of `/actuator/**`.
+
+```bash
+curl -s -H "X-Actuator-Token: <token>" http://127.0.0.1:8081/actuator/conditions | jq .
+```
+
 ## Verify it
 
 ```bash

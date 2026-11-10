@@ -140,8 +140,10 @@ management:
   endpoints:
     web:
       exposure:
-        # Authenticated Spring Cloud observability for the edge; health remains the probe.
-        include: health,info,gateway,metrics,circuitbreakers,circuitbreakerevents,prometheus
+        # Authenticated Spring Cloud wiring debug for the edge; health remains the probe.
+        # conditions is for wiring Eureka/Config in a failing deploy -- never user-visible,
+        # and always behind the edge's X-Actuator-Token when one is set (Epic 108.15/108.16).
+        include: health,info,gateway,metrics,circuitbreakers,circuitbreakerevents,prometheus,conditions
   endpoint:
     health:
       probes:

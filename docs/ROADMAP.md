@@ -5696,6 +5696,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 
 - [x] **108.14** Common Micrometer application tag on every Spring Cloud service (measured 2026-11-10).
 - [x] **108.15** Optional shared-secret gate for the edge's operations surface (measured 2026-11-10).
+- [x] **108.16** Wiring debug behind the ops gate for the edge (measured 2026-11-10).
+
+  (The edge actuator now also exposes `/actuator/conditions` behind the same `X-Actuator-Token` gate
+  for the Spring Cloud wiring debug — an operator can see why a Eureka/Config/CircuitBreaker bean did or
+  did not match. `GatewayActuatorSurfaceTest` also exercises it; the full gateway suite stays 38/38.
+  Measured: `/actuator/conditions` forbidden without the token, 200 with it (GatewayActuatorSurfaceTest 5/5).)
 
   (`GATEWAY_ACTUATOR_TOKEN` now gates the gateway's `/actuator/**` surface: set it and the edge refuses
   every actuator path except `/actuator/health` with 403 (`actuator-surface-not-exposed`) before the actuator

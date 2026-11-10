@@ -109,6 +109,8 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     container probe); `GatewayActuatorGuard` refuses at the edge with 403 (`actuator-surface-not-exposed`)
     before the actuator is reached. When unset the surface stays open, as before (compose binds loopback;
     a production proxy must authenticate what it publishes). Runbook: `docs/EDGE_OPERATIONS_LOCKDOWN.md`.
+    The edge also carries `/actuator/conditions` behind the same token (Epic 108.16) — the Spring Boot
+    condition report, for an operator to see why a wiring bean did or did not match.
 - **Build identity**:
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.
