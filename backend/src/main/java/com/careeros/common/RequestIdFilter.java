@@ -37,6 +37,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * written under the id, so "what was happening at 14:03" is a grep of `careeros.access`
  * rather than a guess. The query string is deliberately left out -- a search term is the
  * reader's text and a reset flow carries a token, and neither belongs in every log file.
+ *
+ * <p>Epic 101 forwards W3C {@code traceparent}/{@code tracestate} across the mesh: a valid
+ * trace is preserved and echoed; otherwise one is minted at the backend so traces remain
+ * contiguous.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -47,10 +51,23 @@ public class RequestIdFilter extends OncePerRequestFilter {
     /** The request and response header the id travels in. */
     public static final String HEADER = "X-Request-Id";
 
+    /** W3C trace context header forwarded across the mesh (Epic 101). */
+    public static final String TRACEPARENT_HEADER = "traceparent";
+
+    /** W3C trace state header forwarded across the mesh (Epic 101). */
+    public static final String TRACESTATE_HEADER = "tracestate";
+
     /** The MDC key `application.yml`'s console pattern reads. */
     public static final String MDC_KEY = "requestId";
 
+    /** MDC key for W3C trace id when present (Epic 101). */
+    public static final String TRACE_ID_MDC_KEY = "traceId";
+
+    /** MDC key for the W3C traceparent header value (Epic 101). */
+    public static final String TRACEPARENT_MDC_KEY = "traceparent";
+
     private static final Pattern ACCEPTED = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._-]{7,63}");
+    private static final Pattern TRACEPARENT = Pattern.compile("^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$");
 
     /**
      * The id the calling thread is serving, or null when it is not serving a request --
@@ -69,29 +86,64 @@ public class RequestIdFilter extends OncePerRequestFilter {
                 : UUID.randomUUID().toString();
         response.setHeader(HEADER, requestId);
         MDC.put(MDC_KEY, requestId);
+
+        String inboundTrace = request.getHeader(TRACEPARENT_HEADER);
+        String traceparent = (inboundTrace != null && TRACEPARENT.matcher(inboundTrace.toLowerCase()).matches())
+                ? inboundTrace.toLowerCase()
+                : mintTraceparent();
+        String tracestate = request.getHeader(TRACESTATE_HEADER);
+        response.setHeader(TRACEPARENT_HEADER, traceparent);
+        MDC.put(TRACE_ID_MDC_KEY, traceId(traceparent));
+        MDC.put(TRACEPARENT_MDC_KEY, traceparent);
+
         long startedNanos = System.nanoTime();
         try {
             chain.doFilter(request, response);
-            writeAccessLine(request, response, startedNanos);
+            writeAccessLine(request, response, startedNanos, traceId(traceparent));
         } catch (IOException | ServletException | RuntimeException e) {
             // The container will turn this into a 500 after the filter unwinds; a number
             // here would be one the answer does not end up carrying.
-            accessLog.info("{} {} error {}ms", request.getMethod(), request.getRequestURI(),
-                    elapsedMs(startedNanos));
+            accessLog.info("{} {} error {}ms trace={}", request.getMethod(), request.getRequestURI(),
+                    elapsedMs(startedNanos), traceId(traceparent));
             throw e;
         } finally {
             // A pooled thread must not carry this request's id into the next one.
             MDC.remove(MDC_KEY);
+            MDC.remove(TRACE_ID_MDC_KEY);
+            MDC.remove(TRACEPARENT_MDC_KEY);
         }
     }
 
     private static void writeAccessLine(HttpServletRequest request, HttpServletResponse response,
-            long startedNanos) {
-        accessLog.info("{} {} {} {}ms", request.getMethod(), request.getRequestURI(),
-                response.getStatus(), elapsedMs(startedNanos));
+            long startedNanos, String traceId) {
+        accessLog.info("{} {} {} {}ms trace={}", request.getMethod(), request.getRequestURI(),
+                response.getStatus(), elapsedMs(startedNanos), traceId);
     }
 
     private static long elapsedMs(long startedNanos) {
         return (System.nanoTime() - startedNanos) / 1_000_000;
+    }
+
+    private static String mintTraceparent() {
+        return "00-" + randomHex(32) + "-" + randomHex(16) + "-01";
+    }
+
+    private static String randomHex(int len) {
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        byte[] bytes = new byte[len / 2];
+        random.nextBytes(bytes);
+        StringBuilder out = new StringBuilder(len);
+        for (byte b : bytes) {
+            out.append(String.format("%02x", b & 0xff));
+        }
+        return out.toString();
+    }
+
+    private static String traceId(String traceparent) {
+        if (traceparent == null) {
+            return "-";
+        }
+        String[] parts = traceparent.split("-");
+        return parts.length >= 2 ? parts[1] : "-";
     }
 }

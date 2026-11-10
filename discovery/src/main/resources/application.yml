@@ -4,6 +4,13 @@ server:
 spring:
   application:
     name: career-os-discovery
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      # Epic 101: opt-in externalized configuration (Spring Cloud Config). Inert by default.
+      enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
+      fail-fast: ${SPRING_CLOUD_CONFIG_FAIL_FAST:false}
 
 eureka:
   client:

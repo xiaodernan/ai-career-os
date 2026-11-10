@@ -181,6 +181,14 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!--
+      Epic 101: externalized configuration via Spring Cloud Config, opt-in. Disabled by
+      default so existing deployments and offline tests keep their env-driven config.
+    -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-config</artifactId>
+    </dependency>
 
     <!-- test -->
     <dependency>

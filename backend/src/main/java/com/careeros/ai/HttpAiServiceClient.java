@@ -107,6 +107,10 @@ public class HttpAiServiceClient implements AiServiceClient {
                     if (requestId != null) {
                         request.getHeaders().set(RequestIdFilter.HEADER, requestId);
                     }
+                    String traceparent = org.slf4j.MDC.get(RequestIdFilter.TRACEPARENT_MDC_KEY);
+                    if (traceparent != null && !traceparent.isBlank()) {
+                        request.getHeaders().set(RequestIdFilter.TRACEPARENT_HEADER, traceparent);
+                    }
                     return execution.execute(request, body);
                 })
                 .build();

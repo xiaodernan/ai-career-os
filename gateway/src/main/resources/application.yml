@@ -4,7 +4,13 @@ server:
 spring:
   application:
     name: career-os-gateway
+  config:
+    import: "optional:configserver:"
   cloud:
+    config:
+      # Epic 101: opt-in Spring Cloud Config (inert by default).
+      enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
+      fail-fast: ${SPRING_CLOUD_CONFIG_FAIL_FAST:false}
     # The backend is addressed through Spring Cloud's discovery abstraction, not a
     # literal URL: the simple client holds the configured instance list, and the
     # load-balancer filter turns `lb://backend` into one of them. Today the list has
@@ -100,8 +106,8 @@ spring:
               '[/**]':
                 allowed-origins: ${GATEWAY_CORS_ORIGINS:http://localhost:3000}
                 allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
-                allowed-headers: [Authorization, Content-Type, X-Internal-Token, X-Request-Id]
-                exposed-headers: [X-Request-Id]
+                allowed-headers: [Authorization, Content-Type, X-Internal-Token, X-Request-Id, traceparent, tracestate]
+                exposed-headers: [X-Request-Id, traceparent]
                 max-age: 3600
 
 eureka:

@@ -52,6 +52,14 @@ spring:
       core-size: 4
       max-size: 16
       queue-capacity: 200
+  cloud:
+    config:
+      # Epic 101: opt-in externalized configuration (Spring Cloud Config). Inert by default
+      # so env-driven deployments and offline tests keep their current behavior.
+      enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
+      fail-fast: ${SPRING_CLOUD_CONFIG_FAIL_FAST:false}
+  config:
+    import: "optional:configserver:"
 
 app:
   # The API admits only these browser origins, matched against the browser's Origin header

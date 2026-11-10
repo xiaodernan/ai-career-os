@@ -5564,6 +5564,33 @@ while both modules' own tests stay green. This gate is the noticing, in the shap
   a backend ternary the card cannot read) went red exactly where predicted, 5/5, with
   byte-exact restores.)
 
+### Epic 102 -- one trace follows the request across the Spring Cloud edge
+
+A request crossing the gateway, backend and engine carried `X-Request-Id`, but no W3C trace
+context: the hop chain could not be correlated by `traceparent`, and the Java services had no
+opt-in path to externalized configuration via Spring Cloud Config.
+
+- [x] **102.1** Gateway and backend propagate W3C `traceparent`/`tracestate` end-to-end (measured 2026-11-10).
+
+  (Gateway `RequestIdFilter` preserves a valid inbound `traceparent` or mints `00-<trace-id>-<span-id>-01`,
+  forwards it to the backend, echoes it in the response, exposes it via CORS, and logs the trace id
+  on the access line. Backend `common.RequestIdFilter` does the same for direct and proxied traffic,
+  stores `traceId`/`traceparent` in MDC for the request, propagates `traceparent` to ai-service in
+  `HttpAiServiceClient`'s request interceptor, and exposes the header via CORS. Backend CORS and
+  gateway global CORS now allow `traceparent`/`tracestate` and expose `traceparent`. Measured:
+  gateway `GatewayRoutingTest` 9/9 green including traceparent mint/preserve/replace cases;
+  backend `RequestIdFilterTest` 6/6 green including traceparent mint/preserve/replace/MDC cases,
+  via targeted offline Maven runs on 2026-11-10.)
+
+- [x] **102.2** Spring Cloud Config client wired as an opt-in element across gateway, discovery, backend (measured 2026-11-10).
+
+  (Added `spring-cloud-starter-config` to `gateway/pom.xml`, `discovery/pom.xml`, and `backend/pom.xml`;
+  configured `spring.cloud.config.enabled=false` by default, `fail-fast=false`, and
+  `spring.config.import=optional:configserver:` so existing env-driven/local deployments remain unchanged.
+  A deployment can enable externalized config via `SPRING_CLOUD_CONFIG_ENABLED=true` and a config server URI
+  without code changes. Measured: gateway `GatewayRoutingTest` 9/9 and backend `RequestIdFilterTest` 6/6 still
+  green after wiring; `discovery` module compiles offline with the new dependency.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

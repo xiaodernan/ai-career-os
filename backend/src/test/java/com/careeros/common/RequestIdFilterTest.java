@@ -75,4 +75,44 @@ class RequestIdFilterTest {
                     .isNotEqualTo(inbound);
         }
     }
+
+    @Test
+    void mintsTraceparentWhenMissingAndClearsMdc() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicReference<String> traceDuringChain = new AtomicReference<>();
+        filter.doFilter(request, response, (req, res) -> {
+            traceDuringChain.set(MDC.get(RequestIdFilter.TRACE_ID_MDC_KEY));
+        });
+
+        String tp = response.getHeader(RequestIdFilter.TRACEPARENT_HEADER);
+        assertThat(tp).matches("00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}");
+        assertThat(traceDuringChain.get()).isEqualTo(tp.split("-")[1]);
+        assertThat(MDC.get(RequestIdFilter.TRACE_ID_MDC_KEY)).isNull();
+    }
+
+    @Test
+    void preservesValidTraceparent() throws Exception {
+        String inbound = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
+        request.addHeader(RequestIdFilter.TRACEPARENT_HEADER, inbound);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> { });
+
+        assertThat(response.getHeader(RequestIdFilter.TRACEPARENT_HEADER)).isEqualTo(inbound);
+    }
+
+    @Test
+    void replacesInvalidTraceparent() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/me");
+        request.addHeader(RequestIdFilter.TRACEPARENT_HEADER, "bad");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> { });
+
+        assertThat(response.getHeader(RequestIdFilter.TRACEPARENT_HEADER))
+                .matches("00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}")
+                .isNotEqualTo("bad");
+    }
 }

@@ -105,9 +105,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(props.getCors().getAllowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Internal-Token", "X-Request-Id"));
-        // The browser can quote the id from a failed call instead of describing the screen.
-        config.setExposedHeaders(List.of(RequestIdFilter.HEADER));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Internal-Token", "X-Request-Id",
+                "traceparent", "tracestate"));
+        // The browser can quote the id/trace from a failed call instead of describing the screen (Epic 101).
+        config.setExposedHeaders(List.of(RequestIdFilter.HEADER, RequestIdFilter.TRACEPARENT_HEADER));
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

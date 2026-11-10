@@ -29,7 +29,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GatewayRoutingTest {
 
-    private record Recorded(String method, String uri, String authorization, String requestId) {
+    private record Recorded(String method, String uri, String authorization, String requestId, String traceparent) {
     }
 
     private static final BlockingQueue<Recorded> REQUESTS = new LinkedBlockingQueue<>();
@@ -44,7 +44,8 @@ class GatewayRoutingTest {
                         exchange.getRequestMethod(),
                         exchange.getRequestURI().toString(),
                         exchange.getRequestHeaders().getFirst(HttpHeaders.AUTHORIZATION),
-                        exchange.getRequestHeaders().getFirst(RequestIdFilter.HEADER)));
+                        exchange.getRequestHeaders().getFirst(RequestIdFilter.HEADER),
+                        exchange.getRequestHeaders().getFirst(RequestIdFilter.TRACEPARENT_HEADER)));
                 byte[] body = ("{\"path\":\"" + exchange.getRequestURI().getPath() + "\"}")
                         .getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, "application/json");
@@ -152,6 +153,47 @@ class GatewayRoutingTest {
                 .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:3000");
 
         assertThat(REQUESTS).isEmpty();
+    }
+
+    @Test
+    void mintsTraceparentAndForwardsItToBackend() {
+        // epic 101: correlation crosses the edge
+        String tp = client.get().uri("/api/v1/health")
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(String.class)
+                .getResponseHeaders()
+                .getFirst(RequestIdFilter.TRACEPARENT_HEADER);
+
+        assertThat(tp).matches("00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}");
+        assertThat(poll().traceparent()).isEqualTo(tp);
+    }
+
+    @Test
+    void preservesValidInboundTraceparent() {
+        String inbound = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        client.get().uri("/api/v1/health")
+                .header(RequestIdFilter.TRACEPARENT_HEADER, inbound)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals(RequestIdFilter.TRACEPARENT_HEADER, inbound);
+
+        assertThat(poll().traceparent()).isEqualTo(inbound);
+    }
+
+    @Test
+    void replacesInvalidTraceparent() {
+        String inbound = "not-a-trace";
+        String answered = client.get().uri("/api/v1/health")
+                .header(RequestIdFilter.TRACEPARENT_HEADER, inbound)
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(String.class)
+                .getResponseHeaders()
+                .getFirst(RequestIdFilter.TRACEPARENT_HEADER);
+
+        assertThat(answered).isNotEqualTo(inbound).matches("00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}");
+        assertThat(poll().traceparent()).isEqualTo(answered);
     }
 
     private static Recorded poll() {
