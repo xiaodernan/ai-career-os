@@ -1,0 +1,61 @@
+# Line endings: Windows is the development platform, LF is canonical for text sources.
+* text=auto
+
+# Shell scripts must keep their shebang readable by bash/zsh on any checkout.
+*.sh text eol=lf
+*.bash text eol=lf
+*.ps1 text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Documentation, configuration, source — all LF canonical.
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.xml text eol=lf
+*.json text eol=lf
+*.sql text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.java text eol=lf
+*.py text eol=lf
+*.Dockerfile text eol=lf
+*.example text eol=lf
+*.env* text eol=lf
+
+# Everything that is not text must stay as it ships.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.p12 binary
+*.pfx binary
+*.pem binary
+*.key binary
+*.der binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.pdf binary
+*.jar binary
+*.class binary
+*.gz binary
+*.zip binary
+*.tar binary
+*.webm binary
+*.mp4 binary
+*.webm binary
+*.wav binary
+*.vtt binary
+*.wasm binary
