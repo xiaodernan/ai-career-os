@@ -5650,6 +5650,18 @@ has clear, overridable defaults.
   profiles are served. Measured: config-server `ConfigServerApplicationTests` 3/3 green offline
   with `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test`.)
 
+### Epic 107 -- ai-service refusal correlation in responses
+
+Structured refusals should carry correlation identifiers so operators can join response bodies to logs.
+
+- [x] **107.1** Include request/trace correlation in refusal detail (measured 2026-11-10).
+
+  (When request/trace context is present, `ai-service` refusal responses now include `requestId`
+  and `traceId` alongside `code`/`message` in `detail`, preserving existing status and code/message
+  semantics. Updated refusal tests for tolerant detail assertions. Measured: ai-service
+  `test_refusals.py` + `test_the_id_the_backend_sends_is_the_id_the_service_logs.py` +
+  `test_json_log_formatter_carries_request_id.py` = 25/25 passing offline.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

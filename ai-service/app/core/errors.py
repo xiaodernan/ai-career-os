@@ -15,6 +15,15 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
+from app.core.request_id import request_id, traceparent
+
+
+def _trace_id(tp: str | None) -> str | None:
+    if not tp:
+        return None
+    parts = tp.split("-")
+    return parts[1] if len(parts) >= 2 else None
+
 
 @dataclass(frozen=True, slots=True)
 class Refusal:
@@ -101,11 +110,19 @@ async def refusal_exception_handler(request: Request, exc: RefusalError) -> JSON
 
     The shape is the one ``to_http_exception`` builds, extras included: a
     refusal that escapes a route without being caught answers the reader the
-    same structured detail the API layer builds by hand.
+    same structured detail the API layer builds by hand. When request/trace
+    context is present, correlation ids are included so a refused call can be
+    joined to logs without guessing.
     """
     detail = {"code": exc.refusal.code, "message": exc.refusal.message}
     if exc.refusal.detail:
         detail.update(exc.refusal.detail)
+    rid = request_id.get()
+    if rid:
+        detail.setdefault("requestId", rid)
+    tid = _trace_id(traceparent.get())
+    if tid:
+        detail.setdefault("traceId", tid)
     return JSONResponse(status_code=exc.refusal.status, content={"detail": detail})
 
 

@@ -78,7 +78,9 @@ def test_an_unreadable_feed_is_a_400_with_a_code():
     r = client.post("/internal/features/parse-feed",
                     json={"payload": "<rss"}, headers=AUTH)
     assert r.status_code == 400
-    assert _refusal(r) == {"code": "INGEST_FEED_INVALID", "message": "invalid feed xml"}
+    detail = _refusal(r)
+    assert detail["code"] == "INGEST_FEED_INVALID"
+    assert detail["message"] == "invalid feed xml"
 
 
 def test_a_board_payload_with_no_posting_array_names_the_keys_it_looked_for():
@@ -113,10 +115,9 @@ def test_a_feed_that_is_neither_shape_is_refused_by_the_engine_not_the_router():
 def test_the_plan_route_refuses_a_request_that_names_both_or_neither(body):
     r = client.post("/internal/features/plan-ingest", json=body, headers=AUTH)
     assert r.status_code == 400
-    assert _refusal(r) == {
-        "code": "EXPORT_SEND_ONE",
-        "message": "send exactly one of postings / feed",
-    }
+    detail = _refusal(r)
+    assert detail["code"] == "EXPORT_SEND_ONE"
+    assert detail["message"] == "send exactly one of postings / feed"
 
 
 def test_a_plan_over_an_unreadable_feed_reports_the_engine_s_code():
@@ -155,10 +156,9 @@ def test_a_blank_memory_content_is_refused_before_any_row_is_touched():
     r = client.patch("/internal/memories/00000000-0000-0000-0000-0000000000aa",
                      json={"content": "   "}, headers=AUTH)
     assert r.status_code == 400
-    assert _refusal(r) == {
-        "code": "MEMORY_CONTENT_BLANK",
-        "message": "memory content cannot be blank \u2014 delete it instead",
-    }
+    detail = _refusal(r)
+    assert detail["code"] == "MEMORY_CONTENT_BLANK"
+    assert detail["message"] == "memory content cannot be blank \u2014 delete it instead"
 
 
 def test_a_missing_ingest_text_keeps_its_422():
@@ -166,7 +166,9 @@ def test_a_missing_ingest_text_keeps_its_422():
     # the status the route always answered with -- not the 400 default.
     r = client.post("/internal/ingest/text", json={"text": "  "}, headers=AUTH)
     assert r.status_code == 422
-    assert _refusal(r) == {"code": "TEXT_REQUIRED", "message": "text required"}
+    detail = _refusal(r)
+    assert detail["code"] == "TEXT_REQUIRED"
+    assert detail["message"] == "text required"
 
 
 # ---------------- the handler agrees with the API layer ----------------
