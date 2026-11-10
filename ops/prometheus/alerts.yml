@@ -324,3 +324,26 @@ groups:
             ignores 400/404 engine answers; an open door means connections and timeouts, not a
             bad file.
           runbook: "docs/RUNBOOK.md#an-ai-service-circuit-breaker-sits-open"
+
+      # The edge's refusal as a signal (Epic 115). The token bucket refusing is its job
+      # -- a flood arrives and the edge answers 429 -- and one refused request is noise,
+      # so the rule wants continuity: a refusal rate above zero sustained five minutes
+      # means every scrape interval finds new refusals, which is a flood and not a
+      # blip. The counter carries no caller tag on purpose (the identity is a token
+      # hash or an address, and per-caller series is the cardinality accident), so the
+      # identities behind the flood are in the gateway log, not on this series.
+      - alert: CareerOSGatewayRateLimited
+        expr: rate(careeros_gateway_ratelimit_refused_total[5m]) > 0
+        for: 5m
+        labels:
+          service: career-os-gateway
+          severity: warning
+        annotations:
+          summary: "The edge has refused callers for five minutes straight"
+          description: >-
+            The gateway's token bucket (GATEWAY_RATE_LIMIT_PER_MINUTE, 1200/min by
+            default) keeps refusing: every scrape interval finds new refusals. The bucket
+            is doing its job; the question is who is hammering it. The gateway log names
+            the refused identities the counter deliberately does not carry, and
+            /actuator/metrics/careeros.gateway.ratelimit.refused shows the running total.
+          runbook: "docs/RUNBOOK.md#the-edge-is-refusing-callers"

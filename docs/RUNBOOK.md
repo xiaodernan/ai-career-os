@@ -32,6 +32,7 @@ The surfaces this document is about:
 | `CareerOSBucketListingRefused` | warning | The nightly sweep asked the object store for its whole listing in the last day and was refused | [The bucket was not swept](#the-bucket-was-not-swept) |
 | `CareerOSPushDeliveryFailing` | warning | Three or more browser wakes were refused by a push service in a day | [The wake a push service refused](#the-wake-a-push-service-refused) |
 | `CareerOSCircuitBreakerOpen` | warning | An ai-service circuit breaker has been open for ten minutes | [An ai-service circuit breaker sits open](#an-ai-service-circuit-breaker-sits-open) |
+| `CareerOSGatewayRateLimited` | warning | The edge's token bucket has refused callers for five minutes straight | [The edge is refusing callers](#the-edge-is-refusing-callers) |
 
 ## A night that never succeeded
 
@@ -961,3 +962,37 @@ every configured replica can serve", not for "a replica answered wrong once".
 doing its job — wait ten minutes of evidence, not one, before paging. If it comes back the next
 time traffic ramps after a deploy, the engine is not healthy fast enough to satisfy the probe and
 should start on a longer `start_period` / `initial-delay` than the default lets it.
+
+## The edge is refusing callers
+
+**What the alert looks like.** `CareerOSGatewayRateLimited` fires when
+`rate(careeros_gateway_ratelimit_refused_total[5m]) > 0` has held for five minutes: the gateway's
+token bucket has refused at least one caller on every scrape interval for five minutes straight.
+One refused request is noise — a client that misbehaved once, a script that hammered the login
+route for a second; the bucket answered and the moment passed. The alarm is for continuity, which
+is what a flood looks like on a counter that keeps moving.
+
+**What the counter is.** `careeros.gateway.ratelimit.refused` is registered by the gateway's edge
+filter (`GatewayRateLimitFilter`) and increments once per 429 the token bucket answers. It carries
+no caller tag on purpose: the identity is a caller's token hash or address, and a metric tagged by
+either grows one series per caller — the cardinality accident that makes a metrics backend fall
+over precisely during the flood this counter exists to describe. The bucket's capacity is
+`GATEWAY_RATE_LIMIT_PER_MINUTE` (1200/min by default) per caller identity; a refusal means one
+identity outran its own bucket, not that the edge is out of capacity for everyone.
+
+**What you need for the fix, in order.**
+
+1. The gateway log — the refused identities are there (the filter logs every 429 with the
+   identity class it refused). One identity is a misbehaving client; every identity is a
+   deployment-wide event (a crawler, a retry storm after an outage, a probing script).
+2. `/actuator/metrics/careeros.gateway.ratelimit.refused` — the running total, to judge scale
+   against the bucket's own 1200/min.
+3. If the caller is legitimate (an internal integration outrunning its own bucket), raise
+   `GATEWAY_RATE_LIMIT_PER_MINUTE` for the edge or give the integration its own identity cadence —
+   do not disable the bucket: it is the only thing between the backend and an unauthenticated flood
+   (docs/SECURITY.md).
+
+**If the alarm cleared on its own:** the flood ended before you looked — the counter's total
+tells you whether anyone was refused since. Persistent refusal from an unknown identity is what
+the edge exists for; persistent refusal from your own integrations is a configuration problem, not
+an attack.

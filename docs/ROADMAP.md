@@ -5739,6 +5739,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the path is `../../base` now, and a new gate case refuses any resource path a kustomization
   names that does not exist relative to it. Docs: MICROSERVICES §2/§9, DEPLOYMENT two-node
   runbook (manual verification documented, not faked in CI).)
+- [x] **115** The edge's refusal becomes an alarm (measured 2026-11-11).
+
+  (The horizon's held-over item: `CareerOSGatewayRateLimited` reads
+  `rate(careeros_gateway_ratelimit_refused_total[5m]) > 0` for 5m — one refusal is noise, so the
+  rule fires on continuity, which is what a flood looks like on a counter. **The counter moved
+  into the project's namespace first**: `gateway.ratelimit.refused` was a series the alarm gate's
+  roster could never see (it walks the services that consult `MeterRegistry`, and every rule must
+  read a `careeros.*` name), so the metric became `careeros.gateway.ratelimit.refused` and the
+  roster walk now covers the gateway module alongside the backend. The runbook grew "The edge is
+  refusing callers" (table row, heading, the identities the counter deliberately does not carry
+  are in the gateway log), DEPLOYMENT's meter roster gained the row, and the gate's service-label
+  pin widened from the backend alone to the fleet's MeterRegistry users. Gate 12/12; gateway
+  `GatewayRateLimitTest` 4/4 on the renamed meter.)
 
   (`ConfigTokenFilter`/`ConfigTokenConfig`: set `CONFIG_SERVER_TOKEN` and every request except
   `/actuator/health` must carry `X-Config-Token`; unset keeps dev behavior. New test

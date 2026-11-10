@@ -65,8 +65,11 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
         // No identity tag: the identity is a caller's token hash or address, and a metric
         // tagged by either grows one series per caller -- the cardinality accident that
         // makes a metrics backend fall over precisely during the flood this counter exists
-        // to describe.
-        this.refusals = Counter.builder("gateway.ratelimit.refused")
+        // to describe. The name carries the project's `careeros.` namespace like every
+        // other meter the fleet registers: the alarm gate's roster walks the services that
+        // consult MeterRegistry, and a meter outside the namespace is a series no rule
+        // there can watch.
+        this.refusals = Counter.builder("careeros.gateway.ratelimit.refused")
                 .description("Requests refused by the edge token bucket")
                 .register(meterRegistry);
     }

@@ -80,7 +80,15 @@ RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "au
 UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
 STORED_OBJECT_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "StoredObjectReclaimer.java"
 RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
-REGISTRATION_ROOT = BACKEND / "src" / "main" / "java"
+GATEWAY_RATE_LIMIT_FILTER = ROOT / "gateway" / "src" / "main" / "java" / "com" / "careeros" / "gateway" / "GatewayRateLimitFilter.java"
+# The population of MeterRegistry users the roster must cover. The gateway joined it
+# when its edge token bucket's refusal counter moved into the `careeros.` namespace
+# (Epic 115): a module the alarm gate could not see is a module whose meters no rule
+# can watch, which is the exact failure the namespace rule exists to prevent.
+REGISTRATION_ROOTS = (
+    BACKEND / "src" / "main" / "java",
+    ROOT / "gateway" / "src" / "main" / "java",
+)
 NIGHTLY_REPORT_SERVICE = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "NightlyReportService.java"
 NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightly-history.tsx"
 
@@ -114,6 +122,10 @@ METRICS = {
     "careeros_storage_objects_reclaimed_total": (STORED_OBJECT_RECLAIMER, "careeros.storage.objects_reclaimed"),
     "careeros_circuitbreaker_open": (AI_CIRCUIT_BREAKER_METRICS, "careeros.circuitbreaker.open"),
     "careeros_storage_objects_judged_total": (UNNAMED_RECLAIMER, "careeros.storage.objects_judged"),
+    # Epic 115: the edge's own refusal counter moved into the namespace (it was
+    # `gateway.ratelimit.refused`, a series no rule in this file could ever watch),
+    # and the alarm that reads it is the horizon's `CareerOSGatewayRateLimited`.
+    "careeros_gateway_ratelimit_refused_total": (GATEWAY_RATE_LIMIT_FILTER, "careeros.gateway.ratelimit.refused"),
 }
 
 ALERT_NAMES = frozenset({
@@ -131,6 +143,7 @@ ALERT_NAMES = frozenset({
     "CareerOSBucketListingRefused",
     "CareerOSPushDeliveryFailing",
     "CareerOSCircuitBreakerOpen",
+    "CareerOSGatewayRateLimited",
 })
 
 # The columns the budget query sums, each one a column of the ledger migration.
@@ -161,18 +174,19 @@ def declared_meters() -> dict:
     here can watch, or the census has stopped seeing a name it used to.
     """
     out = {}
-    for source in sorted(REGISTRATION_ROOT.rglob("*.java")):
-        text = read(source)
-        if "MeterRegistry" not in text:
-            continue
-        names = set(re.findall(r'"(careeros\.[a-z0-9._]+)"', text))
-        assert names, (
-            f"{source.relative_to(ROOT)} consults MeterRegistry and declares no careeros meter; "
-            "a meter registered under another prefix is a reading no rule here can watch"
-        )
-        for name in names:
-            assert name not in out, f"{name} is declared in both {out[name]} and {source}"
-            out[name] = source
+    for root in REGISTRATION_ROOTS:
+        for source in sorted(root.rglob("*.java")):
+            text = read(source)
+            if "MeterRegistry" not in text:
+                continue
+            names = set(re.findall(r'"(careeros\.[a-z0-9._]+)"', text))
+            assert names, (
+                f"{source.relative_to(ROOT)} consults MeterRegistry and declares no careeros meter; "
+                "a meter registered under another prefix is a reading no rule here can watch"
+            )
+            for name in names:
+                assert name not in out, f"{name} is declared in both {out[name]} and {source}"
+                out[name] = source
     assert out, "the registration walk found no meter at all"
     return out
 
@@ -288,8 +302,10 @@ def test_every_alarm_is_pinned_and_each_carries_an_audience_and_a_page():
     for name, rule in pinned.items():
         assert rule["expr"].strip(), f"{name} has no expression"
         assert rule["for"].strip(), f"{name} has no `for`: it would flap on a single scrape"
-        assert rule["labels"]["service"] == "career-os-backend", (
-            "every alert says which stack raised it; the label is what a shared Alertmanager routes on"
+        assert rule["labels"]["service"] in {"career-os-backend", "career-os-gateway"}, (
+            "every alert says which stack raised it -- the label is what a shared Alertmanager "
+            "routes on, and the set is the fleet's MeterRegistry users (the roster's population): "
+            "the backend, and since Epic 115 the gateway whose edge bucket refuses callers"
         )
         assert rule["labels"]["severity"] in {"critical", "warning"}, f"{name} has no severity anyone acts on"
         assert rule["annotations"]["summary"].strip(), f"{name} has no summary"

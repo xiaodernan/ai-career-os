@@ -111,14 +111,14 @@ class GatewayRateLimitTest {
         ask("Bearer delta").expectStatus().isEqualTo(429);
 
         assertThat(refusals() - before).isEqualTo(1.0);
-        assertThat(meterRegistry.find("gateway.ratelimit.refused").meter().getId().getTags())
+        assertThat(meterRegistry.find("careeros.gateway.ratelimit.refused").meter().getId().getTags())
                 .as("a counter tagged by token hash or address grows one series per caller —\n"
                         + "only the platform-wide application tag is allowed (Epic 108.14)")
                 .containsExactly(io.micrometer.core.instrument.Tag.of("application", "career-os-gateway"));
     }
 
     private double refusals() {
-        Counter counter = meterRegistry.find("gateway.ratelimit.refused").counter();
+        Counter counter = meterRegistry.find("careeros.gateway.ratelimit.refused").counter();
         return counter == null ? 0.0 : counter.count();
     }
 
