@@ -65,13 +65,15 @@ reachable from a browser.
   OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
   `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and
   `/api-docs/ui`, and the filter admits both spellings), CORS preflight
-  (`OPTIONS /**`), the observability pair `/actuator/health` and
-  `/actuator/prometheus` (read-only Micrometer metrics; restrict the scrape at
-  the reverse proxy in production if metrics must not be public). Backend Spring Cloud Resilience4j actuator endpoints circuitbreakers and circuitbreakerevents, and /actuator/info, are exposed but require authentication (not permitAll), the
-    The edge carries an optional shared-secret gate for its own operations surface (Epic 108.15): setting `GATEWAY_ACTUATOR_TOKEN`
-    makes every `/actuator/**` on the gateway require the `X-Actuator-Token` header; `/actuator/health` stays open for the probe,
-    and when the token is unset the gateway surface is open as before (dev is loopback-bound; prod requires it in `.env.prod.example`).
-  signed-link mail-settings page `/api/v1/mail/**` (its path is its own
+  (`OPTIONS /**`), the observability set `/actuator/health` plus
+  `/actuator/health/liveness` and `/actuator/health/readiness` (Epic 112's split
+  probes for the orchestrator — lifecycle only, dependency truth stays in
+  `/api/v1/health`) and `/actuator/prometheus` (read-only Micrometer metrics;
+  restrict the scrape at the reverse proxy in production if metrics must not be
+  public). Backend Spring Cloud Resilience4j actuator endpoints circuitbreakers
+  and circuitbreakerevents, and /actuator/info, are exposed but require
+  authentication (not permitAll). The signed-link mail-settings page
+  `/api/v1/mail/**` (its path is its own
   credential — an HMAC-SHA256 of the account id under `app.mail.link-secret`,
   compared in constant time; forge one and the route is a 404, but it still
   answers without a session so a mailbox can unsubscribe in one click), the
@@ -87,6 +89,14 @@ reachable from a browser.
   5321's mailbox cap, and the answer to a forged, retired or erased-account
   address is the same 404, so the open internet cannot grade its guesses), and
   the internal surface `/api/internal/**` (guarded below).
+
+  The edge carries an optional shared-secret gate for its own operations surface
+  (Epic 108.15): setting `GATEWAY_ACTUATOR_TOKEN` makes every actuator path on the
+  gateway require the `X-Actuator-Token` header; the health probe stays open, and
+  when the token is unset the gateway surface is open as before (dev is
+  loopback-bound; prod requires it in `.env.prod.example`). That gate is the
+  gateway's own filter — a different process from the backend chain this bullet
+  describes — so it names no route here.
 
 ## Service-to-service authentication (ai-service)
 

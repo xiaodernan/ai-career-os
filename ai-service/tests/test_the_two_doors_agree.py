@@ -46,19 +46,35 @@ def _gateway_cors() -> dict:
 
 def _backend_lists() -> tuple[list[str], list[str], list[str], int]:
     source = BACKEND_SECURITY.read_text(encoding="utf-8")
+    id_source = BACKEND_ID.read_text(encoding="utf-8")
     request_id_header = re.search(
         r'public static final String HEADER = "([^"]+)"',
-        BACKEND_ID.read_text(encoding="utf-8"),
+        id_source,
     ).group(1)
+
+    # The backend spells CORS headers through RequestIdFilter's public constants
+    # (the trace wave added TRACEPARENT_HEADER beside HEADER), so the resolver
+    # answers any of them from the filter's own declarations. A literal spelling
+    # in the List passes through unchanged, and a constant this resolver cannot
+    # find is a drift the edge's parity test must not paper over.
+    def resolve(part: str) -> str:
+        part = part.strip()
+        constant = re.fullmatch(r"RequestIdFilter\.([A-Z_]+)", part)
+        if constant:
+            declared = re.search(
+                r'public static final String %s = "([^"]+)"' % constant.group(1), id_source
+            )
+            assert declared, (
+                f"RequestIdFilter.{constant.group(1)} is referenced by SecurityConfig's "
+                "CORS lists but declares no value this gate can read"
+            )
+            return declared.group(1)
+        return part.strip('"')
 
     def entries(pattern: str) -> list[str]:
         found = re.search(pattern, source)
         assert found, f"SecurityConfig no longer matches {pattern!r}"
-        return [
-            request_id_header if part.strip() == "RequestIdFilter.HEADER" else part.strip().strip('"')
-            for part in found.group(1).split(",")
-            if part.strip()
-        ]
+        return [resolve(part) for part in found.group(1).split(",") if part.strip()]
 
     methods = entries(r"setAllowedMethods\(List\.of\(([^)]*)\)\)")
     headers = entries(r"setAllowedHeaders\(List\.of\(([^)]*)\)\)")
