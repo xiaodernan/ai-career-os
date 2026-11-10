@@ -42,6 +42,16 @@ TESTS=(
   ai-service/tests/test_journey_api_propagates_request_id.py
   ai-service/tests/test_prod_compose_images_are_not_latest.py
   ai-service/tests/test_dockerfiles_run_as_non_root.py
+  ai-service/tests/test_the_spring_cloud_actuator_surface_contract.py
+  ai-service/tests/test_the_config_client_stays_opt_in.py
+  ai-service/tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py
+  ai-service/tests/test_the_spring_cloud_services_publish_latency_histograms.py
+  ai-service/tests/test_the_spring_cloud_readiness_runbook_exists.py
+  ai-service/tests/test_the_topology_page_reads_the_fleet_the_backend_writes.py
+  ai-service/tests/test_the_resilience_page_reads_the_breakers_the_backend_writes.py
+  ai-service/tests/test_the_compose_files_parse.py
+  ai-service/tests/test_the_load_balancer_health_check_stays_on.py
+  ai-service/tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
 )
 
 echo "== verify_gates: representative offline contract gates =="

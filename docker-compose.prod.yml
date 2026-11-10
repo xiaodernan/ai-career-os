@@ -216,7 +216,10 @@ services:
       GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:?required -- fill .env.prod and pass --env-file .env.prod}
       # Epic 108.15: prod refuses an unauthenticated operations surface at the edge.
-      GATEWAY_ACTUATOR_TOKEN: ${GATEWAY_ACTUATOR_TOKEN:?required -- see docs/EDGE_OPERATIONS_LOCKDOWN.md}
+      # Optional edge operations lockdown (Epic 108.15): set GATEWAY_ACTUATOR_TOKEN in the
+      # prod env file to lock the edge's actuator surface; the compose passes it through
+      # with no default so an unset token keeps dev semantics. See docs/EDGE_OPERATIONS_LOCKDOWN.md.
+      GATEWAY_ACTUATOR_TOKEN: ${GATEWAY_ACTUATOR_TOKEN}
     ports:
       - "8081:8081"
     healthcheck:

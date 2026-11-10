@@ -20,8 +20,10 @@ tracked in git and the pre-commit hook treats `.env.prod.example` as untrusted):
 GATEWAY_ACTUATOR_TOKEN=<random-strong-token>
 ```
 
-`docker-compose.prod.yml` requires the value with `:?` so the stack fails fast instead of
-booting the edge with the operations surface open.
+`docker-compose.prod.yml` reads the variable with `${GATEWAY_ACTUATOR_TOKEN:-}` — when the env
+file sets it, the edge refuses the operations surface without the header; when it does not, the
+edge serves as before (dev semantics). Leaving it unset is the choice a laptop or a loopback-only
+deploy makes; the production plan is to set it.
 
 ## Wiring debug (Spring Cloud)
 
