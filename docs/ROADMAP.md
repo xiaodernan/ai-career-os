@@ -5647,8 +5647,8 @@ has clear, overridable defaults.
   (Added `career-os-backend.yml`, `career-os-gateway.yml`, and `career-os-discovery.yml` example
   profiles under `config-server/src/main/resources/config-repo/` with non-secret service markers,
   keeping the native backend and opt-in behavior unchanged. Contract tests assert per-service
-  profiles are served. Measured: config-server `ConfigServerApplicationTests` 3/3 green offline
-  with `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test`.)
+  profiles and actuator exposure are served. Measured: config-server `ConfigServerApplicationTests`
+  4/4 green offline with `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test`.)
 
 ### Epic 107 -- ai-service refusal correlation in responses
 

@@ -53,4 +53,16 @@ class ConfigServerApplicationTests {
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).contains("UP");
     }
+
+    @Test
+    void actuatorInfoAndEnvAreExposed() {
+        ResponseEntity<String> info = rest.getForEntity(
+                "http://localhost:" + port + "/actuator/info", String.class);
+        assertThat(info.getStatusCode().is2xxSuccessful()).isTrue();
+
+        ResponseEntity<String> env = rest.getForEntity(
+                "http://localhost:" + port + "/actuator/env", String.class);
+        assertThat(env.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(env.getBody()).contains("activeProfiles");
+    }
 }
