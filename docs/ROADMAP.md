@@ -5698,6 +5698,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.15** Optional shared-secret gate for the edge's operations surface (measured 2026-11-10).
 - [x] **108.16** Wiring debug behind the ops gate for the edge (measured 2026-11-10).
 - [x] **108.17** Spring Cloud readiness runbook + contract gate (measured 2026-11-10).
+- [x] **108.18** Backend Spring Cloud wiring debug behind existing auth (measured 2026-11-10).
+
+  (`/actuator/conditions` is exposed on the backend behind the same authenticated actuator surface previously used
+  for Eureka/CircuitBreaker wiring debug — adding the `conditions` endpoint alongside `info`/`circuitbreakers`/`circuitbreakerevents`)
+  exposes no new secret material and stays off the public probe surface; health/prometheus remain public, authenticated
+  wiring debug is uniform across backend and edge. Measured: backend `mvn -o -Dtest=ResilienceStatusServiceTest,ServiceTopologyServiceTest compile` BUILD SUCCESS, SecurityConfig-related tests 2/2; full backend compile green offline.)
 
   (New `docs/SPRING_CLOUD_READINESS.md` walks an operator through build-sha on every service,
   the edge routes through the Spring Cloud load balancer, the Eureka registry, the backend's

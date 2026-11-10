@@ -216,9 +216,9 @@ management:
     web:
       exposure:
         # /actuator/health and /actuator/prometheus are the public probes/scrape targets.
-        # Circuit breaker and info actuator endpoints are exposed for authenticated operators
-        # (Spring Cloud observability); they are not permitAll in security config.
-        include: health,prometheus,info,circuitbreakers,circuitbreakerevents
+        # Authenticated Spring Cloud observability/wiring debug for the backend;
+        # `conditions` is the operator's view of why a bean did or did not match.
+        include: health,prometheus,info,conditions,circuitbreakers,circuitbreakerevents
   endpoint:
     health:
       show-details: never

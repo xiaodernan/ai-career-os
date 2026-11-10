@@ -111,6 +111,9 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     a production proxy must authenticate what it publishes). Runbook: `docs/EDGE_OPERATIONS_LOCKDOWN.md`.
     The edge also carries `/actuator/conditions` behind the same token (Epic 108.16) — the Spring Boot
     condition report, for an operator to see why a wiring bean did or did not match.
+    The backend also exposes `/actuator/conditions` for the same Spring Cloud wiring debug (Epic 108.18) —
+    behind its existing authentication, not permitAll. Use it to see why the Eureka client or
+    circuit breaker did or did not match: a misrouted deployment fails fast there.
 - **Build identity**:
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.
