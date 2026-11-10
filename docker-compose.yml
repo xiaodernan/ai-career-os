@@ -247,6 +247,29 @@ services:
       discovery:
         condition: service_healthy
 
+  # Opt-in Spring Cloud Config Server (Epic 103): centralizes externalized
+  # configuration for gateway/backend/discovery when enabled via config client settings.
+  config-server:
+    profiles: [config]
+    build:
+      context: ./config-server
+    container_name: careeros-config-server
+    restart: unless-stopped
+    environment:
+      CONFIG_SERVER_PORT: 8888
+      CONFIG_SERVER_PROFILE: native
+      CONFIG_SERVER_SEARCH_LOCATIONS: classpath:/config-repo,file:/config
+    volumes:
+      - ./config-server/src/main/resources/config-repo:/config:ro
+    ports:
+      - "127.0.0.1:8888:8888"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
   frontend:
     profiles: [app]
     build:

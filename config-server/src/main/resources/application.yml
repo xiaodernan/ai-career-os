@@ -1,0 +1,28 @@
+server:
+  port: ${CONFIG_SERVER_PORT:8888}
+
+spring:
+  application:
+    name: career-os-config-server
+  profiles:
+    # Native backend serves configuration from a local directory/classpath without git.
+    active: ${CONFIG_SERVER_PROFILE:native}
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: ${CONFIG_SERVER_SEARCH_LOCATIONS:classpath:/config-repo,file:./config-repo}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{requestId:--}] %logger{36} - %msg%n"

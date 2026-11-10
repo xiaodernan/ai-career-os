@@ -1,0 +1,5 @@
+# Shared externalized defaults served by the opt-in Spring Cloud Config Server (Epic 103).
+# Deployments can override per-service files (e.g. career-os-backend.yml, career-os-gateway.yml).
+careeros:
+  config-server:
+    managed: true

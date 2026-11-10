@@ -5591,6 +5591,21 @@ opt-in path to externalized configuration via Spring Cloud Config.
   without code changes. Measured: gateway `GatewayRoutingTest` 9/9 and backend `RequestIdFilterTest` 6/6 still
   green after wiring; `discovery` module compiles offline with the new dependency.)
 
+### Epic 103 -- opt-in Spring Cloud Config Server for externalized microservice configuration
+
+The Java services gained opt-in Config client support (102.2) but had no first-party config
+server in the stack. This epic adds a filesystem-native Spring Cloud Config Server so
+deployments can centralize configuration as a real microservices element without requiring git.
+
+- [x] **103.1** Config server module, compose wiring, and contract-safe integration (measured 2026-11-10).
+
+  (New `config-server/` module: Spring Boot 3.5.16 / Spring Cloud 2025.0.3 `@EnableConfigServer`,
+  native backend serving `classpath:/config-repo` and mounted `file:/config`, actuator health/info/env
+  exposed, Dockerfile with multi-stage build. Added opt-in `config-server` service to
+  `docker-compose.yml` (`profiles: [config]`, port 8888 loopback) and `docker-compose.prod.yml`.
+  Measured: `config-server` `ConfigServerApplicationTests` 2/2 green offline; ai-service compose parse
+  gate `tests/test_the_compose_files_parse.py` 4/4 green after compose updates.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
