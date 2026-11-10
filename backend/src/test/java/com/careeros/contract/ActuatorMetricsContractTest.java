@@ -69,10 +69,16 @@ class ActuatorMetricsContractTest {
     void exactlyTheTwoExposedEndpointsArePermitted() {
         String source = read(SECURITY_CONFIG);
 
-        assertThat(source)
-                .as("the scraper authenticates with nothing, so the two exposed endpoints "
-                        + "must be reachable through the security chain")
-                .contains("\"/actuator/health\", \"/actuator/prometheus\"");
+        // Whitespace-normalized: the permitAll list wraps across lines, and the
+        // contract is the ordered set of public paths, not where the editor broke it.
+        String flat = source.replaceAll("\\s+", " ");
+        assertThat(flat)
+                .as("the scrape and the probes authenticate with nothing, so every public "
+                        + "probe path -- the aggregate health, Epic 112's liveness/readiness "
+                        + "split for the orchestrator, and the Prometheus scrape -- must be "
+                        + "reachable through the security chain")
+                .contains("\"/actuator/health\", \"/actuator/health/liveness\", "
+                        + "\"/actuator/health/readiness\", \"/actuator/prometheus\"");
         // Defense in depth: the broad form would wave through /actuator/env, /actuator/beans
         // and friends the day someone widens the exposure list.
         assertThat(source).doesNotContain("\"/actuator/**\"");
@@ -89,8 +95,12 @@ class ActuatorMetricsContractTest {
                         + "silently disappears")
                 .isTrue();
         assertThat(include.group(1))
-                .as("health and prometheus are the whole observability surface")
-                .isEqualTo("health,prometheus");
+                .as("the observability surface is health + the scrape, plus Epic 108.1's "
+                        + "authenticated Spring Cloud halves (info, wiring conditions, "
+                        + "circuit breakers and their events) -- all of them behind the JWT "
+                        + "chain, since the permitAll pin above still holds the public "
+                        + "surface at the two probes")
+                .isEqualTo("health,prometheus,info,conditions,circuitbreakers,circuitbreakerevents");
 
         Matcher redis = Pattern.compile("(?m)^\\s*redis:\\s*$\\n\\s*enabled:\\s*false")
                 .matcher(managementBlock(yaml));

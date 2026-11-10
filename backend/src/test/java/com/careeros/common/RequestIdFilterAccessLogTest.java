@@ -59,8 +59,10 @@ class RequestIdFilterAccessLogTest {
                 (req, res) -> ((MockHttpServletResponse) res).setStatus(200));
 
         assertThat(appender.list).hasSize(1);
+        // The trace propagation wave (W3C traceparent) rides the same line: the
+        // trace id is the last field, hex or empty when no context reached it.
         assertThat(appender.list.get(0).getFormattedMessage())
-                .matches("GET /api/v1/jobs 200 \\d+ms");
+                .matches("GET /api/v1/jobs 200 \\d+ms trace=[0-9a-f]*");
     }
 
     @Test
@@ -100,8 +102,9 @@ class RequestIdFilterAccessLogTest {
 
         assertThat(appender.list).hasSize(1);
         // "error", not a number: the container will answer 500 after this filter unwinds.
+        // The trace id rides the error line too, the way it rides the completed one.
         assertThat(appender.list.get(0).getFormattedMessage())
-                .matches("GET /api/v1/me error \\d+ms");
+                .matches("GET /api/v1/me error \\d+ms trace=[0-9a-f]*");
         assertThat(MDC.get(RequestIdFilter.MDC_KEY)).isNull();
     }
 }

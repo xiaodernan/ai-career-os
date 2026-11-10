@@ -80,7 +80,8 @@ public class SecurityConfig {
                         // than /actuator/**: the scrape is read-only Micrometer metrics and
                         // health is a liveness probe. Production can restrict
                         // /actuator/prometheus at the reverse proxy (docs/SECURITY.md).
-                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/liveness",
+                                "/actuator/health/readiness", "/actuator/prometheus").permitAll()
                         // Service-to-service surface: authenticated by the shared internal token,
                         // not by a user JWT (see InternalApiFilter).
                         .requestMatchers("/api/internal/**").permitAll()
