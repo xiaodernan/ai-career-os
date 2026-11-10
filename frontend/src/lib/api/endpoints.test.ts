@@ -824,7 +824,9 @@ describe("endpoints ↔ backend route parity", () => {
    * the paste-a-posting dialog finally wired it, and its entry left.
    */
   const NEVER_REFERENCED: Record<string, string> = {
-    "/health": "liveness for the container probe, not something a page calls",
+    // `/health` left this ledger when Epic 108.23's engine-fleet card began reading it
+    // (useDeploymentHealth → endpoints.health): the deployment's dependency report is a
+    // surface the browser reads, not a probe-only route.
     "/calendar.ics":
       "the feed address is pasted into a calendar client, not fetched by the browser; the settings card copies the URL the backend already signed",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
