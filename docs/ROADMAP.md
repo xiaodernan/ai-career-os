@@ -5545,6 +5545,25 @@ page, so the screen describes the routing table instead of a second inventory th
   frontend `service-topology.test.tsx` 3/3, and CI run 42678992385 -- frontend, ai-service,
   backend and the offline-suites gate all green.)
 
+### Epic 101 -- the topology page reads the fleet the backend writes
+
+100 put the discovery answer on the monitoring page, but the answer crosses a wire with no
+shared schema: the backend builds it as Java maps, the page draws it through a TypeScript
+interface, and neither imports the other. A key renamed on one side renders as undefined
+while both modules' own tests stay green. This gate is the noticing, in the shape of Epic 90.
+
+- [x] **101.1** A text gate pins the topology vocabulary across the wire (measured 2026-11-10).
+
+  (`ai-service/tests/test_the_topology_page_reads_the_fleet_the_backend_writes.py` reads
+  `ServiceTopologyService.report()`'s `put` keys and the `ServiceTopology` interface's fields
+  as text and asserts the two sets are equal -- a renamed `instanceId` or `registry` fails by
+  name. A second assertion pins the registry-mode words: the eureka / configuration the
+  backend's ternary writes must cover the words the card branches on. The gate compares sets,
+  not order, because the answer is a map. Measured 2/2; a five-arm mutation battery (a renamed
+  backend key, a renamed page field, a card branching on a word the backend never writes, and
+  a backend ternary the card cannot read) went red exactly where predicted, 5/5, with
+  byte-exact restores.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
