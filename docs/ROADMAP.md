@@ -5619,6 +5619,18 @@ preserve and echo it so the entire request chain is correlated across logs and r
   `test_the_id_the_backend_sends_is_the_id_the_service_logs.py` 6/6, `test_json_log_formatter_carries_request_id.py`
   4/4, `test_observability_and_error_wiring_exists.py` 2/2 all green offline.)
 
+### Epic 105 -- resilience visibility for the ai-service bridge
+
+The backend already guards the ai-service bridge with Spring Cloud Resilience4j circuit breakers;
+operators need a read model of breaker state.
+
+- [x] **105.1** Expose circuit breaker state via authenticated API (measured 2026-11-10).
+
+  (Added `ResilienceStatusService`/`ResilienceStatusController` under `/api/v1/system/resilience`
+  backed by the Resilience4j `CircuitBreakerRegistry`/`Resilience4JCircuitBreakerFactory`, reporting
+  breaker name, state and key metrics sorted by name. Documented in `docs/API.md`. Measured: backend
+  `ResilienceStatusServiceTest` 1/1 green offline with `mvn -f backend/pom.xml -Dtest=ResilienceStatusServiceTest -o test`.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
