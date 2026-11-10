@@ -10,6 +10,8 @@ FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /opt
 COPY --from=build /m/target/*.jar app.jar
+ARG APP_BUILD_SHA=dev
+ENV APP_BUILD_SHA=${APP_BUILD_SHA}
 USER app
 EXPOSE 8761
 ENTRYPOINT ["java","-XX:MaxRAMPercentage=75","-jar","/opt/app.jar"]

@@ -182,6 +182,8 @@ services:
   discovery:
     build:
       context: ./discovery
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-discovery-prod
     restart: unless-stopped
     environment:
@@ -202,6 +204,8 @@ services:
   gateway:
     build:
       context: ./gateway
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-gateway-prod
     restart: unless-stopped
     environment:
@@ -234,6 +238,8 @@ services:
   config-server:
     build:
       context: ./config-server
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-config-server-prod
     restart: unless-stopped
     environment:

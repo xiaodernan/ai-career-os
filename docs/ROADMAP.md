@@ -5713,6 +5713,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   configuration details under authenticated `/actuator/info` (`aiServiceCircuitBreaker`). Measured:
   `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
 
+- [x] **108.8** Bake build SHA into gateway/discovery images and compose wiring (measured 2026-11-10).
+
+  (Gateway and discovery Dockerfiles now accept/export `APP_BUILD_SHA` (config-server already did);
+  dev and prod compose pass `APP_BUILD_SHA` build arg for `gateway`/`discovery` and `docker-compose.prod.yml` includes
+  config-server build arg. Measured: `ai-service` `test_the_compose_files_parse.py` 4/4 passing offline.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

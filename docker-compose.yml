@@ -201,6 +201,8 @@ services:
     profiles: [app]
     build:
       context: ./discovery
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-discovery
     restart: unless-stopped
     environment:
@@ -223,6 +225,8 @@ services:
     profiles: [app]
     build:
       context: ./gateway
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-gateway
     restart: unless-stopped
     environment:
