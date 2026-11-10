@@ -104,6 +104,11 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     `/actuator/prometheus` are public probe/scrape endpoints; `/actuator/info` and Resilience4j
     actuator endpoints require authentication.
   - Gateway/Discovery/Config Server expose actuator endpoints appropriate to their role.
+  - The edge carries an optional shared-secret gate for its operations surface: set `GATEWAY_ACTUATOR_TOKEN`
+    and every `/actuator/**` needs the `X-Actuator-Token` header (`/actuator/health` stays open for the
+    container probe); `GatewayActuatorGuard` refuses at the edge with 403 (`actuator-surface-not-exposed`)
+    before the actuator is reached. When unset the surface stays open, as before (compose binds loopback;
+    a production proxy must authenticate what it publishes).
 - **Build identity**:
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.

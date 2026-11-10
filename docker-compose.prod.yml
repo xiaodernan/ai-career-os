@@ -215,6 +215,8 @@ services:
       EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
       GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:?required -- fill .env.prod and pass --env-file .env.prod}
+      # Epic 108.15: prod refuses an unauthenticated operations surface at the edge.
+      GATEWAY_ACTUATOR_TOKEN: ${GATEWAY_ACTUATOR_TOKEN:?required -- fill .env.prod (see .env.prod.example)}
     ports:
       - "8081:8081"
     healthcheck:

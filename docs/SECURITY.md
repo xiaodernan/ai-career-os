@@ -68,6 +68,9 @@ reachable from a browser.
   (`OPTIONS /**`), the observability pair `/actuator/health` and
   `/actuator/prometheus` (read-only Micrometer metrics; restrict the scrape at
   the reverse proxy in production if metrics must not be public). Backend Spring Cloud Resilience4j actuator endpoints circuitbreakers and circuitbreakerevents, and /actuator/info, are exposed but require authentication (not permitAll), the
+    The edge carries an optional shared-secret gate for its own operations surface (Epic 108.15): setting `GATEWAY_ACTUATOR_TOKEN`
+    makes every `/actuator/**` on the gateway require the `X-Actuator-Token` header; `/actuator/health` stays open for the probe,
+    and when the token is unset the gateway surface is open as before (dev is loopback-bound; prod requires it in `.env.prod.example`).
   signed-link mail-settings page `/api/v1/mail/**` (its path is its own
   credential — an HMAC-SHA256 of the account id under `app.mail.link-secret`,
   compared in constant time; forge one and the route is a 404, but it still

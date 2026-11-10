@@ -5695,6 +5695,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   7/7, `test_the_topology_page_reads_the_fleet_the_backend_writes.py` 3/3.)
 
 - [x] **108.14** Common Micrometer application tag on every Spring Cloud service (measured 2026-11-10).
+- [x] **108.15** Optional shared-secret gate for the edge's operations surface (measured 2026-11-10).
+
+  (`GATEWAY_ACTUATOR_TOKEN` now gates the gateway's `/actuator/**` surface: set it and the edge refuses
+  every actuator path except `/actuator/health` with 403 (`actuator-surface-not-exposed`) before the actuator
+  answers. `GatewayActuatorGuard` runs as a WebFilter ahead of routing (routed paths also refuse via
+  GlobalFilter before spending a rate-limit token). Unset keeps the previous posture unchanged; prod now
+  requires it (`.env.prod.example`, `docker-compose.prod.yml`). Measured: `GatewayActuatorSurfaceTest` 4/4,
+  `GatewayRateLimitTest` updated to expect the one allowed application tag, full gateway suite 38/38,
+  compose parse gate 4/4.)
 
   (`management.metrics.tags.application=${spring.application.name}` on backend/gateway/discovery/config-server,
   so a shared plan scrapes one tag and aggregates `/actuator/prometheus` by application instead of by path.
