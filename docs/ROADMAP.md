@@ -5667,11 +5667,12 @@ Structured refusals should carry correlation identifiers so operators can join r
 
 Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while keeping them protected.
 
-- [x] **108.1** Expose authenticated circuit breaker actuator endpoints (measured 2026-11-10).
+- [x] **108.1** Expose authenticated circuit breaker and info actuator endpoints (measured 2026-11-10).
 
-  (Backend actuator exposure now includes `circuitbreakers` and `circuitbreakerevents` for Spring
-  Cloud Resilience4j observability; `health`/`prometheus` remain the only permitAll actuator endpoints.
-  Documented in `docs/DEPLOYMENT.md` and `docs/SECURITY.md`. Measured: `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
+  (Backend actuator exposure now includes `info`, `circuitbreakers` and `circuitbreakerevents` for
+  Spring Cloud observability; `health`/`prometheus` remain the only permitAll actuator endpoints.
+  `info.app` publishes service name and build SHA (env-driven). Documented in `docs/DEPLOYMENT.md`
+  and `docs/SECURITY.md`. Measured: `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

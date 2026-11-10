@@ -205,12 +205,20 @@ management:
     web:
       exposure:
         # /actuator/health and /actuator/prometheus are the public probes/scrape targets.
-        # Circuit breaker actuator endpoints are exposed for authenticated operators
-        # (Spring Cloud Resilience4j observability); they are not permitAll in security config.
-        include: health,prometheus,circuitbreakers,circuitbreakerevents
+        # Circuit breaker and info actuator endpoints are exposed for authenticated operators
+        # (Spring Cloud observability); they are not permitAll in security config.
+        include: health,prometheus,info,circuitbreakers,circuitbreakerevents
   endpoint:
     health:
       show-details: never
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    build-sha: ${APP_BUILD_SHA:dev}
   health:
     # Redis liveness is already reported by /api/v1/health as a degraded-but-up
     # state (fail-open, docs/SECURITY.md). Actuator's own redis indicator would
