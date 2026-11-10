@@ -33,7 +33,6 @@ FRONTEND_ROOTS = [REPO / "frontend" / "src" / "app",
 # is UI-less. The frontend's NEVER_REFERENCED ledger is the source of this record; the
 # two gates disagree only when one of them drifted, which is the point of running both.
 UI_LESS_ROUTES = {
-    "GET /health": "liveness for the container probe, not something a page calls",
     "GET /calendar.ics": "the feed address is pasted into a calendar client; the settings card copies the URL the backend already signed",
     "GET /me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "PATCH /me": "MeController's alias; the app PATCHes /users/me/profile instead",
@@ -191,10 +190,12 @@ def test_every_public_route_has_a_frontend_surface_or_a_recorded_reason():
     assert not orphans, (
         f"{orphans}: public routes this audit cannot account for -- either the route is "
         "new and needs a frontend surface (or a reason filed in UI_LESS_ROUTES above), "
-        "or the endpoints map drifted from the controllers. 71.1's finding is that the "
-        "accounted set is the shipped set: the UI-less routes are health, the calendar "
-        "feed, the MeController aliases, the rendered mail pages and the inbound "
-        "single-letter read -- everything else has a reader.")
+        "or the endpoints map drifted from the controllers. The accounted set is the "
+        "shipped set: the UI-less routes are the calendar feed, the MeController "
+        "aliases, the rendered mail pages and the inbound single-letter read -- "
+        "`/health` joined the read set when Epic 108.23's engine-fleet card began "
+        "reading the dependency report, and the split probes the orchestrator asks for "
+        "are actuator paths, not this table's routes. Everything else has a reader.")
     assert accounted >= 100, (
         f"only {accounted} routes accounted for -- the walk narrowed; the audit is stated "
         "about the whole public surface, and a narrowed walk would clear it by reading nothing")

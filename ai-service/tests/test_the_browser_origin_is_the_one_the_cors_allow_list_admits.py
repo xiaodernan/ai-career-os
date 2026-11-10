@@ -83,6 +83,12 @@ PREFLIGHT_METHOD = "OPTIONS"
 # admitted by CORS although no browser sends it: each row is reconciled with a server-side sender
 SERVER_ONLY_HEADERS = {
     "x-internal-token": "shared secret the backend and ai-service present to each other",
+    # W3C trace context (Epic 101): the trace headers ride service-to-service hops, and
+    # a caller forward through the edge must survive the preflight even though a browser
+    # page never sets them -- the allowed-headers list admits them so a gateway-forwarded
+    # traceparent is not severed at the CORS door.
+    "traceparent": "W3C trace context the mesh forwards between services, not a browser header",
+    "tracestate": "W3C trace context the mesh forwards between services, not a browser header",
 }
 
 # Next middleware runs on the server: the nonce and policy it writes decorate the request the Next

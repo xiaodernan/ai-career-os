@@ -344,6 +344,10 @@ def refused_claims() -> list[tuple[str, str]]:
     return out
 
 
+GATEWAY_FILTER = ROOT / "gateway" / "src" / "main" / "java" / "com" / "careeros" / "gateway" / "GatewayRateLimitFilter.java"
+GATEWAY_CEILING_VAR = "GATEWAY_RATE_LIMIT_PER_MINUTE"
+
+
 def authority() -> dict[str, int]:
     """The integers Spring binds when the deployment sets nothing -- the deciding carriers."""
     out: dict[str, int] = {}
@@ -354,6 +358,18 @@ def authority() -> dict[str, int]:
             f"derives, so an empty or non-numeric reading means every carrier below is reconciled "
             f"against a stub")
         out[var] = int(value)
+    # The edge's own ceiling joins the authority (Epic 115): the gateway is a separate
+    # service whose deciding carrier is the filter's @Value default, not application.yml,
+    # so prose about the edge's refusals reconciles against the same number Spring binds.
+    found = re.search(
+        r'@Value\("\$\{GATEWAY_RATE_LIMIT_PER_MINUTE:(\d+)\}"\)',
+        read(GATEWAY_FILTER),
+    )
+    assert found, (
+        "GatewayRateLimitFilter no longer declares GATEWAY_RATE_LIMIT_PER_MINUTE with a "
+        "numeric default -- the edge's ceiling has no carrier to reconcile prose against"
+    )
+    out[GATEWAY_CEILING_VAR] = int(found.group(1))
     return out
 
 

@@ -77,7 +77,11 @@ REQUIRED = {
 # `build.args` entry, not an `environment:` line that would shadow a filled `env_file:` secret,
 # so the empty-string hazard above does not apply to it. The set is written down so a second
 # defaulted value has to argue its way in rather than slip in beside it.
-OPTIONAL_EMPTY = {"APP_PUSH_VAPID_PUBLIC_KEY"}
+# The two values production may legitimately leave empty: the push key (an install
+# that ships no browser wakes) and the edge's operations token (Epic 108.15 -- unset
+# keeps dev semantics, loopback-bound). Everything else the override renders must be
+# a required `:?`, because an empty render would override the filled env_file value.
+OPTIONAL_EMPTY = {"APP_PUSH_VAPID_PUBLIC_KEY", "GATEWAY_ACTUATOR_TOKEN"}
 
 INTERP = re.compile(r"\$\{(?P<var>[A-Z][A-Z0-9_]*)(?::(?P<flag>[?-])?(?P<rest>[^}]*))?\}")
 HEADING = re.compile(r"^#{1,6} ")

@@ -3505,9 +3505,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # union (+14 lines with its doc comment); the union itself did not change.
         # 1657 rather than 1652 since 59.2's `bestRehearsalScore` joined the packet above
         # the union (+5 lines with its doc comment); the union itself did not change.
-        # 1671 rather than 1657 since the `ServiceTopology` interface (roadmap 100) joined
-        # the monitoring section above the union (+14 lines with its doc comment).
-        ("types.ts", 1671, "kind:"),
+        # 1705 rather than 1671 since the fleet's trace kind union grew the handoff
+        # branch (Epic 105's edge) and the monitoring section above it moved (+34 lines
+        # since the ServiceTopology note below first moved it).
+        ("types.ts", 1705, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

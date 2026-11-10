@@ -38,14 +38,17 @@ def test_internal_api_surface_is_permitted_but_guarded_by_token_filter() -> None
 
 
 def test_public_routes_documented_by_security_model_remain_permitted() -> None:
-    cfg = SECURITY_CONFIG.read_text(encoding="utf-8")
+    # Whitespace-normalized: the probe split (Epic 112) wraps the permitAll list
+    # across lines, and the contract is the ordered set of public paths, not where
+    # the editor broke them.
+    cfg = " ".join(SECURITY_CONFIG.read_text(encoding="utf-8").split())
     required_patterns = [
         '"/api/v1/auth/**"',
         '"/api/v1/mail/**"',
         '"/api/v1/calendar.ics"',
         '"/api/v1/inbound/mail/**"',
         '"/api/v1/health"',
-        '"/actuator/health", "/actuator/prometheus"',
+        '"/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness", "/actuator/prometheus"',
         'DispatcherType.ASYNC, DispatcherType.ERROR',
         'HttpMethod.OPTIONS, "/**"',
     ]

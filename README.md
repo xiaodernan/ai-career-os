@@ -109,7 +109,8 @@ frontend/      Next.js — app UI + AI activity views
 e2e/           Playwright golden-journey suite (PRD §35), run against the live stack
 docs/          origin spec, architecture, product plan, roadmap, product, API, RAG,
                agents, evaluation, security, deployment, export, demo, runbook,
-               quality gates, worktree consolidation
+               quality gates, worktree consolidation, microservices,
+               Spring Cloud readiness, edge operations lockdown
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 
