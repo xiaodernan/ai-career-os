@@ -54,10 +54,20 @@ so a monitor reads *which* half is degraded instead of the orchestrator guessing
 sketch's acceptance test (flip the DB, watch readiness flip) was replaced by this
 contract: the flip belongs in the dependency report, not in the pod's routing eligibility.
 
-### Epic 113 — Eureka multi-node peer config (optional, opt-in profile)
-- **Goal:** demonstrate peer-awareness: two discovery instances that gossip, `peer-eureka-server` profile in prod overlay.
-- **Deliverables:** `discovery` profile-driven `eureka.client.register-with-eureka=true/fetch-registry=true`; `EUREKA_PEER_ZONES` wiring; docs explain split-horizon; no default behavior change.
-- **Acceptance:** two-node overlay boots (documented as manual verification; not in CI); `DiscoveryApplicationTests` covers the profile properties.
+### Epic 113 — Eureka multi-node peer config (optional, opt-in profile) **DONE (measured 2026-11-11)**
+`discovery` gained an `application-peer.yml` (`peer` profile): client ON (register + fetch),
+self-preservation back ON — the base keeps a lone registry client-off and evicting, because it
+cannot tell a dead service from a network hiccup. Compose ships `discovery-peer` under the
+opt-in `cloud` profile with `EUREKA_MAIN_PEER_ZONE` teaching the main registry the pair's zone
+(Eureka's peer setup lists every node in each node's zone); Kubernetes ships the peer as a prod
+overlay resource with a zone patch on the main discovery. `DiscoveryPeerProfileTests` (3/3,
+offline, property-level) and the single-node default assertions in `DiscoveryApplicationTests`
+(5/5) hold the wiring; the fleet gate grew a peer-wiring case. **Found while landing this: the
+prod overlay had never been buildable** — `resources: [- ../base]` was one level short and every
+`kubectl kustomize overlays/prod` died at evalsymlink since Epic 109, invisible to the text-only
+gate. Fixed to `../../base`, and a new gate case refuses any resource path a kustomization names
+that does not exist relative to it. Two-node boot stays documented manual verification (DEPLOYMENT
+"Two-node registry"), not faked in CI.
 
 ### Epic 114 — Config Server security (opaque token) **DONE (measured 2026-11-10)**
 `ConfigTokenFilter`+`ConfigTokenConfig` add an optional `X-Config-Token` header check gated by

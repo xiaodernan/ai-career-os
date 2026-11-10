@@ -64,6 +64,17 @@ A `deploy/k8s/base` Kustomize bundle mirrors the same topology for Kubernetes (n
     updates in opt-in discovery setups.
 - **Topology visibility**: backend exposes authenticated `GET /api/v1/system/topology` (registry mode
   and instances as seen by the backend discovery client), surfaced in the frontend monitoring UI.
+- **Two-node peer awareness (Epic 113, opt-in)**: a second registry joins through the `peer` profile
+  (`application-peer.yml`), which turns the client ON (`register-with-eureka` + `fetch-registry`) and
+  restores self-preservation — with a peer, a network partition is real, and evicting half the fleet
+  during one is the failure the protection exists for. Each node's zone names the whole pair (Eureka's
+  own peer setup lists every node in each node's zone). Compose: `docker compose --profile app
+  --profile cloud up` starts `discovery-peer` (`:8762` loopback) alongside the registry; the main
+  discovery learns the pair through `EUREKA_MAIN_PEER_ZONE` (default stays the inert self-zone).
+  Kubernetes: the prod overlay ships `discovery-peer.yaml` plus a patch that gives the main discovery
+  the pair's zone; contract gate `test_the_k8s_manifests_define_a_working_fleet.py` holds the wiring,
+  and `DiscoveryPeerProfileTests` pins what the profile composes. A lone registry is unaffected:
+  the default profile keeps the client off (asserted in `DiscoveryApplicationTests`).
 - **Load balancing with health-check eviction (108.21)**: the backend's `AiServiceRouter` hands the
   service-id's instance list to Spring Cloud LoadBalancer each call. With
   `spring.cloud.loadbalancer.configurations=health-check` (and `health-check.path.ai-service=/health`),
@@ -198,6 +209,7 @@ environment).
 | Capability | Default | How to enable |
 |---|---|---|
 | Eureka registration/discovery | Disabled | Set service-specific `*_EUREKA_ENABLED` / Spring profile `eureka` and configure `EUREKA_DEFAULT_ZONE` (see compose/profile wiring) |
+| Eureka two-node peer awareness | Single-node registry | `docker compose --profile app --profile cloud up` (compose) or apply the prod overlay's `discovery-peer.yaml` + zone patch (Kubernetes); see §2 |
 | Config Server | Not started | `docker compose --profile config up -d config-server` (or equivalent) |
 | Config Client (gateway/discovery/backend) | Disabled | `SPRING_CLOUD_CONFIG_ENABLED=true` and point to Config Server URI/import; keep `fail-fast=false` unless required |
 | Resilience actuator endpoints (backend) | Exposed but authenticated | Access with valid credentials/proxy controls; `health`/`prometheus` remain permitAll |

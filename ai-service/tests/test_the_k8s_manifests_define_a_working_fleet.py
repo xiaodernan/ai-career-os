@@ -153,6 +153,68 @@ def test_prod_overlay_scales_the_public_facing_deployments():
         )
 
 
+def test_every_overlay_resource_path_resolves():
+    """A relative reference the file system cannot satisfy kills the build.
+
+    Epic 109 shipped the prod overlay with `resources: [- ../base]` -- one level
+    up instead of two -- and every `kubectl kustomize overlays/prod` died at
+    evalsymlink from that day on. Nothing caught it because this gate reads the
+    manifests as text and YAML and never runs the build; the broken file executed
+    for nobody. The cheapest check that cannot drift: every resource path any
+    kustomization names must exist relative to the file naming it, which is the
+    same walk `kustomize build` does before it reads a single manifest.
+    """
+    overlays = [BASE / "kustomization.yaml", PROD / "kustomization.yaml"]
+    for kust in overlays:
+        doc = yaml.safe_load(kust.read_text(encoding="utf-8"))
+        for rel in doc.get("resources", []):
+            resolved = (kust.parent / rel).resolve()
+            assert resolved.exists(), (
+                f"{kust.relative_to(ROOT)} names resource {rel!r}, which does not "
+                f"exist relative to it -- kustomize build would die at evalsymlink"
+            )
+
+
+def test_the_prod_overlay_peer_registry_carries_the_peer_wiring():
+    """Epic 113: the overlay's own workload is a real fleet member, not a stub.
+
+    The peer rides the prod overlay (a second registry is a production concern),
+    so the overlay's own resource files get the same grade the base gets: the
+    part-of label, the K8s probes, and the wiring that actually makes two
+    registries gossip -- the `peer` profile here, and the main discovery's zone
+    naming the peer there. The second half is the one a stub would miss: a pair
+    whose zones do not name each other is two single-node registries wearing a
+    peer costume.
+    """
+    docs = _load_all(PROD / "discovery-peer.yaml")
+    dep = next(d for d in docs if d["kind"] == "Deployment")
+    assert (dep["metadata"].get("labels") or {}).get("app.kubernetes.io/part-of") == "ai-career-os", (
+        "the peer workload carries the part-of label like every base workload"
+    )
+    assert dep["metadata"]["namespace"] == "careeros-prod", (
+        "an overlay resource lands in the overlay's namespace"
+    )
+    container = dep["spec"]["template"]["spec"]["containers"][0]
+    env = {e["name"]: e.get("value") for e in container["env"]}
+    assert env["SPRING_PROFILES_ACTIVE"] == "peer", (
+        "the second registry must run the peer profile -- without it the client "
+        "stays off and the node gossips with itself"
+    )
+    assert "http://discovery:8761/eureka/" in env["EUREKA_DEFAULT_ZONE"], (
+        "the peer's zone must name the main registry"
+    )
+    for probe in ("readinessProbe", "livenessProbe"):
+        assert probe in container, f"the peer carries a {probe} like the main registry"
+        assert container[probe]["httpGet"]["path"].startswith("/actuator/health/")
+
+    patch_text = (PROD / "kustomization.yaml").read_text(encoding="utf-8")
+    assert "discovery-peer.yaml" in patch_text, "the overlay must ship the peer resource"
+    assert "EUREKA_DEFAULT_ZONE" in patch_text and "discovery-peer:8761" in patch_text, (
+        "the main discovery's zone patch must name the peer, or the pair is two "
+        "single-node registries wearing a peer costume"
+    )
+
+
 def test_port_assignments_match_compose_targets():
     # cross-check the ports this repo commits to its compose topology
     svc_map = {

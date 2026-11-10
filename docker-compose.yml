@@ -207,9 +207,45 @@ services:
     restart: unless-stopped
     environment:
       EUREKA_HOSTNAME: discovery
+      # Single-node default: the zone names this node itself, and with the client
+      # off (register/fetch false) the URL is inert. The two-node cloud demo
+      # (Epic 113) names the whole pair here instead -- Eureka's own peer setup
+      # lists every node of the pair in each node's zone:
+      #   EUREKA_MAIN_PEER_ZONE=http://discovery:8761/eureka/,http://discovery-peer:8761/eureka/
+      # -- see the discovery-peer service.
+      EUREKA_DEFAULT_ZONE: ${EUREKA_MAIN_PEER_ZONE:-http://discovery:8761/eureka/}
     # Loopback only: the dashboard is an operator view, not a public surface.
     ports:
       - "127.0.0.1:8761:8761"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 40s
+
+  # The second registry (Epic 113): peer-awareness, opt-in through the `cloud`
+  # profile -- `docker compose --profile app --profile cloud up` runs two
+  # registries that gossip. Each node's zone names the whole pair (the main's
+  # via EUREKA_MAIN_PEER_ZONE, the peer's below), and the `peer` profile turns
+  # the client on (register + fetch), which is what makes the pair replicate
+  # instead of ignore each other. Start it with the app profile already up:
+  # the peer needs no other service.
+  discovery-peer:
+    profiles: [cloud]
+    build:
+      context: ./discovery
+      args:
+        APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
+    container_name: careeros-discovery-peer
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: peer
+      EUREKA_HOSTNAME: discovery-peer
+      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+    # Loopback only: same rule as the main registry.
+    ports:
+      - "127.0.0.1:8762:8761"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8761/actuator/health"]
       interval: 10s

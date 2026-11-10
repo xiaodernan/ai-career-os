@@ -1,0 +1,25 @@
+# Epic 113 — the peer profile: what this registry adds when a second registry joins.
+#
+# A single-node registry does not register with or read from itself — the round-trip
+# would only describe a map this process already holds, so the base configuration keeps
+# the client off (register-with-eureka/fetch-registry default false). The moment a peer
+# exists that stops being true: each node must push its own registrations into the other
+# (register) and pull the other's view (fetch), because that bidirectional gossip is the
+# whole reason a two-node registry survives one node's death.
+#
+# The zone each node gossips through is the base file's ${EUREKA_DEFAULT_ZONE} — the
+# orchestrator names the *other* node there (compose: the `cloud` profile sets the main
+# discovery's zone to the peer and the peer's zone to the main; the overlay names the
+# headless main Service). Nothing here changes single-node behavior: the profile is
+# activated only when SPRING_PROFILES_ACTIVE carries `peer`.
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+  server:
+    # Self-preservation is meaningless peer-less — the base turns it off because a
+    # lone registry cannot tell "the network hiccuped" from "the service died". With
+    # a peer, the network can actually hiccup, and the protection it buys (keep the
+    # registrations through a partition instead of evicting half the fleet) is the
+    # point of running two nodes at all.
+    enable-self-preservation: ${EUREKA_SELF_PRESERVATION:true}

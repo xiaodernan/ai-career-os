@@ -35,6 +35,22 @@ class DiscoveryApplicationTests {
     @Autowired
     private PeerAwareInstanceRegistry registry;
 
+    @Autowired
+    private org.springframework.core.env.Environment env;
+
+    @Test
+    void aLoneRegistryKeepsTheClientOff() {
+        // Epic 113's other half: the peer profile turns the client on, so the
+        // default profile must be the one that keeps it off. A lone registry
+        // registering with itself would only describe a map it already holds.
+        assertThat(env.getProperty("eureka.client.register-with-eureka", Boolean.class)).isFalse();
+        assertThat(env.getProperty("eureka.client.fetch-registry", Boolean.class)).isFalse();
+        assertThat(env.getProperty("eureka.server.enable-self-preservation", Boolean.class))
+                .as("peer-less, the registry cannot tell a dead service from a network "
+                        + "hiccup -- so it must keep evicting")
+                .isFalse();
+    }
+
     @Test
     void answersHealthy() {
         ResponseEntity<String> health = rest.getForEntity("/actuator/health", String.class);

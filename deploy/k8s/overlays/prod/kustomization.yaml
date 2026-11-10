@@ -2,12 +2,30 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: careeros-prod
 resources:
-  - ../base
+  # ../../base, not ../base: this file sits in overlays/prod, and the base is
+  # two levels up. The one-level form made every `kubectl kustomize overlays/prod`
+  # die at evalsymlink from the day Epic 109 shipped it -- the gate read the
+  # manifests as text and never ran the build, which is exactly the gap the
+  # path-existence case below closes.
+  - ../../base
+  # Epic 113: the second registry. Prod is where a second Eureka is worth its
+  # keep -- the patch below teaches the main discovery the pair's zone, and this
+  # deployment carries the `peer` profile (client on, self-preservation on).
+  - discovery-peer.yaml
 labels:
   - includeSelectors: true
     pairs:
       app.kubernetes.io/environment: prod
 patches:
+  - target:
+      kind: Deployment
+      name: discovery
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: EUREKA_DEFAULT_ZONE
+          value: http://discovery:8761/eureka/,http://discovery-peer:8761/eureka/
   - target:
       kind: Deployment
       name: ai-service

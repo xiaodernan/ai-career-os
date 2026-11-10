@@ -177,6 +177,7 @@ override therefore opens three ports the development file keeps to the machine:
 | gateway    | 8081      | every interface | Optional edge; the browser may use it instead   |
 | frontend   | 3000      | every interface | Reachable from the network, not just the host  |
 | discovery  | —         | compose network | Registry; the override publishes no port for it |
+| config-server | 8888   | `127.0.0.1`     | Opt-in Config Server; native config repo mounted read-only |
 
 So in the stack the Quick Start brings up (`docker-compose.yml` together with
 `docker-compose.prod.yml`), `backend` on 8080, `gateway` on 8081 and `frontend` on
@@ -440,12 +441,34 @@ outage is reported in `docker compose ps` rather than restarted by Docker.
 | gateway    | `wget` GET `http://127.0.0.1:8081/actuator/health`   | backend and discovery healthy                  |
 | frontend   | `node -e` fetch `http://localhost:3000/`             | backend healthy                                |
 | discovery  | `wget` GET `http://127.0.0.1:8761/actuator/health`   | nothing; its state is the leases it receives   |
+| discovery-peer | `wget` GET `http://127.0.0.1:8761/actuator/health` (in-container; host `:8762`) | nothing; it gossips with the main registry, and registration failures retry rather than fail boot |
 
 The production override carries the same probes; `ai-service` there also waits for Redis.
 A probe's port is a container port the service publishes, and its path is the route in
 the table above — `ai-service/tests/test_the_stack_waits_for_an_app_that_answers.py`
 refuses, by name, an application service with no probe, a dependency without a health
 condition, and a probe pointed at a port the service does not publish.
+
+### Two-node registry (opt-in, Epic 113)
+
+A second Eureka makes the registry survivable and is a production-shaped choice, so it is
+opt-in on both orchestrators:
+
+- **Compose**: `docker compose --profile app --profile cloud up -d` — `discovery-peer`
+  joins on host `127.0.0.1:8762`, and the main registry learns the pair through
+  `EUREKA_MAIN_PEER_ZONE` (Eureka's own peer setup lists *every* node of the pair in each
+  node's zone):
+  `EUREKA_MAIN_PEER_ZONE=http://discovery:8761/eureka/,http://discovery-peer:8761/eureka/`.
+  Without the variable, the main registry keeps its inert self-zone and nothing changes.
+- **Kubernetes**: the prod overlay ships `discovery-peer.yaml` (the `peer` profile, client
+  on, self-preservation on) and a patch that gives the main discovery the pair's zone.
+  `kubectl kustomize deploy/k8s/overlays/prod` builds the whole fleet.
+
+Manual verification (not in CI — it needs the live pair): start both registries, register
+a service against one, and read it back through the other's `/e/apps` within a replication
+interval; the dashboard on each node shows the instance. Offline, the profile's wiring is
+held by `DiscoveryPeerProfileTests` (3/3) and the single-node defaults by
+`DiscoveryApplicationTests`.
 
 ### Recording the nightly run
 
@@ -529,6 +552,8 @@ each one is bound to, so the development stack answers on the machine that runs 
 | backend    | 8080      | `127.0.0.1` | Public REST API under `/api/v1`                  |
 | gateway    | 8081      | `127.0.0.1` | Optional edge; forwards `/api/**` to `backend:8080` |
 | discovery  | 8761      | `127.0.0.1` | Registry; lease dashboard at `/`                  |
+| discovery-peer | 8762  | `127.0.0.1` | Second registry (opt-in `cloud` profile, Epic 113); gossips with `discovery` |
+| config-server | 8888   | `127.0.0.1` | Opt-in Config Server (`config` profile); native config repo |
 | ai-service | 8000      | `127.0.0.1` | Internal-only; not exposed to browsers           |
 | postgres   | 5432      | `127.0.0.1` | pgvector `pg16` image                            |
 | redis      | 16380     | `127.0.0.1` | host 16380 → container 6379 (avoids local clash) |

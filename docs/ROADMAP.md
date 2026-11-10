@@ -5722,6 +5722,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   truth stays in `/api/v1/health`, because dependency-gated readiness evicts a healthy pod from
   the Service endpoints on a database blip and cascades restarts. The refinement is recorded in
   `docs/plans/MICROSERVICES_HORIZON.md` (Epic 112, semantics refined from the sketch).)
+- [x] **113** Eureka two-node peer awareness, opt-in (measured 2026-11-11).
+
+  (`discovery/src/main/resources/application-peer.yml` turns the client ON
+  (`register-with-eureka` + `fetch-registry`) and restores self-preservation — peer-less, the
+  base keeps the client off and evicting, because a lone registry cannot tell a dead service
+  from a network hiccup. Compose: the `cloud` profile starts `discovery-peer` (`:8762` loopback)
+  and `EUREKA_MAIN_PEER_ZONE` teaches the main registry the pair's zone (Eureka's peer setup
+  lists every node of the pair in each node's zone); the default stays the inert self-zone.
+  Kubernetes: the prod overlay ships `discovery-peer.yaml` plus a zone patch on the main
+  discovery. Gates: `DiscoveryPeerProfileTests` (3/3, property-level, offline) and the
+  single-node defaults asserted in `DiscoveryApplicationTests` (5/5);
+  `test_the_k8s_manifests_define_a_working_fleet.py` grew the peer-wiring case. **The overlay
+  had been unbuilt since Epic 109** — its `resources: [- ../base]` was one level short, so every
+  `kubectl kustomize overlays/prod` died at evalsymlink while the text-only gate stayed green;
+  the path is `../../base` now, and a new gate case refuses any resource path a kustomization
+  names that does not exist relative to it. Docs: MICROSERVICES §2/§9, DEPLOYMENT two-node
+  runbook (manual verification documented, not faked in CI).)
 
   (`ConfigTokenFilter`/`ConfigTokenConfig`: set `CONFIG_SERVER_TOKEN` and every request except
   `/actuator/health` must carry `X-Config-Token`; unset keeps dev behavior. New test
