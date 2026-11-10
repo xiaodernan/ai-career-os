@@ -34,6 +34,16 @@ class ConfigServerApplicationTests {
     }
 
     @Test
+    void servesTheBackendRoundTripDemoProperty() {
+        ResponseEntity<String> response = rest.getForEntity(
+                "http://localhost:" + port + "/career-os-backend/default", String.class);
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody())
+                .contains("careeros.extras.demo-property")
+                .contains("backend-roundtrip-ok");
+    }
+
+    @Test
     void servesPerServiceExampleProfiles() {
         ResponseEntity<String> gateway = rest.getForEntity(
                 "http://localhost:" + port + "/career-os-gateway/default", String.class);

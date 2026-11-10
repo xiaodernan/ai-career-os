@@ -101,7 +101,11 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     `fail-fast` defaults to `false` to preserve startup resilience and existing deployments.
   - A contract gate (`ai-service/tests/test_the_config_client_stays_opt_in.py`) asserts the opt-in
     posture and the config-server's `config` compose profile.
-- **Design constraint**: configuration centralization is additive and opt-in; env-driven and offline
+  - Round-trip (Epic 110, verified 2026-11-10): the `career-os-backend` profile in the
+    native repo carries `careeros.extras.demo-property=backend-roundtrip-ok`, so a service
+    opted in can read the same value back; `ConfigServerApplicationTests`
+    `servesTheBackendRoundTripDemoProperty` pins the round-trip in the offline suite.
+**Design constraint**: configuration centralization is additive and opt-in; env-driven and offline
   workflows remain valid defaults.
 
 ## 5. Resilience (Resilience4j / Spring Cloud CircuitBreaker)

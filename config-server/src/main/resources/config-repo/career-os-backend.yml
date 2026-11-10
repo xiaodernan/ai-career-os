@@ -5,6 +5,10 @@ careeros:
   config-server:
     service: career-os-backend
     profile-note: "Example backend profile served by native Config Server; override in mounted /config."
+  extras:
+    # Demo property for the opt-in config round-trip (Epic 110). An operator can
+    # override this in the mounted /config dir; the native template never ships a secret.
+    demo-property: "backend-roundtrip-ok"
 
 # Example Spring Cloud / operations knobs (uncomment to apply via Config Server):
 # management:

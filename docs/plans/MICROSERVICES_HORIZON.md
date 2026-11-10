@@ -18,6 +18,7 @@
 | Trace propagation | W3C `traceparent` gateway → backend → ai-service; `trace_id` in ai-service JSON logs; optional `requestId`/`traceId` in refusal bodies | `test_the_id_the_backend_sends_is_the_id_the_service_logs.py`, refusal suite 15/15 |
 | Observability | `info.app`/build-sha; `metrics.tags.application`; `http.server.requests` histograms; `circuitbreakers[events]` + `conditions` auth-only; `/api/v1/system/resilience` + `ServiceResilience` card; `careeros.circuitbreaker.open` gauge + `CareerOSCircuitBreakerOpen` alarm | `test_the_spring_cloud_*` 8 gates; `GatewayActuatorSurfaceTest` 5/5 |
 | Kubernetes probes | `probes.enabled=true` on all four services (`/actuator/health/liveness` + `/readiness`) | `test_the_spring_cloud_services_expose_liveness_and_readiness_probes.py` |
+| Config round-trip (110) | native repo `career-os-backend.yml` carries `careeros.extras.demo-property=backend-roundtrip-ok` | `ConfigServerApplicationTests.servesTheBackendRoundTripDemoProperty` |
 
 ---
 
@@ -28,10 +29,8 @@
 - **Deliverables:** `deploy/k8s/{base,overlays}` with Deployments, Services, liveness/readiness probes pointing at `/actuator/health/liveness` and `/actuator/health/readiness`, PodDisruptionBudget for multi-instance gateway/backend/ai-service, `config` profile for config-server, ServiceAccount + NetworkPolicy (gateway egress only to backend; backend egress only to ai-service/db/minio/redis).
 - **Acceptance:** `kubectl apply --dry-run=client` validates; a smoke test checks the manifests reference the same images/tags as dev compose; documented in `docs/DEPLOYMENT.md` profile.
 
-### Epic 110 — Config Server as the single source of truth (opt-in)
-- **Goal:** turning on Config Client for one service proves hot-reload is effective without redeploy.
-- **Deliverables:** `spring.cloud.config.enabled=true` override example + `config-server/config-repo/career-os-backend.yml` demonstrates a property (e.g. `app.ratelimit.auth-per-minute`) retrievable at runtime; a test asserts the Config Server serves the override; docs show `docker compose --profile config up -d`, `curl localhost:8888/career-os-backend/default`, and the env var to flip.
-- **Acceptance:** the demo property round-trips through the native backend; `ConfigServerApplicationTests` asserts the new key; runbook lists the exact command path.
+### Epic 110 — Config Server opt-in demo round-trip **DONE (measured 2026-11-10)**
+- The `career-os-backend.yml` example profile now carries `careeros.extras.demo-property=backend-roundtrip-ok`; a service opted into Config (`SPRING_CLOUD_CONFIG_ENABLED=true` with `spring.application.name=career-os-backend`) can read the key back from `GET http://config-server:8888/career-os-backend/default`. `ConfigServerApplicationTests.servesTheBackendRoundTripDemoProperty` pins the round-trip offline; suite 5/5 green. Scope kept to a round-trip demo; not a general config-refresh loop. `MICROSERVICES.md` §4 now lists the round-trip.
 
 ### Epic 111 — Spring Cloud Gateway route metrics + one alert
 - **Goal:** gateway latency and refusal counts are exported to Prometheus under `spring.cloud.gateway.*` and a `CareerOSGatewayRateLimited` alert exists.

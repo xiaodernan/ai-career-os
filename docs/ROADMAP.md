@@ -5708,6 +5708,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.25** Every Spring Cloud service publishes the same info.app shape (measured 2026-11-10).
 - [x] **108.26** Dedicated CI job runs the Spring Cloud contract gates (measured 2026-11-10).
 - [x] **108.27** Kubernetes-shaped liveness/readiness probes on every Spring Cloud service (measured 2026-11-10).
+- [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
+
+  (The native config-repo now carries `careeros.extras.demo-property=backend-roundtrip-ok` in the
+  backend example profile; a client opted in with `SPRING_CLOUD_CONFIG_ENABLED=true` + app name
+  `career-os-backend` can read the same key back from `http://config-server:8888/career-os-backend/default`.
+  `ConfigServerApplicationTests.servesTheBackendRoundTripDemoProperty` pins the round-trip offline.
+  Measured: config-server suite 5/5 green offline. Completes the Epic 110 sketch from
+  docs/plans/MICROSERVICES_HORIZON.md; mark 110 done there next.)
 
   (`management.endpoint.health.probes.enabled=true` on the backend (gateway/discovery/config-server already
   had it), exposing `/actuator/health/liveness` and `/actuator/health/readiness` alongside the public
