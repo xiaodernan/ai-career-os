@@ -1,7 +1,8 @@
 # Deployment
 
 How to bring AI Career OS up locally and what each knob controls. The stack is
-five application services (discovery, gateway, backend, ai-service, frontend) plus three stateful
+five application services (discovery, gateway, backend, ai-service, frontend), an opt-in
+Spring Cloud Config Server (`config-server`, Epic 103), plus three stateful
 dependencies (PostgreSQL + pgvector, Redis, MinIO).
 
 Redis is small but not optional: it backs only the rate limiter and the backend's
@@ -608,6 +609,27 @@ The registry holds no durable data -- its state is the set of live leases -- so 
 restart costs one registration round. Losing it does not stop the stack: the edge
 keeps its last answer and the backend keeps serving; new instances are simply not
 discovered until it returns.
+
+## Spring Cloud Config Server (opt-in, Epic 103)
+
+An opt-in Config Server centralizes externalized configuration for the Java services
+without requiring a git backend. It is not started by default.
+
+- **Profiles**: `docker compose --profile config up -d config-server` (dev) or add
+  the `config-server` service in an override. The dev compose publishes
+  `127.0.0.1:8888` and mounts `./config-server/src/main/resources/config-repo` to
+  `/config` for local overrides.
+- **Backend/naming**: native file/classpath backend (`spring.profiles.active=native`),
+  default port `8888`. The config repo can hold shared `application.yml` and
+  per-service files (`career-os-backend.yml`, `career-os-gateway.yml`, `career-os-discovery.yml`).
+- **Client opt-in**: `gateway`, `discovery` and `backend` ship `spring-cloud-starter-config`
+  with `spring.cloud.config.enabled=false` by default and
+  `spring.config.import=optional:configserver:`. Enable with
+  `SPRING_CLOUD_CONFIG_ENABLED=true` and set `spring.cloud.config.uri` (e.g.
+  `http://config-server:8888`) or `spring.config.import=configserver:http://config-server:8888`;
+  `fail-fast` defaults to `false`. Existing env-driven deployments remain unchanged.
+- **Health/actuator**: `GET /actuator/health` (and `info`, `env`) are exposed by the
+  config server.
 
 ## Run services locally against Docker infra
 
