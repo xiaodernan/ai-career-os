@@ -50,6 +50,7 @@ ALIASES = {
     "networking": "networking",
     "stored-jd rehydrate": "jd-rehydrate",
     "timeline": "timeline",
+    "fleet observability": "fleet-observability",
 }
 
 UNNAMED_CLAUSE = "the pagination suite"
