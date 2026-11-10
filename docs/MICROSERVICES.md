@@ -141,6 +141,9 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
     `/actuator/prometheus` are public probe/scrape endpoints; `/actuator/info` and Resilience4j
     actuator endpoints require authentication.
   - Gateway/Discovery/Config Server expose actuator endpoints appropriate to their role.
+  - All four Spring Cloud services enable `management.endpoint.health.probes.enabled=true` (Epic 108.27),
+    so Kubernetes-shaped `/actuator/health/liveness` and `/actuator/health/readiness` answers are
+    available on every service alongside the public `/actuator/health`.
   - A cross-service contract gate (`test_the_spring_cloud_actuator_surface_contract.py`, Epic 108.20) asserts every
     service exposes `health`, `info` and `prometheus`, and that Breaker-heavy and wiring-debug endpoints
     (`circuitbreakers`/`circuitbreakerevents`/`conditions`) live where the breakers live.

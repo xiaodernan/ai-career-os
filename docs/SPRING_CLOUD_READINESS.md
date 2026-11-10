@@ -25,7 +25,12 @@ curl -s http://127.0.0.1:8888/actuator/info
 
 Each answer must contain `app.build-sha` — a stale container answering an old commit
 is the bug these markers exist to prevent (Epic 78 encodes it for the app build).
+All four services also expose the liveness/readiness probe groups:
 
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8081/actuator/health/liveness
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8081/actuator/health/readiness
+```
 ## 2. The edge routes, and only through Spring Cloud
 
 ```bash

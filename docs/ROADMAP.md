@@ -5707,6 +5707,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.24** Circuit-breaker-open gauge and the alarm it feeds (measured 2026-11-10).
 - [x] **108.25** Every Spring Cloud service publishes the same info.app shape (measured 2026-11-10).
 - [x] **108.26** Dedicated CI job runs the Spring Cloud contract gates (measured 2026-11-10).
+- [x] **108.27** Kubernetes-shaped liveness/readiness probes on every Spring Cloud service (measured 2026-11-10).
+
+  (`management.endpoint.health.probes.enabled=true` on the backend (gateway/discovery/config-server already
+  had it), exposing `/actuator/health/liveness` and `/actuator/health/readiness` alongside the public
+  `/actuator/health`. Readiness runbook and MICROSERVICES updated to match; verify_gates.ps1/.sh now covers
+  the contract gate. Measured: new gate 1/1, verify_gates run after the change green; backend offline tests green.)
 
   (`.github/workflows/ci.yml` gains a `springcloud` job running the eleven Spring Cloud contract
   gates on push/PR; `offline-gate` now requires ai-service, frontend, backend and springcloud before
