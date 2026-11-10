@@ -65,6 +65,11 @@ public class ServiceTopologyService {
                 ? instance.getHost() + ":" + instance.getPort()
                 : instance.getInstanceId());
         row.put("uri", instance.getUri().toString());
+        Map<String, String> metadata = new LinkedHashMap<>();
+        if (instance.getMetadata() != null) {
+            instance.getMetadata().forEach(metadata::put);
+        }
+        row.put("metadata", metadata);
         return row;
     }
 }

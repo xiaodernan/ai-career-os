@@ -26,7 +26,8 @@ class ServiceTopologyServiceTest {
     void listsEveryServiceInAStableOrderWithItsInstances() {
         when(discovery.getServices()).thenReturn(List.of("backend", "ai-service"));
         when(discovery.getInstances("backend")).thenReturn(List.of(
-                new DefaultServiceInstance("backend-1", "backend", "10.0.0.2", 8080, false),
+                new DefaultServiceInstance("backend-1", "backend", "10.0.0.2", 8080, false,
+                        Map.of("build-sha", "unit-1", "service", "career-os-backend")),
                 new DefaultServiceInstance("backend-2", "backend", "10.0.0.3", 8080, false)));
         when(discovery.getInstances("ai-service")).thenReturn(List.of(
                 new DefaultServiceInstance("ai-1", "ai-service", "10.0.0.4", 8000, false)));
@@ -44,6 +45,10 @@ class ServiceTopologyServiceTest {
                 .containsExactly("backend-1", "backend-2");
         assertThat(instances).extracting(row -> row.get("uri"))
                 .containsExactly("http://10.0.0.2:8080", "http://10.0.0.3:8080");
+        assertThat(instances.get(0)).extracting(row -> row.get("metadata"))
+                .isEqualTo(Map.of("build-sha", "unit-1", "service", "career-os-backend"));
+        assertThat(instances.get(1)).extracting(row -> row.get("metadata"))
+                .isEqualTo(Map.of());
     }
 
     @Test

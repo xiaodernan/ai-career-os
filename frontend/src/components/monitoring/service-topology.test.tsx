@@ -19,7 +19,11 @@ const state = vi.hoisted(() => ({
           registry: string;
           services: Array<{
             name: string;
-            instances: Array<{ instanceId: string; uri: string }>;
+            instances: Array<{
+              instanceId: string;
+              uri: string;
+              metadata: Record<string, string>;
+            }>;
           }>;
         }
       | undefined,
@@ -40,12 +44,17 @@ describe("ServiceTopology", () => {
       data: {
         registry: "eureka",
         services: [
-          { name: "ai-service", instances: [{ instanceId: "ai-1", uri: "http://10.0.0.4:8000" }] },
+          {
+            name: "ai-service",
+            instances: [
+              { instanceId: "ai-1", uri: "http://10.0.0.4:8000", metadata: { buildSha: "dev" } },
+            ],
+          },
           {
             name: "backend",
             instances: [
-              { instanceId: "b-1", uri: "http://10.0.0.2:8080" },
-              { instanceId: "b-2", uri: "http://10.0.0.3:8080" },
+              { instanceId: "b-1", uri: "http://10.0.0.2:8080", metadata: { buildSha: "abc" } },
+              { instanceId: "b-2", uri: "http://10.0.0.3:8080", metadata: { buildSha: "def" } },
             ],
           },
         ],

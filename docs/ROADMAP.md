@@ -5686,6 +5686,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   registry-visible instances carry build identity when discovery is enabled. Measured: `mvn -f backend/pom.xml -DskipTests -o compile`
   BUILD SUCCESS, `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f discovery/pom.xml -o test` 4/4.)
 
+- [x] **108.13** Topology carries instance metadata (measured 2026-11-10).
+
+  (`/api/v1/system/topology` now publishes a flattened `metadata` map per instance (copied from the
+  discovery client), and the frontend's `ServiceTopology` declares it. The authenticated page shows the
+  registration-time build identity instead of only host/port. Contract gate and unit tests updated.
+  Measured: `ServiceTopologyServiceTest` 3/3, `frontend` `service-topology.test.tsx`/`service-resilience.test.tsx`
+  7/7, `test_the_topology_page_reads_the_fleet_the_backend_writes.py` 3/3.)
+
 - [x] **108.4** Stable Eureka instance identifiers (measured 2026-11-10).
 
   (Configured `eureka.instance.instance-id` for backend, gateway and discovery as

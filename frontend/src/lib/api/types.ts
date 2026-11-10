@@ -959,14 +959,20 @@ export interface ResponseRate {
 /**
  * The discovery answer an operator reads (roadmap 100): which mode the deployment runs
  * and what the load balancer can see. The backend sorts the services, so the page shows
- * the fleet's answer rather than re-ordering it.
+ * the fleet's answer rather than re-ordering it. `metadata` carries what each
+ * registration published (Epic 108.13), e.g. build-sha and service, for build identity.
  */
 export interface ServiceTopology {
   /** "eureka" when the deployment activated that profile, "configuration" otherwise. */
   registry: string;
   services: Array<{
     name: string;
-    instances: Array<{ instanceId: string; uri: string }>;
+    instances: Array<{
+      instanceId: string;
+      uri: string;
+      /** e.g. { build-sha, service } when the deployment publishes Eureka metadata. */
+      metadata: Record<string, string>;
+    }>;
   }>;
 }
 

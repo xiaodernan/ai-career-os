@@ -58,6 +58,19 @@ def test_the_page_reads_exactly_the_keys_the_backend_writes():
     )
 
 
+def test_the_topology_carries_instance_metadata_for_build_identity():
+    source = BACKEND_SERVICE.read_text(encoding="utf-8")
+    assert 'row.put("metadata"' in source, (
+        "the topology report stopped publishing instance metadata; the operator loses "
+        "build-sha at the registry without noticing"
+    )
+    page = FRONTEND_TYPES.read_text(encoding="utf-8")
+    assert "metadata: Record<string, string>;" in page, (
+        "the page's ServiceTopology no longer declares metadata; the backend's "
+        "build-shas would cross the wire with no type to receive them"
+    )
+
+
 def test_the_registry_words_the_page_branches_on_are_the_words_the_backend_writes():
     source = BACKEND_SERVICE.read_text(encoding="utf-8")
     # The mode is the ternary `acceptsProfiles(...) ? "eureka" : "configuration"`.
