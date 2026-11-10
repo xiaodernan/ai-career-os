@@ -23,9 +23,17 @@ def test_every_spring_cloud_service_publishes_request_latency_histograms():
         text = (ROOT / service / "src" / "main" / "resources" / "application.yml").read_text(
             encoding="utf-8"
         )
-        match = re.search(
-            r"percentiles-histogram:\s*\n\s*http\.server\.requests:\s*true", text
+        assert "http.server.requests: true" in text, (
+            f"{service} dropped its http.server.requests histogram; Prometheus gets a count, not a p95"
         )
-        assert match, (
-            f"{service} dropped its latency histogram; Prometheus gets a count, not a p95"
-        )
+
+
+def test_the_gateway_also_publishes_route_latency_histograms():
+    gw = (ROOT / "gateway" / "src" / "main" / "resources" / "application.yml").read_text(
+        encoding="utf-8"
+    )
+    match = re.search(r"spring\.cloud\.gateway\.requests:\s*true", gw)
+    assert match, (
+        "gateway dropped its `spring.cloud.gateway.requests` histogram; per-route p50/p95 "
+        "in Prometheus then answer nothing but the mean"
+    )

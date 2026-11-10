@@ -137,12 +137,14 @@ management:
       # Unified Micrometer tag for every Spring Cloud service (Epic 108.14): a
       # scrape can aggregate by application instead of by path or pod name.
       application: ${spring.application.name}
-      # Histogram buckets for http.server.requests so Prometheus can compute
-      # pod-agnostic p50/p95 over any scrape window (Epic 108.22); default buckets
-      # carry no latency resolution below the smallest request class.
+      # Histogram buckets for http.server.requests (Epic 108.22) and the route-id-tagged
+      # Spring Cloud Gateway meter (Epic 111) so Prometheus can compute p50/p95 per route
+      # and per application. Default buckets carry no latency resolution below the smallest
+      # request class.
     distribution:
       percentiles-histogram:
         http.server.requests: true
+        spring.cloud.gateway.requests: true
   endpoints:
     web:
       exposure:

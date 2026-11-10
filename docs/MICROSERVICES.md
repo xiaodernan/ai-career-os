@@ -173,6 +173,7 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
   All four services also publish `http.server.requests` latency histograms (108.22) - a second contract gate
   (`ai-service/tests/test_the_spring_cloud_services_publish_latency_histograms.py`) enforces those, so Prometheus
   can compute p50/p95 per application, not only a mean.
+  The gateway additionally publishes `spring.cloud.gateway.requests` latency histograms (Epic 111), pinned by the same gate — p50/p95 per route, not just per pod.
   The backend additionally exposes `careeros.circuitbreaker.open` (108.24): an untagged gauge reading 1 while any
   Resilience4j breaker in the ai-service bridge is open, with a bound `CareerOSCircuitBreakerOpen` alarm in
   `ops/prometheus/alerts.yml` and a page in `docs/RUNBOOK.md`.

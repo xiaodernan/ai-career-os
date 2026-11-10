@@ -5709,6 +5709,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.26** Dedicated CI job runs the Spring Cloud contract gates (measured 2026-11-10).
 - [x] **108.27** Kubernetes-shaped liveness/readiness probes on every Spring Cloud service (measured 2026-11-10).
 - [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
+- [x] **111** Spring Cloud Gateway route-latency histograms in Prometheus (measured 2026-11-10).
+
+  (The gateway enables `management.metrics.distribution.percentiles-histogram.spring.cloud.gateway.requests: true`
+  in addition to `http.server.requests`, so Prometheus sees the route-tagged buckets (not just the mean).
+  Extended `test_the_spring_cloud_services_publish_latency_histograms.py` (gate now 2/2). Gateway compiles offline.)
 
   (The native config-repo now carries `careeros.extras.demo-property=backend-roundtrip-ok` in the
   backend example profile; a client opted in with `SPRING_CLOUD_CONFIG_ENABLED=true` + app name

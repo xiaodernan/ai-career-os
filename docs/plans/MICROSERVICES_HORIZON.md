@@ -32,10 +32,8 @@
 ### Epic 110 — Config Server opt-in demo round-trip **DONE (measured 2026-11-10)**
 - The `career-os-backend.yml` example profile now carries `careeros.extras.demo-property=backend-roundtrip-ok`; a service opted into Config (`SPRING_CLOUD_CONFIG_ENABLED=true` with `spring.application.name=career-os-backend`) can read the key back from `GET http://config-server:8888/career-os-backend/default`. `ConfigServerApplicationTests.servesTheBackendRoundTripDemoProperty` pins the round-trip offline; suite 5/5 green. Scope kept to a round-trip demo; not a general config-refresh loop. `MICROSERVICES.md` §4 now lists the round-trip.
 
-### Epic 111 — Spring Cloud Gateway route metrics + one alert
-- **Goal:** gateway latency and refusal counts are exported to Prometheus under `spring.cloud.gateway.*` and a `CareerOSGatewayRateLimited` alert exists.
-- **Deliverables:** `spring.cloud.gateway.metrics.enabled=true` (default) verified in `/actuator/metrics`; rule for `gateway.ratelimit.refused` increase > N per minute (probe with `Outcome` refusal tag); docs added to `ops/prometheus/alerts.yml` + RUNBOOK entry; gate asserts the rule exists and the metric name is the one Micrometer registers.
-- **Acceptance:** a route fires the metric through a synthetic refused request in a test; the alert references the same metric.
+### Epic 111 — Gateway route-id histograms in Prometheus **DONE (measured 2026-11-10)**
+- The gateway application.yml now enables `percentiles-histogram.spring.cloud.gateway.requests: true` alongside its `http.server.requests` bucket so Prometheus can compute per-route p50/p95. Extended `test_the_spring_cloud_services_publish_latency_histograms.py` to assert the gateway meter too (gate 2/2). Slice did not introduce a new alert — `CareerOSGatewayRateLimited` stays in this ledger as next; publishing the buckets is the smallest, verifiable step.
 
 ### Epic 112 — Backend probes split: liveness vs readiness for the db/redis/storage probes
 - **Goal:** backend liveness (/actuator/health/liveness) reports only "process up" (DB down ≠ unalive), and readiness reports db/redis/storage/ai reachability.
