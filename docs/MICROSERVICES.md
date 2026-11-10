@@ -108,6 +108,10 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.
 - **Monitoring UI**: fleet topology and circuit-breaker state are surfaced in the authenticated monitoring experience.
+- **Metrics**: every Spring Cloud service pins \management.metrics.tags.application=\,
+  so a shared scraper can aggregate \/actuator/prometheus\ by application
+  (backend/gateway/discovery/config-server). A contract gate
+  (\i-service/tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py\) enforces it.
 
 ## 8. Opt-in enablement summary
 

@@ -14,6 +14,11 @@ spring:
           search-locations: ${CONFIG_SERVER_SEARCH_LOCATIONS:classpath:/config-repo,file:./config-repo}
 
 management:
+  metrics:
+    tags:
+      # Unified Micrometer tag for every Spring Cloud service (Epic 108.14): a
+      # scrape can aggregate by application instead of by path or pod name.
+      application: ${spring.application.name}
   endpoints:
     web:
       exposure:

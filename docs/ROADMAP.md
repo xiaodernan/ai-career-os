@@ -5694,6 +5694,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   Measured: `ServiceTopologyServiceTest` 3/3, `frontend` `service-topology.test.tsx`/`service-resilience.test.tsx`
   7/7, `test_the_topology_page_reads_the_fleet_the_backend_writes.py` 3/3.)
 
+- [x] **108.14** Common Micrometer application tag on every Spring Cloud service (measured 2026-11-10).
+
+  (`management.metrics.tags.application=${spring.application.name}` on backend/gateway/discovery/config-server,
+  so a shared plan scrapes one tag and aggregates `/actuator/prometheus` by application instead of by path.
+  New contract gate `test_the_spring_cloud_services_print_a_common_metrics_tag.py` asserts the tag in all four
+  application.yml files. Measured: gate 2/2 (with the config opt-in gate), all service modules offline compile/tests green.)
+
 - [x] **108.4** Stable Eureka instance identifiers (measured 2026-11-10).
 
   (Configured `eureka.instance.instance-id` for backend, gateway and discovery as
