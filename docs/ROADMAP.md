@@ -5521,6 +5521,30 @@ to keep passing -- when no registry exists.
   profile, keeps the stub alive, and requires DOWN -- a fixed-address probe reads UP in
   exactly that state. Gateway 31/31.)
 
+
+
+### Epic 100 -- the fleet is a page: the monitoring screen draws the routing table
+
+98 made the registry a process and 99 made the edge's probe resolve the same instance the
+route does, but the fleet itself was still invisible to a reader: an operator could scrape
+actuator or read a compose file, yet the product had no screen that named the services the
+backend actually routes to. This epic puts the discovery client's own answer on the monitoring
+page, so the screen describes the routing table instead of a second inventory that drifts.
+
+- [x] **100.1** The backend answers its own fleet, and the monitoring page draws it (measured 2026-11-10).
+
+  (`system/ServiceTopologyController` serves `GET /api/v1/system/topology` from
+  `ServiceTopologyService.report()`: the registry mode read from the active `eureka` profile
+  (eureka when set, configuration otherwise -- the switch the operator set, not a guess from
+  which client bean is primary) and every service the same `DiscoveryClient` the load balancer
+  uses names, sorted case-insensitively so two reads differ only when the fleet changed. Each
+  instance carries its id (or host:port when the client gives none) and its URI. The frontend
+  `components/monitoring/service-topology.tsx` card asks `useServiceTopology` and draws the
+  registry badge, the services and their instances; `docs/API.md` publishes the row and
+  `architecture.md` names the package. Measured by `ServiceTopologyServiceTest` 3/3, the
+  frontend `service-topology.test.tsx` 3/3, and CI run 42678992385 -- frontend, ai-service,
+  backend and the offline-suites gate all green.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
