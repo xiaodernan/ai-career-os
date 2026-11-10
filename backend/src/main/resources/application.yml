@@ -193,6 +193,7 @@ eureka:
     # The address the edge would dial after discovering this process. In compose the
     # service name is the address; on a laptop it is localhost.
     hostname: ${BACKEND_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}
     health-check-url-path: /actuator/health
     prefer-ip-address: ${BACKEND_EUREKA_PREFER_IP:false}
     metadata-map:

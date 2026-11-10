@@ -124,6 +124,7 @@ eureka:
     fetch-registry: ${GATEWAY_EUREKA_FETCH:true}
   instance:
     hostname: ${GATEWAY_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}
     metadata-map:
       build-sha: ${APP_BUILD_SHA:dev}
       service: ${spring.application.name}

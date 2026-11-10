@@ -5686,6 +5686,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   registry-visible instances carry build identity when discovery is enabled. Measured: `mvn -f backend/pom.xml -DskipTests -o compile`
   BUILD SUCCESS, `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f discovery/pom.xml -o test` 4/4.)
 
+- [x] **108.4** Stable Eureka instance identifiers (measured 2026-11-10).
+
+  (Configured `eureka.instance.instance-id` for backend, gateway and discovery as
+  `${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}` to improve instance identification
+  in the registry and topology views. Measured: `mvn -f backend/pom.xml -DskipTests -o compile` BUILD SUCCESS,
+  `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f discovery/pom.xml -DskipTests -o compile` BUILD SUCCESS.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

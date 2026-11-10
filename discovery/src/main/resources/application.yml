@@ -37,6 +37,7 @@ eureka:
     response-cache-update-interval-ms: ${EUREKA_RESPONSE_CACHE_MS:5000}
   instance:
     hostname: ${EUREKA_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}
     metadata-map:
       build-sha: ${APP_BUILD_SHA:dev}
       service: ${spring.application.name}
