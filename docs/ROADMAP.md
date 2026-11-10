@@ -5697,6 +5697,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.14** Common Micrometer application tag on every Spring Cloud service (measured 2026-11-10).
 - [x] **108.15** Optional shared-secret gate for the edge's operations surface (measured 2026-11-10).
 - [x] **108.16** Wiring debug behind the ops gate for the edge (measured 2026-11-10).
+- [x] **108.17** Spring Cloud readiness runbook + contract gate (measured 2026-11-10).
+
+  (New `docs/SPRING_CLOUD_READINESS.md` walks an operator through build-sha on every service,
+  the edge routes through the Spring Cloud load balancer, the Eureka registry, the backend's
+  discovery/resilience answers, and the offline gates — the curl checks actually run on the stack.
+  New contract gate `test_the_spring_cloud_readiness_runbook_exists.py` keeps the runbook and
+  `docker-compose.yml` in sync (services, same endpoints). Measured: gate 2/2 passing offline.)
 
   (The edge actuator now also exposes `/actuator/conditions` behind the same `X-Actuator-Token` gate
   for the Spring Cloud wiring debug — an operator can see why a Eureka/Config/CircuitBreaker bean did or

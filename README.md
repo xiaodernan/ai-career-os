@@ -48,6 +48,7 @@ Origin spec: [docs/MASTER_PROMPT.md](docs/MASTER_PROMPT.md) · full design:
 [docs/architecture.md](docs/architecture.md) · product plan:
 [docs/product-plan.md](docs/product-plan.md) · ops: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) ·
 Spring Cloud microservices: [docs/MICROSERVICES.md](docs/MICROSERVICES.md) ·
+Spring Cloud readiness checklist: [docs/SPRING_CLOUD_READINESS.md](docs/SPRING_CLOUD_READINESS.md) ·
 security model: [docs/SECURITY.md](docs/SECURITY.md) · RAG design: [docs/RAG.md](docs/RAG.md) ·
 worktree consolidation: [docs/WORKTREE_CONSOLIDATION.md](docs/WORKTREE_CONSOLIDATION.md) ·
 forward backlog: [docs/plans/NEXT_HORIZON.md](docs/plans/NEXT_HORIZON.md)
