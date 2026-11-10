@@ -5705,6 +5705,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.22** Request-latency histograms on every Spring Cloud service (measured 2026-11-10).
 - [x] **108.23** Monitoring engine-fleet card (measured 2026-11-10).
 - [x] **108.24** Circuit-breaker-open gauge and the alarm it feeds (measured 2026-11-10).
+- [x] **108.25** Every Spring Cloud service publishes the same info.app shape (measured 2026-11-10).
+
+  (All four Spring Cloud services (`backend`, `gateway`, `discovery`, `config-server`) publish
+  `info.app` with `name=${spring.application.name}` and `build-sha=${APP_BUILD_SHA:dev}` — the fleet,
+  the registry and the proxy all answer which commit they serve the same way. New gate
+  `test_the_spring_cloud_services_publish_build_sha_in_info.py` pins the shape in all four services;
+  added to `scripts/verify_gates.ps1`/`.sh`. Measured: gate 1/1 passing; verify_gates 190/190.)
 
   (New `AiServiceCircuitBreakerMetrics` exposes `careeros.circuitbreaker.open` (exported
   `careeros_circuitbreaker_open`), an untagged gauge: 1 while any Resilience4j breaker the
