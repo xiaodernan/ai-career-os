@@ -44,6 +44,12 @@ class Refusal:
         detail = {"code": self.code, "message": self.message}
         if self.detail:
             detail.update(self.detail)
+        rid = request_id.get()
+        if rid:
+            detail.setdefault("requestId", rid)
+        tid = _trace_id(traceparent.get())
+        if tid:
+            detail.setdefault("traceId", tid)
         return HTTPException(
             status_code=self.status,
             detail=detail,
@@ -114,15 +120,7 @@ async def refusal_exception_handler(request: Request, exc: RefusalError) -> JSON
     context is present, correlation ids are included so a refused call can be
     joined to logs without guessing.
     """
-    detail = {"code": exc.refusal.code, "message": exc.refusal.message}
-    if exc.refusal.detail:
-        detail.update(exc.refusal.detail)
-    rid = request_id.get()
-    if rid:
-        detail.setdefault("requestId", rid)
-    tid = _trace_id(traceparent.get())
-    if tid:
-        detail.setdefault("traceId", tid)
+    detail = exc.refusal.to_http_exception().detail
     return JSONResponse(status_code=exc.refusal.status, content={"detail": detail})
 
 

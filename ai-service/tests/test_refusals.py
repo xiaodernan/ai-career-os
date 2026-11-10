@@ -175,16 +175,38 @@ def test_a_missing_ingest_text_keeps_its_422():
 
 def test_the_handler_answers_the_same_shape_as_to_http_exception():
     # A refusal that escapes a route uncaught reaches the exception handler;
-    # it must not lose the extras the API-layer path carries.
+    # it must not lose the extras the API-layer path carries. With no request
+    # context, correlation ids are absent.
     from app.core.errors import IMPORT_BUNDLE_INVALID, Refusal
+    from app.core.request_id import request_id, traceparent
 
-    exc = RefusalError(IMPORT_BUNDLE_INVALID.with_detail({"errors": ["no data"]}))
-    response = asyncio.run(refusal_exception_handler(None, exc))
-    import json
-    body = json.loads(response.body)
-    assert response.status_code == 400
-    assert body["detail"] == {
-        "code": "IMPORT_BUNDLE_INVALID",
-        "message": "invalid bundle",
-        "errors": ["no data"],
-    }
+    tok_r = request_id.set(None)
+    tok_t = traceparent.set(None)
+    try:
+        exc = RefusalError(IMPORT_BUNDLE_INVALID.with_detail({"errors": ["no data"]}))
+        response = asyncio.run(refusal_exception_handler(None, exc))
+        import json
+        body = json.loads(response.body)
+        assert response.status_code == 400
+        assert body["detail"] == {
+            "code": "IMPORT_BUNDLE_INVALID",
+            "message": "invalid bundle",
+            "errors": ["no data"],
+        }
+    finally:
+        traceparent.reset(tok_t)
+        request_id.reset(tok_r)
+
+
+def test_refusal_detail_includes_correlation_ids_when_context_present():
+    tp = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+    r = client.post(
+        "/internal/features/parse-feed",
+        json={"payload": "<rss"},
+        headers={**AUTH, "X-Request-Id": "rid-refusal-1", "traceparent": tp},
+    )
+    assert r.status_code == 400
+    detail = _refusal(r)
+    assert detail["code"] == "INGEST_FEED_INVALID"
+    assert detail.get("requestId") == "rid-refusal-1"
+    assert detail.get("traceId") == "4bf92f3577b34da6a3ce929d0e0e4736"
