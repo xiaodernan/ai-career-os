@@ -4,3 +4,14 @@ careeros:
   config-server:
     service: career-os-discovery
     profile-note: "Example discovery profile served by native Config Server; override in mounted /config."
+
+# Example Eureka / operations knobs (uncomment to apply via Config Server):
+# eureka:
+#   server:
+#     enable-self-preservation: false
+#     eviction-interval-timer-in-ms: 5000
+# management:
+#   endpoints:
+#     web:
+#       exposure:
+#         include: health,info,env

@@ -4,3 +4,17 @@ careeros:
   config-server:
     service: career-os-gateway
     profile-note: "Example gateway profile served by native Config Server; override in mounted /config."
+
+# Example Spring Cloud Gateway / operations knobs (uncomment to apply via Config Server):
+# management:
+#   endpoints:
+#     web:
+#       exposure:
+#         include: health,info,gateway
+# spring:
+#   cloud:
+#     gateway:
+#       discovery:
+#         locator:
+#           enabled: false
+#           lower-case-service-id: true

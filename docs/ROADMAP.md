@@ -5645,7 +5645,8 @@ has clear, overridable defaults.
 - [x] **106.1** Add per-service example configs (measured 2026-11-10).
 
   (Added `career-os-backend.yml`, `career-os-gateway.yml`, and `career-os-discovery.yml` example
-  profiles under `config-server/src/main/resources/config-repo/` with non-secret service markers,
+  profiles under `config-server/src/main/resources/config-repo/` with non-secret service markers
+  and commented Spring Cloud/operations knobs (actuator, resilience, gateway/discovery hints),
   keeping the native backend and opt-in behavior unchanged. Contract tests assert per-service
   profiles and actuator exposure are served. Measured: config-server `ConfigServerApplicationTests`
   4/4 green offline with `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test`.)

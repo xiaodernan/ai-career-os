@@ -5,3 +5,23 @@ careeros:
   config-server:
     service: career-os-backend
     profile-note: "Example backend profile served by native Config Server; override in mounted /config."
+
+# Example Spring Cloud / operations knobs (uncomment to apply via Config Server):
+# management:
+#   endpoints:
+#     web:
+#       exposure:
+#         include: health,prometheus,circuitbreakers,circuitbreakerevents
+# resilience4j:
+#   circuitbreaker:
+#     configs:
+#       default:
+#         slidingWindowType: COUNT_BASED
+#         slidingWindowSize: 10
+#         minimumNumberOfCalls: 5
+#         failureRateThreshold: 50
+#         waitDurationInOpenState: 30s
+#         permittedNumberOfCallsInHalfOpenState: 3
+#     instances:
+#       ai-service:
+#         baseConfig: default
