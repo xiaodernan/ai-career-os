@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { BarChart } from "@/components/common/bar-chart";
 import { NightlyHistory } from "@/components/monitoring/nightly-history";
+import { ServiceEngines } from "@/components/monitoring/service-engines";
 import { ServiceResilience } from "@/components/monitoring/service-resilience";
 import { ServiceTopology } from "@/components/monitoring/service-topology";
 import { useHealthReport } from "@/lib/hooks/monitoring";
@@ -188,6 +189,9 @@ export default function MonitoringPage() {
 
       {/* Spring Cloud circuit breaker states for the ai-service bridge (Epic 105). */}
       <ServiceResilience />
+
+      {/* The engine fleet the backend can call right now (Epic 108.23). */}
+      <ServiceEngines />
     </div>
   );
 }

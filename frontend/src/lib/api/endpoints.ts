@@ -139,6 +139,8 @@ export const endpoints = {
   systemTopology: "/system/topology",
   /* Spring Cloud Resilience4j circuit breaker states for the ai-service bridge (Epic 105). */
   systemResilience: "/system/resilience",
+  /* The deployment's dependency report; the engine-replica half is what the fleet card shows. Public, like the route — question asked, answer returned. */
+  health: "/health",
   rateLimitStatus: "/rate-limit/status",
   conversations: "/conversations",
   conversation: (id: string) => `/conversations/${seg(id)}`,

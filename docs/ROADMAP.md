@@ -5703,6 +5703,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.20** Cross-service Spring Cloud actuator surface contract (measured 2026-11-10).
 - [x] **108.21** Blocking load balancer evicts dead engine replicas (measured 2026-11-10).
 - [x] **108.22** Request-latency histograms on every Spring Cloud service (measured 2026-11-10).
+- [x] **108.23** Monitoring engine-fleet card (measured 2026-11-10).
+
+  (New `ServiceEngines` card on the monitoring page reads the backend's public `/api/v1/health` and renders
+  one row per configured ai-service replica from `aiNodes` ({url, up}), with a ready count; i18n keys in both
+  languages (`monitoring.enginesTitle/Description/Ready/Empty/Unavailable`, `monitoring.topologyInstanceSha`-style).
+  Copy-census 163; new component test; i18n/used-keys/translations/topology/resilience suites all green.
+  Measured 2026-11-10.)
 
   (`management.metrics.distribution.percentiles-histogram.http.server.requests: true` on backend/gateway/
   discovery/config-server: Prometheus now gets the `_bucket{le=...}` series it needs to compute p50/p95 per

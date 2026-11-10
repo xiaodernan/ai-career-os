@@ -16,6 +16,34 @@ with existing local/dev and env-driven deployments.
 | AI Engine | `ai-service/` (FastAPI) | LLM/RAG/agent/interview/feature engines (internal service) | Participates in W3C trace propagation and correlation (request/trace context echoed and logged) |
 | Frontend | `frontend/` (Next.js) | User interface; consumes backend API and displays fleet/resilience state in monitoring views | Consumes `/api/v1/system/topology` and `/api/v1/system/resilience` |
 
+```mermaid
+flowchart LR
+    browser([Browser / PWA]) -->|JWT over HTTPS| gateway
+    subgraph Edge["Spring Cloud Gateway (WebFlux)"]
+        gateway["lb://backend · circuit breaker · retry · token-bucket limiter · header governance"]
+    end
+    gateway --> backend
+    subgraph Core["Spring Boot Backend"]
+        backend["/api/v1 · auth/ownership · orchestration"]
+    end
+    backend --> ai["FastAPI ai-service · LB-selected instance"]
+    backend --> db[(PostgreSQL 16 + pgvector)]
+    backend --> redis[(Redis · rate limiter + health)]
+    backend --> minio[(MinIO · private object storage)]
+    edgeHealth["Gateway /actuator/health"] --> backendHealth["/api/v1/health (4-way probe, 2s bound)"]
+    subgraph Registry["Discovery (opt-in)"]
+        eureka([Eureka Server])
+        backend -. registers .-> eureka
+        gateway -. lb://backend via registry .-> eureka
+    end
+    subgraph Config["Config (opt-in)"]
+        cs([Config Server · native]) -. optional:configserver: .-> gateway
+        cs -.-> backend
+        cs -.-> eureka
+    end
+    prometheus([Prometheus scrape]) --> prom["jobs + http.server.requests histograms · metrics.tags.application"]
+```
+
 Stateful dependencies (PostgreSQL+pgvector, Redis, MinIO) remain shared infrastructure services
 as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
 
@@ -129,7 +157,9 @@ as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
 - **Build identity**:
   - `APP_BUILD_SHA` is propagated to service `info.app` metadata and Eureka instance metadata/IDs
     where applicable, enabling consistent instance identification across registry, actuator, and health views.
-- **Monitoring UI**: fleet topology (with each instance's registry-published build-sha) and circuit-breaker state are surfaced in the authenticated monitoring experience.
+- **Monitoring UI**: fleet topology (with each instance's registry-published build-sha), circuit-breaker state,
+  and the engine fleet (one row per ai-service replica the backend's health probe called, Epic 108.23)
+  are surfaced in the authenticated monitoring experience.
 - **Metrics**: every Spring Cloud service pins `management.metrics.tags.application=${spring.application.name}`,
   so a shared scraper can aggregate `/actuator/prometheus` by application (backend/gateway/discovery/config-server).
   A contract gate (`ai-service/tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py`) enforces it.

@@ -10,6 +10,7 @@ import {
   type NormalizedPage,
 } from "@/lib/api/normalize";
 import type {
+  DeploymentHealth,
   HealthReport,
   NightlyReport,
   NightlyVerdict,
@@ -77,6 +78,16 @@ export function useServiceResilience() {
     queryKey: ["system", "resilience"],
     queryFn: async (): Promise<ServiceResilience> =>
       (await api.get<unknown>(endpoints.systemResilience)) as ServiceResilience,
+    staleTime: 30_000,
+  });
+}
+
+/** The engine fleet through the backend's public dependency report (Epic 108.23). */
+export function useDeploymentHealth() {
+  return useQuery({
+    queryKey: ["system", "deployment-health"],
+    queryFn: async (): Promise<DeploymentHealth> =>
+      (await api.get<unknown>(endpoints.health)) as DeploymentHealth,
     staleTime: 30_000,
   });
 }

@@ -104,8 +104,9 @@ describe("the browser's copy", () => {
     // and was never part of this walk.) 161 with `components/monitoring/service-topology.tsx`,
     // the card that draws the fleet the discovery client reports (100); 162 with
     // `components/monitoring/service-resilience.tsx`, the circuit-breaker card for the
-    // ai-service bridge (105.2).
-    expect(browserSources().length).toBe(162);
+    // ai-service bridge (105.2); 163 with `components/monitoring/service-engines.tsx`,
+    // the engine-fleet card reading the same /health the backend reads (108.23).
+    expect(browserSources().length).toBe(163);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -993,6 +993,18 @@ export interface ServiceResilience {
 }
 
 /**
+ * The deployment's dependency report (`GET /health`) the fleet card reads. The backend
+ * probes the engine and answers with status too — aiNodes is one {url, up} row per configured
+ * ai-service replica in configured order, exactly what a second engine node needs to be visible.
+ */
+export interface DeploymentHealth {
+  status: string;
+  ai?: boolean;
+  aiNodes?: Array<{ url: string; up: boolean }>;
+  buildSha?: string;
+}
+
+/**
  * Production monitoring (16.1): agent health, cost, and regression detection.
  * The report is composed by the ai-service's monitoring engine.
  */

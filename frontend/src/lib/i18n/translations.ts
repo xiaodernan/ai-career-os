@@ -938,6 +938,12 @@ export const translations = {
       resilienceCalls: "Failed {failed} · OK {ok} · Rejected {rejected}",
       resilienceEmpty: "No circuit breakers are registered yet.",
       resilienceUnavailable: "Resilience status could not be read.",
+      enginesTitle: "Engine fleet",
+      enginesDescription:
+        "The ai-service replicas the backend can call right now, as the health probe reports them.",
+      enginesReady: "{count} of {total} ready",
+      enginesEmpty: "No engine replica answered the health probe.",
+      enginesUnavailable: "Engine health could not be read.",
     },
     // Rate limit
     rateLimit: {
@@ -4004,6 +4010,11 @@ export const translations = {
       resilienceCalls: "失败 {failed} · 成功 {ok} · 拒绝 {rejected}",
       resilienceEmpty: "尚未注册任何断路器。",
       resilienceUnavailable: "无法读取韧性状态。",
+      enginesTitle: "引擎集群",
+      enginesDescription: "后端健康探针报告的、当前可调用的 ai-service 副本。",
+      enginesReady: "就绪 {count}/{total}",
+      enginesEmpty: "没有任何引擎副本回答健康探针。",
+      enginesUnavailable: "无法读取引擎健康状态。",
     },
     // Rate limit
     rateLimit: {
