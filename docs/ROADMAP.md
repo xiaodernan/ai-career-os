@@ -5712,6 +5712,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **111** Spring Cloud Gateway route-latency histograms in Prometheus (measured 2026-11-10).
 - [x] **109** Kubernetes manifests for the Spring Cloud fleet (measured 2026-11-10).
 - [x] **114** Optional shared-secret gate for the Config Server (measured 2026-11-10).
+- [x] **112** Backend probes split: liveness vs readiness (measured 2026-11-11).
+
+  (`management.endpoint.health.probes.enabled=true` + group mapping `liveness → livenessState`,
+  `readiness → readinessState` on the backend, and the four public probe paths permitted in the
+  security chain. New gate `test_backend_security_config_permits_the_probe_groups.py` (3/3) holds
+  the wiring; `ActuatorMetricsContractTest` follows the widened permitAll list and the exposure
+  surface. **Readiness deliberately tracks the lifecycle, not db/redis/storage/ai** — dependency
+  truth stays in `/api/v1/health`, because dependency-gated readiness evicts a healthy pod from
+  the Service endpoints on a database blip and cascades restarts. The refinement is recorded in
+  `docs/plans/MICROSERVICES_HORIZON.md` (Epic 112, semantics refined from the sketch).)
 
   (`ConfigTokenFilter`/`ConfigTokenConfig`: set `CONFIG_SERVER_TOKEN` and every request except
   `/actuator/health` must carry `X-Config-Token`; unset keeps dev behavior. New test

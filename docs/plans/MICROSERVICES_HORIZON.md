@@ -39,6 +39,21 @@
 - **Deliverables:** `@ReadinessGroup`/configuration that maps the existing `/api/v1/health` components to Spring Boot probe indicators; a contract gate asserting the wiring + the split; docs updated.
 - **Acceptance:** a test that flips the DB unreachable shows `/actuator/health/readiness` false and `/actuator/health/liveness` true.
 
+### Epic 112 — Backend probes split: liveness vs readiness **DONE (measured 2026-11-11, semantics refined from the sketch below)**
+`management.endpoint.health.probes.enabled=true` plus group mapping
+(`liveness → livenessState`, `readiness → readinessState`) on the backend, and the four
+public probe paths (`/actuator/health`, `/actuator/health/liveness`, `/actuator/health/readiness`,
+`/actuator/prometheus`) permitted in the security chain. `test_backend_security_config_permits_the_probe_groups.py`
+holds the wiring; `ActuatorMetricsContractTest` pins the widened permitAll list and the
+exposure surface it serves. **Refinement from the sketch:** readiness tracks
+`readinessState` (the application lifecycle) and deliberately *not* db/redis/storage/ai
+reachability — dependency-gated readiness evicts a healthy pod from the Service endpoints
+on a database blip and cascades restarts across the fleet. Dependency truth stays where it
+already lived: `/api/v1/health` aggregates db/redis/storage/ai and answers 200 either way,
+so a monitor reads *which* half is degraded instead of the orchestrator guessing. The
+sketch's acceptance test (flip the DB, watch readiness flip) was replaced by this
+contract: the flip belongs in the dependency report, not in the pod's routing eligibility.
+
 ### Epic 113 — Eureka multi-node peer config (optional, opt-in profile)
 - **Goal:** demonstrate peer-awareness: two discovery instances that gossip, `peer-eureka-server` profile in prod overlay.
 - **Deliverables:** `discovery` profile-driven `eureka.client.register-with-eureka=true/fetch-registry=true`; `EUREKA_PEER_ZONES` wiring; docs explain split-horizon; no default behavior change.
