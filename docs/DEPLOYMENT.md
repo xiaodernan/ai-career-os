@@ -3,7 +3,9 @@
 How to bring AI Career OS up locally and what each knob controls. The stack is
 five application services (discovery, gateway, backend, ai-service, frontend), an opt-in
 Spring Cloud Config Server (`config-server`, Epic 103), plus three stateful
-dependencies (PostgreSQL + pgvector, Redis, MinIO).
+dependencies (PostgreSQL + pgvector, Redis, MinIO). For the Spring Cloud microservices
+architecture (Eureka/Gateway/Config, resilience, tracing/observability) see
+[MICROSERVICES.md](MICROSERVICES.md).
 
 Redis is small but not optional: it backs only the rate limiter and the backend's
 health ping. The client timeout is pinned to 500ms (`REDIS_TIMEOUT` /

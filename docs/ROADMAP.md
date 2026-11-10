@@ -5700,6 +5700,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   LoadBalancer health-check hints to gateway config-server example. Measured: `mvn -f backend/pom.xml -DskipTests -o compile`
   BUILD SUCCESS, `mvn -f gateway/pom.xml -DskipTests -o compile` BUILD SUCCESS, `mvn -f config-server/pom.xml -o -Dtest=ConfigServerApplicationTests test` 4/4.)
 
+- [x] **108.6** Spring Cloud microservices architecture documentation (measured 2026-11-10).
+
+  (Added `docs/MICROSERVICES.md` documenting Eureka/Gateway/Config (opt-in), resilience/actuator
+  observability, W3C trace correlation, build identity, enablement matrix and safety notes; linked
+  from `docs/README.md` and `docs/DEPLOYMENT.md`. Measured: documentation consistency review against
+  implemented configs/code paths for discovery, gateway, config-server, backend resilience/trace APIs.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
