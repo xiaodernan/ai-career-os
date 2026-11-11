@@ -24,6 +24,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 139 | A dead-lettered job stops being re-injected by the producer each tick, and heals when its cooldown lapses | `DlqGuard` Redis-ZSET cooldown, 32 offline tests + real-Redis end-to-end |
 | 140 | The dead-letter pipeline can be *seen*: one honest verdict over live Redis + consumer liveness | read-only `GET /internal/ops/workqueue`, pure-function health fold, 54 offline tests + real-Redis end-to-end |
 | 141 | The signed-in first screen carries the landing/auth design language, without washing the light theme or growing the bundle | `dashboard/page.test.ts` source contract, copy census, build + bundle budget |
+| 143 | The RAG cache's saving is measured honestly and its invalidation boundary is named, not assumed | read-only `GET /internal/ops/cache`, pure-function verdict (0-rate is three states), off/memory/layered work-count baseline, 48 offline tests |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -578,3 +579,138 @@ the turn's unlink budget after two large Epics — an environment quirk, not a c
 fault; the app's own delete-safety was never bypassed. Honest bound: the aurora is
 decorative and lives only in the dark theme by design; a light-theme reader
 deliberately does not see it.
+
+## Epic 143 — the cache's saving is measured honestly, and its invalidation boundary is named **DONE (verified 2026-11-12)**
+
+**Observed — the claim that was never cashed.** Epic 118 built a genuinely careful
+RAG cache: a reader-scoped, epoch-invalidated retrieval cache, an embedding cache
+keyed by `(provider, model, dim, text)`, and a `SingleFlight` that collapses a
+thundering herd into one model call. Its headline test,
+`test_the_second_question_is_free.py`, proves the second identical question makes
+**zero** model/search calls — by installing a `MemoryCache` *by hand* inside the
+test. But `Settings.cache_backend` defaults to `"off"`, and both `docker-compose.yml`
+and `.env.prod.example` ship it off. So in every shipped configuration the entire
+L1/L2/semantic/single-flight machinery has **never run**: every question recomputes
+the full pipeline. Epic 118's saving was demonstrated in a fixture and never
+delivered to a user.
+
+**Observed — the write-only telemetry.** `CacheStats` faithfully increments
+`hits / misses / writes / evictions / l2_hits`, `RedisCache` counts `breaker_trips`,
+and `SingleFlight` counts `leaders / joined`. `GET /internal/rag/cache` even returns
+`caching.describe()`. But *nothing read any of it into a decision*: no verdict, no
+alert, no dashboard, no "is this cache earning its write cost?" answer. This is the
+same write-without-read shape Epic 140 found in the dead-letter pipeline — and the
+same fix applies: a pure-function fold over the numbers, exposed as a fail-open
+read-only control-plane endpoint.
+
+**The central honesty problem: a hit rate of 0 is three different states.** Folding
+every zero into "healthy because there are no errors" is the dangerous lie — it
+would let a cache that is taxing the product look fine. The verdict separates them:
+
+| verdict | meaning |
+| --- | --- |
+| `off` | `cache_backend=off` (the shipped default); the optimisation has *never run*. Information, not an error — but a dashboard may not claim a saving that was never enabled. |
+| `unknown` | the reading is untrustworthy: backend errors, a tripped Redis breaker, or a malformed counter. Reported before any rate; calling an unobservable cache healthy is the lie Epic 140 refuses. |
+| `cold` | enabled, but too few lookups to measure (0 included). Expected on a fresh deploy; says nothing about whether the cache wastes writes. |
+| `ineffective` | enabled, enough lookups, hit rate below the warn line (`0.50`): the cache is consulted but not answering often enough to pay for its writes. **This is the expensive one** that a naive "0 errors = healthy" hides. |
+| `healthy` | enabled, enough lookups (`>= 20`), hit rate at/above the warn line. |
+
+**Why 20 / 0.50 live as pure-function constants, not config.** They are measurement
+discipline, not deployment knobs: one hit in two calls is 50% and would pass a bare
+rate line while proving nothing. Keeping them as `DEFAULT_MIN_LOOKUPS` /
+`DEFAULT_HIT_RATE_WARN` arguments (injectable in tests, overridable by a future
+caller) avoids another `Settings` field, another `.env.example` declaration, and
+another env-census surface — the knobs that actually change cache behaviour already
+exist (`cache_backend`, `cache_ttl_s`, `cache_max_entries`).
+
+**The layered-cache subtlety that a root-only fold would miss.**
+`LayeredCache.describe()` reports *logical* hit counters on the root (a hit is a hit,
+wherever it came from) but records transport faults on the **nested `shared` Redis
+layer**. A fold that reads only the root would report a healthy 75% hit rate while
+the fleet's only shared cache is down. `cache_health._walk()` traverses `local` /
+`shared` and sums `errors` + `breaker_trips` across every layer, so a tripped shared
+layer correctly yields `unknown`. This is also why `RedisCache.describe()` was
+changed to surface `breaker` — the trips were written but never read, even from
+`describe()`.
+
+**The A/B baseline — counts, not a stopwatch.** `test_the_cache_baseline_is_honest.py`
+reuses Epic 118's `Work` counter around every model/search seam and runs the same
+question through all three real backends (off / memory / layered, the layered using
+an in-process `MemoryCache` as the shared stand-in so the baseline needs no Redis):
+
+- **off**: the 2nd ask spends the *same* work as the 1st (a full pass, `> 0` extra
+  model/search calls). This is the shipped default, honestly named.
+- **memory / layered**: the 2nd identical ask spends **0** extra calls and returns
+  the identical answer. Layered additionally books one `l2_hits` when a shared-layer
+  entry fills a cold front — the fleet-cheap signal (one process warm vs. the fleet
+  warm).
+- A wall-clock check is deliberately only a *loose sanity bound* (a cached hit must
+  not cost more than a full recompute): timing on a shared CI box proves nothing, and
+  "a fast wrong answer is not an optimisation" remains the project's rule. The work
+  count is the assertion; the stopwatch is not the claim.
+
+**The invalidation boundary — named, not assumed.** `caching.invalidate_user()` is
+wired in exactly one place: `app/ingestion/pipeline.py`, ai-service's own document
+ingest. A corpus writer that bypasses that seam — a backend direct SQL write, a
+backfill job, another service — does **not** bump the reader's epoch, so the cache
+keeps serving the pre-write answer until the TTL. A contract test proves this
+explicitly: it changes the corpus the search sees without calling `invalidate_user`,
+asserts the cached (stale) answer survives, then asserts that an explicit
+`invalidate_user` finally surfaces the new corpus. This pins the limitation so
+nobody claims epoch invalidation covers a write path it cannot see. The honest
+remediation is architectural, not in this Epic: **every corpus writer must call the
+invalidation seam, or the cache must stay off for that path.** Until that is
+enforced fleet-wide, `cache_backend=off` remains the correct default — which is
+precisely why Epic 143 does *not* switch caching on.
+
+**What this Epic deliberately does not do.**
+- **Does not turn the cache on.** Enabling it by default would make an unverified
+  optimisation (over an un-enforced invalidation boundary) every user's problem.
+  The honest fix is observability + a baseline first; opt-in stays opt-in.
+- **Does not hard-wire orphan algorithms.** Epic 133 already showed a `top_k` heap
+  over a SQL-`LIMIT`ed ~10-row candidate set is a pseudo-optimisation (Python heap
+  slower than Timsort). No orphan `top_k` / cosine-micro-optimisations are attached
+  to this work just to look algorithmic.
+- **Adds no Prometheus client**; the meter centre stays in backend Micrometer, as
+  Epic 140 established. This endpoint is the same shape a future gauge scrapes.
+- **Does not add a public surface.** `GET /internal/ops/cache` carries
+  `require_internal` and is auto-enrolled by the three internal-auth gates.
+
+**Shipped.**
+- `app/features/cache_health.py` — pure-function fold (`classify` / `health_report`
+  / layered `_walk`), no cache client, no clock, injectable thresholds.
+- `app/ops/cache_status.py` — the one fail-open seam: reads `caching.describe()`,
+  reports both the configured `mode` (intent) and the actual `backend` (fact), and
+  flags `degraded_to` when they disagree (e.g. `redis` configured, `memory` built
+  because `REDIS_URL` was unusable). No I/O, no Redis connection of its own.
+- `app/api/ops.py` — `GET /internal/ops/cache`, always 200, verdict in the body;
+  last-resort catch degrades to `unknown`, never a 500.
+- `app/core/cache.py` — `RedisCache.describe()` now surfaces `breaker`
+  (`trips / open / cooldown_s`), closing the write-only gap.
+- 4 new offline test files (48 tests): verdict truth table (0-rate three states,
+  malformed counter → `unknown`, layered shared-layer fault detection), collector
+  fail-open + two-truths, endpoint auth/shape/405, and the A/B + invalidation
+  baseline. `scripts/verify_gates.sh / .ps1` enrol all four.
+
+**Verified (2026-11-12).** New suites 48/48; the four Epic 143 suites plus all three
+internal-auth gates, OpenAPI-route/description gates, Epic 140 health regressions and
+Epic 118 cache regressions run together: **270 passed**. The full `verify_gates`
+representative offline set: **497 passed, 1 failed** — the single failure is
+`test_done_in_horizon_means_checked_in_roadmap` on **Epic 141**, an *concurrent-session
+ledger inconsistency unrelated to this Epic*: a concurrent frontend worktree marked
+its virtual-list "Epic 141" DONE in `PERFORMANCE_HORIZON.md` without adding
+`- [x] **141**` to `ROADMAP.md`. Both files are concurrent-session-owned and were
+not touched by Epic 143; a byte-identical check against `HEAD` versions of those two
+files shows the ledger is consistent (`missing = []`) and the mismatch appears only
+in the concurrent working-tree edits. Epic 143's own gates are all green; the
+number-141 collision between the dashboard Epic (141) and the virtual-list Epic
+(141) is left for the concurrent session to disambiguate in its own commit.
+
+**Honest bound.** The verdict's warn line (2 hits in 40 lookups = 5% → `ineffective`)
+is a *policy* threshold, not a measured law; it encodes "writes must pay for
+themselves" and is tunable by a caller. The endpoint reads process-local counters,
+so with `CACHE_BACKEND=redis` the fleet's true hit rate is the sum across replicas —
+one replica's report is its own, exactly as `/internal/rag/cache` already documents.
+The A/B baseline is intentionally in-process (no Redis, no provider): it proves the
+cache *mechanism* collapses repeat work, not that a specific production deployment
+will save a specific number of milliseconds.

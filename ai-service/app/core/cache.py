@@ -333,6 +333,23 @@ class RedisCache(Cache):
     async def close(self) -> None:
         await self.pool.close()
 
+    def describe(self) -> dict[str, Any]:
+        """The transport's own health, which ``CacheStats`` cannot express.
+
+        ``breaker_trips`` used to be written but never read: it lives on this
+        object, not in ``stats``, so ``/internal/rag/cache`` never showed it and
+        a Redis outage looked like a clean run of misses. Epic 143 surfaces it
+        (plus whether the breaker is currently open) so the health fold can tell
+        "cold cache" from "cache whose shared layer is down".
+        """
+        data = super().describe()
+        data["breaker"] = {
+            "trips": self.breaker_trips,
+            "open": not self._available(),
+            "cooldown_s": self.cooldown,
+        }
+        return data
+
 
 class LayeredCache(Cache):
     """Memory in front of Redis. The front layer is short-lived; the back one is shared."""
