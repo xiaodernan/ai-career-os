@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     work_queue_backend: str = "off"  # off | redis (Streams consumer group; at-least-once)
     work_queue_claim_ms: int = 120_000  # visibility timeout: a job idle this long is re-claimed
     work_queue_maxlen: int = 10_000  # approximate stream cap; the DB is still the source of truth
+    # Dead-letter (Epic 138). A job delivered more than `work_queue_max_deliveries`
+    # times is moved to the DLQ instead of being re-claimed forever (a poison job
+    # would otherwise burn a worker + a model call on every retry). 0 disables it.
+    work_queue_max_deliveries: int = 5
+    work_queue_dlq_stream: str = "careeros:jobs:embed:dlq"
     cache_ttl_s: int = 300
     cache_max_entries: int = 2048
     redis_url: str = "redis://127.0.0.1:16380/0"
