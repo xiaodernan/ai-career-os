@@ -5758,6 +5758,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (default off); Actuator redis health stays disabled. DashboardCacheTest 6/6;
   backend unit suite (`*Test`) green; live-Redis round-trip not run here (no Docker).)
 
+- [x] **126** The matches digest reads in index order (backend, verified 2026-11-11).
+
+  (`V37__matches_digest_indexes.sql`: `(job_id, user_id, created_at DESC)` for the
+  per-row latest-score LATERAL lookups, and `(user_id, job_id, created_at DESC)` for
+  the dashboard's DISTINCT ON newest-overall digest. `prewarm-hot.sql` extended; the
+  prewarm contract test generalized to V36+V37 (renamed, four cases). Live EXPLAIN not
+  run on this host (no Docker); target-install verification is the documented follow-up.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

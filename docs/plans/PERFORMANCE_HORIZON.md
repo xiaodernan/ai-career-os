@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–125
+# Performance horizon — Epics 118–126
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -22,6 +22,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 123 | The first page is warm before the request arrives | vitest + prewarm gate |
 | 124 | Every claim above is pinned by a gate that fails when it stops being true | gate suite |
 | 125 | The dashboard is served from a shared cache, not rebuilt per open | DashboardCacheTest |
+| 126 | The matches digest reads in index order | Flyway + explain gate |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -153,3 +154,23 @@ round-trip, TTL expiry, poisoned-entry eviction, Redis-outage fail-open, hit/mis
 and green; `mvn -B test -Dtest='*Test'` exits 0 (the CI unit command). Live Redis round-trip
 is not claimed on this host (no Docker here); the Redis path is the same connection shape
 the rate limiter already runs.
+## Epic 126 — the matches digest reads in index order **DONE (verified 2026-11-11)**
+
+**Shipped (2026-11-11, verified offline; live EXPLAIN is the target-install follow-up):**
+- `V37__matches_digest_indexes.sql`: two composites, both backing statements the app
+  runs on the dashboard's hot path --
+  - `idx_match_job_user_created (job_id, user_id, created_at DESC)` -- every LATERAL /
+    scalar "latest score" lookup (`job_id = j.id AND user_id = :userId`) becomes a
+    backward index scan for its `LIMIT 1`, no per-row sort;
+  - `idx_matches_user_job_created (user_id, job_id, created_at DESC)` -- the
+    dashboard's `averageMatch` DISTINCT ON (job_id) newest-overall becomes an
+    index-ordered scan instead of a full sort of the reader's match history.
+- `scripts/prewarm-hot.sql` extended to warm both (plus `ANALYZE job_matches`); the
+  contract test is generalized to cover V36+V37 (renamed
+  `test_the_prewarm_script_covers_the_composite_indexes.py`), and now also refuses a
+  script that warms an index nothing creates.
+
+**Deliberately not shipped:** a `(user_id, created_at DESC)` composite -- grep of the
+Java call sites shows no statement that filters on user_id and orders by created_at on
+job_matches, so it would be a speculative index. Live target-install EXPLAIN remains
+the follow-up ledger note, as with V36.

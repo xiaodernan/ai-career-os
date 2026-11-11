@@ -58,7 +58,7 @@ TESTS=(
   ai-service/tests/test_the_k8s_manifests_define_a_working_fleet.py
   ai-service/tests/test_the_cache_speaks_redis_without_a_client_library.py
   ai-service/tests/test_the_second_question_is_free.py
-  ai-service/tests/test_the_prewarm_script_covers_the_v36_indexes.py
+  ai-service/tests/test_the_prewarm_script_covers_the_composite_indexes.py
   ai-service/tests/test_the_performance_horizon_marks_done_honestly.py
 )
 

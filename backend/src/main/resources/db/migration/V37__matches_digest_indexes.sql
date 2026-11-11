@@ -1,0 +1,27 @@
+-- The matches digest reads in index order (Epic 126).
+--
+-- Two statements ask job_matches for a per-row "latest score" and one asks for a
+-- distinct-per-job reduction:
+--
+-- 1. Every LATERAL / scalar "ORDER BY created_at DESC LIMIT 1" behind the
+--    recommended-jobs digest and the discover/saved board hydration filters
+--    (job_id = j.id AND user_id = :userId). V8's (job_id, user_id) serves the
+--    equality filter; adding created_at DESC makes the LIMIT 1 a backward index
+--    scan with no per-row sort at all.
+--
+-- 2. The dashboard's `averageMatch` DISTINCT ON (job_id) newest-overall over
+--    `WHERE user_id = :userId ORDER BY job_id, created_at DESC, id DESC`.
+--    Postgres had to sort the whole match history per dashboard load; the
+--    composite below makes it an index-ordered scan.
+--
+-- Both indexes answer statements the app runs on the dashboard's hot path; no
+-- speculative third column. V36 is the highest prior version; this one keeps
+-- the strict numeric ordering the nightly CI glob applies. IF NOT EXISTS for
+-- the same reason as every other index here: a partially-applied night must
+-- not stop the next one.
+--
+-- target-install EXPLAIN note: as with V36, live EXPLAIN is not run on the host
+-- that ships this (no Docker in this environment). The migration is additive;
+-- a target-install `EXPLAIN (ANALYZE, BUFFERS)` is the documented follow-up.
+CREATE INDEX IF NOT EXISTS idx_match_job_user_created ON job_matches (job_id, user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_matches_user_job_created ON job_matches (user_id, job_id, created_at DESC);
