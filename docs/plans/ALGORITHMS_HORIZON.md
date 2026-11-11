@@ -31,6 +31,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 147 | Deleting a note/source/resume stops the copilot quoting it from cache: the epoch bumps after the delete commits | `POST /internal/rag/cache/invalidate` + backend `RagCacheInvalidator` (after-commit, fail-open) wired into `KnowledgeService`; endpoint has a real caller, 9 offline + 6 backend tests |
 | 148 | A long agent run cannot grow the timeline's DOM or reducer without bound: the trace window is O(cap), and what it folds away is counted, not hidden | pure `foldTrace` / `settleTraceFold` with injected `cap`, zero drift vs the old reducer, honest `tracesOmitted` surfaced in en/zh; 17 offline tests + source-contract |
 | 149 | A concurrent spring-cloud merge is reconciled: the dev edge activates the same registry profile as the backend, and the count/timeout censuses tell the truth again | dev `docker-compose.yml` gateway gets `SPRING_PROFILES_ACTIVE=eureka` + `EUREKA_DEFAULT_ZONE`; `gateway-edge` spec counted in e2e/README + PRODUCT.md (69/69) and its alias registered; `.env.example` backoff comment stops masquerading as a Redis timeout; 17 + 22 offline gates |
+| 150 | The two read-only ops verdicts get a real consumer: a backend collector scrapes their measured numbers into Prometheus, and their `no backend caller` markers become true | `AiOpsMetrics` (`@Scheduled` + `Gauge`) over `GET /internal/ops/{workqueue,cache}`, 7 excused-by-name signals, fail-open keeping last reading; backend `AiServiceClient` seam + `HttpAiServiceClient` GETs with a nil system id; API.md ledger 10→8; 7 offline backend tests + 31 contract/meter gates |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1252,3 +1253,154 @@ running containers — that walk remains an operator step, stated rather than
 implied. This chapter deliberately names no transport-liveness noun, so the
 vocabulary census stays at its honest 13 lines and the ledger does not move.
 
+
+## Epic 150 — the two read-only verdicts get a real consumer, and their honesty markers become true **DONE (verified 2026-11-12)**
+
+Epics 140 and 143 shipped two read-only control-plane verdicts: `GET
+/internal/ops/workqueue` (the embed work queue's health over live Redis plus the
+consumer's own tick) and `GET /internal/ops/cache` (the RAG cache's honest
+saving, where a zero hit rate is three states and not one fault). Both are pure
+observers — fail-open, always 200, verdict in the body — and both were recorded
+in `docs/API.md` with a literal `no backend caller:` marker. That marker was
+honest, but it was also a promise: each row ended with a sentence naming the
+consumer that had not arrived yet ("a future backend gauge can scrape it").
+This Epic is that consumer. It closes the promise at its source rather than
+quietly deleting the sentence.
+
+**What was deliberately NOT built.** The task that opened this Epic proposed
+giving `release_cooldowns()` a POST HTTP route so a backend caller could clear
+the dead-letter cooldown set, and adding a matching `WorkQueue.release_parked()`
+to clear the backoff set alongside it. That design was rejected after reading
+the three sources that would have had to agree with it, because it fails this
+horizon's own rules:
+
+* The verdict endpoints are *readers*, not actuators. This document (Epic 140)
+  states the boundary verbatim: the verdict is a read, and it never releases a
+  cooldown or drains the dead-letter stream; `release_cooldowns()` remains the
+  operator's explicit action. A route that mutates Redis would invert a boundary
+  two shipped Epics and a contract test deliberately drew. "No caller" here was
+  a design decision, not a gap to fill with the first caller that presents itself.
+* The backend has no authorization tier for a mutation like that. The whole
+  Spring security chain ends in `anyRequest().authenticated()`; the `admin` word
+  exists in the user schema and nowhere as an `@PreAuthorize` check. A
+  `POST .../release` under the current surface would therefore let *any*
+  signed-in account flush every cooled-down poison job at once — releasing them
+  straight back into the producer's next tick, which is a model-call storm and a
+  new attack surface, not a diagnostic. Building the admin gate is a separate,
+  larger decision and does not belong inside a queue-observability Epic.
+* Even as an internal, unexposed call, a Java method nobody invokes is the same
+  write-only machine one layer over: the "real consumer" would be a method whose
+  only purpose is to satisfy the router that added it. That is the exact shape
+  this horizon's Definition of Done forbids — an algorithm or mechanism lands
+  only when it replaces a *live* call site.
+
+**What was built instead — the next step the project already named.** This
+document's Epic 140 section says the verifier endpoints are "the clean single
+source that step would scrape" and that wiring their numbers into the
+backend/gateway `careeros.*` meter roster is "a separate, deliberate next
+step"; `docs/API.md` says the same in one line. That step is done here. A new
+backend collector, `com.careeros.ai.service.AiOpsMetrics`, is the consumer:
+
+* It is a `@Component` with a `@Scheduled(fixedDelayString =
+  ${careeros.ai.ops.metrics-refresh-ms:60000})` tick — the same shape as
+  `AiUsageMetrics`, reusing `@EnableScheduling` (already on) and the shared
+  `MeterRegistry`. One fixed-delay tick asks both engine endpoints.
+* It crosses the existing typed seam: `AiServiceClient` gains two default
+  methods (`workqueueVerdict`, `cacheVerdict`) returning an empty map, so every
+  fake, mock and alternative client compiles and behaves byte-for-byte as
+  before (zero drift); only `HttpAiServiceClient` overrides them with the two
+  GETs. The default empty map is also what a scrape sees when no client serves
+  control-plane reads, and the collector treats that as a failed read, not a
+  healthy zero.
+* `require_internal` insists on a non-empty `X-User-Id` even though neither
+  verdict's calculation scopes by user (`read_status` / `read_health` never
+  touch `ctx.user_id`). The bridge therefore sends one explicit, non-personal
+  value — the nil UUID — and says so in the seam's own javadoc. It cannot
+  collide with an account and makes the wire honest: this is a system read, not
+  a person's context.
+
+**Only measured numbers cross.** A Prometheus series is a number, so the
+collector publishes the *raw readings* the verdicts already carry — `dlq_len`,
+`delayed_len`, `pending` and the engine's own `queue.ok` from one endpoint;
+`hit_rate` and `errors` from the other — plus a `scrape_ok` self-check. It
+deliberately does **not** encode the verdict word into an integer: the engine
+never claimed a total order among `degraded`, `stalled`, `backlogged` and
+`healthy`, and a numeric colour scale would silently invent one that a
+dashboard would then treat as severity. The verdict sentence, its `alerts`
+strings, and per-key diagnostics (`observation_error`, `degraded_to`,
+`freshness.last_tick`) stay on the control-plane endpoint and never become
+series. A contract test pins that the registry holds exactly the seven declared
+gauges and nothing else, so a future field cannot leak in silently. The project
+also gains no public route and lowers no authorization boundary: the two engine
+endpoints remain behind the shared internal token; there is simply one more
+authenticated caller.
+
+**Fail-open, without confusing a silent engine with an empty queue.** The two
+reads are independent, so a cache endpoint that is briefly unreachable cannot
+blank the queue's numbers. A refresh that cannot reach one endpoint keeps that
+half's last good readings and flips `scrape_ok` to 0 — it never publishes a zero
+for "the queue is empty". The projection is a pure function of the two answers
+and the previous reading (`AiOpsMetrics.project`), so all of this is measured
+offline with an injected `AiServiceClient` and a `SimpleMeterRegistry`: the first
+refresh's numbers, a full failure keeping the last reading with `scrape_ok=0`,
+one half failing alone, an empty answer not claiming healthy zero, a later
+refresh replacing numbers together, and a malformed field degrading to zero for
+that field only. Seven backend tests, all green.
+
+Two census gates had to grow with the new file, as their own rules require. The
+backend-reader corpus in `test_response_shape_contract.py` gained `AiOpsMetrics.java`
+— it is a real consumer of both verdict answers — with a written note that its
+control-plane field names are bound inside independent try/catch arms rather than
+the `Map<String,Object> x = ai.y(...)` form this key-reconciliation reader can
+follow, so its seven projections are pinned by the meter roster and the collector
+test instead of by that walk. The same file's Java-record declaration census went
+from 209 to 210 for `AiOpsMetrics.Reading`, a non-route receipt counted like the
+`Purge` and `Reclaim` records before it. Neither pin was relaxed: a consumer that
+arrived unmentioned, or a record the shared opener could not read, would still
+redden this gate.
+
+**Verification.** Backend `mvn test`: 205 suites / 1405 tests, 0 failures, 0
+errors — including the repeated `@SpringBootTest` context starts, which prove the
+new collector's constructor cannot block startup when the engine is unreachable.
+`scripts/verify_gates.sh`: 557 representative offline contract gates passed. The
+three contract/meter files touched directly (`test_api_doc_contract.py`,
+`test_internal_contract.py`, the alarm roster) pass together (31), as does the
+full `test_response_shape_contract.py` (32) and the three configuration/window
+censuses most likely to see a new fixed-delay tick (22). Full ai-service suite:
+2709 passed, 2 skipped. No test was skipped, relaxed or re-baselined downward to
+make this Epic pass.
+
+**The meter roster, honoured in both directions.** Every new gauge is named in
+`test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py`'s
+`METRICS` dict and gets exactly one row in `docs/DEPLOYMENT.md` under "Every
+Meter and What Watches It", with a reason of its own. None is alarmed, and that
+is a decision with a reason rather than an omission: queue health is a brand-new
+signal with no measured good/bad baseline, and a threshold invented now would
+page on a busy minute. They are excused by name *for dashboards* until a
+baseline separates a stuck queue from a busy one — the same honest state
+`careeros_ratelimit_decisions_total` already documents. `scrape_ok` is the
+strongest candidate for a future rule (a dead or silent engine), but a single
+missed tick during a redeploy is noise, so even it waits for a continuity
+baseline. Adding a rule later is the ordinary "retire an excuse" move this gate
+was built to make visible.
+
+**The honesty ledger, closed at its source.** Because the backend now really
+calls both endpoints, `docs/API.md` drops the `no backend caller:` marker from
+each row and replaces it with the collector that reads it. The measured
+`UNREACHED_BY_THE_APP` ledger in `test_api_doc_contract.py` shrinks from 10 to
+8, and the two rows move out of "advertised but never reached" by crossing the
+gate that would have reddened had the doc and the client disagreed. No other
+contract moved: neither row carries a `{...}` response group, so the five-row
+`response_claims()` positive control is unchanged, and no new `/internal/...`
+literal entered the page, so the exempt-literal census is unchanged.
+
+**Honest bounds.** There is no live Prometheus or Grafana on this host, so the
+scrape is verified by the backend's offline collector tests and the three-way
+meter roster gate, not by watching a real scrape endpoint — that walk remains an
+operator step, stated rather than implied. The reading is a 60-second snapshot,
+not an event stream: a fault that appears and clears inside one tick is not
+captured, which is the right resolution for a queue-health dashboard but not a
+sub-minute incident probe. The refresh adds one authenticated GET per endpoint
+per minute of backend traffic — bounded, and itself measured by `scrape_ok`.
+Finally, this chapter names no transport-liveness noun, so the docs' vocabulary
+census stays at its honest 13 lines and that ledger does not move.

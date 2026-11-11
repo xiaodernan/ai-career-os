@@ -290,6 +290,9 @@ def test_both_sides_of_the_comparison_are_actually_read():
 # `SseRelayService` relays the first, and the copilot's streaming route starts the second.
 # `/internal/rag/embeddings` left this list when `HttpAiServiceClient.embedQuery` began feeding the
 # backend's hybrid /jobs ranking; the agent still embeds in-process via registry.embed_text.
+# The two `/internal/ops/*` verdicts left it in Epic 150 when `AiOpsMetrics` began scraping their
+# measured numbers on a fixed delay: they were operator-only until a real collector arrived, and
+# this ledger is where an operator-only route is retired the moment the product starts reaching it.
 UNREACHED_BY_THE_APP = {
     "/internal/agents/runs": "the Activity panel reads agent_runs over the shared database instead",
     "/internal/agents/runs/{}": "same, for one run's detail",
@@ -297,8 +300,6 @@ UNREACHED_BY_THE_APP = {
     "/internal/rag/answer": "same, for the grounded-answer variant",
     "/internal/rag/chunks": "kept for operators",
     "/internal/rag/cache": "operator diagnostic: one process's cache counters, no screen reads them",
-    "/internal/ops/workqueue": "operator/alert diagnostic: read-only queue verdict; a future backend gauge can scrape it",
-    "/internal/ops/cache": "operator/alert diagnostic: read-only cache-saving verdict; no screen reads it yet",
     "/internal/tasks/{}": "the app follows /internal/stream/{taskId} instead",
     "/internal/tasks/{}/stream": "a second stream spelling, unused by the relay",
 }
@@ -324,7 +325,7 @@ def test_what_the_doc_lists_but_the_app_never_calls_stays_explained():
 
 def test_the_unreached_list_is_not_just_a_long_list_of_nothings():
     """Positive control: the comparison above also passes when both sides are empty."""
-    assert len(UNREACHED_BY_THE_APP) == 10
+    assert len(UNREACHED_BY_THE_APP) == 8
     assert all(reason.strip() for reason in UNREACHED_BY_THE_APP.values())
     assert "/internal/stream/{}" not in UNREACHED_BY_THE_APP, \
         "the relay reaches that one; treating it as unreached would hide a live dependency"

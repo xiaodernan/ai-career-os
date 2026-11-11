@@ -80,6 +80,8 @@ RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "au
 UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
 STORED_OBJECT_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "StoredObjectReclaimer.java"
 RAG_CACHE_INVALIDATOR = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "RagCacheInvalidator.java"
+# Epic 150: the backend's Prometheus collector over the ai-service's two read-only ops verdicts.
+AI_OPS_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" / "service" / "AiOpsMetrics.java"
 RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
 DASHBOARD_CACHE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "DashboardCache.java"
 GATEWAY_RATE_LIMIT_FILTER = ROOT / "gateway" / "src" / "main" / "java" / "com" / "careeros" / "gateway" / "GatewayRateLimitFilter.java"
@@ -129,6 +131,18 @@ METRICS = {
     # A failed bump is a freshness cost (stale text until cache TTL on a delete that already
     # committed), not an outage, so DEPLOYMENT.md excuses it by name rather than giving it a page.
     "careeros_rag_cache_invalidations_total": (RAG_CACHE_INVALIDATOR, "careeros.rag.cache_invalidations"),
+    # Epic 150: the backend scrapes the ai-service's two read-only ops verdicts on a fixed
+    # delay and exports only their measured numbers. All seven are excused, none alarmed: the
+    # queue/cache verdicts are a new signal with no measured good/bad baseline, and inventing a
+    # threshold now would page on a busy minute. DEPLOYMENT.md gives each its dashboard reason;
+    # `scrape_ok` is the self-check that tells a dead engine from an empty queue.
+    "careeros_ai_ops_workqueue_dlq_len": (AI_OPS_METRICS, "careeros.ai.ops.workqueue.dlq.len"),
+    "careeros_ai_ops_workqueue_delayed_len": (AI_OPS_METRICS, "careeros.ai.ops.workqueue.delayed.len"),
+    "careeros_ai_ops_workqueue_pending": (AI_OPS_METRICS, "careeros.ai.ops.workqueue.pending"),
+    "careeros_ai_ops_workqueue_ok": (AI_OPS_METRICS, "careeros.ai.ops.workqueue.ok"),
+    "careeros_ai_ops_cache_hit_rate": (AI_OPS_METRICS, "careeros.ai.ops.cache.hit.rate"),
+    "careeros_ai_ops_cache_errors": (AI_OPS_METRICS, "careeros.ai.ops.cache.errors"),
+    "careeros_ai_ops_scrape_ok": (AI_OPS_METRICS, "careeros.ai.ops.scrape.ok"),
     # Epic 115: the edge's own refusal counter moved into the namespace (it was
     # `gateway.ratelimit.refused`, a series no rule in this file could ever watch),
     # and the alarm that reads it is the horizon's `CareerOSGatewayRateLimited`.

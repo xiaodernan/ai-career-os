@@ -28,6 +28,29 @@ public interface AiServiceClient {
         return Map.of();
     }
 
+    /**
+     * The ai-service's own read-only work-queue verdict (Epic 150), for the backend's
+     * Prometheus scrape. This is a control-plane read, not a user request: the ai-service
+     * endpoint is behind the shared internal token, and the {@code X-User-Id} it also requires
+     * is satisfied by a fixed system value -- the verdict is fleet-wide and its calculation
+     * never scopes by user. The backend publishes only numeric projections of this answer,
+     * never the whole object, so no internal diagnostic key crosses into the scrape.
+     *
+     * <p>A default empty map keeps every test double, mock and alternative client that does
+     * not serve control-plane reads compiling and behaving exactly as before (zero drift);
+     * only the real {@link HttpAiServiceClient} overrides it. An empty answer is also what a
+     * scrape sees when the caller cannot reach the engine, which the collector treats as a
+     * failed refresh rather than a healthy zero.
+     */
+    default Map<String, Object> workqueueVerdict(UUID systemUserId) {
+        return Map.of();
+    }
+
+    /** The RAG cache's read-only verdict (Epic 150); see {@link #workqueueVerdict(UUID)}. */
+    default Map<String, Object> cacheVerdict(UUID systemUserId) {
+        return Map.of();
+    }
+
     Map<String, Object> ingestDocument(UUID documentId, UUID userId);
 
     Map<String, Object> ingestText(UUID userId, String title, String text, String kind, UUID refId);

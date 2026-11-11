@@ -234,6 +234,23 @@ public class HttpAiServiceClient implements AiServiceClient {
         post("/internal/rag/cache/invalidate", userId, Map.of());
     }
 
+    /**
+     * Epic 150: the ai-service's read-only work-queue verdict, for the backend's own Prometheus
+     * scrape. The engine's endpoint needs a non-empty {@code X-User-Id} by the shared internal
+     * contract, but the verdict is fleet-wide -- {@code queue_status.read_status()} never scopes
+     * by user -- so the caller passes a fixed system id and this bridge only carries it. No body.
+     */
+    @Override
+    public Map<String, Object> workqueueVerdict(UUID systemUserId) {
+        return get("/internal/ops/workqueue", systemUserId);
+    }
+
+    /** Epic 150: the RAG cache's read-only verdict; see {@link #workqueueVerdict(UUID)}. */
+    @Override
+    public Map<String, Object> cacheVerdict(UUID systemUserId) {
+        return get("/internal/ops/cache", systemUserId);
+    }
+
     @Override
     public Map<String, Object> parseResumeText(String text, UUID userId) {
         return post("/internal/features/resume/parse", userId, Map.of("text", text));

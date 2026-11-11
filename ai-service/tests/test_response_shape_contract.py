@@ -388,8 +388,17 @@ def test_the_shapes_this_gate_cannot_see_stay_a_declared_list():
 
 def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     """A new consumer class must widen the corpus here, not go unmeasured."""
+    # AiOpsMetrics (Epic 150) joins this corpus: it reaches both /internal/ops verdicts through
+    # the injected client. Its readings are control-plane aggregate numbers, bound as bare local
+    # variables inside independent try/catch arms (one unreachable endpoint must not blank the
+    # other) rather than as `Map<String,Object> x = ai.y(...)`, so `_flows()` has no call-site to
+    # follow and this key-reconciliation gate does not grade its field names. That is a real limit
+    # of the reader, not a silent pass: the collector's own seven numeric projections are pinned
+    # by the meter roster gate and by AiOpsMetricsTest against the engine's answer shape, and this
+    # ledger still makes the new consumer visible instead of letting it arrive unmentioned.
     assert sorted(p.name for p in _consumer_files()) == [
-        "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
+        "AiOpsMetrics.java", "ConversationService.java", "CopilotStreamService.java",
+        "FileIngestService.java",
         "GrowthService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
         "RagCacheInvalidator.java", "ResumeService.java", "ScheduledIngestionService.java",
@@ -1073,8 +1082,14 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # walk reads declarations, so both join the receipt records above in being pinned here.
     # 209 with 80's `ContactDtos.RelationCount` (one relation and its count behind it — the chip
     # row's own read). Pure data, on the wire, read by the networking panel; pinned here.
-    assert len(declared) == 209, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 209 measured"
+    # 210 with Epic 150's `AiOpsMetrics.Reading`: the one coherent set of seven Prometheus gauge
+    # values a fixed-delay scrape swaps in as a unit, so a reader never sees half an answer. Like
+    # `RetiredEvidencePurger.Purge` and `UnnamedObjectReclaimer.Reclaim` before it, it reaches no
+    # route — the backend publishes these as Micrometer gauges, not a JSON body — but this walk
+    # reads declarations rather than routes, so the receipt joins the census and its components
+    # must stay plain names the shared opener can read.
+    assert len(declared) == 210, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 210 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
