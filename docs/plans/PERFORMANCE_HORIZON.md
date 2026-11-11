@@ -75,7 +75,7 @@ never refuses a caller who would have been admitted.
 **Do.** Read the three retrieval channels' SQL, run `EXPLAIN (ANALYZE, BUFFERS)` on
 the dev corpus, and add only the indexes a plan actually asks for.
 
-## Epic 122 — the surface is designed
+## Epic 122 — the surface is designed **DONE (verified 2026-11-11)**
 **Shipped so far (2026-11-11, verified offline):**
 - Token layer: `--shadow-halo` / `--shadow-glow`, an ambient body background (two corner
   radials over `--background`), and three utilities (`.glow-halo`, `.card-lift`, `.hairline[-solid]`).
@@ -83,14 +83,16 @@ the dev corpus, and add only the indexes a plan actually asks for.
   + Copilot doorway), drawn from the product's own tokens and labelled as an illustration.
 - Active nav item reads as focused via `glow-halo`; timeline rows use the quieter `hairline` border.
 
-**Still open:** the dashboard hero proper.
-
-**Closed since (2026-11-11):** transitions that explain where a panel came from were already
+**Closed (2026-11-11):** transitions that explain where a panel came from were already
 shipped in the design system (dialog fade+zoom from center, sheet slide-in with origin side,
 tooltip/popover direction-aware origins, all `data-[state]` animate-in/out) -- Epic 122's
 checklist item existed for a surface that already carried the rule; no new code was needed
 beyond the token layer above. Skeleton shapes pinned to the loaded layout: done in Epic 122's
-follow-through and pinned by `loading-skeletons.test.ts` in Epic 124.
+follow-through and pinned by `loading-skeletons.test.ts` in Epic 124. And the dashboard hero
+proper: the greeting band is now a designed front door -- PageHeader's exact contract inside a
+rounded-2xl band with two token-coloured ambient washes, a hairline border and the card shadow
+from the elevation token layer; the Primary CTA carries `glow-halo`. Static gradients, zero
+per-frame cost; dashboard route 254.0 -> 254.3 kB gzip, budget holds.
 
 
 **Do.** A token layer (elevation, motion, type scale, focus), a hero that shows the
@@ -184,6 +186,8 @@ the rate limiter already runs.
   contract test is generalized to cover V36+V37 (renamed
   `test_the_prewarm_script_covers_the_composite_indexes.py`), and now also refuses a
   script that warms an index nothing creates.
+
+**Target-install EXPLAIN is the documented follow-up in docs/plans/TARGET_INSTALL_EXPLAIN.md.**
 
 **Deliberately not shipped:** a `(user_id, created_at DESC)` composite -- grep of the
 Java call sites shows no statement that filters on user_id and orders by created_at on

@@ -5717,7 +5717,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `applications`, `application_letters` — the five reads that back the global search and the board/timeline fold
   and ask for the newest-first order scoped to the caller. Live `EXPLAIN` on this host is not run (no Docker dev
   infra in this environment); the indexes ship as a monotonic Flyway migration, the naming gate stays green, and
-  a target-install verification is the expected follow-up ledger note.)
+  the target-install procedure is docs/plans/TARGET_INSTALL_EXPLAIN.md.)
 
   (Memoisation shipped for `TimelineRow` (timeline, react-memo), `KanbanCard` (board, react-memo) and
   the inbox list (memoised `items`, `rows`, `kindGroups`), so list rendering no longer redoes the per-row
@@ -5733,11 +5733,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 
 - [x] **122** The UI is a designed surface, not a form (frontend, partially shipped 2026-11-11).
 
-  (Shipped: token layer additions (`--shadow-halo`/`--shadow-glow`), an ambient body background,
-  `.glow-halo`/`.card-lift`/`.hairline` utilities; the landing hero now shows a static illustration
-  of the product at work (board + match ring + Copilot doorway, role=img); active nav item uses
-  `glow-halo`; timeline rows read via `hairline`. Still open: panel-origin transitions, per-surface
-  skeleton-shape pinning, dashboard hero.)
+  (Shipped and closed 2026-11-11: token layer additions (`--shadow-halo`/`--shadow-glow`), ambient
+  body background, `.glow-halo`/`.card-lift`/`.hairline` utilities; the landing hero carries a static
+  illustration of the product at work (board + match ring + Copilot doorway, role=img); active nav
+  item uses `glow-halo`; timeline rows read via `hairline`; skeleton-shape pins landed in Epic 124
+  (`loading-skeletons.test.ts`); panel-origin transitions were already in the design system
+  (dialog/sheet/tooltip/popover data-state animations); the dashboard hero is a designed front door
+  (rounded-2xl band, two token washes, hairline border, `glow-halo` on the Copilot CTA; static
+  gradients, dashboard route 254.0 -> 254.3 kB gzip, budget holds).)
 
 - [x] **123** The first page is warm before the request arrives (frontend+backend, verified 2026-11-11).
 
@@ -5765,7 +5768,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   per-row latest-score LATERAL lookups, and `(user_id, job_id, created_at DESC)` for
   the dashboard's DISTINCT ON newest-overall digest. `prewarm-hot.sql` extended; the
   prewarm contract test generalized to V36+V37 (renamed, four cases). Live EXPLAIN not
-  run on this host (no Docker); target-install verification is the documented follow-up.)
+  run on this host (no Docker); the target-install runbook is docs/plans/TARGET_INSTALL_EXPLAIN.md.)
 
 - [x] **127** A route that ships too much Java goes red (frontend/CI, verified 2026-11-11).
 

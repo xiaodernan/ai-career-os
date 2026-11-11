@@ -123,33 +123,57 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title={
-          <>
-            {greeting},{" "}
-            <span className="italic text-primary">
-              {user?.displayName?.split(" ")[0] ?? "welcome"}
-            </span>
-          </>
-        }
-        description={t("dashboard.description")}
-        actions={
-          <>
-            <Button variant="ai" asChild>
-              <Link href="/copilot">
-                <Sparkles aria-hidden />
-                {t("dashboard.askCopilot")}
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/applications">
-                {t("dashboard.openPipeline")}
-                <ArrowRight aria-hidden />
-              </Link>
-            </Button>
-          </>
-        }
-      />
+      {/* The dashboard's front door (Epic 122): PageHeader's exact contract inside a designed
+          band -- two token-coloured ambient washes, a hairline border and the card shadow the
+          elevation token layer defines -- so the first screen reads as a designed surface, not
+          a form. The washes are static gradients, not animations: zero per-frame cost. */}
+      <section className="relative overflow-hidden rounded-2xl border hairline bg-card/60 shadow-card">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 16%, transparent), transparent)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-28 -left-24 h-64 w-64 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 9%, transparent), transparent)",
+          }}
+        />
+        <div className="relative px-6 py-6">
+          <PageHeader
+            title={
+              <>
+                {greeting},{" "}
+                <span className="italic text-primary">
+                  {user?.displayName?.split(" ")[0] ?? "welcome"}
+                </span>
+              </>
+            }
+            description={t("dashboard.description")}
+            actions={
+              <>
+                <Button variant="ai" className="glow-halo" asChild>
+                  <Link href="/copilot">
+                    <Sparkles aria-hidden />
+                    {t("dashboard.askCopilot")}
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/applications">
+                    {t("dashboard.openPipeline")}
+                    <ArrowRight aria-hidden />
+                  </Link>
+                </Button>
+              </>
+            }
+          />
+        </div>
+      </section>
 
       {/* Adaptive onboarding when the workspace holds nothing yet */}
       {workspaceEmpty ? (
