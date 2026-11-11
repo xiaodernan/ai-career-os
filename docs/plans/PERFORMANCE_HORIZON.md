@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–126
+# Performance horizon — Epics 118–127
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -23,6 +23,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 124 | Every claim above is pinned by a gate that fails when it stops being true | gate suite |
 | 125 | The dashboard is served from a shared cache, not rebuilt per open | DashboardCacheTest |
 | 126 | The matches digest reads in index order | Flyway + explain gate |
+| 127 | A route that ships too much Java goes red | `npm run budget` |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -174,3 +175,23 @@ the rate limiter already runs.
 Java call sites shows no statement that filters on user_id and orders by created_at on
 job_matches, so it would be a speculative index. Live target-install EXPLAIN remains
 the follow-up ledger note, as with V36.
+## Epic 127 — a route that ships too much Java goes red **DONE (verified 2026-11-11)**
+
+**Measured.** `next build` prints the per-route "First Load JS" table, but nothing made a
+contributor read it: the build was green either way. On this host the heaviest route
+(/applications) ships ~302 kB gzip; every app route sits between 189 kB and 302 kB; the
+shared base is ~103 kB.
+
+**Shipped (2026-11-11, verified offline):**
+- `frontend/scripts/bundle-budget.mjs` -- recomputes each page route's first-load weight
+  from `.next/app-build-manifest.json` the way the table does (unique chunks per route,
+  gzip-compressed), prints the table, and exits 1 when any route exceeds **340 kB gzip**.
+- `npm run budget` (= `npm run build && node scripts/bundle-budget.mjs`); README Tests
+  section documents it.
+- CI: a dedicated `budget` job (its own runner, so the fast vitest+tsc job stays fast),
+  wired into `offline-gate` so a route over budget blocks the merge.
+- The budget is named with its headroom on purpose: raise it only with a reason in the
+  commit; tighten it as routes shrink.
+
+**Deliberately not done:** chunk-level attribution (which dependency grew the route) --
+`next build --debug` or the analyzer plugin is the follow-up when a route breaches.

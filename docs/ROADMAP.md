@@ -5766,6 +5766,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   prewarm contract test generalized to V36+V37 (renamed, four cases). Live EXPLAIN not
   run on this host (no Docker); target-install verification is the documented follow-up.)
 
+- [x] **127** A route that ships too much Java goes red (frontend/CI, verified 2026-11-11).
+
+  (`frontend/scripts/bundle-budget.mjs` recomputes each page route's gzipped first-load
+  weight from `app-build-manifest.json` and fails over 340 kB; heaviest route on this host is
+  /applications at ~302 kB. `npm run budget` runs the production build first; CI gained a
+  dedicated `budget` job wired into `offline-gate`. Local build verified (33 routes,
+  exit 0); the Google Fonts fetch is the one network dependency of that job, and CI has it.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

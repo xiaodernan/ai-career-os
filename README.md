@@ -93,6 +93,7 @@ database is never touched.
 
 ```bash
 cd frontend    && npm test                     # vitest: normalizers, formatters, SSE, nav, i18n, pipeline taxonomy
+cd frontend    && npm run budget               # production build + per-route bundle budget (Epic 127)
 cd ai-service  && .venv/Scripts/python -m pytest # unit + orchestrator + contract gates (offline: mock/hash)
 cd backend     && mvn test                     # unit tests offline; *IT also need the infra below
 cd backend     && mvn test -Dtest='*Test'      # skip the *IT suite when Docker is not running

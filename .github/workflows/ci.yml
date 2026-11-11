@@ -8,7 +8,9 @@
 #   These need no Docker
 #   and no external API keys — ai-service runs with LLM_PROVIDER=mock /
 #   EMBEDDING_PROVIDER=hash, the backend runs unit tests (*Test, not *IT), and
-#   the frontend runs vitest + tsc. This is the fast gate a contributor waits on.
+#   the frontend runs vitest + tsc, and the `budget` job runs the production
+#   build and enforces the bundle budget (Epic 127). This is the fast gate a
+#   contributor waits on.
 # - On a nightly schedule (and manual dispatch): the Docker-backed run. It boots
 #   postgres/redis/minio, runs the backend integration tests (*IT) and BOTH eval
 #   harnesses (RAG + agent) against the seeded corpus. Everything here uses the
@@ -150,9 +152,26 @@ jobs:
             tests/test_the_compose_files_parse.py \
             tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
 
+  budget:
+    name: frontend (bundle budget)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Build and check the budget
+        run: npm run budget
+
   offline-gate:
     name: offline suites green
-    needs: [ai-service, frontend, backend, springcloud]
+    needs: [ai-service, frontend, backend, springcloud, budget]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -161,8 +180,9 @@ jobs:
           if [ "${{ needs.ai-service.result }}" != "success" ] || \
              [ "${{ needs.frontend.result }}" != "success" ] || \
              [ "${{ needs.backend.result }}" != "success" ] || \
-             [ "${{ needs.springcloud.result }}" != "success" ]; then
-            echo "One or more offline suites failed (incl. Spring Cloud contract gates)."; exit 1
+             [ "${{ needs.springcloud.result }}" != "success" ] || \
+             [ "${{ needs.budget.result }}" != "success" ]; then
+            echo "One or more offline suites failed (incl. Spring Cloud contract gates and the bundle budget)."; exit 1
           fi
 
   # --------------------------------------------------------------------------- #
