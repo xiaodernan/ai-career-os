@@ -322,8 +322,9 @@ residual risk rather than as a clean bill of health.
    fail-open policy exists to keep served.
 
    `spring.data.redis.timeout` and `connect-timeout` are now **500ms** (overridable via
-   `REDIS_TIMEOUT` / `REDIS_CONNECT_TIMEOUT`). Redis backs only the rate limiter and the
-   health ping, so failing fast costs nothing else. Re-measured with Redis stopped:
+   `REDIS_TIMEOUT` / `REDIS_CONNECT_TIMEOUT`). Redis backs the rate limiter, the health
+   ping and, when enabled, the dashboard read-through cache — none of which may stall
+   a request, so failing fast costs nothing else. Re-measured with Redis stopped:
    `/api/v1/health` answers `200 {"status":"degraded","redis":false}` in **0.51s** and
    `/api/v1/auth/login` answers `401` in **1.20s** — which is what "fails open" was
    always meant to mean. Restoring Redis returns `ok`/`redis:true` with no restart.

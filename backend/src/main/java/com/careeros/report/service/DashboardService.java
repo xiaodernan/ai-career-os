@@ -52,11 +52,12 @@ public class DashboardService {
     private final AgentRunRepository runs;
     private final DashboardRepository dashboard;
     private final AiServiceClient aiService;
+    private final DashboardCache cache;
 
     public DashboardService(ApplicationRepository applications, ApplicationEventRepository appEvents,
                             InterviewSessionRepository interviews, ResumeService resumes, JobRepository jobs,
                             JobMatchRepository matches, AgentRunRepository runs, DashboardRepository dashboard,
-                            AiServiceClient aiService) {
+                            AiServiceClient aiService, DashboardCache cache) {
         this.applications = applications;
         this.appEvents = appEvents;
         this.interviews = interviews;
@@ -66,10 +67,27 @@ public class DashboardService {
         this.runs = runs;
         this.dashboard = dashboard;
         this.aiService = aiService;
+        this.cache = cache;
+    }
+
+    /**
+     * The cached read of the dashboard (Epic 125): a hit answers from the cache; the
+     * miss builds (below), stores, and answers. Sits outside the transaction on
+     * purpose -- the cache is not the database's concern, and a TTL'd stale read is a
+     * documented trade, never a correctness one.
+     */
+    public DashboardResponse build(UUID userId) {
+        var cached = cache.get(userId);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+        DashboardResponse built = buildUncached(userId);
+        cache.put(userId, built);
+        return built;
     }
 
     @Transactional(readOnly = true)
-    public DashboardResponse build(UUID userId) {
+    DashboardResponse buildUncached(UUID userId) {
         return new DashboardResponse(
                 kanban(userId),
                 interviews.countByUserId(userId),

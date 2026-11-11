@@ -16,11 +16,14 @@ import com.careeros.report.dto.DashboardDtos.DashboardResponse;
 import com.careeros.report.dto.DashboardDtos.Kanban;
 import com.careeros.report.repository.DashboardRepository;
 import com.careeros.resume.service.ResumeService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * Kanban aggregation in {@link DashboardService#build}: the response must always carry a column
@@ -40,6 +43,9 @@ class DashboardServiceKanbanTest {
 
     @BeforeEach
     void setUp() {
+        // Cache stays "off": these tests pin the aggregation, and off is passthrough.
+        DashboardCache cache = new DashboardCache(mock(StringRedisTemplate.class),
+                new SimpleMeterRegistry(), new ObjectMapper().findAndRegisterModules(), "off", 45);
         applications = mock(ApplicationRepository.class);
         service = new DashboardService(applications,
                 mock(ApplicationEventRepository.class),
@@ -49,7 +55,8 @@ class DashboardServiceKanbanTest {
                 mock(JobMatchRepository.class),
                 mock(AgentRunRepository.class),
                 mock(DashboardRepository.class),
-                mock(AiServiceClient.class));
+                mock(AiServiceClient.class),
+                cache);
     }
 
     private Kanban kanbanFor(List<Object[]> rows) {

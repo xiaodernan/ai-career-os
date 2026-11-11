@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–124
+# Performance horizon — Epics 118–125
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -21,6 +21,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 122 | The UI is a designed surface, not a form | screenshots + vitest |
 | 123 | The first page is warm before the request arrives | vitest + prewarm gate |
 | 124 | Every claim above is pinned by a gate that fails when it stops being true | gate suite |
+| 125 | The dashboard is served from a shared cache, not rebuilt per open | DashboardCacheTest |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -124,3 +125,31 @@ script and V36 cannot drift), `test_the_performance_horizon_marks_done_honestly.
 frontend `warm-prefetch.test.ts`. Both Python gates run in `scripts/verify_gates.{sh,ps1}`.
 Remaining: a gate that the horizon's table stays in sync with the sections, and the
 per-surface skeleton-shape pins from Epic 122.
+## Epic 125 — the dashboard is served from a shared cache, not rebuilt per open **DONE (verified 2026-11-11)**
+
+**Measured.** Every app open hit `GET /api/v1/reports/dashboard`, which was rebuilt from the
+ground truth on every call. The query shape is already single-query-per-aggregate, but the
+call is on the critical path of every page and is read-mostly.
+
+**Shipped (2026-11-11, verified offline):**
+- `DashboardCache` (backend, `report/service`): three backends selected by the
+  `careeros.dashboard.cache` property -- `off` (default, byte-for-byte passthrough),
+  `caffeine` (process-local, bounded at 256 entries), `redis` (shared across replicas over
+  the same `StringRedisTemplate` the sliding-window rate limiter uses).
+- TTL-only invalidation (45s): no coherence protocol, no write-path hooks. A reader who
+  just wrote waits at most one TTL for the strip to agree -- the same trade the service
+  already documents for the rest of the loop.
+- Fail-open everywhere, the limiter's posture: a Redis outage is a miss plus a warn log,
+  never a failed dashboard. A payload that fails to round-trip is evicted, not pinned.
+- Keyed `careeros:v1:dashboard:<uuid>`; the prefix is versioned. Counters
+  `careeros.dashboard.cache{backend,outcome}` on the Prometheus scrape.
+- Prod compose maps `DASHBOARD_CACHE` onto the env the config resolves
+  (`CAREEROS_DASHBOARD_CACHE`), defaulting to off; `.env.prod.example` documents it.
+  Actuator redis health stays disabled, so liveness cannot flip on a cache outage.
+
+**Verification (offline, 2026-11-11):** `DashboardCacheTest` 6/6 (off passthrough, caffeine
+round-trip, TTL expiry, poisoned-entry eviction, Redis-outage fail-open, hit/miss counters);
+`DashboardServiceMetricsTest` + `DashboardServiceKanbanTest` updated for the new constructor
+and green; `mvn -B test -Dtest='*Test'` exits 0 (the CI unit command). Live Redis round-trip
+is not claimed on this host (no Docker here); the Redis path is the same connection shape
+the rate limiter already runs.

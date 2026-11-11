@@ -7,12 +7,14 @@ dependencies (PostgreSQL + pgvector, Redis, MinIO). For the Spring Cloud microse
 architecture (Eureka/Gateway/Config, resilience, tracing/observability) see
 [MICROSERVICES.md](MICROSERVICES.md).
 
-Redis is small but not optional: it backs only the rate limiter and the backend's
-health ping. The client timeout is pinned to 500ms (`REDIS_TIMEOUT` /
-`REDIS_CONNECT_TIMEOUT`) so an outage *degrades* the service — `/api/v1/health`
-returns `{"status":"degraded","redis":false}` in about half a second — rather than
-stalling every request on a client timeout. Raising those values trades that
-degradation back for an outage that looks like a hang. See `docs/SECURITY.md` §3.
+Redis is small but not optional: it backs the rate limiter, the backend's health
+ping and, when `CAREEROS_DASHBOARD_CACHE=redis` (or the prod compose's mapped
+`DASHBOARD_CACHE`) is set, the dashboard read-through cache. The client timeout is
+pinned to 500ms (`REDIS_TIMEOUT` / `REDIS_CONNECT_TIMEOUT`) so an outage *degrades*
+the service — `/api/v1/health` returns `{"status":"degraded","redis":false}` in about
+half a second — rather than stalling every request on a client timeout. Raising those
+values trades that degradation back for an outage that looks like a hang. See
+`docs/SECURITY.md` §3.
 
 ## Production Deployment
 
@@ -425,6 +427,7 @@ which reading answers the operator's question instead of an alarm.
 | `careeros_ai_tokens_24h` | — | The dollar figure this gauge decomposes is the alarmed half. A raw token count has no threshold of its own, because a busy day inside the budget is not a fault. |
 | `careeros_digest_delivery_total` | `CareerOSDigestDeliveryFailing` | One reading per weekly-letter attempt, tagged `sent` or `refused`; the first refusal inside six hours fires, because the relay is the fault an operator has to fix rather than one the retry clock can outlast. |
 | `careeros_circuitbreaker_open` | `CareerOSCircuitBreakerOpen` | One untagged gauge: 1 while any Resilience4j breaker in the ai-service bridge is open, 0 otherwise. The exhausted queue is the only shape of an engine-door refusal that does not look like a bad request; alarming on it is the bridge telling the operator the door is gone, not the client. |
+| `careeros_dashboard_cache_total` | — | One reading per dashboard read, tagged `backend` (off/caffeine/redis) and `outcome` (hit/miss/off). A cache outage is a passthrough plus a WARN line by design, so any threshold would page on a shape that is not a fault; the family is exported for dashboards until a hit-rate baseline exists against a real workload. |
 | `careeros_gateway_ratelimit_refused_total` | `CareerOSGatewayRateLimited` | The edge token bucket's own refusal counter (registered by the gateway's `GatewayRateLimitFilter`, no caller tag by design — per-caller series is the cardinality accident). One refusal is noise, so the rule fires on continuity: a refusal rate above zero sustained five minutes, which is a flood and not a blip. |
 | `careeros_gateway_ratelimit_fallback_total` | — | The edge bucket's fallback counter — one reading whenever a refusal decision was taken from the local in-memory fallback store because Redis did not answer in time. Not alarmed on purpose: a fallback bucket is refusal-shaped, not error-shaped, and Redis' unavailability is already reported by the gateway's own health probe. The dashboard shows the fallback rate against the refusal rate to separate "quiet box" from "box that can no longer reach Redis". |
 | `careeros_digest_last_delivered_timestamp` | — | Moved only by an accepted letter, so a week with no applications leaves it flat and that is healthy. `CareerOSDigestSweepStale` watches the compose clock; the delivery rule watches the relay. |

@@ -36,11 +36,12 @@ spring:
   data:
     redis:
       url: ${REDIS_URL:redis://localhost:6379/0}
-      # Redis backs exactly two things: the sliding-window rate limiter and the health
-      # ping. Nothing else depends on it, so failing fast is strictly better than
-      # waiting -- the limiter's documented fail-open path then serves the request
-      # instead of stalling on it. Unset, Lettuce's defaults applied and a Redis outage
-      # left every endpoint (including /health) unable to answer within 40s.
+      # Redis backs the sliding-window rate limiter, the health ping and (when
+      # DASHBOARD_CACHE=redis) the dashboard read-through cache. The backend is
+      # fail-open without it, so failing fast is strictly better than waiting --
+      # the limiter's documented fail-open path then serves the request instead of
+      # stalling on it. Unset, Lettuce's defaults applied and a Redis outage left
+      # every endpoint (including /health) unable to answer within 40s.
       timeout: ${REDIS_TIMEOUT:500ms}
       connect-timeout: ${REDIS_CONNECT_TIMEOUT:500ms}
   servlet:
@@ -190,6 +191,18 @@ app:
     expired-token-days: ${RETENTION_EXPIRED_TOKEN_DAYS:30}
     retired-document-days: ${RETENTION_RETIRED_DOCUMENT_DAYS:180}
     unnamed-object-days: ${RETENTION_UNNAMED_OBJECT_DAYS:7}
+
+# Epic 125 -- the dashboard's read-through cache. off = passthrough (the default, byte
+# for byte the pre-cache behaviour), caffeine = process-local, redis = shared across
+# replicas over the same connection the rate limiter uses. TTL is the only invalidation:
+# a reader who just wrote waits at most one TTL for the strip to agree. Enable with the
+# env var CAREEROS_DASHBOARD_CACHE=redis (TTL is fixed at 45s); the prod compose maps
+# DASHBOARD_CACHE onto it. Actuator's redis health stays disabled -- liveness must not
+# flip on a cache outage.
+careeros:
+  dashboard:
+    cache: off
+    cache-ttl-seconds: 45
 
 eureka:
   client:

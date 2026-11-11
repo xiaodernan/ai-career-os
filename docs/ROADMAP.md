@@ -5748,6 +5748,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   Connection keep-alive needs no app code (edge/browser's job). Live prewarm on a target
   install is the documented operator step (docs/DEPLOYMENT.md); not run here, no Docker.)
 
+- [x] **125** The dashboard is served from a shared cache, not rebuilt per open (backend, verified 2026-11-11).
+
+  (`DashboardCache`: `off` (default, passthrough) | `caffeine` (bounded 256) | `redis`
+  (shared across replicas, same connection as the sliding-window limiter), selected by
+  `careeros.dashboard.cache`. TTL-only invalidation (45s), fail-open everywhere, poisoned
+  entries evicted; `careeros:v1:dashboard:<uuid>` keys; Prometheus counters
+  `careeros.dashboard.cache`. Prod compose maps `DASHBOARD_CACHE` onto the resolved env
+  (default off);Actuator redis health stays disabled. DashboardCacheTest 6/6;
+  backend unit suite (`*Test`) green; live-Redis round-trip not run here (no Docker).)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

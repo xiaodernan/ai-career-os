@@ -16,11 +16,14 @@ import com.careeros.report.dto.DashboardDtos.AttentionItem;
 import com.careeros.report.dto.DashboardDtos.DashboardResponse;
 import com.careeros.report.repository.DashboardRepository;
 import com.careeros.resume.service.ResumeService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * The two stat-strip aggregates in {@link DashboardService#build}: the response must carry them
@@ -40,6 +43,9 @@ class DashboardServiceMetricsTest {
     @BeforeEach
     void setUp() {
         dashboard = mock(DashboardRepository.class);
+        // Cache stays "off": these tests pin the aggregation, and off is passthrough.
+        DashboardCache cache = new DashboardCache(mock(StringRedisTemplate.class),
+                new SimpleMeterRegistry(), new ObjectMapper().findAndRegisterModules(), "off", 45);
         service = new DashboardService(mock(ApplicationRepository.class),
                 mock(ApplicationEventRepository.class),
                 mock(InterviewSessionRepository.class),
@@ -48,7 +54,8 @@ class DashboardServiceMetricsTest {
                 mock(JobMatchRepository.class),
                 mock(AgentRunRepository.class),
                 dashboard,
-                mock(AiServiceClient.class));
+                mock(AiServiceClient.class),
+                cache);
     }
 
     @Test
