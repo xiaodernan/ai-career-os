@@ -144,7 +144,7 @@ call is on the critical path of every page and is read-mostly.
 - Keyed `careeros:v1:dashboard:<uuid>`; the prefix is versioned. Counters
   `careeros.dashboard.cache{backend,outcome}` on the Prometheus scrape.
 - Prod compose maps `DASHBOARD_CACHE` onto the env the config resolves
-  (`CAREEROS_DASHBOARD_CACHE`), defaulting to off; `.env.prod.example` documents it.
+  (`CAREEROS_DASHBOARD_CACHE`), defaulting to off; the compose comment documents it (the `.env.prod.example` addition is blocked by the secret-shaped-file hook).
   Actuator redis health stays disabled, so liveness cannot flip on a cache outage.
 
 **Verification (offline, 2026-11-11):** `DashboardCacheTest` 6/6 (off passthrough, caffeine

@@ -5755,7 +5755,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `careeros.dashboard.cache`. TTL-only invalidation (45s), fail-open everywhere, poisoned
   entries evicted; `careeros:v1:dashboard:<uuid>` keys; Prometheus counters
   `careeros.dashboard.cache`. Prod compose maps `DASHBOARD_CACHE` onto the resolved env
-  (default off);Actuator redis health stays disabled. DashboardCacheTest 6/6;
+  (default off); Actuator redis health stays disabled. DashboardCacheTest 6/6;
   backend unit suite (`*Test`) green; live-Redis round-trip not run here (no Docker).)
 
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
