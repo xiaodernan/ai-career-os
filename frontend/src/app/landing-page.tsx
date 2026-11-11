@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { ProductPreview } from "@/components/marketing/product-preview";
 
 /**
  * The marketing landing page (18.2): a public-facing page that introduces
@@ -93,96 +94,9 @@ export function LandingPage() {
           </div>
 
         </div>
-        {/* A static illustration of the product at work -- drawn with the product's own
-            tokens, labelled as an illustration rather than faked as a screenshot. It exists
-            so the front door shows the system instead of only claiming it. */}
-          <figure
-            role="img"
-            aria-label={t("landing.preview.label")}
-            className="animate-fade-up mx-auto mt-14 max-w-4xl text-left"
-          >
-            <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-pop">
-              {/* window chrome */}
-              <div
-                className="flex items-center gap-1.5 border-b border-border/60 bg-muted/40 px-4 py-2.5"
-                aria-hidden
-              >
-                <span className="size-2.5 rounded-full bg-red-400/70" />
-                <span className="size-2.5 rounded-full bg-amber-400/70" />
-                <span className="size-2.5 rounded-full bg-emerald-400/70" />
-                <span className="ml-2 text-2xs tabular-nums text-muted-foreground">
-                  careeros.app/applications
-                </span>
-              </div>
-              <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_11rem] sm:p-5">
-                {/* the board, at a glance */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3" aria-hidden>
-                  {[
-                    { label: t("landing.preview.applied"), count: 3, cards: 2 },
-                    { label: t("landing.preview.interview"), count: 2, cards: 2 },
-                    { label: t("landing.preview.offer"), count: 1, cards: 1 },
-                  ].map((col) => (
-                    <div
-                      key={col.label}
-                      className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/30 p-2 sm:p-2.5"
-                    >
-                      <div className="flex items-center justify-between px-0.5 text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        <span className="truncate">{col.label}</span>
-                        <span className="tabular-nums">{col.count}</span>
-                      </div>
-                      {Array.from({ length: col.cards }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="space-y-1.5 rounded-lg border border-border/60 bg-background/80 p-2"
-                        >
-                          <div className="h-2 w-4/5 rounded bg-muted-foreground/25" />
-                          <div className="h-2 w-3/5 rounded bg-muted-foreground/20" />
-                          <div className="mt-1 flex items-center gap-1 pt-0.5">
-                            <div className="h-4 w-10 rounded-full bg-primary/15" />
-                            <div className="h-2 w-6 rounded bg-muted-foreground/15" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-                {/* the match panel, at a glance */}
-                <div
-                  className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border/60 bg-muted/30 p-4"
-                  aria-hidden
-                >
-                  <div
-                    className="flex size-20 items-center justify-center rounded-full"
-                    style={{
-                      background:
-                        "conic-gradient(var(--primary) 0 331deg, color-mix(in oklch, var(--primary) 14%, transparent) 331deg 360deg)",
-                    }}
-                  >
-                    <div className="flex size-16 flex-col items-center justify-center rounded-full bg-card">
-                      <span className="text-lg font-semibold tabular-nums leading-none">92</span>
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {t("landing.preview.match")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full space-y-1.5">
-                    <div className="h-1.5 w-full rounded bg-muted-foreground/20" />
-                    <div className="h-1.5 w-4/5 rounded bg-muted-foreground/20" />
-                    <div className="h-1.5 w-3/5 rounded bg-muted-foreground/20" />
-                  </div>
-                </div>
-              </div>
-              {/* the copilot's doorway */}
-              <div
-                className="flex items-center gap-2 border-t border-border/60 bg-background/60 px-4 py-3 text-sm text-muted-foreground"
-                aria-hidden
-              >
-                <Sparkles className="size-4 shrink-0 text-primary" />
-                <span className="truncate">{t("landing.preview.copilot")}</span>
-                <ArrowRight className="ml-auto size-4 shrink-0" />
-              </div>
-            </div>
-          </figure>
+        {/* A static illustration of the product at work -- the front door
+            shows the system instead of only claiming it. */}
+        <ProductPreview className="mx-auto mt-14 max-w-4xl" />
       </section>
 
       {/* Features */}

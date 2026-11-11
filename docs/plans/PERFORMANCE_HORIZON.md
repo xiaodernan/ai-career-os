@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–129
+# Performance horizon — Epics 118–130
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -26,6 +26,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 127 | A route that ships too much Java goes red | `npm run budget` |
 | 128 | A request carries its own deadline | gateway/backend/ai-service tests |
 | 129 | The applications board ships when it is needed | bundle budget |
+| 130 | The auth door sells the same product the landing does | vitest + budget |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -264,3 +265,24 @@ honest fallback; the kanban's rendering is pinned unchanged by `kanban.test.tsx`
 **Verification (offline, 2026-11-11):** `npm run build` exits 0; `node scripts/bundle-budget.mjs`
 prints /applications at 286.8 kB gzip (was 302.4); applications page suite 6/6 (updated
 fallback assertions); full frontend vitest 1186/1186; `tsc --noEmit` clean.
+## Epic 130 — the auth door sells the same product the landing does **DONE (verified 2026-11-11)**
+
+**Measured.** Both anonymous surfaces had a claim about the product but only one of
+them showed it: the landing hero carried the static product illustration, while the
+auth panel — the page a visitor reaches right before signing in — argued with pillars
+and a quote only. The illustration markup was duplicated figure code inside
+`landing-page.tsx`, so reusing it by copy would fork the design.
+
+**Shipped (2026-11-11, verified offline):**
+- `components/marketing/product-preview.tsx` -- the front-door illustration as one
+  shared element (role=img, one honest aria-label, every inner node aria-hidden,
+  match panel hidden below `sm` so the auth panel degrades to board + copilot).
+- The landing hero renders it via `<ProductPreview />` (six `landing.preview.*` keys
+  moved with it; the landing copy gate passes on the remaining keys).
+- The auth panel renders it between the pillars and the quote -- the visitor reads
+  what the product is before the form asks who they are.
+- `product-preview.test.tsx` pins the contract: labelled image, no raw-key label,
+  the 92 is legible in the illustration. Copy census 163 -> 164 (annotated).
+
+**Verification (offline, 2026-11-11):** full frontend vitest 1193/1193; production
+build exit 0; bundle budget OK; landing copy gate green; `tsc --noEmit` clean.

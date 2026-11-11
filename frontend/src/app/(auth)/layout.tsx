@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { ProductPreview } from "@/components/marketing/product-preview";
 
 /**
  * The four pillars the auth pages sell the product with.
@@ -63,6 +64,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               </li>
             ))}
           </ul>
+
+          {/* The front door shows the product, not just the pitch (Epic 130): the same
+              illustration the landing hero carries. */}
+          <ProductPreview className="max-w-md pt-2" />
         </div>
 
         <p className="relative text-xs text-muted-foreground">

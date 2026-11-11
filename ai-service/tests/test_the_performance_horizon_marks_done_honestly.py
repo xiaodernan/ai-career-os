@@ -23,7 +23,7 @@ HORIZON = ROOT / "docs" / "plans" / "PERFORMANCE_HORIZON.md"
 ROADMAP = ROOT / "docs" / "ROADMAP.md"
 
 SECTION = re.compile(r"^## Epic (\d+)[^\n]*$", re.M)
-HORIZON_EPICS = range(118, 130)  # the horizon covers 118..129
+HORIZON_EPICS = range(118, 131)  # the horizon covers 118..130
 
 
 def _sections():

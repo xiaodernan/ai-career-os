@@ -5799,6 +5799,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `LoadingKanbanSkeleton` fallback; applications route 302 -> 287 kB gzip; applications suite 6/6;
   full frontend 1186/1186; `budget` CI job unchanged and green.)
 
+- [x] **130** The auth door sells the same product the landing does (frontend, verified 2026-11-11).
+
+  (The landing hero's static product illustration extracted to `components/marketing/
+  product-preview.tsx` and rendered on both anonymous surfaces: landing hero and the auth
+  marketing panel (between the pillars and the quote). One source, no fork; `role="img"` with
+  an honest label; match panel hidden below sm. Product-preview test pins the contract;
+  copy census 163 -> 164 (annotated); full vitest 1193/1193; build exit 0; budget OK.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map
