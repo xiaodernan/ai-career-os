@@ -19,6 +19,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 134 | A rerank that costs no model call is available and honest | `RERANK_MODE=bm25`, mode census, 10 offline rerank tests |
 | 135 | (next) The lexical channel can be scored in-process without pg_trgm when the corpus is small | to be measured |
 | 136 | N embed replicas do a job once, and a crashed worker's job comes back | `WorkQueue` consumer-group semantics (fake + real Redis), 22 offline tests |
+| 137 | The auth door carries the landing's design language, without its light-panel pitfalls | `layout.test.ts` source contract, copy census, build + bundle budget |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -197,3 +198,44 @@ permanently. The duplicate-producer scan is at-least-once by design (no dedup in
 multi-process Redis deployment on this host); the one-writer-per-job and
 crash-reclaim properties are pinned by tests and the real-Redis script, not by a
 fleet run. `verify_gates.sh`/`.ps1` gained all three new algorithm/queue gates.
+
+## Epic 137 — the auth door carries the landing's design language **DONE (verified 2026-11-11)**
+
+**Observed.** The landing hero was elevated to a designed surface (aurora, glass,
+gradient text, scroll reveal — the motion system from the previous horizon), but the
+**auth layout**, the first surface an anonymous visitor reaches, still showed a flat
+static radial wash and plain brand text. Epic 130 made it *sell the product* (the
+shared `ProductPreview`); it did not make it *feel* like the landing it precedes.
+This epic closes that gap additively, without touching form logic or copy.
+
+**The light-panel decision (why NOT to copy the landing wholesale).** The landing
+hero can carry `AuroraBackground`, whose blobs use `mix-blend-mode: screen` — that
+blends beautifully over a dark/hero field but **washes out on the auth panel's light
+`bg-sidebar`** (`oklch(0.985 …)`). Copy-pasting the aurora would have been the
+mechanically "consistent" move and the visually wrong one. So the auth door gets a
+gradient accent (the `OS` brand word via `GradientText`), a shimmer rule, a glass
+surface under the product preview, and a CSS-only staggered entrance instead. A
+source-contract test **pins the rejection** (`not.toContain("AuroraBackground")`
+and the `mix-blend-mode: screen` reason in globals.css), so a future copy-paste has
+to make the case explicitly rather than quietly degrading the panel.
+
+**Do (all additive, no new i18n keys, no form changes).** `app/(auth)/layout.tsx`:
+`GradientText` on the brand accent; a decorative `shimmer-rule` above the eyebrow;
+each of the four translated pillars and the glass-wrapped `ProductPreview` get
+`animate-fade-up` with an inline `animationDelay` (120/210/300/390/480 ms) for a
+cascade; content sits at `relative z-10` over the retained static radial. The
+entrance is **CSS-only** (`animation-fill-mode: both` from the existing token) —
+deliberately not the JS `Reveal`/IntersectionObserver — so the marketing copy is in
+the first paint and never depends on JS or an observer to become visible. The
+`prefers-reduced-motion` global rule already disables `.gradient-text`,
+`.shimmer-rule` and all animations, so the reader's preference stays authoritative.
+The form `children` and its original `animate-fade-up` are untouched.
+
+**Verified (offline, 2026-11-11).** `app/(auth)/layout.test.ts` 5/5 source contract
+(gradient accent, glass preview, CSS-delay stagger with no IntersectionObserver,
+reduced-motion safety net, no screen-blended aurora, and all translated keys +
+pillars + form still present); `tsc --noEmit` clean; copy-census 20/20 (no new or
+hardcoded copy); `product-preview.test.tsx` 2/2; full frontend vitest green;
+production `next build` + `bundle-budget.mjs` (auth/login route stays under the
+340 kB gzip budget — the aurora-free choice also keeps this route's JS unchanged,
+since all new motion is existing CSS/utilities and no new client JS was added).
