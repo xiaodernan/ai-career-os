@@ -44,9 +44,21 @@ public class BackendHealthIndicator implements ReactiveHealthIndicator {
                 .retrieve()
                 .bodyToMono(Map.class)
                 .timeout(Duration.ofSeconds(2))
-                .map(body -> Health.up()
-                        .withDetail("backendStatus", body.get("status"))
-                        .build())
+                .map(body -> {
+                    // The backend answers with the shared envelope
+                    // {"success","data":{"status":...},"error"}: the health line lives under
+                    // `data`, not at the top level. A top-level read returns null, and a
+                    // null detail from withDetail throws IllegalArgumentException and pins
+                    // this indicator (and the edge's probe) DOWN forever — the envelope
+                    // changed shape in 1.x and this probe never noticed.
+                    Object status = null;
+                    if (body != null && body.get("data") instanceof Map<?, ?> data) {
+                        status = data.get("status");
+                    }
+                    return Health.up()
+                            .withDetail("backendStatus", status == null ? "no-status-in-envelope" : status)
+                            .build();
+                })
                 .onErrorResume(error -> Mono.just(Health.down(error).build()));
     }
 }

@@ -48,6 +48,35 @@ Stateful dependencies (PostgreSQL+pgvector, Redis, MinIO) remain shared infrastr
 as defined in `docker-compose.yml` / `docker-compose.prod.yml`.
 A `deploy/k8s/base` Kustomize bundle mirrors the same topology for Kubernetes (namespace, ConfigMap, optional Secret with placeholders only, PersistentVolumeClaims, PDBs for the HTTP-facing deployments); a gate `test_the_k8s_manifests_define_a_working_fleet.py` pins its invariants, and `deploy/k8s/overlays/prod` raises replicas for the three public-facing deployments (Epic 109).
 
+## 1.5 The edge's own health story, as it actually broke (2026-11-12)
+
+The edge container sat `unhealthy` for weeks across rebuilds. The failure chain was
+three intertwined defects, in dependency order:
+
+1. **The route could never resolve `lb://backend` in the dev stack.** The `eureka` profile
+   (forced in compose) emptied the simple instance list by design, and the registry held
+   the backend under `CAREER-OS-BACKEND` with `vipAddress=career-os-backend` -- spring-cloud's
+   eureka resolver matches on VIP, so `initial instances count` was 1 (the gateway itself),
+   and the load balancer found nothing for `backend`. Every call fell into the
+   `backend-unavailable` fallback, the breaker opened, and the probe (below) read DOWN.
+   Fix: the dev edge now uses the default single-node mode (`GATEWAY_BACKEND_URI=http://backend:8080`),
+   and the backend registers under the service id the edge asks for (`appname` +
+   `virtual-host-name` = `backend`) so the opt-in registry path resolves too.
+2. **The edge's `BackendHealthIndicator` pinned `DOWN` on a parse bug.** It read
+   `body.get("status")` from `/api/v1/health`, but the API wraps everything in the shared
+   envelope (`{"success","data":{"status":...},"error"}`); the top-level read returned
+   `null`, `withDetail("backendStatus", null)` threw `IllegalArgumentException: 'value' must
+   not be null`, and the indicator (and the docker probe) read DOWN while the edge was able
+   to serve. Fix: the indicator unwraps `data.status`. Its test stubbed the OLD flat shape,
+   which is why the unit suite was green while the real endpoint changed underneath.
+3. **The gateway's `docker inspect` health never recovered** because of (1) and (2) combined --
+   not a runtime instability, exactly the kind of bug that survives rebuilds silently.
+
+Verified on the rebuilt stack: the edge answers `/api/v1/health` with the backend's own 200
+through `lb://backend` and `/api/v1/timeline` with the backend's own 401; the edge container
+reports healthy. The e2e suite never exercised the edge (it talks to the backend directly),
+which is why the acceptance had not noticed.
+
 ## 2. Service discovery (Eureka, opt-in)
 
 - **Registry**: `discovery` runs a standalone Eureka server (`:8761` by default), dashboard on `/`.
@@ -60,6 +89,16 @@ A `deploy/k8s/base` Kustomize bundle mirrors the same topology for Kubernetes (n
 - **Instance identity & metadata** (for operators and topology clarity):
   - `eureka.instance.instance-id`: `${spring.application.name}:${APP_BUILD_SHA:dev}:${server.port}`
   - `eureka.instance.metadata-map`: `build-sha`, `service`
+  - `eureka.instance.appname` + `eureka.instance.virtual-host-name`: under the `eureka` profile the backend registers the service id `backend` (both spellings -- spring-cloud's eureka resolver matches `lb://backend` on the VIP, not on the app name). `spring.application.name` still names the artifact (`career-os-backend`) and stays in the instance-id for traceability.
+  - The dev stack now runs the edge in its default single-node mode (the simple discovery
+    client, `lb://backend` answered by the configured `GATEWAY_BACKEND_URI`, which is the
+    `backend` service inside the compose net) -- inert discovery was the documented dev
+    posture all along; the forced `eureka` profile resolved nothing (the route asked for
+    service id `backend`, the registry held `CAREER-OS-BACKEND`, and its VIP was
+    `career-os-backend`), so the edge answered `backend-unavailable` for every call, its
+    catch-all probe pinned `unhealthy`, and docker kept the edge unhealthy through weeks
+    of rebuilds. The registry path stays one env var away (`SPRING_PROFILES_ACTIVE=eureka`)
+    and now actually resolves.
   - Lease tuning (env-overridable): renewal 10s, expiration 30s on backend/gateway for responsive
     updates in opt-in discovery setups.
 - **Topology visibility**: backend exposes authenticated `GET /api/v1/system/topology` (registry mode

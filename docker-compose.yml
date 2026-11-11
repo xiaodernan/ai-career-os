@@ -272,11 +272,20 @@ services:
     container_name: careeros-gateway
     restart: unless-stopped
     environment:
-      # 98.1: this profile empties the simple instance list, so the registry is the
-      # only answer for `backend`; a half-configured edge that kept both would send
-      # roughly half its traffic to an address the registry does not know about.
-      SPRING_PROFILES_ACTIVE: eureka
-      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+      # The dev stack uses the default single-node mode: the gateway's simple discovery
+      # client is the answer for `backend` (the same mode ai-service already uses).
+      # The eureka profile remains the opt-in discovery demo: set
+      # SPRING_PROFILES_ACTIVE=eureka and it empties the simple list so the registry is
+      # the only answer -- the two paths are mutually exclusive by design (a half
+      # configured edge that kept both would send half its traffic to an address the
+      # registry does not know about). The registry resolves `lb://backend` only when
+      # the backend registers under the service id `backend` (appname + vipAddress;
+      # see the backend's on-profile eureka block).
+      # Once traffic works, the route answers; the probe's only question is the
+      # process, and the fallback is the failure contract of the edge.
+      # GATEWAY_BACKEND_URI is the address the simple client hands the load balancer;
+      # inside the compose network that is the backend service, not this container.
+      GATEWAY_BACKEND_URI: http://backend:8080
       GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
     ports:

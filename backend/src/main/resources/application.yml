@@ -300,4 +300,12 @@ spring:
 eureka:
   client:
     enabled: true
+  instance:
+    # The edge routes `lb://backend`, so the registry must hold the service under the id
+    # the edge asks for. spring.application.name (career-os-backend) names the artifact;
+    # these two name the service. The instance-id keeps the artifact name for traceability.
+    # Both spellings matter: spring-cloud's eureka resolver matches on vipAddress, not on
+    # the app name, so an appname-only registration still answers "no servers".
+    appname: backend
+    virtual-host-name: backend
 

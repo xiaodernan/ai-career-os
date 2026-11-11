@@ -35,7 +35,7 @@ class BackendHealthWithoutARegistryTest {
         try {
             HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
             server.createContext("/api/v1/health", exchange -> {
-                byte[] body = "{\"status\":\"ok\"}".getBytes(StandardCharsets.UTF_8);
+                byte[] body = "{\"success\":true,\"data\":{\"status\":\"ok\"},\"error\":null}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, body.length);
                 exchange.getResponseBody().write(body);
