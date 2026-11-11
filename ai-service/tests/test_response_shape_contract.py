@@ -3114,19 +3114,21 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # performance horizon are the same honest decision written twice -- the keep-alive claim is
     # load-bearing in both (it is why no code shipped), so the census grows rather than the docs
     # being made vaguer to hide the word.
-    # ALGORITHMS_HORIZON.md's 11 are the worker-liveness paragraphs of Epics 140/144/146 (the
+    # ALGORITHMS_HORIZON.md's 13 are the worker-liveness paragraphs of Epics 140/144/146 (the
     # consumer heartbeat behind the workqueue verdict, the delay-set black-hole warning, and the
-    # reclaimed-count repair) plus Epic 147's own sentence explaining that this census grew. They
-    # borrow the noun for a *different* clock — a consumer tick, not the 15s SSE keep-alive this
-    # test owns — with no interval beside it, so they are noun vocabulary, not a second definer.
+    # reclaimed-count repair) plus Epic 147's sentence explaining that this census grew and Epic
+    # 148's two lines describing how it kept the code side of the census unchanged. They borrow
+    # the noun for a *different* clock — a consumer tick, not the 15s SSE keep-alive this test
+    # owns — with no interval beside it, so they are noun vocabulary, not a second definer.
     # Epics 140–146 named them without growing this ledger because this test is a full-suite gate,
-    # not a verify_gates one; Epic 147's API.md census pass caught the omission. Epic 147 then
-    # described that census in this very horizon, adding one more vocabulary line to the file it
-    # was counting — the ledger grows to 11 rather than the sentence being made vaguer to hide the
-    # word. The census is self-referential by design: a paragraph about the word is still the word.
+    # not a verify_gates one; Epic 147's API.md census pass caught the omission. Each horizon
+    # since then has described that census in this very file, adding vocabulary lines to the file
+    # it counts (10 → 11 in Epic 147, 11 → 13 in Epic 148) — the ledger grows rather than the
+    # sentences being made vaguer to hide the word. The census is self-referential by design: a
+    # paragraph about the word is still the word, and none of them states a second interval.
     assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 16,
                         "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 1,
-                        "ALGORITHMS_HORIZON.md": 11}, (
+                        "ALGORITHMS_HORIZON.md": 13}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 

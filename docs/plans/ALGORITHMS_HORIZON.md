@@ -29,6 +29,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 145 | The producer stops re-enqueueing a job that is still sleeping out its backoff, so the delay is never bypassed | `parked_ids()` + dual-source `_suppressed(queue, guard)` unioned into the producer's SQL and the consumer's ACK path, both reads independent/fail-open, 58 offline tests |
 | 146 | The queue stops claiming no worker ever died: orphan recovery is counted honestly | `WorkItem.reclaimed` observation tag from `XAUTOCLAIM`, `drain()` folds it into `ClaimStats.reclaimed`, zero behaviour drift, 5 offline tests |
 | 147 | Deleting a note/source/resume stops the copilot quoting it from cache: the epoch bumps after the delete commits | `POST /internal/rag/cache/invalidate` + backend `RagCacheInvalidator` (after-commit, fail-open) wired into `KnowledgeService`; endpoint has a real caller, 9 offline + 6 backend tests |
+| 148 | A long agent run cannot grow the timeline's DOM or reducer without bound: the trace window is O(cap), and what it folds away is counted, not hidden | pure `foldTrace` / `settleTraceFold` with injected `cap`, zero drift vs the old reducer, honest `tracesOmitted` surfaced in en/zh; 17 offline tests + source-contract |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1096,4 +1097,95 @@ stays complete. The keep-alive vocabulary census grew to admit this horizon's wo
 liveness paragraphs and the three `ai-service` noun-only comments (different clock,
 no interval beside the word) rather than renaming honest comments to dodge a count.
 Full `verify_gates` + backend `mvn test` green at commit.
+
+---
+
+## Epic 148 — the live trace window is bounded, and its folds are counted
+
+**The shape of the risk.** `useTaskStream` accumulates two arrays straight off the SSE
+relay. `text` appends every token delta (`prev + token`) and `traces` appends every
+trace frame (`[...settled, next]`). Neither had a ceiling, so both the React state
+and the DOM `AgentTimeline` mounts (`events.map(...)` → one `<li>` per row, each with
+its own payload-expand state) grew with the length of the run. The step fold
+(`applyStatusEvent`) was already bounded by the seeded roster; these two were not.
+
+**Honest boundary, stated first.** As of this epic the `trace` channel has **no
+producer**: the pipelines publish `status` / `progress` / `done` / `error` and an
+idle transport frame, while `trace` (like `token` and `artifact`) is declared in
+`lib/sse/use-sse.ts` with nobody writing it yet. Today's timeline stays empty.
+This is therefore a ceiling on a render path that is *already wired*, not a fix
+for an OOM happening right now — it matters the moment a producer lands, or a
+caller supplies a long external list. `token` is deliberately left unbounded:
+it is a *complete* answer, and dropping a delta would corrupt the sentence rather
+than bound a window. Bounding the streamed answer is a separate task with a
+different correctness contract (it needs a reader-visible truncation decision,
+not a silent slice); this epic does not pretend to have solved it.
+
+**What shipped.** A pure reducer in `frontend/src/lib/trace-fold.ts`:
+`foldTrace(fold, next, cap)` and `settleTraceFold(fold)`, with `cap` injected so the
+bound is testable with small windows (default `TRACE_ROW_CAP = 200`, a conservative
+ceiling rather than a measured P99 — there is no producer to measure yet).
+`useTaskStream` now holds a `TraceFold { events, omitted }` instead of a bare
+array; `onTrace` folds through `foldTrace`, `onDone` settles through
+`settleTraceFold`, and the state exposes `tracesOmitted`. `TaskProgress` renders
+`N steps · M earlier steps folded` (en/zh, `ai.taskStream.foldedSteps`) so a reader
+can see that the window is partial rather than believing the timeline is whole.
+Caller-supplied `traces` bypass the fold and report an omitted count of 0 — the
+window's number would be a lie for data that never passed through it.
+
+**Zero drift, proven by an oracle.** With the cap unreached, `foldTrace` is the old
+reducer verbatim: a same-id frame merges in place, a new frame settles the
+previous running rows, and append order is unchanged. The test file carries the
+pre-cap reducer copied out of the hook and folds a mixed wire sequence (new ids,
+repeated ids, settles, an error flip) frame-by-frame against it, asserting exact
+array equality and `omitted === 0` throughout. `settleTraceFold` is the old
+`onDone` map. A source-contract check pins the hook to these two functions and
+refuses any return to a bare `setTraces([...settled, next])`.
+
+**One simplification worth recording.** The first cut partitioned the grown array
+into settled vs running indices, dropping the oldest settled first so an in-flight
+row would survive. That partition turned out to be dead logic: the new-id branch
+settles every earlier running row *before* appending, so by the time the cap
+slices, `next` is the only row that can still be running, and it sits at the
+tail — a front slice cannot evict it. The fold collapses to one bounded
+`grown.slice(drop)`, so per-frame cost is O(cap) (settle + slice) and memory is
+O(cap), down from O(frames seen) and unbounded in run time. The test
+`never evicts the in-flight step` pins the real invariant instead of an
+unreachable state; a 1000-frame run at the default cap asserts the window holds
+exactly 200 rows, keeps the newest, and counts all 800 folds. Edge cases pinned:
+cap of one, a same-id merge that must not touch `omitted` even when full, a late
+frame for a rolled-off id re-entering at the tail (a window over *frames*, not a
+per-id store), non-positive/non-finite caps degrading to one row rather than
+removing the bound, and input-fold immutability.
+
+**A cross-epic census interaction, resolved without disguise.** The heartbeat
+vocabulary census in `test_response_shape_contract.py` walks every `docs/*.md`
+paragraph and shipped source comment for the noun (`ping|keep-alive|heartbeat`)
+and requires the count to match the ledger exactly. Epic 147 had just grown that
+ledger to count this horizon's own worker-liveness sentences (10); its closing
+paragraph, which names the census, then pushed the file to 11, and the ledger was
+corrected to 11 rather than rewriting an honest sentence to dodge the count.
+This chapter naming the census adds two more vocabulary lines (the explanatory
+paragraph and the roster of nouns), taking `ALGORITHMS_HORIZON.md` from 11 to 13 —
+the ledger follows to 13, still with zero interval-bearing claims. The census is
+self-referential by design: a paragraph about the word is the word, and making
+the prose vaguer to keep a number down would be the dishonest way out.
+
+Epic 148 also had to keep the **code** side of that same census unchanged,
+because both epics share the one test file: the new `trace-fold.ts` docstring
+avoids the census noun entirely (an idle transport frame, never the borrowed
+word), and `task-stream.tsx` merged its two `@/components/ai/processing-steps`
+imports into one block so the docstring span stays on line 21 — the exact line
+Epic 147's assertion names. With that, the two commits are each independently
+green: Epic 147 never references a file it did not ship, and Epic 148 adds no
+code span the ledger does not already count.
+
+**Verification.** `trace-fold.test.ts` 17 offline tests (zero-drift oracle, bound,
+honest count, in-flight survival, late frame, bad caps, immutability, 1000-frame
+bound, plus a source-contract on the hook); related frontend suites 84/84
+(`trace-fold`, `use-sse`, `processing-steps`, `translations`, `used-keys`);
+`tsc --noEmit` clean. No live-stack e2e: the trace channel has no producer to
+drive a real long run, so the bound is proven on the pure reducer and the hook
+wiring, not on a browser streaming thousands of frames. The two i18n gates hold:
+`foldedSteps` exists in en/zh and is asked for by a literal `t()` call.
 

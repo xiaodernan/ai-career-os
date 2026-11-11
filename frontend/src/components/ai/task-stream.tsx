@@ -5,13 +5,13 @@ import { endpoints } from "@/lib/api/endpoints";
 import { useSSE, errorText, type SSEState } from "@/lib/sse/use-sse";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
-  applyStatusEvent,
+  applyStatusEvent, ProcessingSteps,
   type ProcessingStep,
   type StepStatus,
 } from "@/components/ai/processing-steps";
-import { ProcessingSteps } from "@/components/ai/processing-steps";
 import { AgentTimeline, type AgentTraceEvent } from "@/components/ai/agent-timeline";
 import { asTraceKind } from "@/lib/trace-kinds";
+import { foldTrace, settleTraceFold, emptyTraceFold, type TraceFold } from "@/lib/trace-fold";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
@@ -27,6 +27,13 @@ export type { TraceKind } from "@/lib/trace-kinds";
  * nothing calls it), so `text` stays empty and the trace drawer stays hidden until
  * one lands. It never invents progress: until the backend pushes something, the UI
  * says so.
+ *
+ * Both accumulating surfaces have distinct fates. `text` is a *complete* answer:
+ * dropping a delta would corrupt the sentence, so it is left unbounded and its
+ * bound is a separate task. `traces` is a *window* over steps, so it is folded
+ * through the pure `foldTrace` reducer into a bounded array; rows that leave the
+ * window are counted in `tracesOmitted` and reported to the reader rather than
+ * vanishing. The fold is O(cap) per frame instead of O(history).
  */
 
 export interface UseTaskStreamOptions {
@@ -40,7 +47,10 @@ export interface UseTaskStreamOptions {
 
 export interface TaskStreamState {
   steps: ProcessingStep[];
+  /** The bounded, currently-visible window of trace rows (oldest first). */
   traces: AgentTraceEvent[];
+  /** Rows the window folded away; reported so a long run cannot hide its own truncation. */
+  tracesOmitted: number;
   /** Concatenated token stream (copilot answers, streaming text). */
   text: string;
   connection: SSEState;
@@ -58,7 +68,7 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
   const [steps, setSteps] = React.useState<ProcessingStep[]>(() =>
     seed.map((s, i) => ({ ...s, status: (i === 0 ? "active" : "pending") as StepStatus }))
   );
-  const [traces, setTraces] = React.useState<AgentTraceEvent[]>([]);
+  const [fold, setFold] = React.useState<TraceFold>(emptyTraceFold);
   const [text, setText] = React.useState("");
   const [reporting, setReporting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -69,7 +79,7 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
   if (lastTask.current !== taskId) {
     lastTask.current = taskId;
     setSteps(seed.map((s, i) => ({ ...s, status: (i === 0 ? "active" : "pending") as StepStatus })));
-    setTraces([]);
+    setFold(emptyTraceFold());
     setText("");
     setReporting(false);
     setError(null);
@@ -95,17 +105,7 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
         status: data.status === "error" ? "error" : data.status === "ok" || data.status === "done" ? "ok" : "running",
         payload: data.payload && typeof data.payload === "object" ? (data.payload as Record<string, unknown>) : undefined,
       };
-      setTraces((prev) => {
-        const idx = prev.findIndex((t) => t.id === id);
-        if (idx >= 0) {
-          const merged = [...prev];
-          merged[idx] = { ...merged[idx], ...next, status: next.status ?? "ok" };
-          return merged;
-        }
-        // a new step means the previous running one is done
-        const settled = prev.map((t) => (t.status === "running" ? { ...t, status: "ok" as const } : t));
-        return [...settled, next];
-      });
+      setFold((prev) => foldTrace(prev, next));
     },
     onToken: (token) => {
       setReporting(true);
@@ -118,7 +118,7 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
       setSteps((prev) =>
         prev.map((s) => (s.status === "active" || s.status === "pending" ? { ...s, status: "done" } : s))
       );
-      setTraces((prev) => prev.map((t) => (t.status === "running" ? { ...t, status: "ok" } : t)));
+      setFold(settleTraceFold);
       onDone?.(data);
     },
     onError: (data) => {
@@ -136,7 +136,8 @@ export function useTaskStream(taskId: string | null | undefined, options: UseTas
 
   return {
     steps,
-    traces,
+    traces: fold.events,
+    tracesOmitted: fold.omitted,
     text,
     connection: state,
     reporting,
@@ -184,6 +185,9 @@ function TaskProgress({
   const { t } = useLocale();
   const steps = externalSteps ?? stream.steps;
   const traces = externalTraces ?? stream.traces;
+  // Caller-supplied traces never pass through the fold, so only the live SSE
+  // window has an honest omitted count to show.
+  const tracesOmitted = externalTraces == null ? stream.tracesOmitted : 0;
   const live = Boolean(taskId) || pending;
   const [timelineOpen, setTimelineOpen] = React.useState(false);
   const effectivePendingLabel = pendingLabel ?? t(pendingLabelKey);
@@ -219,7 +223,14 @@ function TaskProgress({
           >
             <ChevronRight className={cn("size-3 transition-transform duration-150", timelineOpen && "rotate-90")} aria-hidden />
             {t("ai.taskStream.agentTrace")}
-            <span className="ml-auto tabular-nums">{t("ai.taskStream.steps", { count: traces.length })}</span>
+            <span className="ml-auto tabular-nums">
+              {t("ai.taskStream.steps", { count: traces.length })}
+              {tracesOmitted > 0 && (
+                <span className="ml-1.5 text-muted-foreground/80">
+                  · {t("ai.taskStream.foldedSteps", { count: tracesOmitted })}
+                </span>
+              )}
+            </span>
           </button>
           {timelineOpen && (
             <div className="px-3 pb-3">
@@ -242,4 +253,3 @@ export function localStages(labels: string[], index: number): ProcessingStep[] {
     status: (i < index ? "done" : i === index ? "active" : "pending") as StepStatus,
   }));
 }
-

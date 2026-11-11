@@ -321,6 +321,8 @@ export const translations = {
         agentTrace: "Agent trace",
         runError: "The run reported an error.",
         steps: "{count} steps",
+        /** Appended after `steps` when the bounded trace window folded away older rows. */
+        foldedSteps: "{count} earlier steps folded",
       },
       processing: {
         active: "Active",
@@ -3453,6 +3455,8 @@ export const translations = {
         agentTrace: "代理追踪",
         runError: "这次运行报告了一个错误。",
         steps: "{count} 步",
+        /** 当追踪窗口折叠了较早的行时，接在 steps 之后显示。 */
+        foldedSteps: "已折叠 {count} 步",
       },
       processing: {
         active: "进行中",
