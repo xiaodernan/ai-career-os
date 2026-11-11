@@ -65,7 +65,7 @@ read-modify-write across round trips), selected by `GATEWAY_RATE_LIMIT_REDIS=tru
 Redis down falls back to the in-process bucket and says so in the log; the fallback
 never refuses a caller who would have been admitted.
 
-## Epic 121 — the queries the read path runs have the indexes they name
+## Epic 121 — the queries the read path runs have the indexes they name **DONE (verified 2026-11-11)**
 
 **Do.** Read the three retrieval channels' SQL, run `EXPLAIN (ANALYZE, BUFFERS)` on
 the dev corpus, and add only the indexes a plan actually asks for.

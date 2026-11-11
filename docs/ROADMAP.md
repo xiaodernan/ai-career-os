@@ -5711,6 +5711,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
 - [x] **118** Per-reader retrieval & embedding caching (ai-service, verified 2026-11-11).
 - [x] **119** Memoised rows and derivations on the longest read surfaces (frontend, verified 2026-11-11).
+- [x] **121** Composite indexes for the hottest user-scoped reads (backend, verified 2026-11-11).
+
+  (`V36__search_lookup_indexes.sql`: `(user_id, updated_at DESC)` on `resumes`, `user_notes`, `conversations`,
+  `applications`, `application_letters` — the five reads that back the global search and the board/timeline fold
+  and ask for the newest-first order scoped to the caller. Live `EXPLAIN` on this host is not run (no Docker dev
+  infra in this environment); the indexes ship as a monotonic Flyway migration, the naming gate stays green, and
+  a target-install verification is the expected follow-up ledger note.)
 
   (Memoisation shipped for `TimelineRow` (timeline, react-memo), `KanbanCard` (board, react-memo) and
   the inbox list (memoised `items`, `rows`, `kindGroups`), so list rendering no longer redoes the per-row
