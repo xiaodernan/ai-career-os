@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     # is why it is the default: a deployment opts in, and the tests that measure the
     # pipeline's model calls set `memory` explicitly.
     cache_backend: str = "off"  # off | memory | redis
+    task_bus_backend: str = "memory"  # memory | redis (Streams; the SSE fan-out scale-out path)
     cache_ttl_s: int = 300
     cache_max_entries: int = 2048
     redis_url: str = "redis://127.0.0.1:16380/0"

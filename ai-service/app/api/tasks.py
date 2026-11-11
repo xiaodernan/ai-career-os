@@ -15,7 +15,7 @@ router = APIRouter(prefix="/internal/tasks", tags=["tasks"])
 @router.get("/{task_id}")
 async def task_state(task_id: str, ctx: Ctx = Depends(require_internal)):
     _require_owner(task_id, ctx)
-    return taskbus.state(task_id)
+    return await taskbus.astate(task_id)
 
 
 @router.get("/{task_id}/stream")
