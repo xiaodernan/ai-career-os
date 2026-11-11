@@ -5731,7 +5731,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (operator diagnostics). Measured: `test_the_second_question_is_free.py` and
   `test_the_cache_speaks_redis_without_a_client_library.py` 44/44 passing; full suite 2389 passed.)
 
-- [x] **122** The UI is a designed surface, not a form (frontend, partially shipped 2026-11-11).
+- [x] **122** The UI is a designed surface, not a form (frontend, verified 2026-11-11).
 
   (Shipped and closed 2026-11-11: token layer additions (`--shadow-halo`/`--shadow-glow`), ambient
   body background, `.glow-halo`/`.card-lift`/`.hairline` utilities; the landing hero carries a static
