@@ -73,6 +73,18 @@ never refuses a caller who would have been admitted.
 
 ## Epic 121 — the queries the read path runs have the indexes they name **DONE (verified 2026-11-11)**
 
+**Live-migration verification (2026-11-11):** the IT harness on this host now applies
+V1..V37 from scratch on the dedicated `career_os_it` database (Flyway at boot) and
+46/46 context-booting ITs pass against it: GlobalSearchHybridIT 4/4, JobSearchHybridIT
+4/4, PagingApiIT 5/5, JobBoardOrderingIT 1/1, TimelineIT 3/3, DomainApiIT 14/14,
+SavedJobBoardIT 5/5, HealthIT 2/2, ApplicationNeedleIT 3/3, CompanyNeedleIT 2/2,
+JobImportAtomicityIT 3/3. Bringing the context up at all exposed a startup defect
+shipped in Epic 105 (`ResilienceStatusService` had two constructors and no
+`@Autowired`, so no Spring context could boot), fixed in the commit that followed
+this note; every context-booting IT was red before it. Live `EXPLAIN` stays with the
+target install: the dev corpus is too small for the planner to prefer the composites
+(TARGET_INSTALL_EXPLAIN.md).
+
 **Do.** Read the three retrieval channels' SQL, run `EXPLAIN (ANALYZE, BUFFERS)` on
 the dev corpus, and add only the indexes a plan actually asks for.
 
@@ -188,7 +200,7 @@ the rate limiter already runs.
   `test_the_prewarm_script_covers_the_composite_indexes.py`), and now also refuses a
   script that warms an index nothing creates.
 
-**Target-install EXPLAIN is the documented follow-up in docs/plans/TARGET_INSTALL_EXPLAIN.md.**
+**Target-install EXPLAIN is the documented follow-up in docs/plans/TARGET_INSTALL_EXPLAIN.md.** The migrations themselves are no longer unverified: the IT harness applied V36+V37 from scratch on `career_os_it` (see Epic 121's note), and JobSearchHybridIT (4/4) and GlobalSearchHybridIT (4/4) exercise the match and search paths on a real PostgreSQL 16.15. The dev corpus (142 jobs / 212 matches / 210 match owners / 4272 notes / 1230 resumes) is too small for the planner to prefer the composites over a scan, which is why the EXPLAIN reading stays with the target install.
 
 **Deliberately not shipped:** a `(user_id, created_at DESC)` composite -- grep of the
 Java call sites shows no statement that filters on user_id and orders by created_at on

@@ -5731,6 +5731,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (operator diagnostics). Measured: `test_the_second_question_is_free.py` and
   `test_the_cache_speaks_redis_without_a_client_library.py` 44/44 passing; full suite 2389 passed.)
 
+
+  Live check (2026-11-11): the IT harness applies V1..V37 from scratch on `career_os_it` and 46/46
+  context-booting ITs pass (incl. GlobalSearchHybridIT 4/4, JobSearchHybridIT 4/4, DomainApiIT 14/14,
+  HealthIT 2/2). The context only boots after ResilienceStatusService gained @Autowired on its DI
+  constructor (Epic-105 defect: no Spring context could start). Target install remains for EXPLAIN.
 - [x] **122** The UI is a designed surface, not a form (frontend, verified 2026-11-11).
 
   (Shipped and closed 2026-11-11: token layer additions (`--shadow-halo`/`--shadow-glow`), ambient
