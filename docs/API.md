@@ -777,6 +777,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/rag/retrieve` | hybrid retrieval + citations (no backend caller: retrieval happens in-process, agent tools -> pipeline.retrieve) |
 | POST | `/internal/rag/answer` | retrieval + grounded answer (no backend caller: same, for the grounded-answer variant) |
 | POST | `/internal/rag/chunks` | chunk listing / inspection (no backend caller: kept for operators) |
+| GET | `/internal/rag/cache` | this process's cache backend and counters (hits, misses, errors, l2 hits, single-flight leaders/joined); per-process by design. (no backend caller: operator diagnostic: one process's cache counters, no screen reads them) |
 | POST | `/internal/interview/opening` | first question |
 | POST | `/internal/interview/answer` | evaluate + follow up |
 | POST | `/internal/interview/finalize` | final report |
@@ -811,7 +812,7 @@ has an engine in `app/features/` and a contract row in
 `tests/test_api_doc_contract.py` derives this table from the live route table minus the
 requests the backend is seen building, so an engine that gains a backend caller has to move up
 into section 3, and a new route with no row anywhere reddens the completeness gate.
-Seven routes that no backend caller builds do sit in section 3, and each says so in its own
+Eight routes that no backend caller builds do sit in section 3, and each says so in its own
 Purpose cell; the gate that partitions the unreached surface charges those seven with
 carrying the marker and every other row with not carrying it.
 

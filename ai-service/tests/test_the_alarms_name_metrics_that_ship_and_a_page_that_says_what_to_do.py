@@ -126,6 +126,7 @@ METRICS = {
     # `gateway.ratelimit.refused`, a series no rule in this file could ever watch),
     # and the alarm that reads it is the horizon's `CareerOSGatewayRateLimited`.
     "careeros_gateway_ratelimit_refused_total": (GATEWAY_RATE_LIMIT_FILTER, "careeros.gateway.ratelimit.refused"),
+    "careeros_gateway_ratelimit_fallback_total": (GATEWAY_RATE_LIMIT_FILTER, "careeros.gateway.ratelimit.fallback"),
 }
 
 ALERT_NAMES = frozenset({

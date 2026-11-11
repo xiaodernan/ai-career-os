@@ -5,9 +5,9 @@ from app.core.ai import ask
 from app.core.deps import Ctx, require_internal
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest
-from app.providers.registry import embed_text
+from app.providers import registry
+from app.rag import caching, store
 from app.rag.pipeline import retrieve
-from app.rag import store
 
 router = APIRouter(prefix="/internal/rag", tags=["rag"])
 
@@ -45,8 +45,26 @@ async def rag_embeddings(req: EmbedReq, ctx: Ctx = Depends(require_internal)):
     means no provider could answer (unconfigured, erroring, or returning nothing) --
     semantic recall is an enhancement, so the caller falls back to keyword-only rather
     than failing a search the user typed into a text box.
+
+    The vector is remembered by `(provider, model, dim, text)`, so a search box that
+    re-sends the same phrase on every keystroke settles into zero provider calls.
     """
-    return {"embedding": await embed_text(req.text) or []}
+    try:
+        vectors = await caching.embed_with_cache(registry.get_embeddings(None), [req.text])
+    except Exception:  # noqa: BLE001 -- the same degrade as `embed_text`, never a 500
+        return {"embedding": []}
+    return {"embedding": vectors[0] if vectors and vectors[0] else []}
+
+
+@router.get("/cache")
+async def rag_cache_stats(ctx: Ctx = Depends(require_internal)):
+    """What this process has remembered, and how often it was right.
+
+    Per-process on purpose: with `CACHE_BACKEND=redis` every replica shares the values
+    but keeps its own counters, so the fleet's hit rate is the sum of these and one
+    replica's rate is what its own log says.
+    """
+    return {"cache": caching.describe()}
 
 
 @router.post("/retrieve")

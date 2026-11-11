@@ -49,6 +49,17 @@ class Settings(BaseSettings):
     rerank_mode: str = "llm"  # llm | none
     rerank_model: str = ""  # empty -> reuse llm_model
 
+    # Cache (Epic 118). `off` keeps every run identical to the pre-cache build, which
+    # is why it is the default: a deployment opts in, and the tests that measure the
+    # pipeline's model calls set `memory` explicitly.
+    cache_backend: str = "off"  # off | memory | redis
+    cache_ttl_s: int = 300
+    cache_max_entries: int = 2048
+    redis_url: str = "redis://127.0.0.1:16380/0"
+    redis_pool_size: int = 4
+    redis_connect_timeout_s: float = 0.5
+    redis_timeout_s: float = 0.5
+
     # chunking
     chunk_target_tokens: int = 350
     chunk_overlap_tokens: int = 50

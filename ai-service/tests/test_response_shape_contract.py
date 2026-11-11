@@ -2382,7 +2382,7 @@ def test_the_run_stream_contract_is_one_table_of_publishers_cases_and_subscriber
          "has no payload row at all: the heartbeat was dropped because nothing writes it, so either change "
          "is a change to what the client throws away")
 
-    assert emitted["status"] - set(table["status"]["reads"]) == {"count", "intent", "state"}, \
+    assert emitted["status"] - set(table["status"]["reads"]) == {"count", "intent", "state", "cached"}, \
         (f"{sorted(emitted['status'] - set(table['status']['reads']))} are published by a `status` payload "
          "and not touched inside any handler body: `state` reaches the second-hand panel (#176) while "
          "`count` and `intent` reach nothing in the app -- re-read from source if a row appears")
@@ -2559,7 +2559,7 @@ def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
     not re-numericled.
     """
     published = _published_payload_keys()
-    assert published["status"] == {"step", "state", "intent", "count", "agent"}, \
+    assert published["status"] == {"step", "state", "intent", "count", "agent", "cached"}, \
         (f"{sorted(published['status'])} are the keys any `status` payload writes; the classifier's "
          "reads are measured against exactly this list")
     assert published["progress"] == {"step", "done", "total"}, \
@@ -2578,7 +2578,7 @@ def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
          "a field no frame carries, `evt.progress === 100` tests for a field that exists only as an event "
          "name, and `evt.label` is invented before falling through to `evt.step`. This ledger expects "
          "exactly these three -- fix the producer or the reader, then re-read this from source")
-    assert produced - reads == {"agent", "count", "intent"}, \
+    assert produced - reads == {"agent", "count", "intent", "cached"}, \
         (f"{sorted(produced - reads)} are published and dropped by the panel, which is the mirror image "
          "of the hole above and is recorded rather than silently ignored")
 
@@ -2593,7 +2593,7 @@ def test_the_step_classifier_reads_three_fields_no_frame_ever_carries():
          "re-read, because the two together are what the app consumes")
     assert forwarded <= published["status"], \
         (f"{sorted(forwarded - published['status'])} would be read by the action hook with no producer")
-    assert published["status"] - reads - forwarded == {"count", "intent"}, \
+    assert published["status"] - reads - forwarded == {"count", "intent", "cached"}, \
         (f"{sorted(published['status'] - reads - forwarded)} are the status fields no reader in the app "
          "touches -- rag extras published and then dropped everywhere, not just in the panel")
 

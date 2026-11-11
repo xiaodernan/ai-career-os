@@ -141,6 +141,17 @@ A `deploy/k8s/base` Kustomize bundle mirrors the same topology for Kubernetes (n
     pinned to the offline repository's 1.15.3); they remain behind authentication and are not permitAll.
   - Frontend monitoring page displays topology and resilience cards.
 
+## 5.1 Shared caching & distributed rate limit (Epics 118, 120)
+
+The ai-service stops paying for repeated retrievals: `app/rag/caching.py` keys embeddings by
+(provider, model, dim, text) and whole retrieval answers by (reader, epoch, normalised request); a reader's
+ingest bumps the epoch so new documents are visible immediately. `app/core/cache.py` carries three backends —
+`off` (default), process-local `memory`, or `redis` reached through a small dependency-free RESP2 client
+(`app/core/resp.py`). The gateway's rate limiter (`EdgeBudget` family) does the same across replicas:
+`InProcessBudget` keeps the current single-process bucket and bounds its identity map; `RedisBudget`
+runs one atomic Lua script (HGET/HSET/PEXPIRE) so every replica spends from the same bucket. Errors
+fall back to the in-process budget with the `careeros.gateway.ratelimit.fallback` counter and a warning.
+
 ## 6. Distributed tracing and correlation
 
 - **W3C trace context propagation** across the request chain:

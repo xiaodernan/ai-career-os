@@ -97,6 +97,16 @@ async def ingest_document(doc_id: str, task_id: str) -> dict:
         await docs_repo.mark_source_ready(str(source_id) if source_id else None, doc_id)
         taskbus.publish(task_id, "status", {"step": "indexing", "state": "done"})
 
+        # The reader's cached answers describe a corpus that no longer exists. Bumping
+        # the generation is what makes "I just uploaded my new resume" visible on the
+        # very next question instead of after the TTL. Best-effort by design: an
+        # answered ingest must not fail because the cache is unreachable.
+        try:
+            from app.rag import caching
+            await caching.invalidate_user(str(doc["user_id"]))
+        except Exception:  # noqa: BLE001 — a cache may not break an ingest
+            pass
+
         result = {"document_id": doc_id, "chunks": n, "chars": len(text)}
         taskbus.finish(task_id, True, result=result)
         return result

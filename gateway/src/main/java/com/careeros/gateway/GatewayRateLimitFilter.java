@@ -1,7 +1,5 @@
 package com.careeros.gateway;
 
-import io.github.resilience4j.ratelimiter.RateLimiter;
-import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.net.InetSocketAddress;
@@ -10,8 +8,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -26,7 +26,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
- * A caller who asks too fast gets a number they can obey (Epic 89.2).
+ * A caller who asks too fast gets a number they can obey (Epic 89.2, shared in 120).
  *
  * <p>The budget is per identity rather than per process: an authenticated caller is
  * known by a hash of their bearer token (the raw credential is never kept as a map key),
@@ -35,10 +35,15 @@ import reactor.core.publisher.Mono;
  * legitimate users is the one case where they share -- which is the same trade every
  * address-based limiter makes.
  *
- * <p>The limiter is Resilience4j's, already present for the circuit, configured as a
- * token bucket: {@code GATEWAY_RATE_LIMIT_PER_MINUTE} tokens refreshed over
- * {@code GATEWAY_RATE_LIMIT_PERIOD}, no waiting. Zero disables the filter, which is the
- * escape hatch an operator needs when the edge is not the bottleneck.
+ * <p><b>Where the budget lives</b> is the operator's choice. By default it is this
+ * process's map of token buckets, correct for one replica and wrong for three: the
+ * production overlay scales the edge, and three replicas each enforcing the configured
+ * allowance admit three times it. {@code GATEWAY_RATE_LIMIT_REDIS=true} moves the
+ * decision into Redis, where one script is one atomic read-refill-take and every replica
+ * spends from the same bucket. Redis being unreachable neither opens the door nor closes
+ * it: the filter falls back to this process's budget, counts the fallback and says so in
+ * the log, because an edge that refuses every caller during a cache outage is an outage
+ * of its own.
  *
  * <p>The refusal is JSON with {@code Retry-After: 60} (or the configured period, rounded
  * up to a whole second). A 429 with a number is actionable; a timeout is not.
@@ -49,19 +54,32 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
     /** The header that tells a caller when asking again may work. */
     public static final String RETRY_AFTER = HttpHeaders.RETRY_AFTER;
 
-    private final int tokensPerPeriod;
-    private final Duration period;
-    private final String retryAfter;
-    private final Counter refusals;
-    private final Map<String, RateLimiter> limiters = new ConcurrentHashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(GatewayRateLimitFilter.class);
 
+    private final int tokensPerPeriod;
+    private final String retryAfter;
+    private final EdgeBudget local;
+    private final EdgeBudget shared;
+    private final boolean distributed;
+    private final Counter refusals;
+    private final Counter fallbacks;
+
+    /** The pre-Epic-120 shape, kept so a unit test can build the single-replica edge. */
+    public GatewayRateLimitFilter(int tokensPerPeriod, Duration period, MeterRegistry meterRegistry) {
+        this(tokensPerPeriod, period, meterRegistry, null, false);
+    }
+
+    @Autowired
     public GatewayRateLimitFilter(
             @Value("${GATEWAY_RATE_LIMIT_PER_MINUTE:1200}") int tokensPerPeriod,
             @Value("${GATEWAY_RATE_LIMIT_PERIOD:60s}") Duration period,
-            MeterRegistry meterRegistry) {
-        this.tokensPerPeriod = tokensPerPeriod;
-        this.period = period;
+            MeterRegistry meterRegistry,
+            ObjectProvider<EdgeBudget> sharedBudget,
+            @Value("${GATEWAY_RATE_LIMIT_REDIS:false}") boolean distributed) {        this.tokensPerPeriod = tokensPerPeriod;
         this.retryAfter = String.valueOf(Math.max(1, period.toSeconds()));
+        this.local = new InProcessBudget(tokensPerPeriod, period);
+        this.shared = sharedBudget == null ? null : sharedBudget.getIfAvailable();
+        this.distributed = distributed && this.shared != null;
         // No identity tag: the identity is a caller's token hash or address, and a metric
         // tagged by either grows one series per caller -- the cardinality accident that
         // makes a metrics backend fall over precisely during the flood this counter exists
@@ -72,6 +90,9 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
         this.refusals = Counter.builder("careeros.gateway.ratelimit.refused")
                 .description("Requests refused by the edge token bucket")
                 .register(meterRegistry);
+        this.fallbacks = Counter.builder("careeros.gateway.ratelimit.fallback")
+                .description("Rate-limit decisions answered locally because the shared budget failed")
+                .register(meterRegistry);
     }
 
     @Override
@@ -79,20 +100,23 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
         if (tokensPerPeriod <= 0) {
             return chain.filter(exchange);
         }
-        RateLimiter limiter = limiters.computeIfAbsent(identity(exchange.getRequest()),
-                key -> RateLimiter.of("edge", RateLimiterConfig.custom()
-                        .limitForPeriod(tokensPerPeriod)
-                        .limitRefreshPeriod(period)
-                        .timeoutDuration(Duration.ZERO)
-                        .build()));
-        if (limiter.acquirePermission()) {
-            return chain.filter(exchange);
-        }
-        refusals.increment();
-        return refuse(exchange.getResponse());
+        String identity = identity(exchange.getRequest());
+        EdgeBudget budget = distributed ? shared : local;
+        return budget.take(identity)
+                .onErrorResume(error -> {
+                    // The shared budget is a dependency of the *decision*, not of the
+                    // request. Losing it costs the caller only the guarantee that the
+                    // fleet's allowance is shared for as long as the outage lasts.
+                    fallbacks.increment();
+                    log.warn("edge budget {} failed ({}); answering from {}",
+                            budget.name(), error.toString(), local.name());
+                    return local.take(identity);
+                })
+                .flatMap(allowed -> allowed ? chain.filter(exchange) : refuse(exchange.getResponse()));
     }
 
     private Mono<Void> refuse(ServerHttpResponse response) {
+        refusals.increment();
         response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         response.getHeaders().set(RETRY_AFTER, retryAfter);
@@ -120,6 +144,15 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException("SHA-256 is part of every JDK", impossible);
         }
+    }
+
+    /** Which budget answers the next decision; asserted by the fallback test. */
+    String budgetInUse() {
+        return distributed ? shared.name() : local.name();
+    }
+
+    EdgeBudget localBudget() {
+        return local;
     }
 
     @Override

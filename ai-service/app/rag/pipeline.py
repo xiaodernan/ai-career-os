@@ -7,11 +7,12 @@ RRF → rerank → compression → prompt construction with citations.
 import logging
 from typing import Any
 
+from app.core import cache as cache_mod
 from app.core import taskbus
 from app.core.ai import evidence_block
 from app.db import observability
 from app.providers.registry import get_embeddings
-from app.rag import store
+from app.rag import caching, store
 from app.rag.compress import compress
 from app.rag.rerank import rerank
 from app.rag.rewrite import understand
@@ -44,6 +45,64 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
                    strategy: str = "hybrid",
                    answer_prompt: str | None = None,
                    max_expansions: int | None = None) -> dict[str, Any]:
+    """Retrieve evidence, remembering the answer under everything that shaped it.
+
+    The cache is a wrapper rather than a branch inside the pipeline: `_retrieve` is
+    the whole of the old function and knows nothing about caching, so a cached answer
+    and a computed one are the same object shape by construction, and the cache can be
+    switched off without touching retrieval logic.
+
+    Single-flight is used only for callers without a `task_id`. Those callers are
+    watching the progress bus, and making one of them wait on another's task would
+    leave its own stream silent -- the collapse is worth it for a background caller,
+    not for the one holding the connection open.
+    """
+    cache = cache_mod.get_cache()
+    key: str | None = None
+    if cache.enabled:
+        generation = await caching.epoch(user_id)
+        key = caching.retrieval_key(
+            user_id=user_id, generation=generation, query=query, top_k=top_k,
+            kinds=kinds, document_ids=document_ids, context_summary=context_summary,
+            strategy=strategy, max_expansions=max_expansions)
+        hit = await caching.lookup_retrieval(key)
+        if hit is not None:
+            if task_id:
+                # The steps did run -- once, earlier -- so the stream still closes
+                # every step it opened. `cached` is what makes that visible.
+                for step in ("understanding_query", "hybrid_retrieval", "reranking"):
+                    taskbus.publish(task_id, "status", {"step": step, "state": "done",
+                                                        "cached": True})
+            if run_id:
+                await observability.trace(run_id, "retrieval", "rag", {
+                    "stage": "cache_hit", "evidence": len(hit.get("evidence") or []),
+                    "query": (query or "")[:200]})
+            return hit
+
+    async def compute() -> dict[str, Any]:
+        return await _retrieve(
+            query, user_id=user_id, run_id=run_id, context_summary=context_summary,
+            top_k=top_k, kinds=kinds, document_ids=document_ids, task_id=task_id,
+            strategy=strategy, answer_prompt=answer_prompt,
+            max_expansions=max_expansions)
+
+    if key is not None and task_id is None:
+        result = await cache_mod.get_single_flight().run(key, compute)
+    else:
+        result = await compute()
+    if key is not None:
+        await caching.remember_retrieval(key, result)
+    return result
+
+
+async def _retrieve(query: str, *, user_id: str, run_id: str | None = None,
+                    context_summary: str = "", top_k: int = 8,
+                    kinds: list[str] | None = None,
+                    document_ids: list[str] | None = None,
+                    task_id: str | None = None,
+                    strategy: str = "hybrid",
+                    answer_prompt: str | None = None,
+                    max_expansions: int | None = None) -> dict[str, Any]:
     """Retrieve evidence for a query. Returns understanding + evidence (citable).
 
     `strategy` selects which retrieval channels contribute to the fusion: the full
@@ -75,14 +134,14 @@ async def retrieve(query: str, *, user_id: str, run_id: str | None = None,
     # rewritten query: the expansions are an enhancement, the rewritten query is what
     # the vector channel exists for. A total failure drops the channel, never the call.
     try:
-        vecs = _vectors(await embedder.embed(queries))
+        vecs = _vectors(await caching.embed_with_cache(embedder, queries))
     except Exception as e:
         log.warning("rag embedding failed; retrying with the rewritten query only: %s", e)
         if run_id:
             await observability.trace(run_id, "retrieval", "rag", {
                 "stage": "embedding_error", "error": str(e)[:200]})
         try:
-            vecs = _vectors(await embedder.embed([u["rewritten"]]))
+            vecs = _vectors(await caching.embed_with_cache(embedder, [u["rewritten"]]))
         except Exception as e2:
             log.warning("rag embedding unavailable; running lexical channels only: %s", e2)
             vecs = []

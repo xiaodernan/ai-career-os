@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
+from app.core.cache import close_cache, init_cache
 from app.core.config import get_settings
 from app.core.db import close_db, init_db
 from app.core.logging import setup_logging
@@ -30,6 +31,10 @@ async def lifespan(app: FastAPI):
             raise RuntimeError("published or empty internal API token forbidden in prod")
     pool = await init_db()
     app.state.pool = pool
+    # The cache is built after the pool so a failure to reach Redis is a logged
+    # degradation inside `build_cache`, never a boot failure: a cache that can stop
+    # the engine from starting would be a dependency, not a cache.
+    await init_cache(settings)
     # Fresh vectors without an ops step: the loop sweeps jobs.embedding IS NULL, so a
     # role created mid-session becomes vector-searchable within a minute (and the first
     # pass doubles as the startup backfill). Failures inside the loop are its own.
@@ -40,6 +45,7 @@ async def lifespan(app: FastAPI):
         embed_task.cancel()
         with suppress(asyncio.CancelledError):
             await embed_task
+        await close_cache()
         await close_db()
 
 

@@ -107,6 +107,18 @@
            does not carry the 1.15.12 managed by Boot 3.5.16, and the backend uses 1.15.3. -->
       <version>1.15.3</version>
     </dependency>
+    <!--
+      Epic 120: the edge's budget has to be one budget across replicas, and that needs a
+      counter every replica can see. The reactive template keeps the call on the event
+      loop (Lettuce is non-blocking underneath); a servlet-style RedisTemplate here would
+      block a gateway thread per rate-limit decision, which is the one place the edge
+      cannot afford it. The starter is the version this Boot parent manages, and it is
+      already in the offline repository.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>

@@ -64,3 +64,18 @@ def test_nothing_new_slips_into_the_public_probe_set():
                            | {"conditions", "circuitbreakers", "circuitbreakerevents", "gateway", "metrics", "env"}), (
             f"{service} exposure includes something unexpected: {sorted(include)}"
         )
+
+
+def test_the_gateway_probe_is_not_hostage_to_its_optional_redis():
+    # The gateway depends on spring-boot-starter-data-redis for the optional distributed
+    # rate limit (Epic 120), but a Redis outage must not mark the edge as down, exactly
+    # like the backend's rate-limiter probe precedent. Assert the indicator is off in the
+    # gateway, the same way the backend does it for its own optional redis.
+    text = (ROOT / "gateway" / "src" / "main" / "resources" / "application.yml").read_text(
+        encoding="utf-8"
+    )
+    m = re.search(r"(?ms)^\s*health:\s*$\n\s*#[^\n]*\n(?:\s*#[^\n]*\n)*\s*redis:\s*$\n\s*enabled:\s*false", text)
+    assert m, (
+        "gateway must disable the actuator redis health indicator (management.health.redis.enabled=false); "
+        "otherwise an optional shared-budget outage flips the edge's probe DOWN"
+    )

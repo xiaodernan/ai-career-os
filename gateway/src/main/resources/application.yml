@@ -4,6 +4,17 @@ server:
 spring:
   application:
     name: career-os-gateway
+  # Epic 120: where the shared edge budget lives. Nothing connects until
+  # `GATEWAY_RATE_LIMIT_REDIS=true` asks Redis for a decision, so the default address is
+  # only a default. The compose stack points this at the `redis` service by name; the
+  # host-side port would go through Docker Desktop's proxy, which is slower than a
+  # decision has any right to be.
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:500ms}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:500ms}
   config:
     import: "optional:configserver:"
   cloud:
@@ -152,8 +163,15 @@ management:
         # conditions is for wiring Eureka/Config in a failing deploy -- never user-visible,
         # and always behind the edge's X-Actuator-Token when one is set (Epic 108.15/108.16).
         include: health,info,gateway,metrics,circuitbreakers,circuitbreakerevents,prometheus,conditions
+  health:
+    # The edge's optional shared budget lives in Redis; the backing service is not
+    # a dependency of the probe. Same rule the backend reuses for its rate-limiter:
+    # a Redis outage must not report the edge as down.
+    redis:
+      enabled: false
   endpoint:
     health:
+      show-details: never
       probes:
         enabled: true
   info:

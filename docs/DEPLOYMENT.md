@@ -408,6 +408,7 @@ which reading answers the operator's question instead of an alarm.
 | `careeros_digest_delivery_total` | `CareerOSDigestDeliveryFailing` | One reading per weekly-letter attempt, tagged `sent` or `refused`; the first refusal inside six hours fires, because the relay is the fault an operator has to fix rather than one the retry clock can outlast. |
 | `careeros_circuitbreaker_open` | `CareerOSCircuitBreakerOpen` | One untagged gauge: 1 while any Resilience4j breaker in the ai-service bridge is open, 0 otherwise. The exhausted queue is the only shape of an engine-door refusal that does not look like a bad request; alarming on it is the bridge telling the operator the door is gone, not the client. |
 | `careeros_gateway_ratelimit_refused_total` | `CareerOSGatewayRateLimited` | The edge token bucket's own refusal counter (registered by the gateway's `GatewayRateLimitFilter`, no caller tag by design — per-caller series is the cardinality accident). One refusal is noise, so the rule fires on continuity: a refusal rate above zero sustained five minutes, which is a flood and not a blip. |
+| `careeros_gateway_ratelimit_fallback_total` | — | The edge bucket's fallback counter — one reading whenever a refusal decision was taken from the local in-memory fallback store because Redis did not answer in time. Not alarmed on purpose: a fallback bucket is refusal-shaped, not error-shaped, and Redis' unavailability is already reported by the gateway's own health probe. The dashboard shows the fallback rate against the refusal rate to separate "quiet box" from "box that can no longer reach Redis". |
 | `careeros_digest_last_delivered_timestamp` | — | Moved only by an accepted letter, so a week with no applications leaves it flat and that is healthy. `CareerOSDigestSweepStale` watches the compose clock; the delivery rule watches the relay. |
 | `careeros_digest_last_sweep_timestamp` | `CareerOSDigestSweepStale` | The Monday compose's own pass marker, moved by every completed pass. Eight days of silence fires, because a week that never ran cannot be recomposed through any route. |
 | `careeros_ingestion_last_success_timestamp` | `CareerOSIngestionNightMissed` | The last run that ended `completed`; 26 hours (93600 seconds) without one fires critical, whether the night never started or every feed in it failed. |
@@ -667,6 +668,18 @@ without requiring a git backend. It is not started by default.
   operator hasn't otherwise chosen to hold in `/config`).
 
 ## Kubernetes (opt-in, Epic 109)
+## Cache & shared rate limit (Epics 118–120, opt-in)
+
+The ai-service never breaks without its cache: every cache backend returns `None` on failure, and
+retrieval then runs exactly as before. When `CACHE_BACKEND=memory`, embeddings and retrieval answers
+are remembered per-process keyed by reader+epoch+normalised request and embeddings keyed by
+(provider, model, dim, text); `CACHE_BACKEND=redis` shares entries across replicas via the compose
+stack’s Redis on the compose network (microseconds), avoiding Docker Desktop's port proxy. The
+edge's rate limiter (`GATEWAY_RATE_LIMIT_REDIS=true`) evaluates one Lua script against the same
+Redis — atomic read-refill-take — so one replica's caller is no longer three buckets. Redis
+outages fall back to per-process buckets with the fallback counter (`careeros.gateway.ratelimit.fallback`)
+and a logged warning; the refusal counter keeps its own name.
+
 
 A Kustomize bundle mirroring the `docker-compose.yml` fleet lives under `deploy/k8s/`.
 It is operator-driven: it is **not** started by default, and you must create your own

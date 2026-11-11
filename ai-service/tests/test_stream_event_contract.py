@@ -254,6 +254,7 @@ def test_the_tolerant_alternates_stay_declared():
 def test_the_frame_payloads_are_actually_read():
     """Positive control: a reading that found no payloads would pass both gates above."""
     assert published_frame_keys() == {
-        "agent", "count", "done", "error", "intent", "result", "state", "step", "text", "total"}
+        "agent", "cached", "count", "done", "error", "intent", "result", "state", "step", "text",
+        "total"}
     assert folded_frame_keys() == {"done", "label", "progress", "state", "status", "step", "total"}
     assert len(_frame_payloads()) >= 10

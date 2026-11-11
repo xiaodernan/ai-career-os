@@ -5709,6 +5709,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.26** Dedicated CI job runs the Spring Cloud contract gates (measured 2026-11-10).
 - [x] **108.27** Kubernetes-shaped liveness/readiness probes on every Spring Cloud service (measured 2026-11-10).
 - [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
+- [x] **118** Per-reader retrieval & embedding caching (ai-service, verified 2026-11-11).
+
+  (`app/core/cache.py`: NullCache/off (default), process-local MemoryCache with LRU + epoch invalidation,
+  or Redis via a dependency-free RESP2 client (`app/core/resp.py`) behind a breaker. `app/rag/caching.py`
+  keys embeddings by (provider, model, dim, text) and retrieval answers by (reader, epoch, normalised request);
+  an ingest bumps the reader epoch invalidating cached answers instantly. Exposed at `/internal/rag/cache`
+  (operator diagnostics). Measured: `test_the_second_question_is_free.py` and
+  `test_the_cache_speaks_redis_without_a_client_library.py` 44/44 passing; full suite 2389 passed.)
+
+- [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
+
+  (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map
+  bounded at 50k with flush counting; RedisBudget runs one atomic Lua script against the shared Redis — HGET,
+  HSET, PEXPIRE — refilling and taking in a single round trip). Errors fall back to the in-process budget with
+  a count `careeros.gateway.ratelimit.fallback` + logged warning. `EdgeBudgetConfig` exposes the shared bean
+  only when `GATEWAY_RATE_LIMIT_REDIS=true`; probe-check `/actuator/health` excludes the optional Redis.
+  Measured: `GatewayBudgetTest` 7/7; full gateway suite 46/46; `test_the_spring_cloud_actuator_surface_contract`
+  now pins the gateway probe's independence.)
 - [x] **111** Spring Cloud Gateway route-latency histograms in Prometheus (measured 2026-11-10).
 - [x] **109** Kubernetes manifests for the Spring Cloud fleet (measured 2026-11-10).
 - [x] **114** Optional shared-secret gate for the Config Server (measured 2026-11-10).

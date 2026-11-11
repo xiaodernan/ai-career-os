@@ -125,6 +125,12 @@ services:
       #   LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash docker-compose --profile app up -d
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-}
+      # Cache (Epic 118). The service name, not the host's 16380: inside the compose
+      # network Redis answers in microseconds, while the published port goes through
+      # Docker Desktop's proxy. The backend is deliberately not a dependency -- a cache
+      # that must be up for the engine to boot is a dependency wearing a cache's name.
+      REDIS_URL: redis://redis:6379/0
+      CACHE_BACKEND: ${CACHE_BACKEND:-off}
     ports:
       - "127.0.0.1:8000:8000"
     # The image carries python, not curl or wget. A 500 (its database half is gone)
