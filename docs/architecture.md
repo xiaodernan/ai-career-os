@@ -101,7 +101,9 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 │       └── user/                 # users, profiles, preferences, memories
 ├── ai-service/                   # FastAPI
 │   └── app/
-│       ├── providers/            # llm/: openai_compat, anthropic, ollama, mock(测试专用)
+│       ├── algorithms/           # the DSA primitives: LRU/TTL caches, top-k heap, sparse vectors
+    │                        # cosine, BM25, skill-gap/rank_jobs -- dependency-free, tests pin the claims
+    ├── providers/            # llm/: openai_compat, anthropic, ollama, mock(测试专用)
 │       │                         # embeddings/: openai, ollama, hash(离线开发)
 │       │                         # voice/: openai_compat, mock(测试专用) — STT/TTS for the interview runner
 │       ├── ingestion/            # parsers(pdf/docx/txt) → clean → chunk → metadata → embed → store

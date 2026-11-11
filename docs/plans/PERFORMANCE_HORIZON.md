@@ -337,7 +337,6 @@ of it. The docstrings already named the path; the code never had it.
 **Verification (offline, 2026-11-11):** `test_the_task_bus_can_scale_out_through_redis_streams.py`
 6/6 (fake-streams Redis with BLOCK/XRANGE/XADD semantics, foreign replica replay,
 redis-down equivalence, queue-shed); full ai-service suite 2410 passed; verify_gates
-267/267 (gate now includes the backplane suite). The heartbeat vocabulary census
-moved from one definer to one definer + two module-local consumers (renamed
-`heartbeat`), annotated; the frame-census moved 2 -> 5 yields with the reason in the
-assertion text.
+267/267 (gate now includes the backplane suite). The interval census moved from one
+definer to one definer + two module-local consumers (renamed in the module), annotated;
+the frame-census moved 2 -> 5 yields with the reason in the assertion text.
