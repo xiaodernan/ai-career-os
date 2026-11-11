@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { GradientText } from "@/components/ui/gradient-text";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
@@ -123,11 +124,16 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* The dashboard's front door (Epic 122): PageHeader's exact contract inside a designed
-          band -- two token-coloured ambient washes, a hairline border and the card shadow the
-          elevation token layer defines -- so the first screen reads as a designed surface, not
-          a form. The washes are static gradients, not animations: zero per-frame cost. */}
-      <section className="relative overflow-hidden rounded-2xl border hairline bg-card/60 shadow-card">
+      {/* The dashboard's front door (Epic 122) dressed in the Epic 137 design language:
+          a shimmer hairline, staggered CSS-only entrance, a gradient accent on the name,
+          and a drifting aurora. The aurora is DARK-ONLY (`hidden dark:block`) on purpose —
+          its blobs use `mix-blend-mode: screen`, which washes a light surface to white (the
+          same trap Epic 137 documented on the auth panel). In the light theme the two static
+          token washes remain; in dark they layer under the aurora. Every motion degrades under
+          `prefers-reduced-motion` via the shared globals.css rules, and it adds zero client JS:
+          the blobs are plain spans, not the observer-driven Reveal component. */}
+      <section className="animate-fade-up relative overflow-hidden rounded-2xl border hairline bg-card/60 shadow-card">
+        {/* Light-theme ambient washes: static gradients, zero per-frame cost. */}
         <div
           aria-hidden
           className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full"
@@ -144,32 +150,44 @@ export default function DashboardPage() {
               "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 9%, transparent), transparent)",
           }}
         />
+        {/* Dark-theme aurora: screen-blend light only ever composited over a dark surface. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden overflow-hidden dark:block">
+          <span className="aurora-blob aurora-blob-1 opacity-30" />
+          <span className="aurora-blob aurora-blob-2 opacity-30" />
+          <div className="aurora-grid opacity-30" />
+        </div>
+        {/* Shimmer hairline crowns the band — the same premium separator the auth door uses. */}
+        <span aria-hidden className="shimmer-rule absolute inset-x-0 top-0 block h-px" />
         <div className="relative px-6 py-6">
           <PageHeader
             title={
               <>
                 {greeting},{" "}
-                <span className="italic text-primary">
+                <GradientText className="italic">
                   {user?.displayName?.split(" ")[0] ?? "welcome"}
-                </span>
+                </GradientText>
               </>
             }
-            description={t("dashboard.description")}
+            description={
+              <span className="animate-fade-up block" style={{ animationDelay: "90ms" }}>
+                {t("dashboard.description")}
+              </span>
+            }
             actions={
-              <>
-                <Button variant="ai" className="glow-halo" asChild>
+              <div className="animate-fade-up flex flex-wrap items-center gap-2" style={{ animationDelay: "160ms" }}>
+                <Button variant="ai" className="glow-halo glow-on-hover" asChild>
                   <Link href="/copilot">
                     <Sparkles aria-hidden />
                     {t("dashboard.askCopilot")}
                   </Link>
                 </Button>
-                <Button variant="outline" asChild>
+                <Button variant="outline" className="glow-on-hover" asChild>
                   <Link href="/applications">
                     {t("dashboard.openPipeline")}
                     <ArrowRight aria-hidden />
                   </Link>
                 </Button>
-              </>
+              </div>
             }
           />
         </div>

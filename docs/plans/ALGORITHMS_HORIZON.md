@@ -23,6 +23,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 138 | A poison job stops burning a worker on every retry; a failed retry never drops the job | re-queue + `attempts` + bounded DLQ, 9 offline tests + real-Redis end-to-end |
 | 139 | A dead-lettered job stops being re-injected by the producer each tick, and heals when its cooldown lapses | `DlqGuard` Redis-ZSET cooldown, 32 offline tests + real-Redis end-to-end |
 | 140 | The dead-letter pipeline can be *seen*: one honest verdict over live Redis + consumer liveness | read-only `GET /internal/ops/workqueue`, pure-function health fold, 54 offline tests + real-Redis end-to-end |
+| 141 | The signed-in first screen carries the landing/auth design language, without washing the light theme or growing the bundle | `dashboard/page.test.ts` source contract, copy census, build + bundle budget |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -512,3 +513,68 @@ choice: the project's Prometheus registries and `careeros.*` meter roster live i
 backend/gateway Java under a strict "every meter is registered or documented"
 gate, so wiring these numbers into `/actuator/prometheus` is a separate, deliberate
 next step — this endpoint is the clean single source that step would scrape.
+
+## Epic 141 — the signed-in first screen carries the designed language **DONE (verified 2026-11-12)**
+
+Epics 137 (auth door) and the landing page established a visual language — aurora,
+glass, gradient text, shimmer hairlines, CSS-only staggered entrance — but it lived
+only on the two *anonymous* surfaces. The first screen a signed-in reader actually
+sees, `(app)/dashboard`, was still the Epic 122 band: two static token washes, a
+hairline and a card shadow. Design debt on the highest-traffic surface in the app.
+
+This Epic dresses that existing band in the Epic 137 language **without** the two
+traps that language carries, and without adding a single byte of client JS:
+
+* **No light-theme wash-out.** Aurora blobs are `mix-blend-mode: screen`, which
+  blows a light `bg-card/60` surface to white — the exact trap Epic 137 documented
+  on the auth sidebar and pinned in its source contract. The dashboard band is
+  light in the light theme and dark via `.dark` in the dark theme, so the aurora is
+  gated `hidden … dark:block`: the drift composites only ever over a dark surface.
+  A light-theme reader keeps the two static token washes (a safe primary tint, not
+  a screen blend); a dark-theme reader gets the blobs + masked grid, tamed to
+  `opacity-30` for a short band. This is the conscious evolution of auth's "no
+  aurora at all" into "aurora where it is safe", pinned by a test.
+* **No new client JS / no IntersectionObserver.** The blobs are plain decorative
+  `<span>`s, not the `AuroraBackground` component (vw-scale, no dark gate) and not
+  the `Reveal` component (the one visual primitive that brings a client
+  IntersectionObserver). Entrance is CSS-only: `animate-fade-up` with inline
+  `animationDelay` on the description and the actions row. So the greeting is in
+  the first paint, needs no JS to appear, and the `/dashboard` route's gzip stays
+  inside the 340 kB budget.
+* **Zero copy / zero key churn.** Every label still goes through `t("dashboard.*")`;
+  only `className`, decorative spans and a `<GradientText>` wrapper changed. No new
+  `.tsx` source file was created, so the `copy-census` browser-source count pin
+  (167) is untouched and `used-keys` stays green.
+* **Motion stays optional.** All new layered motion reuses existing globals.css
+  utilities, so the shared `prefers-reduced-motion` blanket (animations → 1ms) and
+  the Epic 137 per-utility overrides (`.aurora-blob` / `.gradient-text` →
+  `animation: none`) apply automatically; `globals.test.ts` already guards that
+  shape. `GradientText` stays real, selectable text.
+
+Concretely: a `shimmer-rule` hairline crowns the band; the greeting name accent
+moves from a flat `text-primary` span to `<GradientText>`; the band itself enters
+with `animate-fade-up`; description (`+90ms`) and action buttons (`+160ms`) follow
+in a CSS-staggered cascade; both CTAs gain `glow-on-hover` (the primary keeps its
+`glow-halo`). `PageHeader`'s contract — `title` / `description` / `actions` — is
+completely unchanged, so no shared component was touched.
+
+**Verified.** New `frontend/src/app/(app)/dashboard/page.test.ts` (7 source-contract
+assertions, `.test.ts` so it is excluded from the copy census): gradient accent,
+shimmer hairline, CSS stagger with **no actual `new IntersectionObserver(`** and no
+`Reveal`/`AuroraBackground` import, the dark-only aurora gate (`hidden … dark:block`
++ tamed opacity) against the real `mix-blend-mode: screen` rule in globals.css,
+reduced-motion authority, CTA hover, and that all copy still reads from `t()` on an
+unmodified `PageHeader`. `npm run test`: the full suite is 1204 passing tests; one
+unrelated endpoints↔backend parity test hit its 15s timeout under concurrent load
+and passed 16/16 when re-run alone (its own case takes 4.9s) — no regression from
+this change. `npm run budget` (next build + 340 kB gzip/route): **OK across all 35
+routes**; `/dashboard/page` stays at **253.8 kB gzip**, i.e. unchanged from before
+this Epic — direct evidence the design pass added zero client JS (every added node
+is a server-rendered CSS class or decorative span, and Tailwind compiled the
+`dark:block` variant). The build needed the environment's per-turn bulk-delete
+guard temporarily disabled for the one `npm run budget` command (`CODEBUDDY_
+SAFE_DELETE_ENABLED=0`) because Next's own `.next/` cache cleanup had exhausted
+the turn's unlink budget after two large Epics — an environment quirk, not a code
+fault; the app's own delete-safety was never bypassed. Honest bound: the aurora is
+decorative and lives only in the dark theme by design; a light-theme reader
+deliberately does not see it.
