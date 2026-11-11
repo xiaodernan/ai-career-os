@@ -3,8 +3,8 @@
 # Epic 16.3: run all three suites + both eval harnesses.
 #
 # - On every PR / push to main: the *offline* suites only.
-#   Includes the `springcloud` job (Epic 108.26) which runs the Spring
-#   Cloud microservices contract gates on every push.
+#   Includes the `springcloud` job (the ai-service Spring Cloud contract gates)
+#   and `springcloud-java` (the gateway / discovery / config-server unit tests).
 #   These need no Docker
 #   and no external API keys — ai-service runs with LLM_PROVIDER=mock /
 #   EMBEDDING_PROVIDER=hash, the backend runs unit tests (*Test, not *IT), and
@@ -152,6 +152,28 @@ jobs:
             tests/test_the_compose_files_parse.py \
             tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
 
+  # The Spring Cloud services' own Java unit tests (*Test, no Docker) were only run by
+  # hand until now -- a broken edge or config server surfaced nowhere before the nightly.
+  springcloud-java:
+    name: springcloud-java (gateway/discovery/config-server unit tests)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [gateway, discovery, config-server]
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Unit tests
+        # *Test and *Tests; no *IT exists in these modules (any future one needs Docker).
+        run: mvn -q -B test -Dtest='*Test,*Tests'
+
   budget:
     name: frontend (bundle budget)
     runs-on: ubuntu-latest
@@ -171,7 +193,7 @@ jobs:
 
   offline-gate:
     name: offline suites green
-    needs: [ai-service, frontend, backend, springcloud, budget]
+    needs: [ai-service, frontend, backend, springcloud, springcloud-java, budget]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -181,8 +203,9 @@ jobs:
              [ "${{ needs.frontend.result }}" != "success" ] || \
              [ "${{ needs.backend.result }}" != "success" ] || \
              [ "${{ needs.springcloud.result }}" != "success" ] || \
+             [ "${{ needs.springcloud-java.result }}" != "success" ] || \
              [ "${{ needs.budget.result }}" != "success" ]; then
-            echo "One or more offline suites failed (incl. Spring Cloud contract gates and the bundle budget)."; exit 1
+            echo "One or more offline suites failed (incl. the Spring Cloud Java services)."; exit 1
           fi
 
   # --------------------------------------------------------------------------- #
