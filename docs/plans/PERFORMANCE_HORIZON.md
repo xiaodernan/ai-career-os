@@ -150,8 +150,11 @@ explain where a panel came from.
 
 **Open (documented, not silently dropped):** the live `pg_prewarm` run against a target
 install is not done on this host (no Docker here); a target install should record the
-blocks-loaded output. The warm covers the routes the nav admits; per-row prefetch of
-job/resume detail pages is folded into Epic 124's follow-ups.
+blocks-loaded output. The warm covers the routes the nav admits. The per-row prefetch of
+job/resume detail pages (folded here from Epic 124's follow-ups) shipped 2026-11-12:
+lib/hooks/use-warm-link.ts (hover + keyboard focus warms the detail route, the same
+gesture contract as the sidebar's warm-on-intent), wired onto the job card row link and
+both resume-list links; warm-link.test.ts pins the wiring source-contract style.
 
 **Note on saved searches:** the board's saved searches are filter criteria, not model
 questions, so there is no retrieval-cache entry to warm for them -- the thing they

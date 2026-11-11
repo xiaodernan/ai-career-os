@@ -11,6 +11,7 @@ import { SkillChips } from "@/components/common/skill-chips";
 import { SaveToggle } from "@/components/jobs/save-toggle";
 import { relativeTime } from "@/lib/format";
 import { jobStatusWord, remoteTypeWord, salaryBandWord } from "@/lib/status-words";
+import { useWarmLink } from "@/lib/hooks/use-warm-link";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Job } from "@/lib/api/types";
 
@@ -37,6 +38,7 @@ function JobCard({
 }: JobCardProps) {
   const match = job.latestMatch ?? null;
   const { t, locale } = useLocale();
+  const warm = useWarmLink();
   const to = href ?? `/jobs/${job.id}`;
   const salary = salaryBandWord(t, job.salaryMin, job.salaryMax, job.salaryCurrency);
   const company = job.company?.name || job.companyName;
@@ -76,6 +78,8 @@ function JobCard({
               <h3 className="truncate text-sm font-semibold leading-snug">
                 <Link
                   href={to}
+                  onMouseEnter={warm(to)}
+                  onFocus={warm(to)}
                   className="rounded-md outline-none after:absolute after:inset-0 focus-visible:ring-[3px] focus-visible:ring-primary/30 hover:text-primary"
                 >
                   {job.title}

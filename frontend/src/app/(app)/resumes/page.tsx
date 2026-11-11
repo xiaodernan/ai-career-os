@@ -20,6 +20,7 @@ import { useResumes } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { formatDate } from "@/lib/format";
 import { useQueryClient } from "@tanstack/react-query";
+import { useWarmLink } from "@/lib/hooks/use-warm-link";
 import type { Resume } from "@/lib/api/types";
 
 // The route's own default window: `GET /resumes` binds `size` with `defaultValue = "20"`, so
@@ -57,6 +58,7 @@ export default function ResumesPage() {
   const resumes = useResumes({ page: state.page, size: PAGE_SIZE });
   const qc = useQueryClient();
   const router = useRouter();
+  const warm = useWarmLink();
   const [pendingDelete, setPendingDelete] = React.useState<Resume | null>(null);
   const del = useDeleteResume();
 
@@ -121,6 +123,8 @@ export default function ResumesPage() {
                         <div className="min-w-0 flex-1 basis-52">
                           <Link
                             href={`/resumes/${r.id}`}
+                            onMouseEnter={warm(`/resumes/${r.id}`)}
+                            onFocus={warm(`/resumes/${r.id}`)}
                             className="truncate text-sm font-medium hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md"
                           >
                             {r.title}
@@ -139,7 +143,11 @@ export default function ResumesPage() {
                         </Badge>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <Button variant="outline" size="sm" asChild>
-                            <Link href={`/resumes/${r.id}`}>
+                            <Link
+                              href={`/resumes/${r.id}`}
+                              onMouseEnter={warm(`/resumes/${r.id}`)}
+                              onFocus={warm(`/resumes/${r.id}`)}
+                            >
                               {t("resumes.open")}
                               <Sparkles aria-hidden />
                             </Link>

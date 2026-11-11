@@ -14,6 +14,11 @@ vi.mock("@/lib/i18n/locale-context", () => ({
   useLocale: () => ({ locale: reader.locale, t: (key: string) => key, setLocale: () => {} }),
 }));
 
+// The row link warms on hover/focus; the test does not exercise the router.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ prefetch: () => {} }),
+}));
+
 import { JobCard } from "./job-card";
 import type { Job } from "@/lib/api/types";
 
