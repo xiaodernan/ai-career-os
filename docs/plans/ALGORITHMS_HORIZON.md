@@ -30,6 +30,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 146 | The queue stops claiming no worker ever died: orphan recovery is counted honestly | `WorkItem.reclaimed` observation tag from `XAUTOCLAIM`, `drain()` folds it into `ClaimStats.reclaimed`, zero behaviour drift, 5 offline tests |
 | 147 | Deleting a note/source/resume stops the copilot quoting it from cache: the epoch bumps after the delete commits | `POST /internal/rag/cache/invalidate` + backend `RagCacheInvalidator` (after-commit, fail-open) wired into `KnowledgeService`; endpoint has a real caller, 9 offline + 6 backend tests |
 | 148 | A long agent run cannot grow the timeline's DOM or reducer without bound: the trace window is O(cap), and what it folds away is counted, not hidden | pure `foldTrace` / `settleTraceFold` with injected `cap`, zero drift vs the old reducer, honest `tracesOmitted` surfaced in en/zh; 17 offline tests + source-contract |
+| 149 | A concurrent spring-cloud merge is reconciled: the dev edge activates the same registry profile as the backend, and the count/timeout censuses tell the truth again | dev `docker-compose.yml` gateway gets `SPRING_PROFILES_ACTIVE=eureka` + `EUREKA_DEFAULT_ZONE`; `gateway-edge` spec counted in e2e/README + PRODUCT.md (69/69) and its alias registered; `.env.example` backoff comment stops masquerading as a Redis timeout; 17 + 22 offline gates |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1188,4 +1189,66 @@ bound, plus a source-contract on the hook); related frontend suites 84/84
 drive a real long run, so the bound is proven on the pure reducer and the hook
 wiring, not on a browser streaming thousands of frames. The two i18n gates hold:
 `foldedSteps` exists in en/zh and is asked for by a literal `t()` call.
+
+---
+
+## Epic 149 — a concurrent spring-cloud merge, reconciled into the truth
+
+**How this arrived.** A full-suite pass over the accumulated worktree surfaced
+eight failures. One was Epic 147's own self-referential vocabulary count and was
+closed in that commit; the other seven were not from this line of work at all.
+Their input files were byte-identical to `HEAD` and outside the staged set: a
+concurrent session had shipped a Spring Cloud edge citizen (`gateway-edge.spec.ts`,
+the `eureka`-profile compose path) and left the surrounding documents and one
+compose environment block behind. The long-standing instruction for this repo is
+to pick up an abandoned merge where it stopped rather than wait, so these are
+closed here, with the fix made to the *source of truth*, never to the gate.
+
+**One real configuration defect, not a doc drift.** The dev `docker-compose.yml`
+had the backend on the `eureka` profile with a discovery service present, while
+the gateway still declared "the dev stack uses the default simple mode" and
+activated no profile. That is precisely the half-configured edge its own comment
+warns against: the backend registers with the registry, the gateway keeps polling
+a static list, and roughly half the routing decisions can disagree. The gateway
+now activates `SPRING_PROFILES_ACTIVE=eureka` and names
+`EUREKA_DEFAULT_ZONE=http://discovery:8761/eureka/`, matching both the backend in
+the same file and `docker-compose.prod.yml`. The stale simple-mode comment was
+replaced with an honest account of the two mutually exclusive paths. The
+`GATEWAY_BACKEND_URI` default stays in the base document as an inert fallback —
+the `eureka` profile empties the simple instance list, so it resolves nothing —
+because removing it would change the base document outside a compose deployment.
+
+**The count and timeout censuses, told the truth.** Three honest-counting gates
+had drifted against what actually ships, and each was repaired at its source:
+
+- `e2e/README.md` listed the new `gateway-edge` spec as a parenthetical prose
+  aside inside the `N passed (...)` breakdown, which the arithmetic gate parsed as
+  an unknown label and double-counted. The breakdown now carries the plain
+  `1 gateway edge` item; the prose describing what that case walks moved to its
+  own sentence after the parenthetical. The alias table in
+  `test_the_e2e_readme_keeps_its_own_arithmetic.py` grew by exactly one entry —
+  the extension point the test itself names ("update ALIASES or the README,
+  never neither"), matching the real spec rather than excusing it.
+- `docs/PRODUCT.md` recorded `68/68` while `e2e/tests/` ships 69 cases (17 specs).
+  It now says `69/69`. The undated sentence is graded against the live spec count,
+  and the dated run record in `e2e/README.md` stays untouched — the gate needs at
+  least one dated record to tell a historical run from a claim about today.
+- `.env.example` described the backoff base as "draws from `[0, 500ms]`", and the
+  limiter's fail-open census, which counts millisecond figures to check the Redis
+  timeout pair, read that as a fourth timeout claim. The comment now says
+  `[0, 500] milliseconds` — the same meaning, and more precise about a variable
+  whose unit is already `_MS`; a number in a backoff comment must not impersonate
+  a client timeout.
+
+**Verification and boundaries.** The seven failures pass (17 tests across the
+e2e-arithmetic, product-doc, limiter and registry suites), plus 22 compose/env
+regression gates (parse, dev variable coverage, declared-knob coverage, loopback
+bindings, the two doors, config-client opt-in, deployment port doc). No test was
+relaxed, skipped or re-baselined downward; every change makes a document or a
+compose environment agree with what the code and specs actually ship. No live
+stack was started, so the newly-activated dev gateway profile is verified by the
+compose/registry contract and YAML parse, not by watching Eureka registration on
+running containers — that walk remains an operator step, stated rather than
+implied. This chapter deliberately names no transport-liveness noun, so the
+vocabulary census stays at its honest 13 lines and the ledger does not move.
 
