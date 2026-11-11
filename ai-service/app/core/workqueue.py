@@ -52,10 +52,20 @@ XGROUP_CREATE = ("XGROUP", "CREATE")
 
 @dataclass(frozen=True)
 class WorkItem:
-    """A claimed message: its stream id (for ACK) and its payload fields."""
+    """A claimed message: its stream id (for ACK) and its payload fields.
+
+    ``reclaimed`` is True when this message came from ``XAUTOCLAIM`` (another
+    consumer's orphan) rather than a fresh ``XREADGROUP >`` delivery. It is a
+    *measurement* tag, not a behaviour switch: the handler treats both ways
+    identically (at-least-once + idempotent). It exists so ``drain`` can report
+    an honest ``ClaimStats.reclaimed`` instead of the hard-coded 0 that made the
+    heartbeat and logs claim no worker had ever died (Epic 146). The default
+    False keeps every existing constructor / FakePool byte-for-byte unchanged.
+    """
 
     stream_id: str
     fields: dict[str, str]
+    reclaimed: bool = False
 
     def value(self, key: str, default: str = "") -> str:
         return self.fields.get(key, default)
@@ -65,8 +75,8 @@ class WorkItem:
 class ClaimStats:
     """What one drain pass did — useful for logs and for the tests."""
 
-    delivered: int = 0      # fresh XREADGROUP deliveries
-    reclaimed: int = 0      # recovered from another consumer's PEL
+    delivered: int = 0      # total claimed this pass (fresh XREADGROUP + reclaimed)
+    reclaimed: int = 0      # subset of delivered: orphans recovered from another consumer's PEL (Epic 146)
     ack_failed: int = 0
     dead_lettered: int = 0  # poison jobs moved out of the PEL into the DLQ
     delayed: int = 0        # failures parked in the delay ZSET (Epic 144; 0 when off)
@@ -219,6 +229,10 @@ class WorkQueue:
         Orphans come from ``XAUTOCLAIM``: messages sitting in *any* consumer's PEL
         longer than ``min_idle_ms``. Combining both in one call is what gives a
         single ``claim()`` the two behaviours a worker needs each tick.
+
+        Each item carries a ``reclaimed`` tag naming which of the two returned it,
+        so ``drain`` can count orphans recovered from a dead consumer. That tag is
+        observation only — it never changes how the item is handled (Epic 146).
         """
         await self.ensure_group()
         out: list[WorkItem] = []
@@ -235,7 +249,7 @@ class WorkQueue:
                 str(self.min_idle_ms), "0-0", "COUNT", str(self.batch - len(out)))
             for entry_id, fields in self._entries(claimed):
                 sid, decoded = self._fields(entry_id, fields)
-                out.append(WorkItem(sid, decoded))
+                out.append(WorkItem(sid, decoded, reclaimed=True))
         return out
 
     async def ack(self, *stream_ids: str) -> int:
@@ -552,7 +566,14 @@ class WorkQueue:
                 log.warning("work queue ACK failed for %d jobs: %s (they stay pending; "
                             "a duplicate re-queue is harmless to an idempotent handler)",
                             len(acked), e)
-        return ClaimStats(delivered=len(items), reclaimed=0,
+        # Epic 146: count the XAUTOCLAIM orphans this pass actually recovered from
+        # another consumer's PEL. `delivered` stays the total claimed (fresh +
+        # reclaimed) so the heartbeat's throughput number is unchanged — only the
+        # previously-always-zero `reclaimed` becomes honest. The tag is on the
+        # WorkItem, so this is a pure observation of what `claim()` already did,
+        # with no extra Redis command and no behaviour change.
+        reclaimed = sum(1 for item in items if item.reclaimed)
+        return ClaimStats(delivered=len(items), reclaimed=reclaimed,
                           ack_failed=len(acked) - ack_count + failed,
                           dead_lettered=dead_lettered,
                           dead_lettered_ids=tuple(dead_lettered_ids),

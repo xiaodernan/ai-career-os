@@ -27,6 +27,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 143 | The RAG cache's saving is measured honestly and its invalidation boundary is named, not assumed | read-only `GET /internal/ops/cache`, pure-function verdict (0-rate is three states), off/memory/layered work-count baseline, 48 offline tests |
 | 144 | A transient provider blip gets a jittered backoff window to heal in, instead of burning `max_deliveries` in five ticks | Redis-ZSET delay queue + pure-function exponential/full-jitter fold, zero-drift opt-in (worker default ON), 34 offline tests + real-Redis end-to-end |
 | 145 | The producer stops re-enqueueing a job that is still sleeping out its backoff, so the delay is never bypassed | `parked_ids()` + dual-source `_suppressed(queue, guard)` unioned into the producer's SQL and the consumer's ACK path, both reads independent/fail-open, 58 offline tests |
+| 146 | The queue stops claiming no worker ever died: orphan recovery is counted honestly | `WorkItem.reclaimed` observation tag from `XAUTOCLAIM`, `drain()` folds it into `ClaimStats.reclaimed`, zero behaviour drift, 5 offline tests |
 | — | (observed bug, backend-owned) Deleting a note/resume retires chunks by direct SQL without bumping the reader epoch, so the RAG cache can quote deleted content until TTL | needs the backend delete path to call the invalidation seam; backend was under concurrent edit — see findings below |
 
 ## Rules
@@ -940,4 +941,52 @@ ACKs a parked duplicate without a model call and survives a guard outage;
 backoff-off zero drift; a source-contract test that both passes call
 `await _suppressed(queue, guard)` and no single-source call site remains).
 58 offline tests across the two files pass; full `verify_gates` green at commit.
+
+## Epic 146 — the queue stops claiming no worker ever died in (DONE)
+
+**The bug, stated precisely.** `claim()` really does recover a dead consumer's
+orphan via `XAUTOCLAIM` — but `drain()` returned `ClaimStats(reclaimed=0)`
+**hard-coded**. That 0 was then written into the liveness heartbeat
+(`queue_observer.record_tick`) and the `embed_loop_distributed` log line
+(`reclaimed=%d`). So the one number that tells an operator "a worker crashed and
+its job was picked back up" was a permanent, confident lie: it read 0 no matter
+how many orphans were recovered. This is the same class of dishonesty Epic 140
+existed to remove, hiding in a field nobody had wired to a source.
+
+**The fix: an observation tag, not a behaviour switch.** `WorkItem` gains
+`reclaimed: bool = False`. `claim()` tags only the items that came back from the
+`XAUTOCLAIM` branch (`reclaimed=True`); `XREADGROUP >` items keep the default.
+`drain()` folds the tag into `ClaimStats.reclaimed` with a plain sum over the
+items it already claimed — **no extra Redis command**, no change to how any
+message is handled (at-least-once + idempotent handler treats both paths the
+same). The full observation chain was already in place (stats → heartbeat →
+`/internal/ops/workqueue` → logs), so this single upstream correction makes the
+whole line honest at once.
+
+**Zero behaviour drift, deliberately.** `delivered` stays the total claimed
+(fresh + reclaimed), so the heartbeat's throughput number is byte-for-byte what
+it was — only the previously-always-zero `reclaimed` changes. `reclaimed` is
+documented as a *subset* of `delivered`, which is the honest reading Redis gives:
+the batch contains both new deliveries and recovered orphans. The `WorkItem`
+default keeps every existing constructor and every FakePool in the queue suites
+untouched; the health report's verdict ladder never reads either number, so no
+verdict shifts. This is a measurement repair, not a scaling change.
+
+**What was explicitly not done.** No change to `XAUTOCLAIM` itself, the
+visibility timeout, or the retry/DLQ path. No new endpoint or public surface.
+No attempt to attribute an orphan to the *specific* consumer that died — Redis
+`XAUTOCLAIM` returns the message, not its former owner, and inventing that
+attribution would be a second unprovable truth. The multi-replica heartbeats are
+still process-local (Epic 131's recorded scale-out item); this Epic makes the
+number each replica reports honest, which is a prerequisite for ever aggregating
+them, but does not aggregate them here.
+
+**Verification.** `test_the_work_queue_delivers_each_job_once.py` gains five
+offline cases: a fresh delivery stays `reclaimed=False` (zero drift); an
+XAUTOCLAIM orphan is tagged `reclaimed=True`; a mixed batch (1 fresh + 1 orphan)
+reports `delivered=2, reclaimed=1`; the no-orphan common case keeps `reclaimed=0`;
+and a 3-fresh + 2-orphan batch reports exactly `reclaimed=2`. FakePool models
+XAUTOCLAIM's PEL semantics, so the count is pinned against a real recovery
+path, not a stub. Workqueue/observation group 123 passed; full `verify_gates`
+green at commit.
 

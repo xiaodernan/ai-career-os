@@ -236,6 +236,93 @@ async def test_an_unacked_job_is_reclaimed_after_the_visibility_timeout():
     assert recovered[0].stream_id == claimed[0].stream_id, "same job, re-claimed"
 
 
+# --------------------------------------------------------------- reclaimed counting (Epic 146)
+async def test_a_fresh_delivery_is_tagged_not_reclaimed():
+    """Zero-drift: a plain XREADGROUP delivery keeps the default reclaimed=False,
+    so drain's reclaimed count stays 0 exactly as before Epic 146."""
+    pool = FakePool()
+    q = _queue(pool)
+    await q.enqueue({"job_id": "fresh"})
+    items = await q.claim()
+    assert len(items) == 1 and items[0].reclaimed is False
+
+
+async def test_an_orphan_is_tagged_reclaimed_by_the_claim_that_recovers_it():
+    """The XAUTOCLAIM recovery of a dead consumer's job is tagged reclaimed=True;
+    the tag names which Redis command returned it, nothing about how it is handled."""
+    pool = FakePool()
+    dead = _queue(pool, consumer="dead", min_idle_ms=1000)
+    alive = _queue(pool, consumer="alive", min_idle_ms=1000)
+    await pool.execute("XADD", "jobs", "*", "job_id", "orphan")
+    await dead.claim()                 # dead worker takes it, never ACKs
+    pool.clock_ms += 1001              # visibility timeout lapses
+    recovered = await alive.claim()
+    assert len(recovered) == 1
+    assert recovered[0].value("job_id") == "orphan"
+    assert recovered[0].reclaimed is True, "came from XAUTOCLAIM, not XREADGROUP"
+
+
+async def test_drain_reports_the_honest_reclaimed_count_for_a_mixed_batch():
+    """The bug this Epic fixes: drain() used to hard-code reclaimed=0 while the
+    heartbeat and logs reported it. With one fresh + one orphan in the batch,
+    stats.reclaimed must say 1 and stats.delivered stays the total (2)."""
+    pool = FakePool()
+    dead = _queue(pool, consumer="dead", min_idle_ms=1000)
+    alive = _queue(pool, consumer="alive", min_idle_ms=1000)
+    # One message goes to the dead worker (becomes an orphan), one stays fresh.
+    await pool.execute("XADD", "jobs", "*", "job_id", "orphan")
+    await dead.claim()
+    await pool.execute("XADD", "jobs", "*", "job_id", "fresh")
+    pool.clock_ms += 1001
+
+    seen = []
+    async def handler(item: WorkItem) -> bool:
+        seen.append((item.value("job_id"), item.reclaimed))
+        return True
+
+    stats = await alive.drain(handler)
+    assert sorted(seen) == [("fresh", False), ("orphan", True)]
+    assert stats.delivered == 2, "total throughput unchanged"
+    assert stats.reclaimed == 1, "one orphan recovered from the dead consumer's PEL"
+
+
+async def test_drain_reclaimed_is_zero_when_no_worker_ever_died():
+    """The common case stays byte-for-byte: no orphans -> reclaimed 0, so the
+    heartbeat and log line keep their old honest 'nothing was reclaimed'."""
+    pool = FakePool()
+    q = _queue(pool)
+    for i in range(3):
+        await q.enqueue({"job_id": str(i)})
+
+    async def ok(item: WorkItem) -> bool:
+        return True
+
+    stats = await q.drain(ok)
+    assert stats.delivered == 3
+    assert stats.reclaimed == 0
+
+
+async def test_drain_reclaimed_counts_only_the_orphans_not_the_whole_batch():
+    """A batch of several fresh plus two orphans: reclaimed is exactly the orphan
+    count, not the delivered total and not zero — the number must be trustworthy."""
+    pool = FakePool()
+    dead = _queue(pool, consumer="dead", min_idle_ms=1000)
+    alive = _queue(pool, consumer="alive", min_idle_ms=1000, batch=8)
+    for i in range(2):
+        await pool.execute("XADD", "jobs", "*", "job_id", f"orphan-{i}")
+    await dead.claim()
+    for i in range(3):
+        await pool.execute("XADD", "jobs", "*", "job_id", f"fresh-{i}")
+    pool.clock_ms += 1001
+
+    async def ok(item: WorkItem) -> bool:
+        return True
+
+    stats = await alive.drain(ok)
+    assert stats.delivered == 5
+    assert stats.reclaimed == 2
+
+
 async def test_drain_acks_successes_and_requeues_failures():
     pool = FakePool()
     q = _queue(pool)
