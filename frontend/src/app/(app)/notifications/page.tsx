@@ -140,8 +140,9 @@ export default function NotificationsPage() {
   const kind = asInboxKind(view.kind);
   const unreadOnly = view.unread === true;
 
-  const items = inbox.data?.items ?? [];
-  const rows = rowsUnder(items, kind, unreadOnly);
+  const items = React.useMemo(() => inbox.data?.items ?? [], [inbox.data?.items]);
+  const rows = React.useMemo(() => rowsUnder(items, kind, unreadOnly), [items, kind, unreadOnly]);
+  const kindGroups = React.useMemo(() => kindsPresent(items), [items]);
   const unread = inbox.data?.unread ?? 0;
   /** The rows the reader has dealt with: the inbox it is showing, minus the unread. */
   const read = Math.max(0, items.length - unread);
@@ -213,7 +214,7 @@ export default function NotificationsPage() {
                 >
                   {t("notifications.filterAll")}
                 </Button>
-                {kindsPresent(items).map((group) => (
+                {kindGroups.map((group) => (
                   <Button
                     key={group.kind}
                     size="sm"

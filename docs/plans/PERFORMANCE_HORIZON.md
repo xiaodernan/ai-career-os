@@ -42,7 +42,9 @@ the pipeline makes), a different user never sees the first user's entry, ingesti
 document invalidates the key, and the Redis client's protocol behaviour is pinned by
 a fake server that fragments its replies.
 
-## Epic 119 — the ten-thousandth row costs nothing to draw
+## Epic 119 — the ten-thousandth row costs nothing to draw **DONE (verified 2026-11-11)**
+**Scope as shipped:** memoised rows and derivations on the timeline and inbox lists (react-memo on TimelineRow, memoised visible/items/rows/kindGroups), so parent re-renders no longer redo per-row string/filter work. Virtual rendering of full windows still open (tracked with Epic 123/124).
+
 
 **Measured.** The board, the timeline and the inbox all render windows of rows, and
 every window re-derives strings, sorts and formats per render.

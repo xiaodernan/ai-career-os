@@ -55,7 +55,7 @@ const KIND_VISUALS: Record<string, { icon: LucideIcon; labelKey: string; href?: 
   unknown: { icon: History, labelKey: "timeline.kinds.unknown" },
 };
 
-function TimelineRow({ event, locale }: {
+const TimelineRow = React.memo(function TimelineRow({ event, locale }: {
   event: TimelineEntry;
   locale: "en" | "zh";
 }) {
@@ -96,7 +96,7 @@ function TimelineRow({ event, locale }: {
       </time>
     </li>
   );
-}
+})
 
 export default function TimelinePage() {
   const { t, locale } = useLocale();
@@ -116,6 +116,11 @@ export default function TimelinePage() {
   const offeredKinds = React.useMemo(
     () => [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
     [counts]
+  );
+  const visible = React.useMemo(
+    () => (narrowedKind ? (query.data ?? []).filter((event) => event.kind === narrowedKind)
+                        : (query.data ?? [])),
+    [query.data, narrowedKind]
   );
 
   return (
@@ -175,10 +180,7 @@ export default function TimelinePage() {
               description: t("timeline.emptyDescription"),
             }}
       >
-        {(events) => {
-          const visible = narrowedKind
-            ? events.filter((event) => event.kind === narrowedKind)
-            : events;
+        {() => {
           if (visible.length === 0) {
             return (
               <p className="rounded-lg border border-border/60 bg-card px-4 py-6 text-center text-sm text-muted-foreground">

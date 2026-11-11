@@ -5710,6 +5710,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **108.27** Kubernetes-shaped liveness/readiness probes on every Spring Cloud service (measured 2026-11-10).
 - [x] **110** Config Server opt-in demo round-trip (verified 2026-11-10).
 - [x] **118** Per-reader retrieval & embedding caching (ai-service, verified 2026-11-11).
+- [x] **119** Memoised rows and derivations on the longest read surfaces (frontend, verified 2026-11-11).
+
+  (Memoisation shipped for `TimelineRow` (timeline, react-memo on the component + memoised `visible`) and
+  the inbox list (memoised `items`, `rows`, `kindGroups`), so list rendering no longer redoes the per-row
+  string/filter work on parent re-renders. Virtual rendering of full windows is still listed in the horizon
+  backlog (Epic 124/123) as a follow-up.)
 
   (`app/core/cache.py`: NullCache/off (default), process-local MemoryCache with LRU + epoch invalidation,
   or Redis via a dependency-free RESP2 client (`app/core/resp.py`) behind a breaker. `app/rag/caching.py`
