@@ -47,10 +47,10 @@ test("a contact is written, edited and deleted on the screen", async ({
   // plain list: there is no pager on an address book.
   await expect
     .poll(async () => {
-      const contacts = await unwrap<Array<{ name: string; company: string }>>(
+      const contacts = await unwrap<{ items: Array<{ name: string; company: string }> }>(
         await api.get("/contacts")
       );
-      return contacts.map((c) => `${c.name}@${c.company}`).join(",");
+      return contacts.items.map((c) => `${c.name}@${c.company}`).join(",");
     }, { timeout: 20_000 })
     .toContain("Li Ming@Acme");
 
@@ -62,10 +62,10 @@ test("a contact is written, edited and deleted on the screen", async ({
 
   await expect
     .poll(async () => {
-      const contacts = await unwrap<Array<{ name: string; company: string }>>(
+      const contacts = await unwrap<{ items: Array<{ name: string; company: string }> }>(
         await api.get("/contacts")
       );
-      return contacts.map((c) => `${c.name}@${c.company}`).join(",");
+      return contacts.items.map((c) => `${c.name}@${c.company}`).join(",");
     }, { timeout: 20_000 })
     .toContain("Li Ming@Acme Labs");
 

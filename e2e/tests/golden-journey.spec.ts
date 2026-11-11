@@ -352,8 +352,8 @@ test.describe("golden journey — track the application", () => {
     // Saving is the bookmark half of tracking.
     const savedRes = await api.post(`/jobs/${job.id}/save`);
     expect((await savedRes.json()).success).toBe(true);
-    const saved = await unwrap<Array<{ job: { id: string } }>>(await api.get("/jobs/saved"));
-    expect(saved.some((s) => s.job.id === job.id), "saved role should appear in /jobs/saved").toBe(true);
+    const saved = await unwrap<{ items: Array<{ job: { id: string } }> }>(await api.get("/jobs/saved"));
+    expect(saved.items.some((s) => s.job.id === job.id), "saved role should appear in /jobs/saved").toBe(true);
 
     // An application is the kanban card.
     const app = await unwrap<{ id: string; status: string }>(

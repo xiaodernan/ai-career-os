@@ -251,11 +251,11 @@ test("the notes and the contacts the reader typed travel in the bundle", async (
     "the note did not come back"
   ).toContain("Hangzhou senior backend, 40-60w total.");
 
-  const restoredContacts = await unwrap<Array<{ name: string; relation: string }>>(
+  const restoredContacts = await unwrap<{ items: Array<{ name: string; relation: string }> }>(
     await otherApi.get("/contacts")
   );
   expect(
-    restoredContacts.map((c) => c.name),
+    restoredContacts.items.map((c) => c.name),
     "the contact did not come back"
   ).toContain("Li Ming");
 });
