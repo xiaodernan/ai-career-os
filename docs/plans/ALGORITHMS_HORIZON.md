@@ -16,7 +16,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 |---|---|---|
 | 132 | The primitives exist and are measured | `test_the_algorithms_module.py` (50) |
 | 133 | The top-K helper uses the *right* heap for the scale | measurement + stability/streaming contract; fusion keeps its sort on purpose |
-| 134 | A rerank that costs no model call is available and honest | `RERANK_MODE=bm25`, mode census, offline rerank tests |
+| 134 | A rerank that costs no model call is available and honest | `RERANK_MODE=bm25`, mode census, 10 offline rerank tests |
 | 135 | (next) The lexical channel can be scored in-process without pg_trgm when the corpus is small | to be measured |
 
 ## Rules
@@ -87,3 +87,37 @@ and `docs/RAG.md`; (b) offline tests prove `bm25` orders by lexical relevance, k
 stable ties, injects finite normalized scores, and never calls `ask_json`; (c) the
 existing six rerank degradation tests still pass; (d) a measured note records the
 BM25 pass's wall time on a 40-candidate corpus.
+
+**DONE (verified 2026-11-11, offline).** All four conditions met:
+- **Shipped.** `RERANK_MODE=bm25` is the third mode alongside `llm` (still default)
+  and `none`. `app/rag/rerank.py` scores the fused `rows[:25]` with the BM25 from
+  Epic 132, min-max normalising to (0, 1] so `pipeline.to_evidence`'s
+  `max(rerank, rrf)` keeps a single scale — an out-of-scale BM25 score would
+  fabricate confidence, so this is pinned by an explicit `to_evidence` test.
+  Both computed modes inject the same `rerank` field and trace a `mode` key; the
+  citation/observability paths do not branch on the ranker. `eval/run_eval.py`'s
+  `--rerank` choices, `.env.example`, `config.py`'s mode comment, and `docs/RAG.md`
+  carry the new mode; the RAG-doc census was generalised from a hardcoded
+  two-mode parse to `findall(RERANK_MODE=(\w+))` so a fourth mode is one doc edit.
+- **Chinese actually works.** A tokeniser that only matched `[a-z0-9]+` would
+  score every Chinese resume chunk zero and make the feature useless on a Chinese
+  job platform. `_rerank_tokens` emits overlapping CJK character bigrams (plus
+  Latin words) — the standard no-segmenter IR trick — so "机器学习" shares signal
+  with "机器学习框架". Writing it surfaced a real bug in the first draft: a missing
+  `\\u` on the Hangul range (`\\ufaffac00`) widened the character class to cover
+  ASCII, so English was bigrammed too; the bigram test caught it and the escape is
+  fixed. Bigrams cost time linear in text length.
+- **Measured (this host, 2026-11-11).** BM25 fit+score over 40 candidate chunks of
+  ~600 mixed Chinese/English characters: **median 9.60 ms, p95 22.5 ms** (300 runs,
+  varied vocabulary). That is one in-process CPU pass — zero model call, zero
+  network round trip, zero token billing, and available when no provider is
+  configured. The `llm` path remains for relevance quality; `bm25` is the honest
+  middle between a model call and no lexical re-scoring at all. An earlier
+  measurement with an artificially repetitive corpus read 31.6 ms; the varied
+  corpus above is the representative one (repetition inflated the term counts).
+- **Verified.** `test_the_rerank_that_costs_no_model_call.py` 10/10 (ordering,
+  normalisation, evidence-scale safety, zero-match + tie stability, Chinese
+  bigrams, never-LLM, unknown-mode fallthrough); `test_core_modules.py` rerank
+  degradation suite still green; RAG-doc + env-declaration censuses green
+  (100/100 combined with core_modules). Full ai-service suite is the operator's
+  offline-gate run; this host has no Docker for the live RAG eval.

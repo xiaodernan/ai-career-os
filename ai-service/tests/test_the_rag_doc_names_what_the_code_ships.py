@@ -95,11 +95,16 @@ def rerank_modes() -> set[str]:
 
 
 def documented_rerank_modes() -> set[str]:
+    """Every mode RAG.md offers, read from its `RERANK_MODE=<mode>` mentions.
+
+    Named explicitly rather than inferred from "X skips it" prose, so adding a
+    fourth mode is a one-line doc edit plus the matching config comment -- the
+    census then compares the two sets and fails on drift either way.
+    """
     text = read(DOC)
-    named = re.search(r"`RERANK_MODE=(\w+)`", text)
-    skipped = re.search(r"`(\w+)` skips it", text)
-    assert named and skipped, "RAG.md no longer names the rerank modes"
-    return {named.group(1), skipped.group(1)}
+    modes = set(re.findall(r"`RERANK_MODE=(\w+)`", text))
+    assert modes, "RAG.md no longer names any RERANK_MODE modes"
+    return modes
 
 
 def cover_letter_kinds() -> set[str]:

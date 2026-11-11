@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     voice_tts_model: str = "gpt-4o-mini-tts"
     voice_tts_voice: str = "alloy"
 
-    rerank_mode: str = "llm"  # llm | none
+    rerank_mode: str = "llm"  # llm | bm25 | none
     rerank_model: str = ""  # empty -> reuse llm_model
 
     # Cache (Epic 118). `off` keeps every run identical to the pre-cache build, which

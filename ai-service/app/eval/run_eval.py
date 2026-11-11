@@ -271,7 +271,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--experiment", default=f"exp-{uuid.uuid4().hex[:6]}")
     p.add_argument("--k", type=int, default=5, help="cutoff for @k metrics")
     p.add_argument("--top-k", type=int, default=8, help="retrieval depth")
-    p.add_argument("--rerank", choices=["llm", "none"], default=None)
+    p.add_argument("--rerank", choices=["llm", "bm25", "none"], default=None)
     p.add_argument("--answer", action="store_true", help="also score generation")
     p.add_argument("--dataset", default=None, help="jsonl override for golden set")
     p.add_argument("--tags", default=None, help="comma-separated tag filter")

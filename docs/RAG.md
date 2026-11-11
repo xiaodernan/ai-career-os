@@ -49,8 +49,15 @@ understand → hybrid retrieve → RRF fuse → rerank → compress → cite
    per-channel lists by chunk id (no score scale mismatch). Covered by
    `tests/test_core_modules.py::test_rrf_*`.
 
-4. **Rerank** (`rag/rerank.py::rerank`) — `RERANK_MODE=llm` re-orders the fused
-   candidates down to `top_k` with an LLM relevance pass (`none` skips it).
+4. **Rerank** (`rag/rerank.py::rerank`) — three modes, all injecting the same
+   `rerank` field in 0..1 so `to_evidence`'s `max(rerank, rrf)` keeps one scale:
+   `RERANK_MODE=llm` (default) re-orders the fused candidates down to `top_n` with
+   an LLM relevance pass; `RERANK_MODE=bm25` does the same in-process with Okapi
+   BM25 — no model call, deterministic, microseconds, Chinese-aware character
+   bigrams (the standard no-segmenter trick), min-max normalised to (0, 1];
+   `RERANK_MODE=none` skips it and keeps the fused RRF order. A query sharing no
+   token with any candidate scores all-zero and leaves RRF order untouched, in
+   either computed mode. Pinned in `tests/test_the_rerank_that_costs_no_model_call.py`.
 
 5. **Compress** (`rag/compress.py::compress`) — keeps only the sentences that
    overlap the query intent, with a floor so very relevant-but-terse chunks
