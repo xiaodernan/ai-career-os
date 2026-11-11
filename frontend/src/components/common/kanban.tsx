@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   DndContext,
   closestCenter,
@@ -109,7 +110,7 @@ interface KanbanCardProps {
   onOpen: (app: Application) => void;
 }
 
-function KanbanCard({
+const KanbanCard = React.memo(function KanbanCard({
   app,
   index,
   status,
@@ -278,7 +279,7 @@ function KanbanCard({
       </div>
     </div>
   );
-}
+})
 
 interface KanbanBoardProps {
   applications: Application[];

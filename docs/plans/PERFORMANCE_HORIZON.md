@@ -43,7 +43,7 @@ document invalidates the key, and the Redis client's protocol behaviour is pinne
 a fake server that fragments its replies.
 
 ## Epic 119 — the ten-thousandth row costs nothing to draw **DONE (verified 2026-11-11)**
-**Scope as shipped:** memoised rows and derivations on the timeline and inbox lists (react-memo on TimelineRow, memoised visible/items/rows/kindGroups), so parent re-renders no longer redo per-row string/filter work. Virtual rendering of full windows still open (tracked with Epic 123/124).
+**Scope as shipped:** memoised rows and derivations on the timeline, inbox, and Kanban board (react-memo on TimelineRow and KanbanCard, memoised visible/items/rows/kindGroups), so parent re-renders no longer redo per-row string/filter work. Virtual rendering of full windows still open (tracked with Epic 123/124).
 
 
 **Measured.** The board, the timeline and the inbox all render windows of rows, and

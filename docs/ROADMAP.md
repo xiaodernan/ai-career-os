@@ -5712,7 +5712,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **118** Per-reader retrieval & embedding caching (ai-service, verified 2026-11-11).
 - [x] **119** Memoised rows and derivations on the longest read surfaces (frontend, verified 2026-11-11).
 
-  (Memoisation shipped for `TimelineRow` (timeline, react-memo on the component + memoised `visible`) and
+  (Memoisation shipped for `TimelineRow` (timeline, react-memo), `KanbanCard` (board, react-memo) and
   the inbox list (memoised `items`, `rows`, `kindGroups`), so list rendering no longer redoes the per-row
   string/filter work on parent re-renders. Virtual rendering of full windows is still listed in the horizon
   backlog (Epic 124/123) as a follow-up.)
