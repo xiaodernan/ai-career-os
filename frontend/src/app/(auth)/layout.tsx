@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/common/theme-toggle";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { ProductPreview } from "@/components/marketing/product-preview";
+import { GradientText } from "@/components/ui/gradient-text";
 
 /**
  * The four pillars the auth pages sell the product with.
@@ -36,12 +37,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Sparkles className="size-4.5" aria-hidden />
           </span>
           <span className="font-serif text-lg font-semibold tracking-tight">
-            Career<span className="text-primary">OS</span>
+            Career<GradientText>OS</GradientText>
           </span>
         </Link>
 
-        <div className="relative max-w-md space-y-10">
-          <div>
+        <div className="relative z-10 max-w-md space-y-10">
+          <div className="animate-fade-up">
+            <span aria-hidden className="shimmer-rule mb-5 block h-px w-16 rounded-full" />
             <p className="mb-3 text-xs font-medium tracking-widest text-primary uppercase">
               {t("auth.eyebrow")}
             </p>
@@ -54,8 +56,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <ul className="space-y-5">
-            {PILLARS.map((p) => (
-              <li key={p.title} className="flex gap-3">
+            {PILLARS.map((p, i) => (
+              <li
+                key={p.title}
+                className="animate-fade-up flex gap-3"
+                style={{ animationDelay: `${120 + i * 90}ms` }}
+              >
                 <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/70" />
                 <div>
                   <p className="text-sm font-medium">{t(p.title)}</p>
@@ -66,11 +72,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </ul>
 
           {/* The front door shows the product, not just the pitch (Epic 130): the same
-              illustration the landing hero carries. */}
-          <ProductPreview className="max-w-md pt-2" />
+              illustration the landing hero carries. It now floats on a glass surface,
+              the same elevation language the landing's feature cards use. */}
+          <div className="animate-fade-up glass relative max-w-md rounded-2xl p-3"
+               style={{ animationDelay: "480ms" }}>
+            <ProductPreview className="pt-2" />
+          </div>
         </div>
 
-        <p className="relative text-xs text-muted-foreground">
+        <p className="relative z-10 text-xs text-muted-foreground">
           {t("auth.quote")}
         </p>
       </section>
