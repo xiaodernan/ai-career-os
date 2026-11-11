@@ -25,6 +25,8 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 140 | The dead-letter pipeline can be *seen*: one honest verdict over live Redis + consumer liveness | read-only `GET /internal/ops/workqueue`, pure-function health fold, 54 offline tests + real-Redis end-to-end |
 | 141 | The signed-in first screen carries the landing/auth design language, without washing the light theme or growing the bundle | `dashboard/page.test.ts` source contract, copy census, build + bundle budget |
 | 143 | The RAG cache's saving is measured honestly and its invalidation boundary is named, not assumed | read-only `GET /internal/ops/cache`, pure-function verdict (0-rate is three states), off/memory/layered work-count baseline, 48 offline tests |
+| 144 | (observed, not built) Failed embed jobs retry on the *next tick* with no backoff, so a transient provider blip can exhaust `max_deliveries` and dead-letter prematurely | design + findings below; touches `workqueue.drain`/`claim` core, deferred to avoid a rushed regression |
+| — | (observed bug, backend-owned) Deleting a note/resume retires chunks by direct SQL without bumping the reader epoch, so the RAG cache can quote deleted content until TTL | needs the backend delete path to call the invalidation seam; backend was under concurrent edit — see findings below |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -714,3 +716,59 @@ one replica's report is its own, exactly as `/internal/rag/cache` already docume
 The A/B baseline is intentionally in-process (no Redis, no provider): it proves the
 cache *mechanism* collapses repeat work, not that a specific production deployment
 will save a specific number of milliseconds.
+
+## Open findings — observed 2026-11-12, deliberately not built this turn
+
+Two real gaps were found while scoping the work after Epic 143. Both are recorded
+with their evidence and the reason they were **not** rushed into code, so the next
+session can pick either up without re-deriving the context.
+
+### Finding A — failed jobs have no retry backoff (candidate Epic 144)
+
+`WorkQueue.drain()` (`app/core/workqueue.py`, the failure branch at lines ~299–331)
+re-queues a failed job with `XADD` straight back onto the main stream, increments
+`attempts`, and ACKs the old copy. `claim()` takes fresh deliveries first. There is
+**no delay**: the very next producer tick re-claims the job. With
+`work_queue_max_deliveries=5`, a *transient* embed-provider blip that would heal in
+30 s can therefore be retried five times within five tick intervals and be
+dead-lettered prematurely — a permanent loss of a job that was only briefly
+unhealthy. Epic 139's `DlqGuard` cooldown starts **after** a job reaches the DLQ, so
+it does not cover the retry cadence before that point. Backoff is the missing link.
+
+The clean design (not yet implemented): carry a `not_before` epoch field on the
+re-queued entry, exponential (`base * 2**(attempts-1)`, capped) + full jitter so N
+replicas do not retry in lockstep; `claim()` honors `not_before` by leaving
+not-yet-due entries on the stream (a due-only read needs care — plain `XREADGROUP`
+has no per-field filter, so this is either a ZSET scheduler or a producer-side
+eligibility gate). Verify: a failed job is not re-claimed before its window, a
+transient failure heals without reaching the DLQ, a persistent failure still
+dead-letters at the cap, and the drift from Epic 138/139 behaviour is explicit.
+
+**Why deferred.** This edits the `drain`/`claim` core that Epics 138/139/140 just
+stabilised, plus `Settings` + `.env.example` (env census + secret-hook choreography),
+and every FakePool in the queue suites. Doing it in the same turn as Epic 143, with
+the backend/e2e/frontend sessions still actively committing, would be a rushed
+regression risk on the project's most delicate reliability path. It is a real,
+well-scoped next Epic — not a placeholder.
+
+### Finding B — the cache can quote a deleted document (backend-owned bug)
+
+Epic 143's contract test proves that a corpus write which does **not** call
+`caching.invalidate_user` leaves the reader's epoch unmoved, so the cached answer
+survives. A concrete instance exists today: `KnowledgeService.deleteNote` /
+`retireRef` (and the resume-delete analogue) retires chunks by **direct SQL**
+(`documents.status` → terminal + `reclaimer.reclaim`) without going through
+ai-service's ingest pipeline, which is the only place `invalidate_user` is wired.
+Add/Edit *do* re-ingest through `fileIngest.ingestText` and are covered; **Delete
+is the gap**. Until TTL, the copilot can cite a note or resume the reader deleted.
+
+**Why deferred / what the honest fix is.** The correction belongs on the backend
+delete path: after a successful retire, call the ai-service invalidation seam for
+that `user_id` (the normal ingest path already does). A brand-new
+`POST /internal/rag/cache/invalidate` endpoint alone would be an orphan "write"
+surface that no caller consumes — the exact anti-pattern Epic 143 was written to
+expose — so it was deliberately **not** built. Doing this properly needs the
+backend + `HttpAiServiceClient` + its tests, which were under concurrent edit when
+this was found. The follow-up is a cross-service change and should be sequenced
+after that session settles, then pinned by an e2e case that deletes a note and asks
+the same question again.
