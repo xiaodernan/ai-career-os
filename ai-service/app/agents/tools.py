@@ -322,6 +322,10 @@ def _fuse_rrf(keyword_rows: list, semantic_rows: list, limit: int) -> list:
                 continue
             rows_by_id.setdefault(job_id, row)
             scores[job_id] = scores.get(job_id, 0.0) + 1.0 / (_RRF_K + rank)
+    # Both retrievers are already SQL-LIMITed to ~`limit` rows, so n is a small
+    # constant here and a plain stable sort is the right tool: CPython's Timsort is
+    # faster than a Python-level heap at this size. A bounded heap would only pay
+    # off for a large n (see app.algorithms.top_k, used where that holds).
     ordered = sorted(scores, key=lambda j: -scores[j])
     return [rows_by_id[j] for j in ordered[:limit]]
 

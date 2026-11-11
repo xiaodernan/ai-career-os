@@ -176,6 +176,30 @@ class TestTopK:
         best = top_k(jobs, 2, key=lambda job: job["pay"])
         assert [job["title"] for job in best] == ["b", "c"]
 
+    def test_a_large_generator_selects_the_same_top_k_as_a_sort(self):
+        """The heap path accepts any iterable (including one without `__len__`)
+        and returns exactly what a full sort would, at a scale where the bounded
+        heap -- not a materialise-and-sort -- is what keeps memory at O(k).
+
+        Note the honest bound: selection is still O(n); it must see every input.
+        Only *space* drops to O(k). An unbounded source cannot have a "top k",
+        and this helper does not pretend otherwise.
+        """
+        n = 50_000
+        stream = (i for i in range(n))          # no __len__: forces the heap path
+        assert top_k(stream, 7) == sorted(range(n), reverse=True)[:7]
+
+    def test_matches_a_full_sort_across_many_scales_and_ties(self):
+        """The C-heap path is stable: byte-for-byte the sort at every scale."""
+        import random
+        rng = random.Random(7)
+        for _ in range(50):
+            n = rng.randint(0, 200)
+            k = rng.randint(0, n + 5)
+            values = [rng.randint(0, 9) for _ in range(n)]  # heavy ties
+            assert top_k(values, k) == sorted(values, reverse=True)[:k]
+            assert bottom_k(values, k) == sorted(values)[:k]
+
 
 class TestCosine:
     def test_identical_vectors_score_one(self):

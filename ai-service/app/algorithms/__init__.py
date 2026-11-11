@@ -1,14 +1,18 @@
 """Algorithm building blocks for AI Career OS.
 
 A small, dependency-light collection of the data-structure and algorithm
-primitives the product leans on: an O(1) LRU cache (the OS-level cache the
-rest of the system borrows), a heap-based top-K selector (priority queue used
-for ranking), vector math for similarity, and BM25 for lexical ranking.
+primitives the product leans on: an O(1) LRU/TTL cache (the OS-level cache shape
+the rest of the system borrows), a stable bounded-heap top-K selector (priority
+queue used for ranking, backed by the C-level `heapq`), vector math for
+similarity, Okapi BM25 for lexical ranking, and the skill-gap/job-rank scorers.
 
 Nothing here imports the web stack. Each module is independently testable,
-which is the point: the interesting claims (cache eviction order, heap
-stability, cosine vs. numpy agreement) are checked in
-``tests/test_the_algorithms_module_*.py``.
+which is the point: the interesting claims (cache eviction order, heap stability,
+cosine vs. numpy agreement, BM25's hand-computable scores) are checked in
+``tests/test_the_algorithms_module*.py``. Complexity claims are measured, not
+assumed: a Python-level heap loop measured *slower* than Timsort at every size on
+this host, so `top_k` deliberately delegates to the C `heapq.nlargest` path --
+see that module's docstring and `docs/plans/ALGORITHMS_HORIZON.md`.
 """
 
 from app.algorithms.lru import LruCache, TtlCache
