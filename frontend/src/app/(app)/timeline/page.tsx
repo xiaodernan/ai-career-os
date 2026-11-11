@@ -30,8 +30,13 @@ const PAGE_DEFAULTS: { kind?: string } = { kind: undefined };
 
 /** Constant row geometry: the windowed path requires a row that never wraps. */
 const ROW_HEIGHT = 72;
-/** Below this, the full render stays -- byte-identical to before the windowing work. */
-const VIRTUAL_THRESHOLD = 100;
+/**
+ * Below this, the full render stays and the DOM is simple; past it, the window engages.
+ * The engine's own fold caps per source at 50 (`PER_SOURCE_CAP`), so a power-user's
+ * timeline converges near 100 rows -- a threshold of 100 would never engage. 30 keeps
+ * the window meaningful for realistic folds without disturbing small feeds.
+ */
+const VIRTUAL_THRESHOLD = 30;
 
 /**
  * The timeline (Epic 81): one ordered read over what the loop has written

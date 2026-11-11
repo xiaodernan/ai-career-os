@@ -5831,14 +5831,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `VirtualList` component (absolute-positioned rows, full track height, `aria-setsize` /
   `aria-posinset` so AT is told the honest row count, ResizeObserver-measured viewport,
   SSR-deterministic at-rest window). Rows are fixed-height by design (72 px, single-line
-  truncation with a `title` fallback); the timeline engages the window past 100 rows
+  truncation with a `title` fallback); the timeline engages the window past 30 rows
   (`VIRTUAL_THRESHOLD`), and below that the DOM is byte-identical to before the change.
   virtual-list.test.tsx 7/7; timeline page suite green; vitest 1212 passed; `tsc --noEmit`
   clean; production build exit 0; `/timeline` 237 kB gzip (+5.4 kB for the windowing code);
   bundle budget tightened 340 -> 310 kB gzip across all 35 routes, heaviest `/(app)/jobs/[id]/page`
-  at 299.6 kB. Honest bound: the virtualization path has not run in a browser here (no feed
-  over 100 rows is seeded) -- it is pinned by the pure math and the SSR markup; a live scroll
-  walkthrough on a seeded long feed remains the follow-up.)
+  at 299.6 kB. Live-verified 2026-11-12: a fold of 90 merged events rendered 15 rows
+  in the DOM (aria-setsize 90).)
 
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 

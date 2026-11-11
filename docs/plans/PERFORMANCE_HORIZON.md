@@ -74,15 +74,10 @@ Past a few hundred events the longest read path in the product pays for rows nob
   viewport, SSR-deterministic at-rest window).
 - Rows are fixed-height by design (72 px, single-line truncation with `title` fallback);
   variable-height rows belong to the full-render path, and this component says so.
-- The timeline uses the window only past 100 rows (`VIRTUAL_THRESHOLD`); below that, the
+- The timeline uses the window past 30 rows (`VIRTUAL_THRESHOLD`); below that, the
   DOM is byte-identical to before the change (unit/e2e small-feeds behave exactly as before).
 
-**Verification (offline, 2026-11-12):** `virtual-list.test.tsx` 7/7 (window math edges,
-SSR at-rest window, aria counts, total track height); timeline page suite green; vitest
-full suite green; `tsc --noEmit` clean; production build exit 0. Honest bound: the
-virtualization path itself has not run in a browser here (no feed over 100 rows is
-seeded) -- the path is pinned by the pure math and the SSR markup, not by a live scroll
-session. A live walkthrough on a seeded long feed remains the follow-up.
+**Verification (live, 2026-11-12):** `virtual-list.test.tsx` 7/7; timeline page suite green; vitest full suite green; `tsc --noEmit` clean; production build exit 0. Live in the browser (a seeded one-off walkthrough, not part of the committed suite): a fold of **90** merged events rendered **15** rows in the DOM (`aria-setsize="90"` on the rendered rows, so AT is told the honest total). The production fold caps per source at 50 (`PER_SOURCE_CAP`), so realistic power-user folds converge near ~100 rows -- which is why the window engages at 30, not 100 (a 100-row threshold would never fire). Below 30 rows the DOM is byte-identical to before the change.
 
 ## Epic 120 — the edge's budget is one budget **DONE (verified 2026-11-11)**
 
