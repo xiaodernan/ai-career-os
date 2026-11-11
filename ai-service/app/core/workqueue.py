@@ -37,6 +37,7 @@ used by the cache and the task bus. No new dependency, no new infrastructure.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
@@ -65,6 +66,7 @@ class ClaimStats:
     delivered: int = 0      # fresh XREADGROUP deliveries
     reclaimed: int = 0      # recovered from another consumer's PEL
     ack_failed: int = 0
+    dead_lettered: int = 0  # poison jobs moved out of the PEL into the DLQ
 
 
 class WorkQueue:
@@ -74,15 +76,22 @@ class WorkQueue:
     ``RespPool`` with no Redis: ``pool`` speaks ``execute(*args)``; ``stream`` is
     the key; ``group`` the consumer group; ``consumer`` this worker's name;
     ``min_idle_ms`` the after-which-a-job-is-presumed-dead visibility timeout;
-    ``batch`` the max messages to take per call.
+    ``batch`` the max messages to take per call; ``max_deliveries`` (0 = off) the
+    number of deliveries after which a still-failing job is moved to ``dlq_stream``
+    instead of being re-claimed forever.
     """
 
     def __init__(self, pool: resp.RespPool, *, stream: str, group: str, consumer: str,
-                 min_idle_ms: int = 60_000, batch: int = 16, maxlen: int = 0) -> None:
+                 min_idle_ms: int = 60_000, batch: int = 16, maxlen: int = 0,
+                 max_deliveries: int = 0, dlq_stream: str = "") -> None:
         if min_idle_ms <= 0 or batch <= 0:
             raise ValueError("min_idle_ms and batch must be positive")
         if maxlen < 0:
             raise ValueError("maxlen must be >= 0 (0 disables trimming)")
+        if max_deliveries < 0:
+            raise ValueError("max_deliveries must be >= 0 (0 disables the DLQ)")
+        if max_deliveries and not dlq_stream:
+            raise ValueError("max_deliveries needs a dlq_stream to move poison jobs to")
         self.pool = pool
         self.stream = stream
         self.group = group
@@ -90,6 +99,8 @@ class WorkQueue:
         self.min_idle_ms = min_idle_ms
         self.batch = batch
         self.maxlen = maxlen
+        self.max_deliveries = max_deliveries
+        self.dlq_stream = dlq_stream
         self._group_ready = False
 
     # -------------------------------------------------------------- wire helpers
@@ -197,38 +208,131 @@ class WorkQueue:
             return 0
         return int(await self.pool.execute("XACK", self.stream, self.group, *stream_ids) or 0)
 
+    async def pending_counts(self) -> dict[str, int]:
+        """`{stream_id: delivery_count}` for this group's PEL, from Redis.
+
+        `XPENDING <stream> <group> - + <count>` is the *detailed* form: each row is
+        `[id, consumer, idle_ms, delivery_count]`. This is an **observability**
+        metric ("how many PEL entries, redelivered how often"), useful for an
+        operator watching for stuck jobs.
+
+        It is deliberately **not** the retry/DLQ counter. A live-but-failing worker
+        leaves its failed message in *its own* PEL, and XAUTOCLAIM only re-claims
+        **other** consumers' orphans — so that message's Redis count stays at 1 no
+        matter how many times the handler fails. That is why `drain` maintains an
+        explicit ``attempts`` field on re-queued messages for the DLQ decision,
+        instead of trusting this number. Counts for messages absent from the PEL
+        default to 0; a Redis failure yields an empty dict (fail-open).
+        """
+        try:
+            rows = await self.pool.execute(
+                "XPENDING", self.stream, self.group, "-", "+", str(self.batch * 4)) or []
+        except (resp.RespUnavailable, resp.RespError, OSError):
+            return {}
+        out: dict[str, int] = {}
+        for row in rows:
+            if not isinstance(row, (list, tuple)) or len(row) < 4:
+                continue
+            sid = row[0].decode() if isinstance(row[0], bytes) else str(row[0])
+            try:
+                out[sid] = int(row[3])
+            except (TypeError, ValueError):
+                out[sid] = 0
+        return out
+
     async def drain(self, handler: Callable[[WorkItem], Awaitable[bool]]) -> ClaimStats:
         """Claim, run ``handler`` on each job, ACK the ones it reports success.
 
-        ``handler(item) -> True`` means done (ACK). ``False`` / an exception leaves
-        the message pending, so the next ``min_idle_ms`` cycle re-claims it. The
-        drain never lets one bad job stop the others: a failing handler is logged
-        and its message left for recovery, which is the point of a PEL.
+        ``handler(item) -> True`` means done (ACK). On failure the message is
+        **re-queued**: `XADD` it back to the main stream with an incremented
+        ``attempts`` field, then `XACK` the old copy. This explicit retry is
+        deliberate, because relying on XAUTOCLAIM for retries has a hole: a worker
+        that stays alive but whose handler keeps failing would leave the message in
+        *its own* PEL, and XAUTOCLAIM only re-claims **other** consumers' orphans --
+        so a poison job could never reach a retry limit. Re-queueing also makes the
+        attempt count travel with the message, so it stays correct across a worker
+        crash (the orphan XAUTOCLAIM later picks up carries its ``attempts`` field).
+
+        With ``max_deliveries`` set, a job whose re-queued attempt reaches the limit
+        is moved to ``dlq_stream`` instead: XADD the DLQ entry **first**, then ACK
+        the main-stream copy, so a failed DLQ write leaves it pending (never dropped).
+        Without a DLQ, ``max_deliveries=0`` keeps the original behaviour: a failed
+        job is re-queued indefinitely, its attempts still visible for an operator.
+
+        Both the retry re-queues and the DLQ adds are trimmed with ``MAXLEN ~ maxlen``.
+        That matters because the DB (``embedding IS NULL``) is the source of truth: a
+        producer that re-injects a still-NULL poison job every tick starts a *fresh*
+        ``attempts=0`` lineage, so without a DLQ cap a permanently-bad row would grow
+        the dead-letter stream without bound. Trimming a dead-letter drops only its
+        *record* — the still-NULL row is re-enqueued by the next producer pass, so no
+        job is permanently lost. (Suppressing that re-injection entirely is a
+        producer-side decision, deliberately kept out of this generic queue.)
         """
         await self.ensure_group()
         items = await self.claim()
         acked: list[str] = []
+        dead_lettered = 0
         failed = 0
         for item in items:
             try:
                 ok = await handler(item)
             except Exception:
-                log.warning("work queue handler raised for %s; leaving pending", item.stream_id,
+                log.warning("work queue handler raised for %s; will retry", item.stream_id,
                             exc_info=True)
                 ok = False
             if ok:
                 acked.append(item.stream_id)
-            else:
+                continue
+            try:
+                attempts = int(item.value("attempts", "0")) + 1
+            except (TypeError, ValueError):
+                attempts = 1
+            poison = bool(self.max_deliveries and attempts >= self.max_deliveries)
+            target = self.dlq_stream if poison else self.stream
+            fields = dict(item.fields)
+            fields["attempts"] = str(attempts)
+            if poison:
+                fields.update({
+                    "origin_stream": self.stream,
+                    "origin_id": item.stream_id,
+                    "dlq_at": str(int(time.time())),
+                })
+            flat: list[Any] = []
+            for k, v in fields.items():
+                flat.extend((k, v))
+            try:
+                cmd: list[Any] = [target]
+                # Bound the stream we write to, whether it is the main retry stream
+                # or the DLQ. A poison job re-injected by the producer each tick
+                # would otherwise grow the DLQ forever (see the drain docstring).
+                if self.maxlen:
+                    cmd += ["MAXLEN", "~", str(self.maxlen)]
+                await self.pool.execute("XADD", *cmd, "*", *flat)
+            except (resp.RespUnavailable, resp.RespError, OSError) as e:
+                # Re-queue / DLQ write failed: leave the message pending so the
+                # PEL still holds it and XAUTOCLAIM can recover it. Never ACK.
+                log.warning("work queue retry XADD failed for %s: %s (stays pending)",
+                            item.stream_id, e)
                 failed += 1
+                continue
+            acked.append(item.stream_id)  # old copy leaves the PEL; new copy is queued
+            if poison:
+                dead_lettered += 1
+                log.error("work queue job %s dead-lettered after %d attempts",
+                          item.stream_id, attempts)
+            # A re-queued job is still in the system, just back on the stream; it is
+            # not counted as a failure here because the retry itself succeeded.
         ack_count = 0
         if acked:
             try:
                 ack_count = await self.ack(*acked)
             except (resp.RespUnavailable, resp.RespError, OSError) as e:
-                log.warning("work queue ACK failed for %d jobs: %s (will be re-claimed)",
+                log.warning("work queue ACK failed for %d jobs: %s (they stay pending; "
+                            "a duplicate re-queue is harmless to an idempotent handler)",
                             len(acked), e)
         return ClaimStats(delivered=len(items), reclaimed=0,
-                          ack_failed=len(acked) - ack_count + failed)
+                          ack_failed=len(acked) - ack_count + failed,
+                          dead_lettered=dead_lettered)
 
     async def pending(self) -> int:
         """Best-effort PEL length for this group (observability)."""

@@ -18,8 +18,10 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 133 | The top-K helper uses the *right* heap for the scale | measurement + stability/streaming contract; fusion keeps its sort on purpose |
 | 134 | A rerank that costs no model call is available and honest | `RERANK_MODE=bm25`, mode census, 10 offline rerank tests |
 | 135 | (next) The lexical channel can be scored in-process without pg_trgm when the corpus is small | to be measured |
-| 136 | N embed replicas do a job once, and a crashed worker's job comes back | `WorkQueue` consumer-group semantics (fake + real Redis), 22 offline tests |
+| 136 | N embed replicas do a job once, and a crashed worker's job comes back | `WorkQueue` consumer-group semantics (fake + real Redis), 12 + 12 offline tests |
 | 137 | The auth door carries the landing's design language, without its light-panel pitfalls | `layout.test.ts` source contract, copy census, build + bundle budget |
+| 138 | A poison job stops burning a worker on every retry; a failed retry never drops the job | re-queue + `attempts` + bounded DLQ, 9 offline tests + real-Redis end-to-end |
+| 139 | (next) A dead-lettered job stops being re-injected by the producer each tick, until an operator requeues it | producer-side dead-letter suppression keyed by job id |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -239,3 +241,92 @@ hardcoded copy); `product-preview.test.tsx` 2/2; full frontend vitest green;
 production `next build` + `bundle-budget.mjs` (auth/login route stays under the
 340 kB gzip budget — the aurora-free choice also keeps this route's JS unchanged,
 since all new motion is existing CSS/utilities and no new client JS was added).
+
+## Epic 138 — a poison job stops burning a worker on every retry **DONE (verified 2026-11-11)**
+
+**Observed.** Epic 136 gave the embed work queue at-least-once delivery and crash
+recovery, but no *retry ceiling*. A job whose handler keeps returning failure (an
+embedding provider that rejects one malformed row, a bad vector dimension, a
+permanently broken id) was re-delivered forever: on each `drain()` tick it occupied
+a batch slot and spent an embedding call, and a whole consumer group could be
+starved behind one poison message. The fix needed a dead-letter queue — and the
+first design for it was **wrong in a way only the protocol semantics reveal**.
+
+**The design correction (why NOT to use Redis `delivery_count`).** The tempting
+implementation is to let the message stay in the PEL, let `XAUTOCLAIM` re-claim it,
+and read Redis's `delivery_count` from `XPENDING` to decide when to dead-letter.
+That has a hole: **`XAUTOCLAIM` only re-claims *other* consumers' orphans.** A
+worker that stays alive but whose handler keeps failing leaves the message in
+*its own* PEL; Redis's count is pinned at 1 no matter how many times the handler
+fails, so the DLQ never fires and the job loops forever. `XPENDING`'s
+`delivery_count` is therefore demoted to an **observability metric**
+(`pending_counts()`, documented as such), and the retry decision moves to an
+**application-owned `attempts` field that travels with the message**:
+
+* On handler failure, `drain()` increments `attempts`, `XADD`s the message **back
+  to the main stream** (or to the DLQ if it reached `max_deliveries`), then `XACK`s
+  the old copy. Re-queueing (rather than leaving it pending) is what makes a
+  live-but-failing job actually get retried, and what carries the attempt count
+  across a worker crash — the orphan a later `XAUTOCLAIM` picks up still has it.
+* At the ceiling, the DLQ entry is **written first**, then the main-stream copy is
+  ACKed. A failed DLQ `XADD` leaves the message pending (never ACKed, never
+  silently dropped), so the poison job is recoverable rather than lost.
+* `max_deliveries=0` (and a DLQ-disabled config) keeps Epic 136's behaviour:
+  retry indefinitely, `attempts` still visible to an operator. Backward-compatible.
+
+**Do.** `WorkQueue` gains `max_deliveries` / `dlq_stream` (validated together), a
+`dead_lettered` counter on `ClaimStats`, and the re-queue / DLQ path in `drain()`.
+DLQ entries carry `origin_stream`, `origin_id` and `dlq_at` so an operator can trace
+a poison job back to its source. **The DLQ `XADD` is trimmed with `MAXLEN ~ maxlen`
+just like the retry re-queues** — a correction made *after* the real-Redis run
+showed an unbounded DLQ (see the honest bounds below). Two Settings knobs
+(`WORK_QUEUE_MAX_DELIVERIES=5`, `WORK_QUEUE_DLQ_STREAM=careeros:jobs:embed:dlq`)
+are declared in `.env.example` and wired through `embed_workers._queue()`; the env
+census folds Settings fields into its read-oracle, so no test exemption was needed.
+`pending_counts()` is explicitly documented as a PEL observability metric, not the
+DLQ counter.
+
+**Verified (offline + real Redis 7, 2026-11-11).** 9 new DLQ tests in
+`test_the_work_queue_delivers_each_job_once.py` (now 21) pin: `XPENDING`
+delivery-count observability across a two-consumer `XAUTOCLAIM` reclaim, the
+attempt-count re-queue, dead-lettering exactly at the ceiling with provenance
+fields, a failed DLQ write leaving the job pending, a successful job never being
+dead-lettered, **the DLQ add carrying `MAXLEN ~`**, no-DLQ retry-forever backward
+compatibility, invalid knob rejection, and Redis-down fail-open. The suite's
+`FakePool` was corrected to model the real PEL faithfully: a plain `XADD` leaves a
+message on the stream with `owner=None` and it enters the PEL only on
+`XREADGROUP`/`XAUTOCLAIM` — so a just-re-queued retry is not miscounted as
+"pending" before anyone claims it (the earlier model had wrongly counted it, and
+one Epic 136 assertion had to be fixed to match real Redis).
+
+**Real-Redis end-to-end (live Redis 7 at 127.0.0.1:16399, 2026-11-11).** Against
+actual `XADD`/`XREADGROUP`/`XAUTOCLAIM`/`XACK`/`XRANGE` (not the fake):
+* **(A)** one job poisoned twice: first `drain` re-queued it at `attempts=1` and
+  ACKed the old PEL copy (PEL empty, one stream copy carries `attempts=1`); second
+  `drain` wrote exactly one DLQ entry with `attempts=2` + `origin_stream` +
+  `origin_id` + `dlq_at`, and ACKed the main copy (PEL empty).
+* **(B)** with the DLQ key holding a non-stream (`SET`), the poison `XADD` raised
+  `WRONGTYPE`; the job stayed pending and was never ACKed — *never silently dropped*.
+* **(C)** a successful job was ACKed and never dead-lettered.
+* **(D, the honest bound below)** a producer-style fresh re-enqueue was observed
+  to reset the retry lineage. Two harness assertions were corrected against the
+  real protocol — `XACK` removes from the PEL, **not** the stream, so `XRANGE`
+  still shows the ACKed copy; and the *main* stream's dev Redis on 16380 was not
+  serving RESP during this run, so the check used the live instance on 16399.
+  `verify_gates.sh`/`.ps1` already run both work-queue suites.
+
+**Honest bound — what the DLQ does and does not stop.** The retry ceiling is scoped
+to **one message lineage**: a job whose handler keeps failing is dead-lettered after
+`max_deliveries` *re-queues*, an operator gets a bounded, provenance-rich DLQ stream
+to inspect/reprocess, and the worker stops spending a batch slot + model call on
+*that lineage*. It does **not** suppress the producer: `producer_pass()` selects
+`jobs WHERE embedding IS NULL` every tick and `XADD`s a **fresh, `attempts`-less**
+message, so a permanently-unembeddable row still starts a new lineage each tick
+(scenario D: live `attempts` values `['0','0','1','1']` after two producer ticks)
+and can still cost ~one model call per tick. The DLQ stream is now `MAXLEN ~`
+trimmed so this cannot grow it without bound, but **stopping the re-injection itself
+is a producer-side decision** — dead-letter a job and suppress its id from future
+producer passes until an operator requeues it. That is Epic 139; keeping it out of
+138 preserves the DB-as-source-of-truth contract (a trimmed DLQ record never loses
+the job, because the still-NULL row comes back next pass) and avoids silently
+changing recall for transient provider failures.

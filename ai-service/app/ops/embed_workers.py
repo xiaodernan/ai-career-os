@@ -60,11 +60,15 @@ def _consumer_name() -> str:
 
 def _queue(pool: resp.RespPool) -> workqueue.WorkQueue:
     settings = get_settings()
+    max_deliveries = int(getattr(settings, "work_queue_max_deliveries", 5) or 0)
     return workqueue.WorkQueue(
         pool, stream=STREAM, group=GROUP, consumer=_consumer_name(),
         min_idle_ms=int(getattr(settings, "work_queue_claim_ms", 120_000) or 120_000),
         batch=16,
-        maxlen=int(getattr(settings, "work_queue_maxlen", 10_000) or 10_000))
+        maxlen=int(getattr(settings, "work_queue_maxlen", 10_000) or 10_000),
+        max_deliveries=max_deliveries,
+        dlq_stream=(getattr(settings, "work_queue_dlq_stream", "")
+                    if max_deliveries else ""))
 
 
 async def _redis_pool() -> resp.RespPool | None:
