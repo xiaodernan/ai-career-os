@@ -5784,6 +5784,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   MICROSERVICES.md §6. Tests: DeadlineFilterTest, GatewayDeadlineTest, ai-service mesh tests;
   live-stack deadline path not run here (no Docker).)
 
+- [x] **124** The gates (verified 2026-11-11).
+
+  (The horizon's claims each get a failing-when-false test: composite-index prewarm gate, honesty
+  gate (dated DONE + roadmap check), table sync, `warm-prefetch` pin, `loading-skeletons` shape pins.
+  `verify_gates` 261/261; frontend pins in vitest 1186/1186.)
+
+- [x] **129** The applications board ships when it is needed (frontend, verified 2026-11-11).
+
+  (dnd-kit split out via `next/dynamic`, `ssr:false`, with the board-shaped
+  `LoadingKanbanSkeleton` fallback; applications route 302 -> 287 kB gzip; applications suite 6/6;
+  full frontend 1186/1186; `budget` CI job unchanged and green.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

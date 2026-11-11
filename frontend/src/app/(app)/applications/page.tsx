@@ -12,8 +12,17 @@ import { useReorderApplication } from "@/lib/hooks/actions";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
-import { KanbanBoard } from "@/components/common/kanban";
+import dynamic from "next/dynamic";
+import { LoadingKanbanSkeleton } from "@/components/common/loading-skeletons";
 import { ApplicationDialog } from "@/components/applications/application-dialog";
+
+// The board is the page's heaviest child (dnd-kit and its sortable strategy) and
+// it only runs on the client anyway; splitting it out keeps the route's first-load
+// Java for the rest of the page. The fallback is the board's own shape, not a spinner.
+const KanbanBoard = dynamic(
+  () => import("@/components/common/kanban").then((mod) => mod.KanbanBoard),
+  { ssr: false, loading: () => <LoadingKanbanSkeleton /> }
+);
 
 // The most rows one request may carry: `Paging.MAX_PAGE_SIZE` on the server, which clamps
 // anything larger. Past this many applications the board pages rather than asking for more.

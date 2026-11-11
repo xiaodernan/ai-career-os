@@ -54,9 +54,12 @@ import { LocaleProvider } from "@/lib/i18n/locale-context";
  * board is a thing a reader *edits* -- a drag that quietly narrowed the page under it would move a
  * card into a column the request never asked for.
  *
- * Rendered through the real locale provider, the real kanban and the real pager, because the copy
- * and the count are the contract: the two empties are different sentences in both shipped
- * languages, and the number beside the pager is the server's total rather than this window's length.
+ * Rendered through the real locale provider, the lazily imported kanban's loading fallback
+ * and the real pager, because the copy and the count are the contract: the two empties are
+ * different sentences in both shipped languages, and the number beside the pager is the
+ * server's total rather than this window's length. In production the board only ever renders
+ * with client-side data, so the static markup shows the loading fallback, never the cards;
+ * the cards themselves are pinned by `components/common/kanban.test.tsx`.
  */
 
 const ITEMS: Application[] = [
@@ -132,8 +135,11 @@ describe("the pipeline board", () => {
     expect(html).toContain('aria-label="Search the pipeline by role, company or notes"');
     expect(html).toContain('value="acme"');
     expect(html).toContain("Clear search");
-    expect(html).toContain("Staff Backend Engineer");
-    expect(html).toContain("Under_Score Labs");
+    // The board is dynamically imported (ssr: false): its chunk is not part of the route's
+    // first-load Java, and the fallback covers the moment it has not landed. The kanban's
+    // own suite renders the board; this page's contract is the query it asks for.
+    expect(html).toContain("Loading pipeline");
+    expect(html).not.toContain("Staff Backend Engineer");
     // The create form is not displaced by the box: a reader mid-search can still add a card.
     expect(html).toContain("Add</button>");
     // The count is the matches, not the window: page three of 241 at a hundred a page.

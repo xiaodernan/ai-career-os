@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–128
+# Performance horizon — Epics 118–129
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -25,6 +25,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 126 | The matches digest reads in index order | Flyway + explain gate |
 | 127 | A route that ships too much Java goes red | `npm run budget` |
 | 128 | A request carries its own deadline | gateway/backend/ai-service tests |
+| 129 | The applications board ships when it is needed | bundle budget |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -82,8 +83,14 @@ the dev corpus, and add only the indexes a plan actually asks for.
   + Copilot doorway), drawn from the product's own tokens and labelled as an illustration.
 - Active nav item reads as focused via `glow-halo`; timeline rows use the quieter `hairline` border.
 
-**Still open:** transitions that explain where a panel came from; skeleton shapes pinned to the
-loaded layout for every surface; the dashboard hero proper.
+**Still open:** the dashboard hero proper.
+
+**Closed since (2026-11-11):** transitions that explain where a panel came from were already
+shipped in the design system (dialog fade+zoom from center, sheet slide-in with origin side,
+tooltip/popover direction-aware origins, all `data-[state]` animate-in/out) -- Epic 122's
+checklist item existed for a surface that already carried the rule; no new code was needed
+beyond the token layer above. Skeleton shapes pinned to the loaded layout: done in Epic 122's
+follow-through and pinned by `loading-skeletons.test.ts` in Epic 124.
 
 
 **Do.** A token layer (elevation, motion, type scale, focus), a hero that shows the
@@ -117,17 +124,21 @@ benefit from is a warm buffer pool and fresh histograms, which is exactly what
 `prewarm-hot.sql` does. (The retrieval-cache warm from the original sketch applies
 to the RAG path, already covered by Epic 118.)
 
-## Epic 124 — the gates (in progress, first gates landed 2026-11-11)
+## Epic 124 — the gates **DONE (verified 2026-11-11)**
 
 Every claim above gets a test that fails when the claim stops being true, plus the
 roadmap/census updates the repo already requires.
 
-**Landed (2026-11-11):** `test_the_prewarm_script_covers_the_v36_indexes.py` (prewarm
-script and V36 cannot drift), `test_the_performance_horizon_marks_done_honestly.py`
-(DONE means dated, and DONE in the horizon means checked in ROADMAP.md), plus the
-frontend `warm-prefetch.test.ts`. Both Python gates run in `scripts/verify_gates.{sh,ps1}`.
-Remaining: a gate that the horizon's table stays in sync with the sections, and the
-per-surface skeleton-shape pins from Epic 122.
+**Landed (all verified 2026-11-11):** `test_the_prewarm_script_covers_the_composite_indexes.py`
+(prewarm script and V36+V37 cannot drift, and a script warming an index nothing creates
+fails), `test_the_performance_horizon_marks_done_honestly.py` (DONE means dated and checked
+in ROADMAP.md; the horizon's table must name every epic), `warm-prefetch.test.ts` (the
+sidebar's warm-on-intent wiring cannot be deleted quietly), and
+`loading-skeletons.test.ts` (the per-surface skeleton-shape pins from Epic 122: every
+exported skeleton declares itself to AT, LoadingCardSkeleton holds the StatCard anatomy,
+the metric grid's breakpoints match the loaded strip, and the route fallback imports
+only exported skeletons). Both Python gates run in `scripts/verify_gates.{sh,ps1}`; the
+frontend pins run in the vitest suite.
 ## Epic 125 — the dashboard is served from a shared cache, not rebuilt per open **DONE (verified 2026-11-11)**
 
 **Measured.** Every app open hit `GET /api/v1/reports/dashboard`, which was rebuilt from the
@@ -232,3 +243,20 @@ the decision-count bump for the two mentions of the decision this epic's roadmap
 entries carry, and the notes-writer census gained the ANALYZE-only exemption for
 `scripts/prewarm-hot.sql`. Backend *Test suite exits 0.
 Not run here (no Docker): the *IT deadline path against a live stack.
+## Epic 129 — the applications board ships when it is needed **DONE (verified 2026-11-11)**
+
+**Measured.** The applications page is the heaviest route in the app (~302 kB gzip of
+first-load Java at Epic 127's baseline), and its board -- dnd-kit, sortable, and the
+drag strategy -- is the chunk responsible for the drag interaction. In production the
+board only ever renders with client-side data, so the static markup already showed the
+loading skeleton; shipping dnd-kit in first-load Java bought pixels nobody saw.
+
+**Shipped (2026-11-11, verified offline):** the board is dynamically imported
+(`next/dynamic`, `ssr:false`) with `LoadingKanbanSkeleton` as the fallback -- the board's
+own grid shape, not a spinner. The applications route drops to ~287 kB gzip (-15.6 kB)
+and the `budget` CI job keeps it honest. The page's own contract test now asserts the
+honest fallback; the kanban's rendering is pinned unchanged by `kanban.test.tsx`.
+
+**Verification (offline, 2026-11-11):** `npm run build` exits 0; `node scripts/bundle-budget.mjs`
+prints /applications at 286.8 kB gzip (was 302.4); applications page suite 6/6 (updated
+fallback assertions); full frontend vitest 1186/1186; `tsc --noEmit` clean.
