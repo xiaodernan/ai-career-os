@@ -72,6 +72,12 @@ class Settings(BaseSettings):
     # its own when the window lapses; 0 disables suppression (pure Epic 138 behaviour).
     work_queue_dlq_cooldown_s: int = 900
     work_queue_dlq_guard_key: str = "careeros:jobs:embed:dlq:cooldown"
+    # Read-only queue health (Epic 140). `stale_s`: a consumer heartbeat older
+    # than this means the loop stopped (report "stalled"); keep it comfortably
+    # above the loop interval or a slow-but-healthy loop looks dead. `backlog_warn`:
+    # PEL depth at which a live queue reports "backlogged".
+    work_queue_health_stale_s: int = 300
+    work_queue_health_backlog_warn: int = 32
     cache_ttl_s: int = 300
     cache_max_entries: int = 2048
     redis_url: str = "redis://127.0.0.1:16380/0"

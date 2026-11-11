@@ -36,6 +36,7 @@ used by the cache and the task bus. No new dependency, no new infrastructure.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass
@@ -359,3 +360,101 @@ class WorkQueue:
             return int(rows[0]) if rows else 0
         except Exception:
             return 0
+
+    # ------------------------------------------------------------ observation
+    # Everything below is READ-ONLY and fail-open. An observer must never change
+    # consumer state (no XREADGROUP, no XACK) and a Redis outage must read as
+    # "unknown", never raise into the request that is trying to report on it.
+
+    async def _xlen(self, key: str) -> int:
+        """``XLEN key`` -> row count, or 0 on any Redis failure (fail-open)."""
+        if not key:
+            return 0
+        try:
+            return int(await self.pool.execute("XLEN", key) or 0)
+        except Exception:
+            return 0
+
+    async def queue_len(self) -> int:
+        """Entries currently on the main stream (fail-open, read-only).
+
+        A non-zero value is *not* automatically a backlog: re-queued retries and
+        the producer's per-tick re-injection both leave entries on the stream that
+        a consumer has already ACKed (``XACK`` removes from the PEL, not the
+        stream). Read this alongside ``pending()``: the PEL is the real "work not
+        yet done" signal; the stream length is "messages retained", which the
+        ``MAXLEN ~`` trim bounds.
+        """
+        return await self._xlen(self.stream)
+
+    async def dlq_len(self) -> int:
+        """Entries on the dead-letter stream (fail-open, read-only).
+
+        0 when no DLQ is configured. This is the number an operator alerts on:
+        a growing DLQ means jobs are failing past ``max_deliveries`` and being
+        suppressed by the DlqGuard's cooldown until a human looks at them.
+        """
+        return await self._xlen(self.dlq_stream)
+
+    async def snapshot(self) -> dict[str, int | bool]:
+        """One coherent, read-only read of this queue's observable state.
+
+        Returns a plain dict so it can cross the JSON/HTTP boundary and be folded
+        into the pure-function health report without carrying a Redis client:
+
+        ``stream_len``  — entries retained on the main stream (``XLEN``).
+        ``pending``     — entries in this group's PEL (``XPENDING`` summary).
+        ``dlq_len``     — entries on the dead-letter stream (``XLEN``).
+        ``dlq_enabled`` — whether a DLQ is configured at all.
+        ``ok``          — whether **all** reads succeeded.
+
+        ``ok`` is the honest part. A fail-open 0 is indistinguishable from a
+        genuinely empty queue, so an observer that only returned zeroes could not
+        tell "Redis is down" from "nothing is pending" — and would report a dead
+        queue as healthy. Each numeric field still degrades to 0 independently
+        (fail-open), but any failure flips ``ok`` to False so the health report can
+        say *unknown* instead of *healthy*. This never creates a consumer group
+        and never claims or ACKs a job.
+        """
+        async def _observe(awaitable) -> tuple[int, bool]:
+            """One int-valued reading -> (value, succeeded); failure degrades to 0."""
+            try:
+                return int(await awaitable), True
+            except Exception:
+                return 0, False
+
+        async def _xlen(key: str) -> tuple[int, bool]:
+            if not key:
+                return 0, True  # no DLQ configured is a valid, known state
+            return await _observe(self.pool.execute("XLEN", key))
+
+        async def _pending() -> tuple[int, bool]:
+            async def read() -> int:
+                try:
+                    rows = await self.pool.execute(
+                        "XPENDING", self.stream, self.group) or []
+                except resp.RespError as e:
+                    # A queue that has never been consumed has no group yet, and
+                    # Redis answers NOGROUP. That is a *known* state (nothing is
+                    # pending), not a failed read: treating it as ok=False would
+                    # make every freshly deployed queue report "unknown" until the
+                    # first job arrives. Any other RESP error still fails open.
+                    if "NOGROUP" in str(e).upper():
+                        return 0
+                    raise
+                return int(rows[0]) if rows else 0
+            return await _observe(read())
+
+        # Independent reads; asyncio.gather keeps the observer to one event-loop
+        # round-trip instead of summing three network latencies. Each degrades on
+        # its own so a partial failure blanks one number, not the whole report.
+        (stream_len, ok1), (pending, ok2), (dlq_len, ok3) = await asyncio.gather(
+            _xlen(self.stream), _pending(), _xlen(self.dlq_stream),
+        )
+        return {
+            "stream_len": stream_len,
+            "pending": pending,
+            "dlq_len": dlq_len,
+            "dlq_enabled": bool(self.dlq_stream),
+            "ok": ok1 and ok2 and ok3,
+        }

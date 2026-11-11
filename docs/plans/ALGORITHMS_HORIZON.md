@@ -22,6 +22,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 137 | The auth door carries the landing's design language, without its light-panel pitfalls | `layout.test.ts` source contract, copy census, build + bundle budget |
 | 138 | A poison job stops burning a worker on every retry; a failed retry never drops the job | re-queue + `attempts` + bounded DLQ, 9 offline tests + real-Redis end-to-end |
 | 139 | A dead-lettered job stops being re-injected by the producer each tick, and heals when its cooldown lapses | `DlqGuard` Redis-ZSET cooldown, 32 offline tests + real-Redis end-to-end |
+| 140 | The dead-letter pipeline can be *seen*: one honest verdict over live Redis + consumer liveness | read-only `GET /internal/ops/workqueue`, pure-function health fold, 54 offline tests + real-Redis end-to-end |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -409,3 +410,105 @@ the live instance: mark→active (ZADD+ZRANGEBYSCORE), window-lapse→heal+prune
 pipeline), re-mark→refreshed window, release/release_all, and disabled guard — all
 passed against actual RESP commands. `verify_gates.sh`/`.ps1` gained the new guard
 gate. `WORK_QUEUE_DLQ_COOLDOWN_S=0` reproduces Epic 138 exactly.
+
+## Epic 140 — the dead-letter pipeline can be seen, not just written **DONE (verified 2026-11-12)**
+
+Epics 136/138/139 made the embed work queue reliable — consumer groups, a dead-letter
+queue, a cooldown guard — but every one of them **wrote** state into Redis and only
+narrated it in log lines. A growing DLQ, a stalled consumer, a killed worker: none of
+them was queryable. An operator's only recourse was `redis-cli` and a log grep. This
+Epic adds the read half: one honest verdict over the whole pipeline, exposed as a
+read-only, internal-auth'd endpoint a monitor or a future Micrometer gauge can read.
+
+**The core problem is that "zero" is ambiguous.** A fail-open Redis read returns 0,
+and so does a genuinely empty, healthy queue. A naive observer that just reports
+"pending = 0" would call a dead Redis healthy, and call a dead *consumer* healthy
+because an idle stream looks the same whether a worker just drained it or died an
+hour ago. The design therefore keeps three observations separate and lets an explicit
+verdict ladder resolve the ambiguity, highest precedence first:
+
+```
+disabled    work_queue_backend != redis — nothing to watch (informational)
+unknown     Redis unreachable (snapshot.ok=False) — the numbers are zeroes we
+            cannot trust; never report healthy on an unreadable queue
+stalled     Redis reads fine, but the consumer heartbeat is missing/stale — a
+            dead worker behind an idle-looking queue
+degraded    live consumer, but dead letters in the DLQ or job ids cooling down
+backlogged  live + clean, but PEL depth over the warn line
+healthy     live, no poison, no meaningful backlog
+```
+
+**Three observations, one author each** (no second source of truth can drift):
+
+* **live Redis** — `WorkQueue.snapshot()` (`XLEN` main + `XLEN` DLQ + `XPENDING`
+  summary, issued concurrently via `asyncio.gather`) plus `DlqGuard.size()` (`ZCARD`).
+  A new `ok` bit records whether *all* reads succeeded; each numeric still degrades
+  to 0 independently (partial failure blanks one number, not the report).
+* **consumer liveness** — `app/ops/queue_observer.py`, a module-level single-writer
+  heartbeat that `embed_loop_distributed` stamps *after a complete produce→consume→
+  drain pass*, not on wake. It stores **only** liveness + last-tick throughput;
+  cooldown/DLQ counts are deliberately *not* duplicated here (they are read live),
+  so a stale heartbeat can never disagree with a fresh Redis read. No mode flag
+  either: `work_queue_backend` is the single author for "is this enabled".
+* **pure fold** — `app/features/work_queue_health.py` takes plain dicts + an
+  injected `now`, and produces `{verdict, alerts, freshness, queue, guard, backend}`
+  with no Redis client, no clock of its own, no new dependency (same discipline as
+  `monitoring.health_report`). Raw numbers travel alongside the verdict so a chart
+  and an alert name the same value.
+
+`app/ops/queue_status.read_status()` is the one fail-open seam: it reads config once
+(mode + the two tuning knobs), builds a **short-lived** pool from `REDIS_URL` (never
+the loop's — the loop owns its pool's lifetime), constructs the *same* read-only
+`WorkQueue`/`DlqGuard` the loop uses via `embed_workers._queue`/`_guard`, and closes
+its pool in `finally`. When `backend != redis` it touches no Redis at all. Redis
+down, a bad URL, a RESP error, even an unexpected exception all degrade to a
+well-formed *unknown* report, never a 500. `GET /internal/ops/workqueue` adds only
+`require_internal` plus a last-resort catch — a control-plane endpoint cannot turn
+an observer's bad day into a 500 that looks like the service died. Two new knobs
+`WORK_QUEUE_HEALTH_STALE_S=300` and `WORK_QUEUE_HEALTH_BACKLOG_WARN=32` are declared
+in `.env.example` and read by the collector (env census passes); both tune the
+report only and cannot change the queue.
+
+**Verified (offline + real Redis, 2026-11-12).** 54 new offline tests: 49 in four
+new suites — pure health fold (21: the full verdict ladder, precedence, freshness
+boundary, future-clock clamp, malformed input, stream-depth-alone-is-healthy),
+heartbeat registry (9: copy semantics, int coercion, replace-not-append, reset,
+loop source contract), fail-open collector (12: off/disabled without touching
+Redis, healthy/degraded/stalled/backlogged, bad URL, RESP error, unexpected
+exception, pool-always-closed, knobs threaded through), and the HTTP endpoint
+(7: 401/400 auth, 401 wrong token, full shape, degraded-is-still-200, collector-
+raises→unknown-not-500, GET-only/405) — plus 5 new observation tests in the existing
+workqueue suite (`snapshot` read-only/no-mutation, `ok` bit, NOGROUP, DLQ bounds).
+The internal-auth gate picks the new route up
+automatically. **Live Redis end-to-end** (the instance on 16380) proved:
+`snapshot()` matches real `XLEN`/`XPENDING`; a fresh queue reports `ok=True`; a
+fresh heartbeat + DLQ + cooldown folds to `degraded`; a stale heartbeat folds to
+`stalled`; and an unreachable Redis folds to `unknown` with `ok=False` — with the
+observed `dlq_len` **exactly equal** to the real DLQ `XLEN`.
+
+**Two honest findings from the live run, both folded back into the code:**
+
+1. **Real Redis answers `NOGROUP` for `XPENDING` before a queue's first consumer
+   pass.** The first end-to-end run read `ok=False` on a freshly deployed, empty
+   queue — which would make every new deployment report `unknown` until its first
+   job. `snapshot()` now treats `NOGROUP` as *known-empty* (`pending=0, ok=True`),
+   and a contract test pins it. Any *other* RESP error still fails open.
+2. **At-least-once + per-tick re-injection can legitimately put more DLQ entries
+   than poison jobs.** One real `drain(fail)×2` produced 8 DLQ records for 2 jobs
+   (`XAUTOCLAIM` claimed duplicate lineages). The harness's `== 2` assertion was
+   wrong, not the code; the meaningful guarantee Epic 140 makes is that the
+   **observed number equals the real `XLEN`** (measured: observed 8 == XLEN 8), so a
+   dashboard and Redis cannot disagree.
+
+**Honest bounds.** The heartbeat is in-memory: it is lost on process restart, so a
+just-restarted worker reports `stalled` until its first complete tick — the right
+conservative answer. `stale_s` must be set comfortably above the loop interval or
+a slow-but-healthy loop looks dead. `DlqGuard.size()` counts not-yet-pruned expired
+members too (documented in the guard); a cooldown window that has lapsed but not
+been pruned can read a hair high. The verdict is a *read*, not an action: it never
+releases a cooldown or drains the DLQ (the operator's `release_cooldowns()` remains
+the explicit action). This Epic stays entirely inside ai-service by deliberate
+choice: the project's Prometheus registries and `careeros.*` meter roster live in
+backend/gateway Java under a strict "every meter is registered or documented"
+gate, so wiring these numbers into `/actuator/prometheus` is a separate, deliberate
+next step — this endpoint is the clean single source that step would scrape.

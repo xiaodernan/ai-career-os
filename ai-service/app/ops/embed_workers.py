@@ -48,6 +48,7 @@ from typing import Any
 
 from app.core import db, dlq_guard, resp, workqueue
 from app.core.config import get_settings
+from app.ops import queue_observer
 
 log = logging.getLogger("ops.embed_workers")
 
@@ -288,6 +289,14 @@ async def embed_loop_distributed(interval: float = 60.0,
                 await queue.ensure_group()
                 await producer_pass(queue, guard=guard)
                 stats = await consumer_pass(queue, guard=guard)
+                # Liveness heartbeat for the read-only ops endpoint (Epic 140).
+                # Stamped after a *complete* pass, so a fresh tick means the whole
+                # produce->consume->drain cycle finished, not just that the loop woke.
+                # On the Redis-down / exception paths below it is NOT stamped, so the
+                # endpoint sees a stale heartbeat and can report "stalled".
+                queue_observer.record_tick(
+                    delivered=stats.delivered, reclaimed=stats.reclaimed,
+                    dead_lettered=stats.dead_lettered)
                 if stats.delivered or stats.reclaimed:
                     log.info("embed work queue: delivered=%d reclaimed=%d ack_failed=%d "
                              "dead_lettered=%d", stats.delivered, stats.reclaimed,

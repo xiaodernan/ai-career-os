@@ -84,7 +84,7 @@ async def health():
     }
 
 
-from app.api import agents, features, ingest, interview, memory, rag, tasks, voice  # noqa: E402
+from app.api import agents, features, ingest, interview, memory, ops, rag, tasks, voice  # noqa: E402
 
 app.include_router(ingest.router)
 app.include_router(rag.router)
@@ -95,3 +95,4 @@ app.include_router(tasks.router)
 app.include_router(tasks.alias_router)
 app.include_router(features.router)
 app.include_router(voice.router)
+app.include_router(ops.router)

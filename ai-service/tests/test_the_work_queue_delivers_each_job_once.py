@@ -109,6 +109,14 @@ class FakePool:
                 self.acked.append(sid)
             return len(ids)
         if cmd == "XPENDING":
+            # Real Redis answers NOGROUP when the group (or key) does not exist
+            # yet -- a freshly deployed queue before its first consumer pass.
+            # Model that faithfully so the observer must treat it as "0 pending,
+            # known state", not as a failed read. The group name is a[2] in both
+            # the summary (XPENDING stream group) and detailed forms.
+            if len(a) >= 3 and a[2] not in self.groups:
+                raise resp.RespError(
+                    f"NOGROUP No such key '{a[1]}' or consumer group '{a[2]}'")
             # Only *delivered-but-unacked* messages are in a consumer group's PEL.
             # A plain XADD leaves the message on the stream with owner=None; it
             # enters the PEL on XREADGROUP/XAUTOCLAIM. Real XPENDING therefore
@@ -123,6 +131,12 @@ class FakePool:
             # Detailed form (6+ args): [[id, consumer, idle_ms, delivery_count], ...]
             return [[sid.encode(), owner.encode(), 0, count]
                     for sid, owner, count in pending]
+        if cmd == "XLEN":
+            key = a[1]
+            if key == self.key:
+                return len(self.stream)
+            # Any sidecar stream recorded as a DLQ (there is one in the DLQ tests).
+            return len(self.dlq)
         raise AssertionError(f"unexpected command: {a}")
 
 
@@ -467,3 +481,79 @@ def test_max_deliveries_requires_a_dlq_stream():
 async def test_pending_counts_is_fail_open_on_redis_down():
     q = _dlq_queue(FakePool(down=True))
     assert await q.pending_counts() == {}
+
+
+# --------------------------------------------------------------- observation (Epic 140)
+async def test_snapshot_reports_stream_pending_and_dlq_without_mutating():
+    """A read must not claim, ACK, or create a group — it is a pure observation."""
+    pool = FakePool()
+    q = _dlq_queue(pool)  # stream=jobs, dlq=jobs:dlq
+    await q.enqueue({"job_id": "a"})
+    await q.enqueue({"job_id": "b"})
+    before = list(pool.commands)
+    pel_before = dict(pool.pel)
+
+    snap = await q.snapshot()
+
+    assert snap == {
+        "stream_len": 2,
+        "pending": 0,          # nothing has been XREADGROUP-delivered yet
+        "dlq_len": 0,
+        "dlq_enabled": True,
+        "ok": True,
+    }
+    new_cmds = [c for c in pool.commands[len(before):]]
+    # Read-only: XLEN on both streams + XPENDING summary. No XREADGROUP / XACK / XADD.
+    assert all(c[0] in ("XLEN", "XPENDING") for c in new_cmds), new_cmds
+    assert pool.groups == set(), "an observer must not create the consumer group"
+    assert pool.pel == pel_before, "an observer must not touch the PEL"
+
+
+async def test_snapshot_sees_pending_after_a_claim_and_dlq_after_dead_letter():
+    pool = FakePool()
+    q = _dlq_queue(pool, max_deliveries=1)
+    await q.enqueue({"job_id": "poison"})
+    await q.drain(lambda _i: _false())  # -> dead-lettered into jobs:dlq
+    snap = await q.snapshot()
+    assert snap["dlq_len"] == 1
+    assert snap["dlq_enabled"] is True
+    assert snap["pending"] == 0, "the DLQ copy was ACKed out of the main PEL"
+    # The ACKed original still sits on the main stream (XACK != XDEL).
+    assert snap["stream_len"] == 1
+
+
+async def test_queue_len_and_dlq_len_are_individually_fail_open():
+    pool = FakePool(down=True)
+    q = _dlq_queue(pool)
+    assert await q.queue_len() == 0
+    assert await q.dlq_len() == 0
+    snap = await q.snapshot()
+    assert snap == {"stream_len": 0, "pending": 0, "dlq_len": 0,
+                    "dlq_enabled": True, "ok": False}, \
+        "a Redis-down read must report ok=False so the health report says unknown, " \
+        "not healthy"
+
+
+async def test_dlq_len_is_zero_when_no_dlq_is_configured():
+    pool = FakePool()
+    q = _queue(pool)  # no dlq_stream
+    snap = await q.snapshot()
+    assert snap["dlq_enabled"] is False
+    assert snap["dlq_len"] == 0
+    assert snap["ok"] is True, "an absent DLQ is a known state, not a failed read"
+    assert await q.dlq_len() == 0
+
+
+async def test_snapshot_on_a_queue_whose_group_does_not_exist_yet_is_ok_not_unknown():
+    """Real Redis answers NOGROUP for XPENDING before the first consumer pass.
+
+    That is a freshly-deployed *known* state (nothing pending), not a failed read.
+    If this flipped to ok=False, every new deployment would report the queue as
+    "unknown" until its first job — the observer would cry wolf on day one.
+    """
+    pool = FakePool()
+    q = _dlq_queue(pool)
+    assert pool.groups == set()  # no consumer has called ensure_group yet
+    snap = await q.snapshot()
+    assert snap["pending"] == 0
+    assert snap["ok"] is True, "NOGROUP is known-empty, not a Redis failure"
