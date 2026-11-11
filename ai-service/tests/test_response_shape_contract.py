@@ -3166,14 +3166,20 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
          "here rather than assumed -- a test that states an interval states a claim about production")
 
     args = _heartbeat_arguments()
-    assert args["declared"] == [{"file": "app/core/taskbus.py", "line": 58, "function": "subscribe"}], \
+    # Epic 131 moved both pins: the Redis backplane added ~200 lines above `subscribe`.
+    assert args["declared"] == [{"file": "app/core/taskbus.py", "line": 258, "function": "subscribe"}], \
         (f"{args['declared']}: exactly one Python signature declares the parameter, which is what makes "
          "it a definer rather than one caller among many")
-    assert args["read"] == [{"file": "app/core/taskbus.py", "line": 72}], \
-        (f"{args['read']}: the interval is consumed once, as the `wait_for` timeout that ends a quiet "
+    assert args["read"] == [{"file": "app/core/taskbus.py", "line": 265},
+                             {"file": "app/core/taskbus.py", "line": 262}], \
+        (f"{args['read']}: the interval is passed to each path that consumes it -- once when the "
+         "Redis backplane serves the stream, once when the memory feed does. Both carry the same "
          "wait with a `ping` -- the sentence the comments above repeat")
-    assert [row["file"] for row in args["overridden"]] == ["tests/test_core_modules.py"] * 3 \
-        and all(float(row["value"]) < declared["seconds"] for row in args["overridden"]), \
+    # Epic 131 added this file to the offline-test overrides: the fake Redis and the
+    # backplane both advertise 0.05s subscriptions so the suite stays fast.
+    assert [row["file"] for row in args["overridden"]] == (
+        ["tests/test_core_modules.py"] * 3 + ["tests/test_the_task_bus_can_scale_out_through_redis_streams.py"] * 3
+    ) and all(float(row["value"]) < declared["seconds"] for row in args["overridden"]), \
         (f"{args['overridden']}: every override of the heartbeat lives in the offline tests and shortens "
          "it, which is why the tests can run fast without proving a different interval -- an override in "
          "shipped code would make every claim above true of a number nothing uses")
@@ -3571,10 +3577,13 @@ def test_the_two_parsers_disagree_about_a_frame_that_carries_no_data():
 
     bus = TASKBUS_PATH.read_text(encoding="utf-8")
     yielded = re.findall(r'yield\s+\{([^}]*)\}', bus)
-    assert all('"data"' in y for y in yielded) and len(yielded) == 2, \
-        (f"{yielded}: the frames the bus emits itself are exactly two and both carry a `data` key, so "
-         "today no producer can make the two guards disagree -- if a yield without data is ever added, "
-         "the relay swallows it and the browser forwards it as `\"\"`")
+    # Epic 131 grew this census from 2 to 5: the memory path and the Redis backplane each carry
+    # the pair (error task-not-found / ping), and the backplane adds the transport-failure frame.
+    # All five carry `data`; a yield without it is the relay's swallowing clause.
+    assert all('"data"' in y for y in yielded) and len(yielded) == 5, \
+        (f"{yielded}: the frames the bus emits itself are five and all carry a `data` key: the memory path, "
+         "Epic 131's Redis backplane path, and the backplane's transport-failure frame. A yield without data "
+         "is what the relay's empty-frame guard swallows -- the browser forwards it as `\"\"`")
 
 
 def test_the_bus_ships_a_frame_formatter_that_the_wire_never_uses():

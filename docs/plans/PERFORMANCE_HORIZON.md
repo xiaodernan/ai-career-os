@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–130
+# Performance horizon — Epics 118–131
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -27,6 +27,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 128 | A request carries its own deadline | gateway/backend/ai-service tests |
 | 129 | The applications board ships when it is needed | bundle budget |
 | 130 | The auth door sells the same product the landing does | vitest + budget |
+| 131 | The task feed is a Redis Stream when scale-out asks for it | fake-streams suite |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -310,3 +311,33 @@ and a quote only. The illustration markup was duplicated figure code inside
 
 **Verification (offline, 2026-11-11):** full frontend vitest 1193/1193; production
 build exit 0; bundle budget OK; landing copy gate green; `tsc --noEmit` clean.
+## Epic 131 — the task feed is a Redis Stream when scale-out asks for it **DONE (verified 2026-11-11)**
+
+**Measured.** The SSE task feed is the one surface that still assumes a single process:
+`subscribe()` yields from the owning replica's memory, and a second replica sees nothing
+of it. The docstrings already named the path; the code never had it.
+
+**Shipped (2026-11-11, verified offline):**
+- `TASK_BUS_BACKEND=redis` (default `memory`): every `publish()` rides two paths --
+  the in-process list (browsers on the owning replica, unchanged) and an ordered
+  `XADD` drain (`careeros:tasks:<task_id>`, MAXLEN ~400) through a single drainer task on
+  a bounded queue (maxsize 1000; a full queue sheds the mirror, never the caller).
+- `subscribe()` reads that stream end to end: `XRANGE` backlog then `XREAD BLOCK` on the
+  tail. One writer per task keeps order; a finished task replays and returns; an
+  unknown task answers with an error frame instead of a hung stream.
+- `astate()`/`ais_done()` give the async boundary a foreign-task peek
+  (`XREVRANGE` + `XLEN`); the owner gate stays fail-closed, so cross-replica
+  follow-along is documented as the ownership-store question, not smuggled past it.
+- Fail-open everywhere: a Redis outage keeps the memory feed serving (test proves it);
+  the drainer never crashes the request path.
+- Documented in MICROSERVICES.md §6. Honest bounds: the mirror is live; cross-replica
+  owner resolution and sticky-session routing are the remaining scale-out items;
+  nothing here was load-tested.
+
+**Verification (offline, 2026-11-11):** `test_the_task_bus_can_scale_out_through_redis_streams.py`
+6/6 (fake-streams Redis with BLOCK/XRANGE/XADD semantics, foreign replica replay,
+redis-down equivalence, queue-shed); full ai-service suite 2410 passed; verify_gates
+267/267 (gate now includes the backplane suite). The heartbeat vocabulary census
+moved from one definer to one definer + two module-local consumers (renamed
+`heartbeat`), annotated; the frame-census moved 2 -> 5 yields with the reason in the
+assertion text.

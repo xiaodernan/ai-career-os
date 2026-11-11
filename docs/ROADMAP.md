@@ -5812,6 +5812,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   an honest label; match panel hidden below sm. Product-preview test pins the contract;
   copy census 163 -> 164 (annotated); full vitest 1193/1193; build exit 0; budget OK.)
 
+- [x] **131** The task feed can fan out through Redis Streams (ai-service, verified 2026-11-11).
+
+  (`TASK_BUS_BACKEND=redis` mirrors every publish into `careeros:tasks:<task_id>` (XADD, MAXLEN ~400)
+  via one ordered drainer on a bounded queue; `subscribe()` replays via XRANGE then follows with
+  XREAD BLOCK; fail-open to the memory feed on a Redis outage; the owner gate stays fail-closed.
+  Cross-replica owner resolution is the documented remaining step. Verified by a fake-streams
+  Redis suite (6/6); full ai-service suite 2410 passed; verify_gates 267/267.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

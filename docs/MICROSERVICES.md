@@ -175,6 +175,17 @@ fall back to the in-process budget with the `careeros.gateway.ratelimit.fallback
   A deadline is work conservation, never a permission problem: absent means unchanged.
   `GATEWAY_DEADLINE_MS` bounds the edge budget (default 300000, above the 180s AI read budget;
   `0` disables the stamp).
+- **The task feed as a Redis Stream (Epic 131, opt-in).** Every `publish()` rides two
+  paths: the in-process list that serves the owning replica's browsers (unchanged,
+  same events, same order), and an `XADD` (MAXLEN ~400) on `careeros:tasks:<task_id>`.
+  With `TASK_BUS_BACKEND=redis` a subscriber on any replica replays the backlog from
+  the stream and follows with `XREAD BLOCK` -- one writer per task keeps interleave
+  out of a single task's timeline. The owner gate (`owner()`) still fails closed, so
+  cross-replica follow-along is an ownership question the scale-out design
+  answers next; what is live today is the mirror that lets any observer follow a
+  task without touching the app. A Redis outage degrades the mirror to
+  warn-and-drop: the in-process feed keeps serving, exactly like the cache
+  degrades to memory.
 - **CORS**: correlation headers are allowed/exposed as required for browser diagnostics.
 
 ## 7. Observability and build identity

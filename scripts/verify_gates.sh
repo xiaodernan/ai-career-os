@@ -60,6 +60,7 @@ TESTS=(
   ai-service/tests/test_the_second_question_is_free.py
   ai-service/tests/test_the_prewarm_script_covers_the_composite_indexes.py
   ai-service/tests/test_the_performance_horizon_marks_done_honestly.py
+  ai-service/tests/test_the_task_bus_can_scale_out_through_redis_streams.py
 )
 
 echo "== verify_gates: representative offline contract gates =="
