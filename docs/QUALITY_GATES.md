@@ -63,8 +63,8 @@
 - Flyway migration naming/version monotonicity; CI/nightly referenced paths + ops modules exist/importable.
 - `SECURITY.md`/`RUNBOOK.md`/`architecture.md` structure; README/DEPLOYMENT markdown links resolve; expansion backlog structure.
 - Observability wiring (request-id/error handlers) and health endpoints present; ai-service JSON logs carry `request_id` (unit-tested).
-- Spring Cloud surfaces: backend/gateway/discovery/config-server share actuator, build info, metrics/distribution and Prometheus contracts (cross-service gates); edge ops surface gated by `GATEWAY_ACTUATOR_TOKEN` (docs/EDGE_OPERATIONS_LOCKDOWN.md).
-- `scripts/verify_gates.{ps1,sh}` run a representative offline gate set in one command.
+- Spring Cloud surfaces: backend/gateway/discovery/config-server share actuator, build info, metrics/distribution and Prometheus contracts (cross-service gates); edge ops surface gated by `GATEWAY_ACTUATOR_TOKEN` (docs/EDGE_OPERATIONS_LOCKDOWN.md). The `springcloud-java` job runs the gateway/discovery/config-server Java unit tests on every push; the `budget` job enforces the frontend bundle budget; the `offline-gate` umbrella requires all of them.
+- `scripts/verify_gates.{ps1,sh}` run a representative offline gate set in one command (261/261).
 
 ## Rules for adding gates
 - Prove the gap with a failing case (destructive proof or mutation) when feasible; restore state.
