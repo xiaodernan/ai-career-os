@@ -238,6 +238,24 @@ Flyway runs automatically on backend startup. Ensure the database user has
 DDL permissions for the initial run. For zero-downtime deployments, run
 migrations separately before deploying the new backend version.
 
+### Prewarming the read path (optional)
+
+`scripts/prewarm-hot.sql` refreshes the planner's statistics for the five hot
+user-scoped relations and loads the five V36 composite indexes into shared buffers
+(`pg_prewarm`), so a cold deploy does not pay its first page reads out of random
+disk I/O:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/prewarm-hot.sql
+```
+
+Section A (`ANALYZE`) is always safe for the table owner. Section B needs the
+trusted `pg_prewarm` extension (PostgreSQL 13+, which a database owner may install);
+on a managed service where the extension is unavailable, comment out Section B and
+keep Section A. The script and the V36 migration are pinned together by a contract
+test (`ai-service/tests/test_the_prewarm_script_covers_the_v36_indexes.py`), so a new
+composite index cannot land without moving the prewarm in the same change.
+
 ### Backup & Recovery
 
 Two scripts own this, so a restore is rehearsed rather than retyped at 3 a.m.:

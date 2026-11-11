@@ -5739,6 +5739,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `glow-halo`; timeline rows read via `hairline`. Still open: panel-origin transitions, per-surface
   skeleton-shape pinning, dashboard hero.)
 
+- [x] **123** The first page is warm before the request arrives (frontend+backend, verified 2026-11-11).
+
+  (Sidebar warms the target route on hover *and* keyboard focus via `router.prefetch` --
+  Next's auto-prefetch is hover-only. `scripts/prewarm-hot.sql` refreshes the planner's
+  histograms (`ANALYZE`) and loads the five V36 composite indexes into shared buffers
+  (`pg_prewarm`, PG13+ trusted extension); both pinned against V36 by a contract test.
+  Connection keep-alive needs no app code (edge/browser's job). Live prewarm on a target
+  install is the documented operator step (docs/DEPLOYMENT.md); not run here, no Docker.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

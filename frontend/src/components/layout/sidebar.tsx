@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav";
@@ -71,9 +71,18 @@ export function NavLinks({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useLocale();
   const { data: inbox } = useNotifications();
   const unread = inbox?.unread ?? 0;
+  // Warm the route before the click (Epic 123). Next's Link auto-prefetch fires on hover
+  // in production, but not on keyboard focus -- and a reader navigating by keyboard
+  // deserves the same instant page. prefetch is idempotent, so this layers cleanly on
+  // top of the framework's own behaviour rather than replacing it.
+  const warm = React.useCallback(
+    (href: string) => () => router.prefetch(href),
+    [router]
+  );
   return (
     <TooltipProvider delayDuration={200}>
       <nav
@@ -93,6 +102,8 @@ export function NavLinks({
               key={item.href}
               href={item.href}
               onClick={onNavigate}
+              onMouseEnter={warm(item.href)}
+              onFocus={warm(item.href)}
               aria-current={active ? "page" : undefined}
               aria-label={
                 collapsed ? (unreadText ? `${label}, ${unreadText}` : label) : undefined

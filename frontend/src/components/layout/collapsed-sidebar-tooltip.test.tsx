@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as React from "react";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/dashboard",
+  useRouter: () => ({ prefetch: () => {} }),
+}));
 vi.mock("@/lib/i18n/locale-context", () => ({
   // The identity translator keeps the label rule visible: an item with a key
   // renders that key, an item without one keeps its English name.

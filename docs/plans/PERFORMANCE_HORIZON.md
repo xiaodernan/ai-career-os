@@ -19,7 +19,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 120 | The edge's rate limit is one budget across replicas | Lua script against live Redis |
 | 121 | The read path's indexes match the queries it actually runs | `EXPLAIN` on the dev stack |
 | 122 | The UI is a designed surface, not a form | screenshots + vitest |
-| 123 | The database optimiser is told what the hot queries need | Flyway + explain gate |
+| 123 | The first page is warm before the request arrives | vitest + prewarm gate |
 | 124 | Every claim above is pinned by a gate that fails when it stops being true | gate suite |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
@@ -86,13 +86,41 @@ loaded layout for every surface; the dashboard hero proper.
 product working, skeletons that match the shape of what lands, and transitions that
 explain where a panel came from.
 
-## Epic 123 — the plate is warm before the request arrives
+## Epic 123 — the plate is warm before the request arrives **DONE (verified 2026-11-11)**
 
-**Do.** Prefetch the routes a nav row admits, warm the retrieval cache for a
-reader's saved searches, and keep the browser's connection to the edge alive across
-navigations.
+**Shipped (2026-11-11, verified offline; live prewarm run is the operator step):**
+- The sidebar warms the target route on `onMouseEnter` *and* `onFocus` via
+  `router.prefetch` -- Next's auto-prefetch covers hover only, keyboard readers got a
+  cold page. Prefetch is idempotent; the wiring is pinned by
+  `frontend/src/components/layout/warm-prefetch.test.ts` (5 tests), 29/29 layout suite green.
+- `scripts/prewarm-hot.sql` warms the read path literally: `ANALYZE` on the five hot
+  relations (stats the planner uses) and `pg_prewarm` on the five V36 composite indexes
+  (buffers the reader uses). Section B needs the trusted `pg_prewarm` extension (PG13+);
+  on a managed service without it, run Section A only. The script and V36 are pinned
+  together by `ai-service/tests/test_the_prewarm_script_covers_the_v36_indexes.py`.
+- Keep-the-connection-alive needs no code here: HTTP/1.1 keep-alive and HTTP/2
+  multiplexing are the edge's and the browser's job; there is no per-navigation
+  connection for this app to keep alive beyond what the browser already reuses.
 
-## Epic 124 — the gates
+**Open (documented, not silently dropped):** the live `pg_prewarm` run against a target
+install is not done on this host (no Docker here); a target install should record the
+blocks-loaded output. The warm covers the routes the nav admits; per-row prefetch of
+job/resume detail pages is folded into Epic 124's follow-ups.
+
+**Note on saved searches:** the board's saved searches are filter criteria, not model
+questions, so there is no retrieval-cache entry to warm for them -- the thing they
+benefit from is a warm buffer pool and fresh histograms, which is exactly what
+`prewarm-hot.sql` does. (The retrieval-cache warm from the original sketch applies
+to the RAG path, already covered by Epic 118.)
+
+## Epic 124 — the gates (in progress, first gates landed 2026-11-11)
 
 Every claim above gets a test that fails when the claim stops being true, plus the
 roadmap/census updates the repo already requires.
+
+**Landed (2026-11-11):** `test_the_prewarm_script_covers_the_v36_indexes.py` (prewarm
+script and V36 cannot drift), `test_the_performance_horizon_marks_done_honestly.py`
+(DONE means dated, and DONE in the horizon means checked in ROADMAP.md), plus the
+frontend `warm-prefetch.test.ts`. Both Python gates run in `scripts/verify_gates.{sh,ps1}`.
+Remaining: a gate that the horizon's table stays in sync with the sections, and the
+per-surface skeleton-shape pins from Epic 122.

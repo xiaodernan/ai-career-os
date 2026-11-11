@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as React from "react";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/dashboard",
+  useRouter: () => ({ prefetch: () => {} }),
+}));
 vi.mock("@/lib/i18n/locale-context", () => ({
   // Two rules on purpose: the nav label answers the English name so the link's
   // accessible name is readable, and the count key keeps its own spelling so
