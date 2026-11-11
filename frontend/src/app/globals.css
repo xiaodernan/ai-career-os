@@ -387,3 +387,141 @@ button, a, [role="button"], input, select, textarea {
     border: 1px solid CanvasText;
   }
 }
+
+/* ================================================================== */
+/* Motion system extensions — aurora, glass, scroll reveal, gradient. */
+/* Decorative layer only; reduced-motion handling lives at the bottom. */
+/* ================================================================== */
+
+@keyframes aurora-drift-1 {
+  0%   { transform: translate3d(-8%, -6%, 0) scale(1); }
+  50%  { transform: translate3d(10%, 8%, 0) scale(1.15); }
+  100% { transform: translate3d(-8%, -6%, 0) scale(1); }
+}
+@keyframes aurora-drift-2 {
+  0%   { transform: translate3d(6%, 4%, 0) scale(1.1); }
+  50%  { transform: translate3d(-10%, -8%, 0) scale(0.95); }
+  100% { transform: translate3d(6%, 4%, 0) scale(1.1); }
+}
+@keyframes aurora-drift-3 {
+  0%   { transform: translate3d(0, 8%, 0) scale(1); }
+  50%  { transform: translate3d(0, -10%, 0) scale(1.2); }
+  100% { transform: translate3d(0, 8%, 0) scale(1); }
+}
+@keyframes gradient-pan {
+  from { background-position: 0% 50%; }
+  to   { background-position: 200% 50%; }
+}
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+/* Aurora: layered, blurred radial blobs drifting over a faint grid. */
+.aurora-bg {
+  background:
+    radial-gradient(60% 60% at 50% 0%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 70%);
+}
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.55;
+  will-change: transform;
+  mix-blend-mode: screen;
+}
+.aurora-blob-1 {
+  width: 46vw; height: 46vw; left: -8vw; top: -12vw;
+  background: radial-gradient(circle at 30% 30%, color-mix(in oklch, oklch(0.6 0.2 277) 72%, transparent), transparent 70%);
+  animation: aurora-drift-1 22s ease-in-out infinite;
+}
+.aurora-blob-2 {
+  width: 40vw; height: 40vw; right: -6vw; top: -4vw;
+  background: radial-gradient(circle at 50% 50%, color-mix(in oklch, oklch(0.62 0.18 250) 66%, transparent), transparent 70%);
+  animation: aurora-drift-2 28s ease-in-out infinite;
+}
+.aurora-blob-3 {
+  width: 36vw; height: 36vw; left: 28vw; top: 4vw;
+  background: radial-gradient(circle at 50% 50%, color-mix(in oklch, oklch(0.6 0.17 320) 56%, transparent), transparent 70%);
+  animation: aurora-drift-3 26s ease-in-out infinite;
+}
+.aurora-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(72% 60% at 50% 0%, black, transparent 78%);
+  mask-image: radial-gradient(72% 60% at 50% 0%, black, transparent 78%);
+  opacity: 0.55;
+}
+
+/* Glass surfaces — frosted, for cards that float over the aurora. */
+.glass {
+  background: color-mix(in oklch, var(--card) 68%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+}
+.glass-strong {
+  background: color-mix(in oklch, var(--card) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Animated gradient text — a moving sheen across the headline accent. */
+.gradient-text {
+  background: linear-gradient(100deg, var(--primary), oklch(0.62 0.18 250), oklch(0.6 0.17 320), var(--primary));
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-pan 8s linear infinite;
+}
+
+/* Scroll reveal — opacity + lift, driven by an IntersectionObserver that
+   toggles `.is-visible`. Starts hidden only when JS can reveal it. */
+.reveal-in {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity 0.7s var(--ease-out-soft), transform 0.7s var(--ease-out-soft);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal-in.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.float-soft { animation: float-soft 6s ease-in-out infinite; }
+.spin-slow { animation: spin-slow 26s linear infinite; }
+
+/* CTA lift + halo on hover. */
+.glow-on-hover {
+  transition: box-shadow 0.4s var(--ease-out-soft), transform 0.4s var(--ease-out-soft);
+}
+.glow-on-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Quiet shimmering hairline used to separate premium panels. */
+.shimmer-rule {
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    color-mix(in oklch, var(--primary) 55%, transparent),
+    transparent);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-in { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .aurora-blob, .gradient-text, .float-soft, .spin-slow, .shimmer-rule { animation: none !important; }
+  .aurora-grid { opacity: 0.4; }
+}

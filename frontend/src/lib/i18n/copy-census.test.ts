@@ -107,8 +107,11 @@ describe("the browser's copy", () => {
     // ai-service bridge (105.2); 163 with `components/monitoring/service-engines.tsx`,
     // the engine-fleet card reading the same /health the backend reads (108.23); 164 with
     // `components/marketing/product-preview.tsx`, the front-door illustration the landing
-    // hero and the auth panel now share (130).
-    expect(browserSources().length).toBe(164);
+    // hero and the auth panel now share (130); 167 with the front-door aesthetic
+    // series' three motion primitives: components/ui/aurora.tsx,
+    // components/ui/gradient-text.tsx, components/ui/reveal.tsx (AuroraBackground,
+    // GradientText, Reveal).
+    expect(browserSources().length).toBe(167);
   });
 
   it("finds a sentence, however long it is", () => {
