@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     # would otherwise burn a worker + a model call on every retry). 0 disables it.
     work_queue_max_deliveries: int = 5
     work_queue_dlq_stream: str = "careeros:jobs:embed:dlq"
+    # Dead-letter cooldown (Epic 139). A job that reached the DLQ is cooled down by
+    # job id for this many seconds so the producer stops re-injecting it every tick
+    # (which would start a fresh attempts=0 lineage and burn a model call forever).
+    # A *cooldown*, not a permanent tombstone: a transient provider outage heals on
+    # its own when the window lapses; 0 disables suppression (pure Epic 138 behaviour).
+    work_queue_dlq_cooldown_s: int = 900
+    work_queue_dlq_guard_key: str = "careeros:jobs:embed:dlq:cooldown"
     cache_ttl_s: int = 300
     cache_max_entries: int = 2048
     redis_url: str = "redis://127.0.0.1:16380/0"

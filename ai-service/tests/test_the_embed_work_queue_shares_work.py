@@ -51,12 +51,14 @@ class _FakeEmbedder:
 
 
 class _FakeQueue:
-    def __init__(self, *, down=False):
+    def __init__(self, *, down=False, dead_lettered_ids=()):
         self.down = down
         self.enqueued = []
         self.acked = []
         self.items = []
         self.drained_with = None
+        # When set, drain() reports these as dead-lettered, so consumer_pass cools them.
+        self.dead_lettered_ids = tuple(dead_lettered_ids)
 
     async def enqueue(self, fields):
         if self.down:
@@ -69,16 +71,46 @@ class _FakeQueue:
         results = [await handler(item) for item in self.items]
         ok = [it.stream_id for it, good in zip(self.items, results) if good]
         self.acked.extend(ok)
-        return workqueue.ClaimStats(delivered=len(self.items),
-                                    ack_failed=sum(not r for r in results))
+        return workqueue.ClaimStats(
+            delivered=len(self.items), ack_failed=sum(not r for r in results),
+            dead_lettered=len(self.dead_lettered_ids),
+            dead_lettered_ids=self.dead_lettered_ids)
 
     async def ensure_group(self):
         if self.down:
             raise resp.RespUnavailable("down")
 
 
+class _StubGuard:
+    """Only the guard surface the embed passes use; its own semantics are pinned in
+    test_the_dead_letter_guard_bounds_poison_jobs.py."""
+
+    def __init__(self, *, enabled=True, active=(), cooldown_s=900, active_error=None):
+        self.enabled = enabled
+        self.cooldown_s = cooldown_s
+        self._active = set(active)
+        self.active_error = active_error
+        self.marked = []
+        self.active_calls = 0
+
+    async def active(self):
+        self.active_calls += 1
+        if self.active_error:
+            raise self.active_error
+        return set(self._active)
+
+    async def mark(self, ids, *, now=None):
+        self.marked.append(tuple(ids))
+        self._active.update(ids)
+        return len(list(ids))
+
+
 def _item(job_id, sid="1-0"):
     return workqueue.WorkItem(sid, {"job_id": job_id})
+
+
+JOB_A = "00000000-0000-0000-0000-000000000001"
+JOB_B = "00000000-0000-0000-0000-000000000002"
 
 
 # --------------------------------------------------------------- producer
@@ -117,6 +149,86 @@ async def test_producer_is_fail_open_on_redis_down(monkeypatch):
     monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
     q = _FakeQueue(down=True)
     assert await producer_pass(q) == 0, "it reports what it sent; the loop falls back"
+
+
+# --------------------------------------------------------------- Epic 139: producer suppression
+async def test_producer_pushes_suppressed_ids_into_sql_not_a_python_filter(monkeypatch):
+    """A SQL LIMIT must count only ELIGIBLE rows; a post-filter would let suppressed
+    ids fill the batch and starve older embeddable jobs."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active={JOB_A})
+    await producer_pass(_FakeQueue(), limit=5, guard=guard)
+    sql, args = calls[0]
+    assert "NOT (j.id = ANY($1::uuid[]))" in sql, sql
+    assert "embedding IS NULL" in sql
+    assert args[0] == [JOB_A] and args[1] == 5, "suppression binds before LIMIT"
+    assert "LIMIT $2" in sql, sql
+    assert guard.active_calls == 1, "one batched guard read per pass"
+
+
+async def test_producer_without_suppression_keeps_the_original_sql(monkeypatch):
+    """Backward compatible: no suppressed ids -> no array bind, LIMIT stays $1."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    await producer_pass(_FakeQueue(), limit=5, guard=_StubGuard(active=set()))
+    sql, args = calls[0]
+    assert "ANY(" not in sql, sql
+    assert "LIMIT $1" in sql and args == (5,)
+
+
+async def test_producer_works_with_no_guard_at_all(monkeypatch):
+    """Pure Epic 138 behaviour when the guard is not wired in (default/off)."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    await producer_pass(_FakeQueue(), limit=5)
+    sql, args = calls[0]
+    assert "ANY(" not in sql and args == (5,)
+
+
+async def test_producer_drops_malformed_suppressed_ids_before_the_uuid_bind(monkeypatch):
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active={JOB_A, "not-a-uuid"})
+    await producer_pass(_FakeQueue(), guard=guard)
+    sql, args = calls[0]
+    assert "ANY(" in sql
+    assert args == ([JOB_A],), "only a valid uuid reaches the ::uuid[] bind"
+
+
+async def test_producer_is_fail_open_when_the_guard_read_errors(monkeypatch):
+    """A guard outage degrades to 'enqueue everything', never to lost recall."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active_error=resp.RespUnavailable("down"))
+    await producer_pass(_FakeQueue(), limit=5, guard=guard)
+    sql, args = calls[0]
+    assert "ANY(" not in sql and args == (5,), "the suppression clause vanished"
 
 
 # --------------------------------------------------------------- handler idempotence
@@ -212,6 +324,86 @@ async def test_consumer_survives_a_handler_exception(monkeypatch):
     assert stats.ack_failed == 1
 
 
+# --------------------------------------------------------------- Epic 139: consumer cooldown
+async def test_consumer_acks_a_cooling_down_duplicate_without_a_model_call(monkeypatch):
+    """Producer stops new enqueues, but at-least-once duplicates may already sit in
+    the stream. They must be ACKed for free, not spend another embedding call."""
+    monkeypatch.setattr("app.providers.registry.embeddings_ready", lambda _s: True)
+    called = []
+
+    async def fake_embed_one(job_id):
+        called.append(job_id)
+        return True
+
+    monkeypatch.setattr(embed_workers, "embed_one", fake_embed_one)
+    q = _FakeQueue()
+    q.items = [_item(JOB_A, "1-0"), _item(JOB_B, "2-0")]
+    guard = _StubGuard(active={JOB_A})
+    await consumer_pass(q, guard=guard)
+    assert called == [JOB_B], "the cooling-down id never reached the provider"
+    assert q.acked == ["1-0", "2-0"], "both copies leave the PEL"
+    assert guard.active_calls == 1, "one batched read for the whole pass"
+
+
+async def test_consumer_marks_dead_lettered_ids_into_the_guard(monkeypatch):
+    """The other half of the loop: drain's dead-lettered ids become cooldown members
+    so the NEXT producer pass excludes them in SQL."""
+    monkeypatch.setattr("app.providers.registry.embeddings_ready", lambda _s: True)
+    q = _FakeQueue(dead_lettered_ids=(JOB_A, JOB_B))
+    guard = _StubGuard(active=set(), cooldown_s=900)
+    await consumer_pass(q, guard=guard)
+    assert guard.marked == [(JOB_A, JOB_B)]
+    assert await guard.active() == {JOB_A, JOB_B}, "marked ids are now suppressed"
+
+
+async def test_consumer_is_fail_open_when_the_guard_read_errors(monkeypatch):
+    """A guard outage must not stop the consumer doing its real work."""
+    monkeypatch.setattr("app.providers.registry.embeddings_ready", lambda _s: True)
+    called = []
+
+    async def fake_embed_one(job_id):
+        called.append(job_id)
+        return True
+
+    monkeypatch.setattr(embed_workers, "embed_one", fake_embed_one)
+    q = _FakeQueue()
+    q.items = [_item(JOB_A, "1-0")]
+    guard = _StubGuard(active_error=resp.RespUnavailable("down"))
+    await consumer_pass(q, guard=guard)
+    assert called == [JOB_A], "the job was still embedded despite the guard outage"
+
+
+async def test_consumer_with_no_guard_is_pure_epic_138(monkeypatch):
+    """Backward compatible: no guard -> every item goes to the handler."""
+    monkeypatch.setattr("app.providers.registry.embeddings_ready", lambda _s: True)
+    called = []
+
+    async def fake_embed_one(job_id):
+        called.append(job_id)
+        return True
+
+    monkeypatch.setattr(embed_workers, "embed_one", fake_embed_one)
+    q = _FakeQueue()
+    q.items = [_item(JOB_A, "1-0")]
+    await consumer_pass(q)
+    assert called == [JOB_A]
+
+
+async def test_a_disabled_guard_is_inert_in_both_passes(monkeypatch):
+    """cooldown_s=0 (the off knob) -> no suppression, no marking, no active read."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(enabled=False, active={JOB_A})
+    await producer_pass(_FakeQueue(), limit=5, guard=guard)
+    assert "ANY(" not in calls[0][0]
+    assert guard.active_calls == 0, "a disabled guard is not even read"
+
+
 # --------------------------------------------------------------- wiring
 def test_main_chooses_the_distributed_loop_only_when_the_knob_is_redis():
     """Read it back from main's source so a wiring regression is caught offline."""
@@ -226,3 +418,95 @@ def test_consumer_name_is_stable_per_process_format():
     name = embed_workers._consumer_name()
     assert isinstance(name, str) and len(name) == 12
     assert name != embed_workers._consumer_name(), "each process gets its own PEL identity"
+
+
+# --------------------------------------------------------------- Epic 139: wiring
+def test_queue_names_the_id_field_when_the_dlq_is_on(monkeypatch):
+    """drain() can only report dead-lettered job ids if the queue knows the field."""
+    settings = SimpleNamespace(work_queue_max_deliveries=5, work_queue_dlq_stream="dlq",
+                               work_queue_claim_ms=120_000, work_queue_maxlen=10_000)
+    monkeypatch.setattr(embed_workers, "get_settings", lambda: settings)
+    q = embed_workers._queue(FakePoolForFactory())
+    assert q.id_field == "job_id"
+    assert q.max_deliveries == 5 and q.dlq_stream == "dlq"
+
+
+def test_queue_leaves_id_field_empty_when_the_dlq_is_off(monkeypatch):
+    settings = SimpleNamespace(work_queue_max_deliveries=0, work_queue_dlq_stream="dlq",
+                               work_queue_claim_ms=120_000, work_queue_maxlen=10_000)
+    monkeypatch.setattr(embed_workers, "get_settings", lambda: settings)
+    q = embed_workers._queue(FakePoolForFactory())
+    assert q.id_field == "", "no DLQ -> drain reports no ids -> nothing to cool down"
+    assert q.max_deliveries == 0 and q.dlq_stream == ""
+
+
+def test_guard_factory_reads_the_cooldown_knobs(monkeypatch):
+    settings = SimpleNamespace(work_queue_dlq_cooldown_s=1234,
+                               work_queue_dlq_guard_key="my:guard")
+    monkeypatch.setattr(embed_workers, "get_settings", lambda: settings)
+    g = embed_workers._guard(FakePoolForFactory())
+    assert g.enabled is True
+    assert g.cooldown_s == 1234 and g.key == "my:guard"
+
+
+def test_guard_factory_disables_on_zero_cooldown(monkeypatch):
+    settings = SimpleNamespace(work_queue_dlq_cooldown_s=0,
+                               work_queue_dlq_guard_key="my:guard")
+    monkeypatch.setattr(embed_workers, "get_settings", lambda: settings)
+    g = embed_workers._guard(FakePoolForFactory())
+    assert g.enabled is False, "the off knob gives pure Epic 138 behaviour"
+
+
+def test_the_loop_wires_one_guard_into_both_passes():
+    """Source contract: the guard is built once and threaded to producer + consumer,
+    so the two halves of the cooldown loop cannot silently drift apart."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "app" / "ops" / "embed_workers.py").read_text(
+        encoding="utf-8")
+    assert "guard = _guard(pool)" in src
+    assert "producer_pass(queue, guard=guard)" in src
+    assert "consumer_pass(queue, guard=guard)" in src
+
+
+async def test_operator_release_all_clears_the_cooldown_set(monkeypatch):
+    """The documented 'requeue after an incident' path: release_all -> empty set."""
+    from app.core import dlq_guard
+
+    pool = _ReleaseFakePool()
+    guard = dlq_guard.DlqGuard(pool, key="k", cooldown_s=900)
+    await guard.mark([JOB_A, JOB_B])
+    assert await guard.release_all() == 2
+    assert await guard.active(now=1000.0) == set()
+
+
+class FakePoolForFactory:
+    """The factories only store the pool; no command is issued in these tests."""
+
+    async def execute(self, *args):
+        raise AssertionError("factory tests must not touch Redis")
+
+
+class _ReleaseFakePool:
+    """Minimal ZSET for the operator-release path test."""
+
+    def __init__(self):
+        self.rows = {}
+
+    async def execute(self, *args):
+        a = [str(x) for x in args]
+        if a[0] == "ZADD":
+            for i in range(2, len(a) - 1, 2):
+                self.rows[a[i + 1]] = float(a[i])
+            return 2
+        if a[0] == "ZREMRANGEBYSCORE":
+            gone = list(self.rows)
+            self.rows.clear()
+            return len(gone)
+        if a[0] == "ZRANGEBYSCORE":
+            lo = a[2]
+            thr = float(lo[1:]) if lo.startswith("(") else 0.0
+            return [m.encode() for m, s in self.rows.items() if s > thr]
+        raise AssertionError(a)
+
+    async def pipeline(self, cmds):
+        return [await self.execute(*c) for c in cmds]

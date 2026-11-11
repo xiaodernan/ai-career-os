@@ -67,6 +67,12 @@ class ClaimStats:
     reclaimed: int = 0      # recovered from another consumer's PEL
     ack_failed: int = 0
     dead_lettered: int = 0  # poison jobs moved out of the PEL into the DLQ
+    # The ids of jobs that were dead-lettered, read from the item field named by
+    # WorkQueue's `id_field` (empty tuple when no id_field is configured). The embed
+    # worker uses these to cool the ids down in its DlqGuard so the producer cannot
+    # immediately re-inject them. Kept on the stats rather than a callback so the
+    # generic queue stays unaware of the guard and the handler stays pure.
+    dead_lettered_ids: tuple[str, ...] = ()
 
 
 class WorkQueue:
@@ -78,12 +84,16 @@ class WorkQueue:
     ``min_idle_ms`` the after-which-a-job-is-presumed-dead visibility timeout;
     ``batch`` the max messages to take per call; ``max_deliveries`` (0 = off) the
     number of deliveries after which a still-failing job is moved to ``dlq_stream``
-    instead of being re-claimed forever.
+    instead of being re-claimed forever. ``id_field`` (default empty) names the
+    payload field whose value identifies the job; when set, ``drain`` reports the
+    ids of dead-lettered jobs in ``ClaimStats.dead_lettered_ids`` so a caller can
+    suppress them upstream, without this generic queue knowing about that store.
     """
 
     def __init__(self, pool: resp.RespPool, *, stream: str, group: str, consumer: str,
                  min_idle_ms: int = 60_000, batch: int = 16, maxlen: int = 0,
-                 max_deliveries: int = 0, dlq_stream: str = "") -> None:
+                 max_deliveries: int = 0, dlq_stream: str = "",
+                 id_field: str = "") -> None:
         if min_idle_ms <= 0 or batch <= 0:
             raise ValueError("min_idle_ms and batch must be positive")
         if maxlen < 0:
@@ -101,6 +111,7 @@ class WorkQueue:
         self.maxlen = maxlen
         self.max_deliveries = max_deliveries
         self.dlq_stream = dlq_stream
+        self.id_field = id_field
         self._group_ready = False
 
     # -------------------------------------------------------------- wire helpers
@@ -272,6 +283,7 @@ class WorkQueue:
         items = await self.claim()
         acked: list[str] = []
         dead_lettered = 0
+        dead_lettered_ids: list[str] = []
         failed = 0
         for item in items:
             try:
@@ -318,6 +330,10 @@ class WorkQueue:
             acked.append(item.stream_id)  # old copy leaves the PEL; new copy is queued
             if poison:
                 dead_lettered += 1
+                if self.id_field:
+                    jid = item.value(self.id_field)
+                    if jid:
+                        dead_lettered_ids.append(jid)
                 log.error("work queue job %s dead-lettered after %d attempts",
                           item.stream_id, attempts)
             # A re-queued job is still in the system, just back on the stream; it is
@@ -332,7 +348,8 @@ class WorkQueue:
                             len(acked), e)
         return ClaimStats(delivered=len(items), reclaimed=0,
                           ack_failed=len(acked) - ack_count + failed,
-                          dead_lettered=dead_lettered)
+                          dead_lettered=dead_lettered,
+                          dead_lettered_ids=tuple(dead_lettered_ids))
 
     async def pending(self) -> int:
         """Best-effort PEL length for this group (observability)."""

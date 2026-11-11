@@ -21,7 +21,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 136 | N embed replicas do a job once, and a crashed worker's job comes back | `WorkQueue` consumer-group semantics (fake + real Redis), 12 + 12 offline tests |
 | 137 | The auth door carries the landing's design language, without its light-panel pitfalls | `layout.test.ts` source contract, copy census, build + bundle budget |
 | 138 | A poison job stops burning a worker on every retry; a failed retry never drops the job | re-queue + `attempts` + bounded DLQ, 9 offline tests + real-Redis end-to-end |
-| 139 | (next) A dead-lettered job stops being re-injected by the producer each tick, until an operator requeues it | producer-side dead-letter suppression keyed by job id |
+| 139 | A dead-lettered job stops being re-injected by the producer each tick, and heals when its cooldown lapses | `DlqGuard` Redis-ZSET cooldown, 32 offline tests + real-Redis end-to-end |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -330,3 +330,82 @@ producer passes until an operator requeues it. That is Epic 139; keeping it out 
 138 preserves the DB-as-source-of-truth contract (a trimmed DLQ record never loses
 the job, because the still-NULL row comes back next pass) and avoids silently
 changing recall for transient provider failures.
+
+## Epic 139 — the producer stops re-injecting a dead-lettered job, and it heals **DONE (verified 2026-11-12)**
+
+**Observed (the bound Epic 138 measured and left open).** Epic 138's retry ceiling is
+scoped to **one message lineage**, but `producer_pass()` re-selects
+`jobs WHERE embedding IS NULL` every 60 s tick and `XADD`s a *fresh* message with no
+`attempts` field. A permanently-unembeddable row therefore starts a brand-new
+`attempts=0` lineage every tick: the real-Redis scenario D saw live attempts
+`['0','0','1','1']` after two producer ticks. Result: ~one model call burned per
+tick, forever, and one DLQ dead-letter per tick (bounded in stream *size* by Epic
+138's `MAXLEN ~`, but the *work* was unbounded). The DLQ alone cannot fix this — the
+re-injection is a producer decision.
+
+**The design decision: a bounded cooldown, NOT a permanent tombstone.** The obvious
+fix is "suppress dead-lettered ids forever until an operator clears them." That is
+**dangerous**: a 10-minute provider blip can dead-letter hundreds of *perfectly good*
+jobs (5 fast retries inside the blip), and a permanent set would leave all of them
+un-embedded until a human noticed — a silent recall drop, exactly the failure the
+"DB as source of truth" contract exists to prevent. So suppression is a **cooldown**
+keyed by job id, backed by **one Redis sorted set** (`ZADD key <expiry_epoch> job_id`):
+
+* ``active(now)`` = `ZRANGEBYSCORE key (now +inf` — ids whose window is still open;
+* ``ZREMRANGEBYSCORE key -inf now`` runs in the **same pipeline round trip**, so the
+  set cannot accumulate dead members;
+* after `WORK_QUEUE_DLQ_COOLDOWN_S` (default 900 s) a lapsed id leaves the set and the
+  next producer tick re-enqueues it — **a transient outage heals on its own**;
+* an operator can `release(ids)` / `release_all()` early (or plain `ZREM` /
+  `ZREMRANGEBYSCORE -inf +inf` via redis-cli) after fixing the row or restoring the
+  provider. This is the "requeue it" half of the contract.
+
+The DB column `embedding IS NULL` stays the single source of truth for *whether a job
+needs work*; the guard only decides *when it is eligible to be tried*. A pruned or
+released entry can never lose a job.
+
+**Do (two halves, one batched guard read per pass).** `app/core/dlq_guard.py` is a
+dependency-free `DlqGuard` over the existing RESP pool (ZADD/ZSCORE/ZRANGEBYSCORE/
+ZREMRANGEBYSCORE/ZREM/ZCARD + `pipeline`), with an injectable clock. Producer half:
+`producer_pass` excludes cooling ids **in SQL** (`NOT j.id = ANY($n::uuid[])`), not in
+Python — a post-`LIMIT` filter would let suppressed ids fill the batch and starve
+older embeddable jobs; pushing it into the WHERE makes `LIMIT` count only eligible
+rows. Consumer half: `WorkQueue.drain` (new optional `id_field`) reports
+`ClaimStats.dead_lettered_ids`; `consumer_pass` marks those into the guard, and **ACKs
+leftover at-least-once duplicate copies of cooling ids without a model call** (the
+producer stops *new* enqueues, but copies enqueued in earlier ticks may still sit in
+the stream). `embed_loop_distributed` builds one guard and threads it to both passes.
+`release_cooldowns()` is the operator entry point.
+
+**Honest bounds.**
+* **Fail-open at two layers.** `DlqGuard` swallows its own Redis errors; the caller
+  boundary (`_suppressed`) also degrades any escaping exception to "suppress nothing".
+  A guard outage costs suppression, never recall — the system degrades to exact Epic
+  138 behaviour. This was *found by a failing test*, not assumed: a stub whose
+  `active()` raised exposed that the caller was trusting the guard too much, so the
+  boundary wrapper was added.
+* **Approximate across replicas, on purpose.** All replicas share one ZSET (global
+  suppression, no leader). Two replicas may both `ZADD` an id (idempotent, last
+  expiry wins) or read the same active set; a job may be tried at most ~once per
+  window per replica in the worst case — bounded, not "once per tick".
+* **A cooldown is not a fix for the underlying poison row.** It reduces a permanently
+  bad job's cost from ~1 model call/tick to ~1 per 900 s; the row stays `embedding IS
+  NULL` and re-enters each window until someone fixes it or the provider. That is the
+  correct trade-off: bounded cost + self-healing + no silent recall loss, without
+  pretending the bad row is gone.
+* **Wall-clock scores** (unix epoch) because ZSET scores must be comparable across
+  processes; `time.time` is injectable so expiry is tested without sleeping.
+
+**Verified (offline + real Redis 7, 2026-11-12).** 13 `DlqGuard` tests (mark/batched
+ZADD/expiry-refresh/self-heal/pipeline-prune/release/release_all/fail-open on down and
+on RESP error/disabled-knob/malformed-id) + 16 new embed integration tests
+(producer SQL bind shape, no-guard and disabled-guard backward compatibility,
+malformed-id filtering, guard-error fail-open, consumer ACKs cooling duplicates with
+zero model calls, consumer marks dead-lettered ids, loop wiring source contract,
+operator release) + 3 `drain` tests for `dead_lettered_ids`; the existing 33
+workqueue/embed tests stay green (backward compatible). `test_the_env_examples...`
+census passes with both new knobs declared and read. **Real Redis 7 end-to-end** on
+the live instance: mark→active (ZADD+ZRANGEBYSCORE), window-lapse→heal+prune (same
+pipeline), re-mark→refreshed window, release/release_all, and disabled guard — all
+passed against actual RESP commands. `verify_gates.sh`/`.ps1` gained the new guard
+gate. `WORK_QUEUE_DLQ_COOLDOWN_S=0` reproduces Epic 138 exactly.

@@ -63,6 +63,7 @@ TESTS=(
   ai-service/tests/test_the_task_bus_can_scale_out_through_redis_streams.py
   ai-service/tests/test_the_work_queue_delivers_each_job_once.py
   ai-service/tests/test_the_embed_work_queue_shares_work.py
+  ai-service/tests/test_the_dead_letter_guard_bounds_poison_jobs.py
   ai-service/tests/test_the_rerank_that_costs_no_model_call.py
   ai-service/tests/test_the_algorithms_module.py
 )

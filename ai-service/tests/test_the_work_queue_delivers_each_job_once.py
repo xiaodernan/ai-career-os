@@ -358,6 +358,43 @@ async def _false():
     return False
 
 
+async def test_drain_reports_dead_lettered_job_ids_when_id_field_is_set():
+    """Epic 139: drain surfaces the ids of poisoned jobs so the caller can cool them
+    down upstream. The generic queue stays unaware of the guard — it just reports ids
+    from a named field. Without id_field, the tuple stays empty (no config, no cost).
+    """
+    pool = FakePool()
+    q = WorkQueue(pool, stream="jobs", group="g", consumer="w", batch=8,
+                  min_idle_ms=1000, max_deliveries=1, dlq_stream="jobs:dlq",
+                  id_field="job_id")
+    await q.enqueue({"job_id": "poison-a"})
+    await q.enqueue({"job_id": "poison-b"})
+    stats = await q.drain(lambda _i: _false())
+    assert stats.dead_lettered == 2
+    assert set(stats.dead_lettered_ids) == {"poison-a", "poison-b"}
+
+
+async def test_drain_reports_no_ids_when_id_field_is_unset():
+    pool = FakePool()
+    q = _dlq_queue(pool, max_deliveries=1)  # no id_field
+    await q.enqueue({"job_id": "poison"})
+    stats = await q.drain(lambda _i: _false())
+    assert stats.dead_lettered == 1
+    assert stats.dead_lettered_ids == (), "opt-in: default queue reports no ids"
+
+
+async def test_drain_skips_empty_id_field_values():
+    """A malformed message with no id must not produce an empty cooldown member."""
+    pool = FakePool()
+    q = WorkQueue(pool, stream="jobs", group="g", consumer="w", batch=8,
+                  min_idle_ms=1000, max_deliveries=1, dlq_stream="jobs:dlq",
+                  id_field="job_id")
+    await q.enqueue({"job_id": ""})
+    stats = await q.drain(lambda _i: _false())
+    assert stats.dead_lettered == 1
+    assert stats.dead_lettered_ids == (), "no empty string leaks into the guard"
+
+
 async def test_dlq_add_is_bounded_too_so_a_poison_job_cannot_grow_it_forever():
     """A producer re-injecting a poison job each tick starts many lineages; the DLQ
     must be trimmed like the main stream, or it grows without bound. The DB keeps
