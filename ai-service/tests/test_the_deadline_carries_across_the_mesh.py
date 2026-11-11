@@ -92,6 +92,24 @@ def test_retrieval_can_burn_the_budget_and_the_model_is_not_asked(monkeypatch):
     assert calls == ["retrieve"]  # retrieval ran; the model never got asked
 
 
+def test_every_model_call_refuses_a_passed_budget():
+    """The funnel backstop: ask() refuses before any provider is touched when the
+    caller is already gone -- and the no-deadline case is unchanged."""
+    import asyncio
+
+    from app.core.ai import ask
+    from app.core.errors import RefusalError
+    from app.providers.base import LLMMessage, LLMRequest
+
+    deadline_ms.set(int(time.time() * 1000) - 1_000)
+    try:
+        with pytest.raises(RefusalError) as excinfo:
+            asyncio.run(ask(LLMRequest(messages=[LLMMessage("user", "hi")])))
+        assert excinfo.value.refusal.code == SERVICE_DEADLINE_EXCEEDED.code
+    finally:
+        deadline_ms.set(None)
+
+
 def test_the_deadline_is_echoed_not_minted(monkeypatch):
     deadline = str(int(time.time() * 1000) + 60_000)
 

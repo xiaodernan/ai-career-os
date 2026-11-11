@@ -8,6 +8,8 @@ import time
 from typing import Any
 
 from app.core.config import get_settings
+from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
+from app.core.request_id import deadline_remaining_ms
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolCall, Usage
 from app.providers.pricing import estimate_cost
@@ -56,6 +58,13 @@ def evidence_block(items: list[dict[str, Any]]) -> str:
 
 async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None = None,
               agent: str = "system", kind: str = "chat") -> LLMResponse:
+    # The budget backstop at the model door (Epic 128): every LLM call in the
+    # engine passes through here, and a caller whose deadline has already passed
+    # deserves a refusal, not tokens. No deadline (the nightly sweep, the eval
+    # harnesses) means no check -- behaviour is unchanged.
+    remaining = deadline_remaining_ms()
+    if remaining is not None and remaining <= 0:
+        raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     s = get_settings()
     provider = get_llm(s)
     try:
@@ -142,6 +151,11 @@ async def ask_stream(req: LLMRequest, *, user_id: str | None = None,
     a caller forward a delta without inventing a second event shape.
     """
     s = get_settings()
+    # Same backstop at the streaming door, checked before the first delta: a caller
+    # already gone should not watch an SSE stream get built for them.
+    remaining = deadline_remaining_ms()
+    if remaining is not None and remaining <= 0:
+        raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     provider = get_llm(s)
     started = time.monotonic()
     pieces: list[str] = []

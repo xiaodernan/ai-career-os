@@ -169,8 +169,10 @@ fall back to the in-process budget with the `careeros.gateway.ratelimit.fallback
   ai-service carries it into a context variable with two checkpoints at the most expensive
   route: `/internal/rag/answer` refuses with `SERVICE_DEADLINE_EXCEEDED` when the budget is
   already gone before retrieval, and again after retrieval -- retrieval can burn the budget
-  by itself, and the model call that follows would be pure waste. A deadline is work
-  conservation, never a permission problem: absent means unchanged.
+  by itself, and the model call that follows would be pure waste. A third backstop sits at
+  the model door itself: `ask()`/`ask_stream()` -- the single funnel for every LLM call in
+  the engine -- refuses before any provider is touched when the caller is already gone.
+  A deadline is work conservation, never a permission problem: absent means unchanged.
   `GATEWAY_DEADLINE_MS` bounds the edge budget (default 300000, above the 180s AI read budget;
   `0` disables the stamp).
 - **CORS**: correlation headers are allowed/exposed as required for browser diagnostics.

@@ -246,7 +246,17 @@ was spent on nobody.
   expensive route (`/internal/rag/answer`) has two checkpoints: before retrieval (a budget
   already gone refuses with `SERVICE_DEADLINE_EXCEEDED`, 503, nothing retrieved) and after
   retrieval (retrieval can burn the whole budget; the model is never asked -- pinned by a
-  scripted-budget test, 2026-11-11).
+  scripted-budget test, 2026-11-11). A third backstop sits at the model door: `ask()` and
+  `ask_stream()` -- the single funnel for every LLM call in the engine -- refuse before any
+  provider is touched when the caller is already gone (Epic 128 follow-through, 2026-11-11;
+  full suite 2404 passed).
+
+**IT verification (2026-11-11):** the IT harness on this host ran the full *IT suite
+(129 tests) green except `RateLimitIT` under whole-suite load (the 500ms limiter pin vs
+a contended docker-desktop proxy; both assertions pass in isolation, 6/6 -- the
+documented fail-open posture, not a regression). `ResilienceStatusService` gained
+@Autowired on its DI constructor in c1bbf39; before it, every Spring context failed to
+boot and the whole context-booting IT layer was unusable.
 - Documented in MICROSERVICES.md §6. A deadline is work conservation, never a permission
   problem; `x-request-deadline-ms` is echoed, garbage is ignored.
 
