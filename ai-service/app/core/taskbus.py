@@ -262,7 +262,7 @@ async def subscribe(task_id: str, heartbeat_s: float = 15.0) -> AsyncIterator[di
             async for ev in _subscribe_backplane(backplane, task_id, heartbeat_s):
                 yield ev
             return
-    async for ev in _subscribe_memory(task_id, heartbeat):
+    async for ev in _subscribe_memory(task_id, heartbeat_s):
         yield ev
 
 
