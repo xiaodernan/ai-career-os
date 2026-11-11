@@ -2,6 +2,7 @@ package com.careeros.ai;
 
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.common.DeadlineFilter;
 import com.careeros.common.EnvelopeJson;
 import com.careeros.common.RequestIdFilter;
 import com.careeros.config.AppProperties;
@@ -110,6 +111,12 @@ public class HttpAiServiceClient implements AiServiceClient {
                     String traceparent = org.slf4j.MDC.get(RequestIdFilter.TRACEPARENT_MDC_KEY);
                     if (traceparent != null && !traceparent.isBlank()) {
                         request.getHeaders().set(RequestIdFilter.TRACEPARENT_HEADER, traceparent);
+                    }
+                    // Epic 128: the budget this request carries travels to the engine,
+                    // which is where the expensive half of the work happens.
+                    Long deadline = DeadlineFilter.current();
+                    if (deadline != null) {
+                        request.getHeaders().set(DeadlineFilter.HEADER, String.valueOf(deadline));
                     }
                     return execution.execute(request, body);
                 })
@@ -846,6 +853,14 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> exchange(java.util.function.Supplier<Map> call) {
+        // Epic 128: refuse before the engine is asked to spend anything when the
+        // caller's own budget for this request has already passed. Cheap on purpose:
+        // one clock read, no lock, no I/O -- the wire was never the expensive part.
+        if (DeadlineFilter.expired()) {
+            log.warn("refusing to ask the engine: the request's own deadline already passed");
+            throw new ApiException(ApiErrorCode.AI_SERVICE_UNAVAILABLE,
+                    "the request's own deadline passed; the engine was not asked");
+        }
         try {
             Map raw = guarded(call);
             if (raw == null) {

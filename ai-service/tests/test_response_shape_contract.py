@@ -3109,8 +3109,13 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # number and were caught by the assertion above, and the record of that collision names the word
     # twice more in ROADMAP.md while explaining why the rows now say `pass marker`. A census over the
     # word counts a paragraph about the word; what it must not do is let a number arrive beside one.
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 15,
-                        "RUNBOOK.md": 14, "SECURITY.md": 1}, (
+    # 16 in ROADMAP.md and PERFORMANCE_HORIZON.md at 1 since Epic 123 (2026-11-11): the "Connection
+    # keep-alive needs no app code" note in the roadmap's ledger and the matching sentence in the
+    # performance horizon are the same honest decision written twice -- the keep-alive claim is
+    # load-bearing in both (it is why no code shipped), so the census grows rather than the docs
+    # being made vaguer to hide the word.
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 16,
+                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 1}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 

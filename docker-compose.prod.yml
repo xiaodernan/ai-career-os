@@ -138,11 +138,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?required -- fill .env.prod and pass --env-file .env.prod}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}
       REDIS_URL: redis://:${REDIS_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}@redis:6379/0
-      # Epic 125: opt-in dashboard read-through cache over the same Redis the limiter
-      # uses. Defaults to off (passthrough); set DASHBOARD_CACHE=redis in .env.prod to
-      # enable. Mapped onto the env the backend's configuration resolves
-      # (CAREEROS_DASHBOARD_CACHE), so the yml literal stays the fallback.
-      CAREEROS_DASHBOARD_CACHE: ${DASHBOARD_CACHE:off}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?required -- fill .env.prod and pass --env-file .env.prod}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?required -- fill .env.prod and pass --env-file .env.prod}

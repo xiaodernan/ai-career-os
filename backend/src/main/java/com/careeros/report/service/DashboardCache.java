@@ -65,7 +65,9 @@ public class DashboardCache {
                           ObjectMapper mapper,
                           @Value("${careeros.dashboard.cache:off}") String mode,
                           @Value("${careeros.dashboard.cache-ttl-seconds:45}") long ttlSeconds) {
-        this.mode = mode == null ? "off" : mode.trim().toLowerCase();
+        String normalized = mode == null ? "off" : mode.trim().toLowerCase();
+        // A blank value is the actuator-token pattern: unset pass-through, never "redis".
+        this.mode = normalized.isBlank() ? "off" : normalized;
         this.ttl = Duration.ofSeconds(Math.max(1, ttlSeconds));
         this.redis = redis;
         this.registry = registry;

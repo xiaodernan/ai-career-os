@@ -357,6 +357,20 @@ def test_the_only_writer_of_note_rows_is_behind_the_post_the_client_calls() -> N
                     operations[rel] = found
     assert walked > 30, f"the writer census read {walked} files, so its silence proves nothing"
 
+    # `prewarm-hot.sql` refreshes the planner's statistics for the hot relations, which
+    # includes the notes table: an ANALYZE never touches a row. The mention is allowed
+    # only inside an ANALYZE statement -- anything else in the file that names the
+    # table is a second author wearing an operator's hat, and fails here.
+    ANALYSIS_ONLY = {"scripts/prewarm-hot.sql"}
+    for rel in list(table_speakers):
+        if rel not in ANALYSIS_ONLY:
+            continue
+        for line in (ROOT / rel).read_text(encoding="utf-8").splitlines():
+            if "user_notes" in line:
+                assert line.strip().upper().startswith("ANALYZE"), (
+                    f"{rel} names the notes table outside an ANALYZE statement: {line!r}")
+        table_speakers.remove(rel)
+
     # Naming the TABLE from outside the Java service would write rows around the entity layer, which
     # is the second author this test's title forbids. Nothing does: all three specs reach the route
     # with a verb, so every row they create is made by the handler the clauses above pinned to

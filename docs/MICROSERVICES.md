@@ -162,6 +162,15 @@ fall back to the in-process budget with the `careeros.gateway.ratelimit.fallback
   - ai-service validates/preserves or mints `traceparent`, echoes headers, and emits `trace_id`
     in JSON logs; structured refusal error responses may include optional `requestId`/`traceId`
     for correlation without changing error code/message/status semantics.
+- **The request's own deadline** (Epic 128) travels the same mesh hop: the gateway stamps every
+  `/api/**` request with `X-Request-Deadline-Ms` (epoch milliseconds; a caller value still in the
+  future is kept, an expired/garbage one is replaced), the backend's AI bridge consults it before
+  dispatch and refuses work whose budget already passed (`AI_SERVICE_UNAVAILABLE`), and the
+  ai-service carries it into a context variable with its own backstop at the most expensive route
+  (`/internal/rag/answer` refuses with `SERVICE_DEADLINE_EXCEEDED` when the caller is already
+  gone). A deadline is work conservation, never a permission problem: absent means unchanged.
+  `GATEWAY_DEADLINE_MS` bounds the edge budget (default 300000, above the 180s AI read budget;
+  `0` disables the stamp).
 - **CORS**: correlation headers are allowed/exposed as required for browser diagnostics.
 
 ## 7. Observability and build identity

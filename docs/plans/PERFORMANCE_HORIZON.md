@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–127
+# Performance horizon — Epics 118–128
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -24,6 +24,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 125 | The dashboard is served from a shared cache, not rebuilt per open | DashboardCacheTest |
 | 126 | The matches digest reads in index order | Flyway + explain gate |
 | 127 | A route that ships too much Java goes red | `npm run budget` |
+| 128 | A request carries its own deadline | gateway/backend/ai-service tests |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -145,9 +146,11 @@ call is on the critical path of every page and is read-mostly.
   never a failed dashboard. A payload that fails to round-trip is evicted, not pinned.
 - Keyed `careeros:v1:dashboard:<uuid>`; the prefix is versioned. Counters
   `careeros.dashboard.cache{backend,outcome}` on the Prometheus scrape.
-- Prod compose maps `DASHBOARD_CACHE` onto the env the config resolves
-  (`CAREEROS_DASHBOARD_CACHE`), defaulting to off; the compose comment documents it (the `.env.prod.example` addition is blocked by the secret-shaped-file hook).
-  Actuator redis health stays disabled, so liveness cannot flip on a cache outage.
+- Enable with `CAREEROS_DASHBOARD_CACHE=redis` (the prod override deliberately carries no
+  interpolation for it, the same posture as the edge's opt-ins): the backend reads the env
+  the `env_file` fills, so an operator sets one line in `.env.prod` and the yml literal
+  stays the fallback. Actuator redis health stays disabled, so liveness cannot flip on a
+  cache outage.
 
 **Verification (offline, 2026-11-11):** `DashboardCacheTest` 6/6 (off passthrough, caffeine
 round-trip, TTL expiry, poisoned-entry eviction, Redis-outage fail-open, hit/miss counters);
@@ -195,3 +198,37 @@ shared base is ~103 kB.
 
 **Deliberately not done:** chunk-level attribution (which dependency grew the route) --
 `next build --debug` or the analyzer plugin is the follow-up when a route breaches.
+## Epic 128 — a request carries its own deadline **DONE (verified 2026-11-11)**
+
+**Measured.** Every caller has a moment they stop waiting, but nothing in the mesh told
+the services that. A browser's timeout, a fetch aborted at 30 seconds, a queue that filled:
+the backend and the engine kept doing work for a reader who had gone, and every token of it
+was spent on nobody.
+
+**Shipped (2026-11-11, verified offline):**
+- Gateway `DeadlineHeaderFilter` stamps every `/api/**` request with `X-Request-Deadline-Ms`
+  (epoch milliseconds). A well-formed caller deadline still in the future is kept; an
+  expired or garbage value is replaced, never forwarded. `GATEWAY_DEADLINE_MS` bounds the
+  budget (default 300000, above the 180s AI read budget; `0` disables the stamp).
+- Backend `DeadlineFilter` carries the value on the request thread (cleared on exit, never
+  leaked to a pooled thread); the AI bridge's interceptor forwards it to the ai-service, and
+  `exchange()` refuses before dispatch when the budget already passed
+  (`AI_SERVICE_UNAVAILABLE`, one clock read, no I/O).
+- ai-service carries the value into a context variable (echoed on the answer); the most
+  expensive route (`/internal/rag/answer`) has a backstop: a past-due budget refuses with
+  `SERVICE_DEADLINE_EXCEEDED` (503) without retrieving anything.
+- Documented in MICROSERVICES.md §6. A deadline is work conservation, never a permission
+  problem; `x-request-deadline-ms` is echoed, garbage is ignored.
+
+**Verification (offline, 2026-11-11):** DeadlineFilterTest 4/4; HttpAiServiceClientTest
+25/25 (new cases: past budget refuses before the wire, future budget reaches the engine);
+GatewayDeadlineTest 4/4 (stamp shape, kept-future, replaced-expired, replaced-garbage);
+ai-service `test_the_deadline_carries_across_the_mesh.py` 5/5 (backstop refuses before any
+engine work, echo, garbage ignored, no-budget unchanged). The full ai-service suite reds
+this change surfaced were fixed here, not deferred: the prod-compose override carried an
+unmarked interpolation for the dashboard cache opt-in (removed -- the override now carries
+no interpolation for it; `.env.prod` is the pass-through), the docs vocabulary census gained
+the decision-count bump for the two mentions of the decision this epic's roadmap and horizon
+entries carry, and the notes-writer census gained the ANALYZE-only exemption for
+`scripts/prewarm-hot.sql`. Backend *Test suite exits 0.
+Not run here (no Docker): the *IT deadline path against a live stack.

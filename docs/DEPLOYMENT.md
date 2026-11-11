@@ -8,8 +8,10 @@ architecture (Eureka/Gateway/Config, resilience, tracing/observability) see
 [MICROSERVICES.md](MICROSERVICES.md).
 
 Redis is small but not optional: it backs the rate limiter, the backend's health
-ping and, when `CAREEROS_DASHBOARD_CACHE=redis` (or the prod compose's mapped
-`DASHBOARD_CACHE`) is set, the dashboard read-through cache. The client timeout is
+ping and, when `CAREEROS_DASHBOARD_CACHE=redis` is set in `.env.prod`, the dashboard
+read-through cache (the backend reads the env the file fills; the prod override
+carries no interpolation for it, the same posture as the other opt-ins). The client
+timeout is
 pinned to 500ms (`REDIS_TIMEOUT` / `REDIS_CONNECT_TIMEOUT`) so an outage *degrades*
 the service — `/api/v1/health` returns `{"status":"degraded","redis":false}` in about
 half a second — rather than stalling every request on a client timeout. Raising those

@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 
 from app.core.ai import ask
 from app.core.deps import Ctx, require_internal
+from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
+from app.core.request_id import deadline_remaining_ms
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest
 from app.providers import registry
@@ -78,6 +80,13 @@ async def rag_retrieve(req: RetrieveReq, ctx: Ctx = Depends(require_internal)):
 
 @router.post("/answer")
 async def rag_answer(req: AnswerReq, ctx: Ctx = Depends(require_internal)):
+    # The engine's backstop: the edge stamps the caller's own deadline, and the
+    # bridge refuses before dispatch -- but a saturated engine can still reach
+    # this route with a budget that is already gone, and the work that remains
+    # is the most expensive kind. One clock read before any of it happens.
+    remaining = deadline_remaining_ms()
+    if remaining is not None and remaining <= 0:
+        raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     run_id = req.run_id or ctx.run_id or await observability.create_run(
         ctx.user_id, "rag", "rag_answer")
     r = await retrieve(req.query, user_id=ctx.user_id, run_id=run_id,

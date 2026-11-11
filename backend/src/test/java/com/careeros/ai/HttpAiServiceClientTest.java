@@ -59,6 +59,7 @@ class HttpAiServiceClientTest {
     private final List<String> requestIds = new ArrayList<>();
     private final List<String> healthPaths = new ArrayList<>();
     private final List<String> healthTokens = new ArrayList<>();
+    private final List<String> deadlineHeaders = new ArrayList<>();
     private volatile int healthStatus = 200;
 
     @BeforeEach
@@ -84,6 +85,7 @@ class HttpAiServiceClientTest {
             bodies.add(body);
             paths.add(exchange.getRequestURI().getPath());
             requestIds.add(exchange.getRequestHeaders().getFirst("X-Request-Id"));
+            deadlineHeaders.add(exchange.getRequestHeaders().getFirst("X-Request-Deadline-Ms"));
             // A payload that asks to be refused answers the way the
             // ai-service's typed refusals do; anything else succeeds. The
             // marker rides in the payload, so one context covers both.
@@ -430,6 +432,60 @@ class HttpAiServiceClientTest {
         assertThat(nodes.keySet()).containsExactly(up, down);
         assertThat(nodes.values()).containsExactly(true, false);
         assertThat(fleet.healthy()).isTrue();
+    }
+
+    /** Runs a call inside the deadline filter, the way the servlet container would. */
+    private void withDeadline(String header, org.junit.jupiter.api.function.Executable call) throws Exception {
+        com.careeros.common.DeadlineFilter filter = new com.careeros.common.DeadlineFilter();
+        jakarta.servlet.http.HttpServletRequest req =
+                org.mockito.Mockito.mock(jakarta.servlet.http.HttpServletRequest.class);
+        if (header != null) {
+            org.mockito.Mockito.when(req.getHeader(com.careeros.common.DeadlineFilter.HEADER))
+                    .thenReturn(header);
+        }
+        jakarta.servlet.http.HttpServletResponse res =
+                org.mockito.Mockito.mock(jakarta.servlet.http.HttpServletResponse.class);
+        jakarta.servlet.FilterChain chain = (request, response) -> {
+            try {
+                call.execute();
+            } catch (Throwable t) {
+                throw new jakarta.servlet.ServletException(t);
+            }
+        };
+        filter.doFilterInternal(req, res, chain);
+    }
+
+    @Test
+    void aFutureDeadlineIsCarriedToTheEngine() throws Exception {
+        long future = System.currentTimeMillis() + 60_000;
+        withDeadline(String.valueOf(future), () ->
+                client.parseFeed("<rss/>", null, UUID.randomUUID()));
+
+        assertThat(bodies).hasSize(1);
+        assertThat(deadlineHeaders).containsExactly(String.valueOf(future));
+    }
+
+    @Test
+    void aCallPastItsOwnDeadlineIsRefusedBeforeTheEngineIsAsked() throws Exception {
+        long past = System.currentTimeMillis() - 1_000;
+
+        withDeadline(String.valueOf(past), () -> {
+            assertThatThrownBy(() -> client.parseFeed("<rss/>", null, UUID.randomUUID()))
+                    .isInstanceOfSatisfying(ApiException.class, e ->
+                            assertThat(e.code()).isEqualTo(ApiErrorCode.AI_SERVICE_UNAVAILABLE));
+        });
+
+        assertThat(bodies).isEmpty(); // the engine was never asked
+        assertThat(deadlineHeaders).isEmpty();
+    }
+
+    @Test
+    void noDeadlineCarriesNoHeader() {
+        assertThatCode(() -> client.parseFeed("<rss/>", null, UUID.randomUUID()))
+                .doesNotThrowAnyException();
+
+        assertThat(bodies).hasSize(1);
+        assertThat(deadlineHeaders).containsExactly((String) null);
     }
 
     /** The refusal bodies the fake upstream answers, keyed by payload marker. */

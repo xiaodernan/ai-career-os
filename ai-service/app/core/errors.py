@@ -96,6 +96,16 @@ EXPORT_SEND_ONE = Refusal("EXPORT_SEND_ONE", "send exactly one of postings / fee
 MEMORY_CONTENT_BLANK = Refusal("MEMORY_CONTENT_BLANK", "memory content cannot be blank — delete it instead")
 TEXT_REQUIRED = Refusal("TEXT_REQUIRED", "text required", status=422)
 
+# ---------------- the request's own deadline (Epic 128) ----------------
+# The edge stamps X-Request-Deadline-Ms; the engine's backstop refuses to spend
+# tokens on a request whose caller already stopped waiting. 503: the work could
+# not be done, not because the caller was wrong but because the budget is gone.
+SERVICE_DEADLINE_EXCEEDED = Refusal(
+    "SERVICE_DEADLINE_EXCEEDED",
+    "the request's own deadline already passed; the engine was not asked to spend tokens on it",
+    status=503,
+)
+
 # Convenience: return a RefusalError to raise
 def raise_refusal(refusal: Refusal) -> RefusalError:
     """Return a RefusalError with the given refusal, ready to raise."""

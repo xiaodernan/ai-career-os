@@ -5754,8 +5754,9 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (shared across replicas, same connection as the sliding-window limiter), selected by
   `careeros.dashboard.cache`. TTL-only invalidation (45s), fail-open everywhere, poisoned
   entries evicted; `careeros:v1:dashboard:<uuid>` keys; Prometheus counters
-  `careeros.dashboard.cache`. Prod compose maps `DASHBOARD_CACHE` onto the resolved env
-  (default off); Actuator redis health stays disabled. DashboardCacheTest 6/6;
+  `careeros.dashboard.cache`. Enable with `CAREEROS_DASHBOARD_CACHE=redis` in
+  `.env.prod` (the prod override carries no interpolation for it; env_file is the
+  pass-through); Actuator redis health stays disabled. DashboardCacheTest 6/6;
   backend unit suite (`*Test`) green; live-Redis round-trip not run here (no Docker).)
 
 - [x] **126** The matches digest reads in index order (backend, verified 2026-11-11).
@@ -5773,6 +5774,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   /applications at ~302 kB. `npm run budget` runs the production build first; CI gained a
   dedicated `budget` job wired into `offline-gate`. Local build verified (33 routes,
   exit 0); the Google Fonts fetch is the one network dependency of that job, and CI has it.)
+
+- [x] **128** A request carries its own deadline (edge/backend/engine, verified 2026-11-11).
+
+  (`X-Request-Deadline-Ms`: gateway stamps `/api/**` (kept if future, replaced if past or
+  garbage; `GATEWAY_DEADLINE_MS` default 300000), backend AI bridge refuses before dispatch
+  on a past-due budget (`AI_SERVICE_UNAVAILABLE`), ai-service carries it in a context variable
+  with a backstop at /internal/rag/answer (`SERVICE_DEADLINE_EXCEEDED`, 503). Documented in
+  MICROSERVICES.md §6. Tests: DeadlineFilterTest, GatewayDeadlineTest, ai-service mesh tests;
+  live-stack deadline path not run here (no Docker).)
 
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
