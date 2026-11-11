@@ -1,29 +1,16 @@
 import type { Viewport } from "next";
 import { cookies, headers } from "next/headers";
-import { Inter, Newsreader, JetBrains_Mono } from "next/font/google";
+// Self-hosted fonts (@fontsource-variable), not next/font/google: the Docker
+// build has no route to fonts.googleapis.com, and the browser should not
+// fetch its front-door type from a third party at all. Variable axes match
+// what next/font loaded (Inter 100-900, Newsreader incl. italic, JetBrains Mono).
+import "@fontsource-variable/inter";
+import "@fontsource-variable/newsreader";
+import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import { RootDocument } from "@/components/root-document";
 import { rootMetadata } from "@/lib/i18n/metadata";
 import { LOCALE_COOKIE, localeFromCookie } from "@/lib/i18n/locale-cookie";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
-
-const jetbrains = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 /**
  * The root's metadata.
@@ -60,7 +47,7 @@ export default async function RootLayout({
     <RootDocument
       locale={locale}
       nonce={nonce}
-      bodyClassName={`${inter.variable} ${newsreader.variable} ${jetbrains.variable} min-h-dvh bg-background text-foreground`}
+      bodyClassName="min-h-dvh bg-background text-foreground"
     >
       {children}
     </RootDocument>
