@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -39,13 +39,21 @@ export function LoadingListSkeleton({
 }
 
 export function LoadingCardSkeleton({ className }: { className?: string }) {
+  // Shape-pinned to the loaded StatCard: CardHeader (icon bar + label bar, then the
+  // big number) and CardContent (the hint line) rather than an anonymous div stack,
+  // so the shimmer holds the loaded layout instead of approximating it.
   return (
-    <Card className={cn("", className)}>
-      <div className="space-y-3">
-        <Skeleton className="h-3.5 w-1/3" />
-        <Skeleton className="h-7 w-1/2" />
+    <Card className={cn("", className)} aria-hidden>
+      <CardHeader>
+        <CardDescription className="flex items-center gap-1.5">
+          <Skeleton className="size-3.5 rounded-sm" />
+          <Skeleton className="h-3.5 w-24" />
+        </CardDescription>
+        <Skeleton className="mt-1 h-7 w-1/2" />
+      </CardHeader>
+      <CardContent>
         <Skeleton className="h-3 w-2/3" />
-      </div>
+      </CardContent>
     </Card>
   );
 }
