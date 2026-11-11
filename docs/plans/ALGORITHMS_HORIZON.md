@@ -18,6 +18,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 133 | The top-K helper uses the *right* heap for the scale | measurement + stability/streaming contract; fusion keeps its sort on purpose |
 | 134 | A rerank that costs no model call is available and honest | `RERANK_MODE=bm25`, mode census, 10 offline rerank tests |
 | 135 | (next) The lexical channel can be scored in-process without pg_trgm when the corpus is small | to be measured |
+| 136 | N embed replicas do a job once, and a crashed worker's job comes back | `WorkQueue` consumer-group semantics (fake + real Redis), 22 offline tests |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -121,3 +122,78 @@ BM25 pass's wall time on a 40-candidate corpus.
   degradation suite still green; RAG-doc + env-declaration censuses green
   (100/100 combined with core_modules). Full ai-service suite is the operator's
   offline-gate run; this host has no Docker for the live RAG eval.
+
+## Epic 136 — N embed replicas do a job once, and a crashed worker's job comes back **DONE (verified 2026-11-11)**
+
+**Measured / observed.** `app/ops/embed_jobs.py::embed_loop` runs on **every** ai-service
+replica and selects `jobs WHERE embedding IS NULL` with no claim. With R replicas the
+same NULL rows are embedded R times: R model calls and R bills for one batch, plus
+R concurrent `UPDATE`s racing the same rows, and a replica that dies mid-batch leaves
+its share with nobody to re-claim it. `embedding IS NULL` is an idempotence *barrier*,
+not a *claim* — two readers can both observe NULL before either writes. This is a work
+queue problem, and it is the concrete reason to add one.
+
+**Why not a consumer group on the existing task bus (the "合理使用" decision).**
+`app/core/taskbus.py`'s Redis backplane is a **broadcast**: every browser following a
+task must see every progress event, so it uses plain `XADD`/`XREAD` with no consumer
+group — adding one would deliver each event to only one subscriber and break SSE.
+A work queue is the opposite (each job to exactly one worker, recoverable on crash).
+They are different abstractions over the same stream primitive; conflating them is the
+mistake here. So this epic adds a **separate** `app/core/workqueue.py` and leaves the
+task bus untouched.
+
+**Do.**
+- `WorkQueue` speaks RESP2 through the existing dependency-free `app.core.resp` pool:
+  `XGROUP CREATE ... MKSTREAM` (BUSYGROUP startup race benign), `XREADGROUP GROUP ...
+  >` (fresh jobs, one consumer each), `XAUTOCLAIM` (orphans idle past the visibility
+  timeout), `XACK` (completed), `XPENDING` (observability). No new dependency.
+- `app/ops/embed_workers.py` wires it opt-in: `WORK_QUEUE_BACKEND=redis` (default `off`)
+  makes each tick run a **producer** (enqueue only the ids of NULL-embedding jobs —
+  the stream stays small; text + embedding stay with the consumer) then a **consumer**
+  (`drain` claims a batch, embeds each id, ACKs successes). `main.py` selects the
+  distributed loop only for the `redis` value; `off` keeps `embed_loop` byte-for-byte.
+- **At-least-once, stated plainly.** A worker that finishes but crashes before ACK is
+  re-claimed and runs twice; so is a duplicate producer enqueue. The handler is
+  idempotent two ways: it re-checks `embedding IS NULL` under a `WHERE ... AND
+  embedding IS NULL` UPDATE, so a re-claimed already-written job costs one cheap
+  SELECT, not a second model call. Exactly-once would need a transaction spanning
+  Redis + the provider + Postgres, which does not exist; this is the standard honest
+  answer, not a gap.
+- **Fail-open.** Redis unusable (bad URL / outage) falls back to the original
+  single-process `embed_jobs()` DB scan. The queue can cost parallelism, never recall.
+  A per-process random `consumer` name attributes PEL entries across restarts.
+
+**Verified (offline, 2026-11-11).** Two gates, 22 tests:
+`test_the_work_queue_delivers_each_job_once.py` 10/10 (group created once, BUSYGROUP
+benign, each fresh job to one consumer, ACK removes from PEL, un-ACKed job re-claimed
+only after the visibility timeout, handler failure/raise leaves it pending, Redis-down
+fail-open, knob validation) against an in-memory stream+PEL model; and
+`test_the_embed_work_queue_shares_work.py` 12/12 (producer enqueues only NULL ids,
+limit/DB fetch shape, enqueue fail-open, idempotent re-claim = no provider call, empty
+job = no provider, real write carries the NULL guard, wrong vector count = pending,
+no-provider = no claim, consumer ACK/failure split, main wiring, consumer identity).
+
+**Real-Redis end-to-end (this host, 2026-11-11).** Not left to the fake: a scripted
+run against the local Redis exercised the actual RESP commands — 3 `XADD`ed jobs went
+to exactly one of two consumers (`{'a': 3, 'b': 0}`); after a 350 ms idle past a
+300 ms visibility timeout, `XAUTOCLAIM` on the second consumer re-claimed all 3
+un-ACKed ids; `XACK`ing them dropped `XPENDING` to 0. The fake model and the real
+protocol agree.
+
+**Honest bounds — including a measured correction.** The producer's `XADD` is capped
+with `MAXLEN ~ WORK_QUEUE_MAXLEN` (10k). The `~` is *approximate* trimming: Redis
+removes whole macro nodes (~100 entries) instead of trimming to the exact count,
+which is the cheap O(1)-ish option for a high-throughput producer (exact `MAXLEN`
+walks and deletes each extra entry). **Measured against the real Redis 7.4.11 on
+this host, 2026-11-11:** 12 `XADD`s with `MAXLEN ~ 5` left `XLEN=12` (no macro node
+full yet — the first end-to-end assertion wrongly expected `< 12` and correctly
+failed); 150 `XADD`s with `MAXLEN ~ 5` left `XLEN=50` (one node), and exact
+`MAXLEN 5` left `XLEN=5`. So the guarantee is **bounded growth at macro-node
+granularity**, not an exact cap — for a 10k cap that ±100 is immaterial. A job
+trimmed before a consumer claims it is re-enqueued by the next producer pass — the
+DB's `embedding IS NULL` is the source of truth, so trimming loses no job
+permanently. The duplicate-producer scan is at-least-once by design (no dedup index
+— that would be a second truth). No load test of R real replicas was run here (no
+multi-process Redis deployment on this host); the one-writer-per-job and
+crash-reclaim properties are pinned by tests and the real-Redis script, not by a
+fleet run. `verify_gates.sh`/`.ps1` gained all three new algorithm/queue gates.

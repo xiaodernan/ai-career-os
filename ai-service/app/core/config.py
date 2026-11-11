@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     # pipeline's model calls set `memory` explicitly.
     cache_backend: str = "off"  # off | memory | redis
     task_bus_backend: str = "memory"  # memory | redis (Streams; the SSE fan-out scale-out path)
+    # Work queue (Epic 136). `off` keeps the single-process DB-scan embed loop exactly
+    # as it was; `redis` turns job embedding into a consumer group so N replicas each
+    # take a share instead of all N embedding the same NULL rows (billed N times).
+    work_queue_backend: str = "off"  # off | redis (Streams consumer group; at-least-once)
+    work_queue_claim_ms: int = 120_000  # visibility timeout: a job idle this long is re-claimed
+    work_queue_maxlen: int = 10_000  # approximate stream cap; the DB is still the source of truth
     cache_ttl_s: int = 300
     cache_max_entries: int = 2048
     redis_url: str = "redis://127.0.0.1:16380/0"

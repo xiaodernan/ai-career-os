@@ -35,10 +35,18 @@ async def lifespan(app: FastAPI):
     # degradation inside `build_cache`, never a boot failure: a cache that can stop
     # the engine from starting would be a dependency, not a cache.
     await init_cache(settings)
-    # Fresh vectors without an ops step: the loop sweeps jobs.embedding IS NULL, so a
-    # role created mid-session becomes vector-searchable within a minute (and the first
-    # pass doubles as the startup backfill). Failures inside the loop are its own.
-    embed_task = asyncio.create_task(embed_loop())
+    # Fresh vectors without an ops step: a role created mid-session becomes
+    # vector-searchable within a minute (the first pass doubles as the backfill).
+    # Off (default) runs the original single-process DB scan. `redis` turns job
+    # embedding into a work-queue consumer group so N replicas share the work
+    # instead of each embedding the same NULL rows; it fails open to the same
+    # single-process scan when Redis is down. Failures stay inside the loop.
+    embed_loop_fn = embed_loop
+    if getattr(settings, "work_queue_backend", "off").strip().lower() == "redis":
+        from app.ops.embed_workers import embed_loop_distributed
+
+        embed_loop_fn = embed_loop_distributed
+    embed_task = asyncio.create_task(embed_loop_fn())
     try:
         yield
     finally:
