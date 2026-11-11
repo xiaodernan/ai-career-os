@@ -8,6 +8,7 @@ import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JCircuitBreakerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Spring Cloud Resilience4j circuit breaker states (Epic 105).
@@ -21,6 +22,10 @@ public class ResilienceStatusService {
 
     private final CircuitBreakerRegistry registry;
 
+    // Two constructors exist (the package-private one is the test seam), so Spring must be
+    // told which one it wants -- an unannotated class with two constructors falls back to
+    // looking for a default one and fails the context with "No default constructor found".
+    @Autowired
     public ResilienceStatusService(ObjectProvider<CircuitBreakerRegistry> registryProvider,
                                    ObjectProvider<Resilience4JCircuitBreakerFactory> factoryProvider) {
         CircuitBreakerRegistry registry = registryProvider.getIfAvailable();
