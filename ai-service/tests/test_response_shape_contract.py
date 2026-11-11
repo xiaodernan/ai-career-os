@@ -392,7 +392,7 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "ConversationService.java", "CopilotStreamService.java", "FileIngestService.java",
         "GrowthService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
-        "ResumeService.java", "ScheduledIngestionService.java",
+        "RagCacheInvalidator.java", "ResumeService.java", "ScheduledIngestionService.java",
         "TimelineService.java", "VoiceService.java",
     ]
 
@@ -3114,12 +3114,33 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # performance horizon are the same honest decision written twice -- the keep-alive claim is
     # load-bearing in both (it is why no code shipped), so the census grows rather than the docs
     # being made vaguer to hide the word.
+    # ALGORITHMS_HORIZON.md's 11 are the worker-liveness paragraphs of Epics 140/144/146 (the
+    # consumer heartbeat behind the workqueue verdict, the delay-set black-hole warning, and the
+    # reclaimed-count repair) plus Epic 147's own sentence explaining that this census grew. They
+    # borrow the noun for a *different* clock — a consumer tick, not the 15s SSE keep-alive this
+    # test owns — with no interval beside it, so they are noun vocabulary, not a second definer.
+    # Epics 140–146 named them without growing this ledger because this test is a full-suite gate,
+    # not a verify_gates one; Epic 147's API.md census pass caught the omission. Epic 147 then
+    # described that census in this very horizon, adding one more vocabulary line to the file it
+    # was counting — the ledger grows to 11 rather than the sentence being made vaguer to hide the
+    # word. The census is self-referential by design: a paragraph about the word is still the word.
     assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 16,
-                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 1}, (
+                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 1,
+                        "ALGORITHMS_HORIZON.md": 11}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
     assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
+        # Three ai-service worker-liveness nouns (Epics 140/144/146): the workqueue verdict's
+        # consumer tick, the delay-set black-hole warning and the reclaimed-count repair borrow
+        # "heartbeat" for a *different* clock than this test's 15s SSE keep-alive. Each states
+        # no interval beside the word (its window is `stale_s`, a named setting), so they are
+        # noun vocabulary, not a second definer. They went uncounted while this was a full-suite
+        # gate; Epic 147's census pass brought them into the ledger rather than renaming honest
+        # comments to dodge a count.
+        ("ai-service/app/core/config.py", 87),
+        ("ai-service/app/core/workqueue.py", 569),
+        ("ai-service/app/ops/embed_workers.py", 314),
         # The other clocks that share the word -- 22.3's signal mail, 22.4's Monday letter and
         # 28.2's retention sweep each call their pass marker a heartbeat, so their comments name
         # the word and state no interval. They are not run-stream claims, but the noun census is

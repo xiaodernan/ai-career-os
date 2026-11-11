@@ -47,7 +47,7 @@ class NoteTagFilterTest {
         notes = mock(UserNoteRepository.class);
         service = new KnowledgeService(mock(KnowledgeSourceRepository.class),
                 mock(DocumentRepository.class), notes, mock(FileIngestService.class),
-                mock(StoredObjectReclaimer.class));
+                mock(StoredObjectReclaimer.class), mock(RagCacheInvalidator.class));
     }
 
     @Test

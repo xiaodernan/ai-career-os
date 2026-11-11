@@ -54,7 +54,7 @@ class KnowledgeRetirementTest {
         notes = mock(UserNoteRepository.class);
         reclaimer = mock(StoredObjectReclaimer.class);
         service = new KnowledgeService(sources, documents, notes, mock(FileIngestService.class),
-                reclaimer);
+                reclaimer, mock(RagCacheInvalidator.class));
     }
 
     private KnowledgeSource source() {

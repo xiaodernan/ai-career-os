@@ -28,7 +28,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 144 | A transient provider blip gets a jittered backoff window to heal in, instead of burning `max_deliveries` in five ticks | Redis-ZSET delay queue + pure-function exponential/full-jitter fold, zero-drift opt-in (worker default ON), 34 offline tests + real-Redis end-to-end |
 | 145 | The producer stops re-enqueueing a job that is still sleeping out its backoff, so the delay is never bypassed | `parked_ids()` + dual-source `_suppressed(queue, guard)` unioned into the producer's SQL and the consumer's ACK path, both reads independent/fail-open, 58 offline tests |
 | 146 | The queue stops claiming no worker ever died: orphan recovery is counted honestly | `WorkItem.reclaimed` observation tag from `XAUTOCLAIM`, `drain()` folds it into `ClaimStats.reclaimed`, zero behaviour drift, 5 offline tests |
-| — | (observed bug, backend-owned) Deleting a note/resume retires chunks by direct SQL without bumping the reader epoch, so the RAG cache can quote deleted content until TTL | needs the backend delete path to call the invalidation seam; backend was under concurrent edit — see findings below |
+| 147 | Deleting a note/source/resume stops the copilot quoting it from cache: the epoch bumps after the delete commits | `POST /internal/rag/cache/invalidate` + backend `RagCacheInvalidator` (after-commit, fail-open) wired into `KnowledgeService`; endpoint has a real caller, 9 offline + 6 backend tests |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -722,9 +722,10 @@ will save a specific number of milliseconds.
 ## Open findings — observed 2026-11-12
 
 Two real gaps were found while scoping the work after Epic 143. Both are recorded
-with their evidence. Finding A was **resolved by Epic 144** in a later turn (the
-reason for deferring it initially, and why the eventual implementation is now
-zero-drift, are preserved below); Finding B remains open and backend-owned.
+with their evidence. Finding A was **resolved by Epic 144** and Finding B was
+**resolved by Epic 147**, each in a later turn (the reason for deferring them
+initially, and why the eventual implementations are now zero-drift and honest, are
+preserved below). Neither remains open.
 
 ### Finding A — failed jobs have no retry backoff — RESOLVED by Epic 144
 
@@ -758,27 +759,28 @@ leaves `drain`/`claim` byte-for-byte the old path and issues *no* ZSET command
 (pinned by a zero-drift tripwire test), while only the real worker factory turns it
 ON by default to fix the bug. See the full Epic 144 section below.
 
-### Finding B — the cache can quote a deleted document (backend-owned bug)
+### Finding B — the cache can quote a deleted document — RESOLVED by Epic 147
 
 Epic 143's contract test proves that a corpus write which does **not** call
 `caching.invalidate_user` leaves the reader's epoch unmoved, so the cached answer
-survives. A concrete instance exists today: `KnowledgeService.deleteNote` /
-`retireRef` (and the resume-delete analogue) retires chunks by **direct SQL**
+survives. A concrete instance existed: `KnowledgeService.deleteNote` / `retireRef`
+(and the resume-delete analogue) retires chunks by direct JPA
 (`documents.status` → terminal + `reclaimer.reclaim`) without going through
-ai-service's ingest pipeline, which is the only place `invalidate_user` is wired.
-Add/Edit *do* re-ingest through `fileIngest.ingestText` and are covered; **Delete
-is the gap**. Until TTL, the copilot can cite a note or resume the reader deleted.
+ai-service's ingest pipeline, which was the only place `invalidate_user` was wired.
+Add/Edit *do* re-ingest through `fileIngest.ingestText` and were covered; **Delete
+was the gap**. Until TTL, the copilot could cite a note or resume the reader had
+deleted.
 
-**Why deferred / what the honest fix is.** The correction belongs on the backend
-delete path: after a successful retire, call the ai-service invalidation seam for
-that `user_id` (the normal ingest path already does). A brand-new
-`POST /internal/rag/cache/invalidate` endpoint alone would be an orphan "write"
-surface that no caller consumes — the exact anti-pattern Epic 143 was written to
-expose — so it was deliberately **not** built. Doing this properly needs the
-backend + `HttpAiServiceClient` + its tests, which were under concurrent edit when
-this was found. The follow-up is a cross-service change and should be sequenced
-after that session settles, then pinned by an e2e case that deletes a note and asks
-the same question again.
+**Why deferred, and what the honest fix turned out to be.** The correction belongs
+on the backend delete path, not in ai-service alone: a brand-new
+`POST /internal/rag/cache/invalidate` route with no caller would be the orphan
+"write" machine Epic 143 was written to expose. It was deferred while the backend
+was under concurrent edit, then built as **Epic 147** as one cross-service change:
+the endpoint and its *real* backend caller landed together (a contract test fails
+if the caller disappears), and the bump runs **after the delete transaction
+commits** — the detail that makes the fix correct rather than cosmetic. See the
+full Epic 147 section below. The original note that it was "backend-owned" held:
+the epoch seam already existed in ai-service; only its wiring was missing.
 
 ---
 
@@ -989,4 +991,109 @@ and a 3-fresh + 2-orphan batch reports exactly `reclaimed=2`. FakePool models
 XAUTOCLAIM's PEL semantics, so the count is pinned against a real recovery
 path, not a stub. Workqueue/observation group 123 passed; full `verify_gates`
 green at commit.
+
+## Epic 147 — a delete the reader can no longer keep quoting (DONE)
+
+**Finding B, closed.** The backend's delete paths retire a document's chunks by
+setting `documents.status='retired'` inside a JPA transaction, but the ai-service's
+RAG retrieval cache is a separate process that never learns about it. A retrieval
+cached moments before the delete keeps quoting the deleted note / source / resume
+until its TTL. Add and Edit were already covered (they re-ingest through
+`fileIngest.ingestText`, whose success path bumps the epoch); Delete was the hole.
+The cache's epoch seam (`caching.invalidate_user`) already existed — what was
+missing was a *trigger* on the backend delete path.
+
+**The fix is cross-service, and the endpoint is not an orphan.** `POST
+/internal/rag/cache/invalidate` is registered on ai-service, but it is never built
+without its consumer: `HttpAiServiceClient.invalidateCache(userId)` calls it and
+`RagCacheInvalidator` drives that client from `KnowledgeService`'s delete seam. A
+contract test (`test_the_write_endpoint_has_a_real_backend_caller`) fails if either
+the endpoint loses the backend caller or the after-commit invalidator disappears —
+the inverse of Epic 143's discipline, where an unwired *read* was the sin. This is
+why the endpoint was deliberately *not* built in the Epic 143 turn: a write surface
+with nobody to call it is a machine built for nobody.
+
+**"After commit" is the whole bug, not a detail.** Bumping the epoch *inside* the
+delete transaction would be a plausible-looking but wrong fix: until the rows
+commit, another replica reading the shared store still sees `status='ready'`, so
+the freshly bumped generation would let the reader re-fetch and re-cache the old,
+still-quotable content. `RagCacheInvalidator.invalidateAfterCommit(userId)` uses the
+same `TransactionSynchronizationManager.afterCommit()` pattern
+`StoredObjectReclaimer` established for object deletes: the rows are durable and
+retired before any reader is told to look again, and a rollback never bumps. Called
+with no active transaction (a maintenance path), it runs inline. The one seam
+`KnowledgeService.retireRef` funnels note edits/deletes *and* resume
+delete/version-switch through it; `deleteSource` calls it directly. A note **edit**
+re-ingests new text immediately after, whose success bumps the epoch again — the
+extra after-commit bump is harmless (a generation counter, not a lock) and covers
+the case where that re-ingest fails or is slow.
+
+**Fail-open on every layer.** The endpoint takes **no body** — the user is its own
+`X-User-Id`, so a caller cannot name another user's cache to retire — and its only
+effect is `invalidate_user`, which is already fail-open: cache off → 0, Redis blip
+→ 0 (turns a failure into a miss, never a 5xx). The backend adds a second layer:
+an ai-service that is unreachable at `afterCommit` is counted (`careeros.rag.cache_invalidations`,
+outcome `failed`) and logged, never escalated to the reader whose delete already
+succeeded. The worst honest case is that a stale entry expires on its own TTL; the
+delete stands. `AiServiceClient.invalidateCache` is a **default no-op** so every
+test double and mock that does not care about the cache compiles and behaves
+exactly as before (zero drift); only `HttpAiServiceClient` performs the call.
+
+**Why one call invalidates the whole fleet.** A generation bump is not a scramble
+of cached values: retrieval keys embed the per-user epoch, so retiring a generation
+makes all its keys unaddressed at once and the old values age out on their own TTL.
+With `CACHE_BACKEND=redis` or `layered`, `LayeredCache.incr` writes the epoch to the
+**shared** store and drops this process's local copy; every replica's `counter()`
+reads it back from there. So one HTTP call to any replica invalidates every
+replica — the design epoch was built for, now actually reachable. With the
+single-process `memory` backend there is exactly one process to bump. The user id
+comes from the request's own header, never a body field, which the internal-contract
+key census enforces (no body model → no phantom keys).
+
+**What was explicitly not done.** No Lua script or atomic delete+invalidate (the
+cache is a different service; there is no shared transaction, and the after-commit
+ordering is the honest boundary). No SCAN+UNLINK of cached keys — generation
+retirement is cheaper and cannot miss a concurrent write from another replica.
+No e2e test against a live stack (this host has no Docker): the cross-service
+contract is pinned on both sides offline instead — the ai-service surface + epoch
+mechanism in `test_the_cache_invalidate_endpoint_closes_the_delete_hole.py`, and the
+after-commit / rollback / fail-open ordering in the backend's
+`RagCacheInvalidatorTest`. No change to the ingest path's existing bump
+(Add/Edit stay covered as before). No new operator endpoint beyond the one the
+backend now calls. No per-transaction de-duplication of the bump: a bundle import
+that deletes N notes inside one transaction registers N after-commit bumps (N
+idempotent epoch increments, N cheap HTTP calls). Correct, just not coalesced; a
+hot batch path would be where a transaction-scoped "already bumped this user" set
+earns its keep, which this low-frequency recovery path does not justify.
+
+**Two honest boundaries, stated plainly.** (1) No live-stack e2e (no Docker on this
+host): the "delete a note, ask the same question, get no citation" walkthrough is
+pinned on each side offline but never run end to end here — the one operator step
+that remains. (2) The `/internal/ops/*` verdict endpoints this pass touched in
+`API.md` are still read-only diagnostics with no frontend or alert consumer; giving
+them honest rows (a completeness gate the *full* suite exposed, since that gate is
+not in `verify_gates`) makes the surface truthful but does not put those two
+numbers on a screen. Wiring one to a real consumer is a separate, larger task.
+
+**Verification.** ai-service: 9 offline tests (401/400 auth door; cache-off →
+`{invalidated:false,generation:0}`; one call bumps 1, repeats bump again; a
+retrieval key under generation 0 is no longer the reader's key after the bump; a
+caller cannot reach another user's epoch; a blipped backend reports "not
+invalidated" rather than a lie; the endpoint has a real after-commit caller).
+backend: `mvn test` green on `RagCacheInvalidatorTest` (6: inline-with-no-transaction,
+waits-for-commit, rollback-never-bumps, refusal-can't-undo-delete, refusal-inside-
+afterCommit, null-user-noop) plus the four `KnowledgeService` constructor-wiring
+suites and `StoredObjectReclaimTest` regression. The internal surface reconciles
+on both sides (`test_api_doc_contract`, `test_internal_contract`,
+`test_response_shape_contract`): the new route has exactly one API.md row naming
+its `{invalidated,generation}` response, and the two previously-undocumented
+`/internal/ops/*` verdict endpoints picked up by that census were given honest
+"No backend caller" rows + ledger reasons. The new `careeros.rag.cache_invalidations`
+Micrometer counter is named in `DEPLOYMENT.md`'s meter roster (excused, not alarmed —
+a failed bump is a freshness cost behind a WARN line, not an outage) and in the alarm
+gate's `METRICS`, so the "every shipped meter is watched or excused by name" census
+stays complete. The keep-alive vocabulary census grew to admit this horizon's worker-
+liveness paragraphs and the three `ai-service` noun-only comments (different clock,
+no interval beside the word) rather than renaming honest comments to dodge a count.
+Full `verify_gates` + backend `mvn test` green at commit.
 

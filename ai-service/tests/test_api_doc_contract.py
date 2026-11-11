@@ -269,11 +269,13 @@ def test_both_sides_of_the_comparison_are_actually_read():
     """Positive control: the gates above stay green on a doc that named nothing."""
     assert len(documented_paths()) >= 20, "the doc's internal table was not read"
     assert "/internal/ingest/documents/{}/text" in documented_paths()
-    # Four answers rather than two since 19.6's voice seam: the transcript and the clip are the
-    # only internal rows whose notes print their keys with an arrow, and the state row's prose
-    # names its three flags in words rather than in a `{...}` group.
+    # Five answers rather than two since 19.6's voice seam (and Epic 147's cache bump): the
+    # transcript, the clip and the invalidate result are the internal rows whose notes print
+    # their keys with an arrow; the state row's prose names its three flags in words rather
+    # than in a `{...}` group.
     assert response_claims() == {"/internal/agents/chat": ({"task_id", "run_id"}, False),
                                  "/internal/rag/embeddings": ({"embedding"}, False),
+                                 "/internal/rag/cache/invalidate": ({"invalidated", "generation"}, False),
                                  "/internal/voice/transcribe": ({"text", "provider"}, False),
                                  "/internal/voice/speak": ({"audio", "mime", "provider"}, False)}
     shape = _returned(_routes()[("POST", "/internal/agents/chat")])
@@ -295,6 +297,8 @@ UNREACHED_BY_THE_APP = {
     "/internal/rag/answer": "same, for the grounded-answer variant",
     "/internal/rag/chunks": "kept for operators",
     "/internal/rag/cache": "operator diagnostic: one process's cache counters, no screen reads them",
+    "/internal/ops/workqueue": "operator/alert diagnostic: read-only queue verdict; a future backend gauge can scrape it",
+    "/internal/ops/cache": "operator/alert diagnostic: read-only cache-saving verdict; no screen reads it yet",
     "/internal/tasks/{}": "the app follows /internal/stream/{taskId} instead",
     "/internal/tasks/{}/stream": "a second stream spelling, unused by the relay",
 }
@@ -320,7 +324,7 @@ def test_what_the_doc_lists_but_the_app_never_calls_stays_explained():
 
 def test_the_unreached_list_is_not_just_a_long_list_of_nothings():
     """Positive control: the comparison above also passes when both sides are empty."""
-    assert len(UNREACHED_BY_THE_APP) == 8
+    assert len(UNREACHED_BY_THE_APP) == 10
     assert all(reason.strip() for reason in UNREACHED_BY_THE_APP.values())
     assert "/internal/stream/{}" not in UNREACHED_BY_THE_APP, \
         "the relay reaches that one; treating it as unreached would hide a live dependency"

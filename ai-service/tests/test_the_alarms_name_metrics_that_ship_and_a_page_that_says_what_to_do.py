@@ -79,6 +79,7 @@ REMINDER_CLOCK = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "notif
 RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "RetentionMetrics.java"
 UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
 STORED_OBJECT_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "StoredObjectReclaimer.java"
+RAG_CACHE_INVALIDATOR = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "RagCacheInvalidator.java"
 RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
 DASHBOARD_CACHE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "DashboardCache.java"
 GATEWAY_RATE_LIMIT_FILTER = ROOT / "gateway" / "src" / "main" / "java" / "com" / "careeros" / "gateway" / "GatewayRateLimitFilter.java"
@@ -124,6 +125,10 @@ METRICS = {
     "careeros_storage_objects_reclaimed_total": (STORED_OBJECT_RECLAIMER, "careeros.storage.objects_reclaimed"),
     "careeros_circuitbreaker_open": (AI_CIRCUIT_BREAKER_METRICS, "careeros.circuitbreaker.open"),
     "careeros_storage_objects_judged_total": (UNNAMED_RECLAIMER, "careeros.storage.objects_judged"),
+    # Epic 147 / Finding B: the delete path's after-commit RAG epoch bump, tagged requested/failed.
+    # A failed bump is a freshness cost (stale text until cache TTL on a delete that already
+    # committed), not an outage, so DEPLOYMENT.md excuses it by name rather than giving it a page.
+    "careeros_rag_cache_invalidations_total": (RAG_CACHE_INVALIDATOR, "careeros.rag.cache_invalidations"),
     # Epic 115: the edge's own refusal counter moved into the namespace (it was
     # `gateway.ratelimit.refused`, a series no rule in this file could ever watch),
     # and the alarm that reads it is the horizon's `CareerOSGatewayRateLimited`.

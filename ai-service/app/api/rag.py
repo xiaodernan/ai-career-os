@@ -69,6 +69,33 @@ async def rag_cache_stats(ctx: Ctx = Depends(require_internal)):
     return {"cache": caching.describe()}
 
 
+@router.post("/cache/invalidate")
+async def rag_cache_invalidate(ctx: Ctx = Depends(require_internal)):
+    """Retire every cached retrieval for this user by bumping their epoch generation.
+
+    The backend calls this **after committing** a delete of a note / source / resume,
+    whose chunks go to ``status='retired'`` but whose cached retrievals would otherwise
+    keep quoting deleted text until TTL. Bumping the generation makes every key under
+    that user unreadable at once, on every replica: with ``CACHE_BACKEND=redis`` (or
+    ``layered``) the epoch counter lives in the shared store and each process's
+    ``counter()`` reads it from there, so one call invalidates the whole fleet.
+
+    No request body: the user to invalidate is ``ctx.user_id`` (the backend's
+    ``X-User-Id`` header), never a caller-chosen field — a caller can only ever retire
+    its *own* cache. Fail-open by construction: ``invalidate_user`` returns 0 when the
+    cache is off or the store is unreachable, so a cache hiccup cannot turn a delete
+    that already committed into a 5xx. It reports what happened rather than assuming
+    it: ``invalidated`` is False when nothing was enabled to bump.
+
+    A generation bump is not a scramble of the values themselves: the old keys expire
+    on their own TTL; readers simply stop addressing them. That is cheaper than
+    SCAN+UNLINK across the keyspace and cannot miss an entry another replica wrote a
+    moment ago (Epic 143's invalidation boundary, now actually reachable).
+    """
+    generation = await caching.invalidate_user(ctx.user_id)
+    return {"invalidated": generation > 0, "generation": generation}
+
+
 @router.post("/retrieve")
 async def rag_retrieve(req: RetrieveReq, ctx: Ctx = Depends(require_internal)):
     out = await retrieve(req.query, user_id=ctx.user_id, run_id=ctx.run_id,

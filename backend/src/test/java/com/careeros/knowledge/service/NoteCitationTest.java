@@ -58,7 +58,7 @@ class NoteCitationTest {
         notes = mock(UserNoteRepository.class);
         fileIngest = mock(FileIngestService.class);
         service = new KnowledgeService(sources, documents, notes, fileIngest,
-                mock(StoredObjectReclaimer.class));
+                mock(StoredObjectReclaimer.class), mock(RagCacheInvalidator.class));
     }
 
     @Test

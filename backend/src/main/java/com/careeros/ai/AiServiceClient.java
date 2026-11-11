@@ -34,6 +34,23 @@ public interface AiServiceClient {
 
     Map<String, Object> documentText(UUID documentId, UUID userId);
 
+    /**
+     * Retire every RAG retrieval cached for {@code userId} by bumping their epoch
+     * generation (Finding B, Epic 147). The backend calls this *after committing* a
+     * delete of a note / source / resume: the documents go to {@code status='retired'}
+     * but a cached retrieval would otherwise keep quoting the deleted text until TTL.
+     *
+     * <p>A default no-op keeps every test double and mock that does not care about the
+     * cache compiling unchanged and behaving exactly as before (zero drift); only the
+     * real {@link HttpAiServiceClient} performs the call, and the after-commit
+     * invalidator routes through this seam. The ai-service endpoint is fail-open, so an
+     * outage here reports "not invalidated" and never fails the already-committed delete.
+     */
+    default void invalidateCache(UUID userId) {
+        // no-op: the cache is an optimisation; a caller that does not wire it loses
+        // freshness, never a delete. HttpAiServiceClient overrides with the real call.
+    }
+
     Map<String, Object> parseResumeText(String text, UUID userId);
 
     Map<String, Object> analyzeJd(String rawText, UUID userId);

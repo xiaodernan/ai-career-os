@@ -221,6 +221,19 @@ public class HttpAiServiceClient implements AiServiceClient {
         return get("/internal/ingest/documents/" + documentId + "/text", userId);
     }
 
+    /**
+     * Finding B (Epic 147): tell the ai-service to bump this user's RAG cache epoch.
+     * Empty body on purpose — the user is the request's own {@code X-User-Id}, so a
+     * caller cannot name someone else's cache to retire. The route has no request model,
+     * which keeps the internal-contract key reconciliation honest (no body keys sent,
+     * none required). Its own fail-open lives in the ai-service; the after-commit
+     * invalidator adds a second layer so a raised transport error cannot undo a delete.
+     */
+    @Override
+    public void invalidateCache(UUID userId) {
+        post("/internal/rag/cache/invalidate", userId, Map.of());
+    }
+
     @Override
     public Map<String, Object> parseResumeText(String text, UUID userId) {
         return post("/internal/features/resume/parse", userId, Map.of("text", text));

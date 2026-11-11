@@ -778,6 +778,9 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/rag/answer` | retrieval + grounded answer (no backend caller: same, for the grounded-answer variant) |
 | POST | `/internal/rag/chunks` | chunk listing / inspection (no backend caller: kept for operators) |
 | GET | `/internal/rag/cache` | this process's cache backend and counters (hits, misses, errors, l2 hits, single-flight leaders/joined); per-process by design. (no backend caller: operator diagnostic: one process's cache counters, no screen reads them) |
+| POST | `/internal/rag/cache/invalidate` | `{}` → `{invalidated, generation}`: bump this user's RAG epoch so cached retrievals stop quoting a just-deleted note/source/resume; scoped to the caller's `X-User-Id`, fail-open (`invalidated=false` if the cache is off or the store is down). Backend `invalidateCache`, driven by `RagCacheInvalidator` after a delete transaction commits |
+| GET | `/internal/ops/workqueue` | read-only control-plane verdict over the Redis embed work queue (live stream/PEL/DLQ/delay depth + consumer liveness); always 200, fail-open to `unknown`. (no backend caller: operator/alert diagnostic: read-only queue verdict; a future backend gauge can scrape it) |
+| GET | `/internal/ops/cache` | read-only control-plane verdict over the RAG cache's honest saving (0-rate is three states, not one); always 200, degrades to `unknown`. (no backend caller: operator/alert diagnostic: read-only cache-saving verdict; no screen reads it yet) |
 | POST | `/internal/interview/opening` | first question |
 | POST | `/internal/interview/answer` | evaluate + follow up |
 | POST | `/internal/interview/finalize` | final report |

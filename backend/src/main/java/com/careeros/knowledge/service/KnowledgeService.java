@@ -47,15 +47,17 @@ public class KnowledgeService {
     private final UserNoteRepository notes;
     private final FileIngestService fileIngest;
     private final StoredObjectReclaimer reclaimer;
+    private final RagCacheInvalidator cacheInvalidator;
 
     public KnowledgeService(KnowledgeSourceRepository sources, DocumentRepository documents,
                             UserNoteRepository notes, FileIngestService fileIngest,
-                            StoredObjectReclaimer reclaimer) {
+                            StoredObjectReclaimer reclaimer, RagCacheInvalidator cacheInvalidator) {
         this.sources = sources;
         this.documents = documents;
         this.notes = notes;
         this.fileIngest = fileIngest;
         this.reclaimer = reclaimer;
+        this.cacheInvalidator = cacheInvalidator;
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +81,10 @@ public class KnowledgeService {
         List<String> retired = retireDocuments(userId, source);
         sources.delete(source);
         reclaimer.reclaim(retired);
+        // Finding B: the chunks are retired in this transaction; the ai-service's cached
+        // retrievals are not. Bump the reader's epoch AFTER this commit so no replica can
+        // re-fetch the still-'ready' rows under a fresh generation before retirement lands.
+        cacheInvalidator.invalidateAfterCommit(userId);
     }
 
     /**
@@ -99,6 +105,12 @@ public class KnowledgeService {
             keys.addAll(retireDocuments(userId, source));
             sources.delete(source);
         }
+        // This is the single seam every un-owning path funnels through: a note deleted or
+        // edited here, a resume deleted or switched to another version in ResumeService.
+        // Bumping AFTER commit retires the cached answers that quoted the old chunks.
+        // A note *edit* re-ingests new text right after (which bumps on success too); this
+        // extra bump is harmless and covers the case where that re-ingest fails or is slow.
+        cacheInvalidator.invalidateAfterCommit(userId);
         return keys;
     }
 
