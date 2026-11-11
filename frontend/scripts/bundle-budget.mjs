@@ -8,11 +8,12 @@
  * the route, gzip-compressed, because that is the bytes a proxy transmits),
  * and fails when any route exceeds its budget.
  *
- * Budget: every page route stays under 340 kB gzip. Measured landscape at
- * adoption (2026-11-11, next build on this host): the heaviest route
- * (/applications) is ~301 kB gzip, the shared base is ~103 kB, so the budget
- * names a breach rather than a bother. Tighten this, never raise it without
- * writing why in the commit.
+ * Budget: every page route stays under 310 kB gzip. Measured landscape at
+ * the 2026-11-12 build (next build on this host, 35 routes): the heaviest
+ * route (/(app)/jobs/[id]/page) is 299.6 kB gzip, the shared base ~103 kB.
+ * Tightened from 340 on 2026-11-12, which the gate had allowed to idle for
+ * a full epic cycle; the number now names a ~3% breach rather than a faraway
+ * one. Tighten this, never raise it without writing why in the commit.
  *
  * Usage:  npm run budget        (runs `next build` first)
  *         node scripts/bundle-budget.mjs
@@ -24,7 +25,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = join(ROOT, ".next", "app-build-manifest.json");
-const BUDGET_KIB = 340;
+const BUDGET_KIB = 310;
 
 if (!existsSync(MANIFEST)) {
   console.error("bundle-budget: no .next/app-build-manifest.json -- run `next build` first (or `npm run budget`)");

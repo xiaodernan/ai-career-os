@@ -27,7 +27,7 @@
 
 ### Frontend performance and product surface (Epics 122–130, measured 2026-11-11)
 - `frontend/scripts/bundle-budget.mjs` recomputes each page route's gzipped first-load JS
-  from `app-build-manifest.json` and fails the `budget` CI job at 340 kB; `npm run budget`
+  from `app-build-manifest.json` and fails the `budget` CI job at 310 kB (tightened from 340 on 2026-11-12); `npm run budget`
   runs the production build first. Heaviest route at adoption ~302 kB (/applications).
 - `loading-skeletons.test.ts` pins the loading skeletons to their loaded shapes
   (LoadingCardSkeleton holds the StatCard anatomy; the metric grid's breakpoints match the
