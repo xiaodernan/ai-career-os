@@ -347,6 +347,43 @@ class WorkQueue:
         except Exception:
             return 0
 
+    async def parked_ids(self) -> set[str]:
+        """Ids of jobs currently waiting out a backoff window (Epic 145).
+
+        This closes a gap Epic 144 left: a failed job parked in the delay ZSET
+        still has ``embedding IS NULL`` in the DB, so the producer's next
+        ``SELECT`` would re-enqueue it as a *fresh attempts=0 message*, which the
+        consumer group claims immediately — the backoff is bypassed and a
+        persistently-failing job is retried every tick again. The delay set is the
+        authoritative list of "do not re-enqueue yet" ids, so the producer and
+        consumer suppress these ids exactly as they suppress DlqGuard cooldowns.
+
+        Read-only and fail-open: a Redis outage returns an empty set, i.e. "suppress
+        nothing" (exact Epic 138 behaviour, never lost recall). With ``id_field``
+        unset there is no id to extract, so this returns empty without a command.
+        Members are ``<origin_id>\\x1f<fields JSON>``; a malformed one is skipped
+        rather than failing the whole read.
+        """
+        if self.backoff_base_ms <= 0 or not self.id_field:
+            return set()
+        try:
+            members = await self.pool.execute(
+                "ZRANGE", self.delay_zset, "0", "-1") or []
+        except Exception:
+            return set()
+        ids: set[str] = set()
+        for member in members:
+            raw = member.decode() if isinstance(member, bytes) else str(member)
+            try:
+                _origin, payload = raw.split("\x1f", 1)
+                fields = json.loads(payload)
+                jid = fields.get(self.id_field) if isinstance(fields, dict) else None
+                if jid:
+                    ids.add(str(jid))
+            except (ValueError, TypeError):
+                continue  # a corrupt member is dropped by promote_due; skip it here
+        return ids
+
     async def pending_counts(self) -> dict[str, int]:
         """`{stream_id: delivery_count}` for this group's PEL, from Redis.
 

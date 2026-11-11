@@ -51,7 +51,7 @@ class _FakeEmbedder:
 
 
 class _FakeQueue:
-    def __init__(self, *, down=False, dead_lettered_ids=()):
+    def __init__(self, *, down=False, dead_lettered_ids=(), parked=(), parked_error=None):
         self.down = down
         self.enqueued = []
         self.acked = []
@@ -59,12 +59,24 @@ class _FakeQueue:
         self.drained_with = None
         # When set, drain() reports these as dead-lettered, so consumer_pass cools them.
         self.dead_lettered_ids = tuple(dead_lettered_ids)
+        # Epic 145: ids waiting out a retry backoff. These must be suppressed in BOTH
+        # passes exactly like cooldown ids; a separate failure injection proves the two
+        # sources are read independently (one outage must not blank the other).
+        self.parked = set(parked)
+        self.parked_error = parked_error
+        self.parked_calls = 0
 
     async def enqueue(self, fields):
         if self.down:
             raise resp.RespUnavailable("down")
         self.enqueued.append(fields)
         return f"{len(self.enqueued)}-0"
+
+    async def parked_ids(self):
+        self.parked_calls += 1
+        if self.parked_error:
+            raise self.parked_error
+        return set(self.parked)
 
     async def drain(self, handler):
         self.drained_with = handler
@@ -229,6 +241,129 @@ async def test_producer_is_fail_open_when_the_guard_read_errors(monkeypatch):
     await producer_pass(_FakeQueue(), limit=5, guard=guard)
     sql, args = calls[0]
     assert "ANY(" not in sql and args == (5,), "the suppression clause vanished"
+
+
+# --------------------------------------------------------------- Epic 145: dual-source suppression
+async def test_producer_suppresses_both_cooldown_and_parked_ids(monkeypatch):
+    """The producer must exclude BOTH sources in SQL. A parked job still has
+    embedding IS NULL, so re-selecting it next tick would XADD a fresh attempts=0
+    copy and bypass the backoff Epic 144 just built."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active={JOB_A})
+    q = _FakeQueue(parked={JOB_B})
+    await producer_pass(q, guard=guard)
+    sql, args = calls[0]
+    assert "NOT (j.id = ANY($1::uuid[]))" in sql
+    assert set(args[0]) == {JOB_A, JOB_B}, "both sources unioned before the uuid bind"
+
+
+async def test_producer_merges_overlapping_sources_without_duplicates(monkeypatch):
+    """An id that is both cooling down and parked must not be bound twice — the
+    ::uuid[] array is a set, and duplication would only waste bind width."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active={JOB_A, JOB_B})
+    q = _FakeQueue(parked={JOB_B})
+    await producer_pass(q, guard=guard)
+    args = calls[0][1]
+    assert sorted(args[0]) == [JOB_A, JOB_B]
+
+
+async def test_producer_parked_read_error_still_honours_the_guard(monkeypatch):
+    """Independent reads: an outage in parked_ids must NOT blank the cooldown source
+    (nor vice versa). Suppressing only one still closes that source's storm hole."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active={JOB_A})
+    q = _FakeQueue(parked_error=resp.RespUnavailable("delay zset down"))
+    await producer_pass(q, guard=guard)
+    args = calls[0][1]
+    assert args[0] == [JOB_A], "cooldown survives the parked read failing"
+
+
+async def test_producer_guard_error_still_honours_parked_ids(monkeypatch):
+    """The mirror case: a guard outage must NOT blank the parked/backoff source."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    guard = _StubGuard(active_error=resp.RespUnavailable("guard down"))
+    q = _FakeQueue(parked={JOB_B})
+    await producer_pass(q, guard=guard)
+    args = calls[0][1]
+    assert args[0] == [JOB_B], "backoff suppression survives the guard read failing"
+
+
+async def test_consumer_acks_a_parked_duplicate_without_a_model_call(monkeypatch):
+    """At-least-once copies of a backing-off job can still sit on the stream. The
+    consumer must ACK them for free, or a parked job gets embedded on every tick
+    despite the delay ZSET — the exact hole this Epic closes on the consumer side."""
+    monkeypatch.setattr("app.providers.registry.embeddings_ready", lambda _s: True)
+    called = []
+
+    async def fake_embed_one(job_id):
+        called.append(job_id)
+        return True
+
+    monkeypatch.setattr(embed_workers, "embed_one", fake_embed_one)
+    q = _FakeQueue(parked={JOB_A})
+    q.items = [_item(JOB_A, "1-0"), _item(JOB_B, "2-0")]
+    await consumer_pass(q)
+    assert called == [JOB_B], "the parked id never reached the provider"
+    assert q.acked == ["1-0", "2-0"], "both copies leave the PEL"
+
+
+async def test_consumer_guard_error_still_acks_parked_duplicates(monkeypatch):
+    """Consumer-side independence: even with the guard down, a parked duplicate is
+    still recognised and ACKed for free by the backoff source."""
+    monkeypatch.setattr("app.providers.registry.embeddings_ready", lambda _s: True)
+    called = []
+
+    async def fake_embed_one(job_id):
+        called.append(job_id)
+        return True
+
+    monkeypatch.setattr(embed_workers, "embed_one", fake_embed_one)
+    q = _FakeQueue(parked={JOB_A})
+    q.items = [_item(JOB_A, "1-0")]
+    guard = _StubGuard(active_error=resp.RespUnavailable("guard down"))
+    await consumer_pass(q, guard=guard)
+    assert called == [], "parked suppression survives the guard read failing"
+    assert q.acked == ["1-0"]
+
+
+async def test_parked_ids_is_not_read_when_backoff_is_disabled(monkeypatch):
+    """Zero-drift at the call site: a queue built with backoff off returns no parked
+    ids and the pass behaves exactly as Epic 138/139 (no backoff coupling)."""
+    calls = []
+
+    async def fake_fetch(sql, *args):
+        calls.append((sql, args))
+        return []
+
+    monkeypatch.setattr(embed_workers.db, "fetch", fake_fetch)
+    await producer_pass(_FakeQueue(), limit=5, guard=_StubGuard(active=set()))
+    sql, args = calls[0]
+    assert "ANY(" not in sql and args == (5,)
 
 
 # --------------------------------------------------------------- handler idempotence
@@ -466,6 +601,18 @@ def test_the_loop_wires_one_guard_into_both_passes():
     assert "guard = _guard(pool)" in src
     assert "producer_pass(queue, guard=guard)" in src
     assert "consumer_pass(queue, guard=guard)" in src
+
+
+def test_both_passes_merge_the_two_suppression_sources():
+    """Source contract (Epic 145): both passes call the same dual-source merge with
+    the queue AND guard. A single-source regression (e.g. consumer still calling
+    ``_suppressed(guard)``) would silently reopen the producer re-injection storm."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "app" / "ops" / "embed_workers.py").read_text(
+        encoding="utf-8")
+    assert src.count("await _suppressed(queue, guard)") == 2, \
+        "producer and consumer must both union parked ids and cooldown ids"
+    assert "await _suppressed(guard)" not in src, "no single-source call site may remain"
 
 
 async def test_operator_release_all_clears_the_cooldown_set(monkeypatch):

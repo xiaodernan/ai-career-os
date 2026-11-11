@@ -125,15 +125,18 @@ async def producer_pass(queue: workqueue.WorkQueue, *, limit: int | None = None,
     job actually lands. `MAXLEN` trimming is done once at group creation time via
     the queue's stream; here we only add.
 
-    If ``guard`` is enabled, ids inside their dead-letter cooldown are excluded **in
-    SQL** (``NOT j.id = ANY($n::uuid[])``), not filtered in Python afterward. That
-    detail matters: a Python filter after ``LIMIT`` would let a handful of suppressed
-    ids fill the batch and starve older, embeddable jobs. Pushing it into the WHERE
-    clause makes ``LIMIT`` count only eligible rows. ``guard.active()`` is fail-open,
-    so a Redis outage degrades to "enqueue everything" (Epic 138 behaviour), never to
-    lost recall.
+    Suppressed ids come from two sources, unioned by ``_suppressed``: ids inside their
+    dead-letter cooldown (``guard``, Epic 139) and ids waiting out a retry backoff
+    (``queue.parked_ids()``, Epic 145). They are excluded **in SQL**
+    (``NOT j.id = ANY($n::uuid[])``), not filtered in Python afterward. That detail
+    matters: a Python filter after ``LIMIT`` would let a handful of suppressed ids fill
+    the batch and starve older, embeddable jobs — and for a parked job it would re-add
+    a fresh ``attempts=0`` copy next tick, bypassing the backoff. Pushing it into the
+    WHERE clause makes ``LIMIT`` count only eligible rows. Both reads are independent
+    and fail-open, so a Redis outage degrades to "enqueue everything" (Epic 138
+    behaviour), never to lost recall.
     """
-    suppressed: set[str] = await _suppressed(guard)
+    suppressed: set[str] = await _suppressed(queue, guard)
     sql = ("SELECT j.id::text AS id FROM jobs j WHERE j.embedding IS NULL")
     args: list[Any] = []
     if suppressed:
@@ -170,24 +173,39 @@ def _is_uuid(value: str) -> bool:
         return False
 
 
-async def _suppressed(guard: dlq_guard.DlqGuard | None) -> set[str]:
-    """Fail-open read of the cooldown set at the *caller* boundary.
+async def _suppressed(queue: workqueue.WorkQueue,
+                      guard: dlq_guard.DlqGuard | None) -> set[str]:
+    """Fail-open union of the TWO "do not re-enqueue yet" sources.
 
-    ``DlqGuard.active()`` already swallows its own Redis errors, but the guard is an
-    optimisation and must never be a correctness dependency: if any unexpected error
-    escapes it (a custom guard, a future bug, a cancelled pipeline), the embed pass
-    still runs with "suppress nothing", i.e. exact Epic 138 behaviour. Defence in
-    depth at the boundary is what makes "a guard outage costs suppression, never
-    recall" a property of the *system*, not of one class.
+    * ``DlqGuard.active()`` — ids past their dead-letter cooldown (Epic 139).
+    * ``queue.parked_ids()`` — ids waiting out a retry backoff (Epic 145). This is
+      the fix for the gap Epic 144 left: a parked job still has ``embedding IS
+      NULL``, so without this the producer re-selects it next tick and XADDs a
+      fresh ``attempts=0`` message, bypassing the backoff entirely.
+
+    The two sources are read **independently** and merged: an outage/failure in one
+    must not blank the other (that would re-open the storm hole for whichever one
+    broke). Each is an optimisation over the DB scan, never a correctness
+    dependency: any error escapes as "suppress nothing", i.e. exact Epic 138
+    behaviour, so a Redis outage costs suppression, never recall. ``parked_ids`` is
+    fetched defensively via ``getattr`` so a custom/older queue fake without the
+    method (backoff disabled) contributes nothing and keeps the old behaviour.
     """
-    if not (guard and guard.enabled):
-        return set()
-    try:
-        return await guard.active()
-    except Exception:
-        log.warning("dlq guard active() escaped its fail-open; continuing with no suppression",
-                    exc_info=True)
-        return set()
+    out: set[str] = set()
+    if guard and guard.enabled:
+        try:
+            out |= await guard.active()
+        except Exception:
+            log.warning("dlq guard active() escaped its fail-open; continuing without "
+                        "its suppression", exc_info=True)
+    parked = getattr(queue, "parked_ids", None)
+    if callable(parked):
+        try:
+            out |= await parked()
+        except Exception:
+            log.warning("queue parked_ids() escaped its fail-open; continuing without "
+                        "backoff suppression", exc_info=True)
+    return out
 
 
 async def embed_one(job_id: str) -> bool:
@@ -224,17 +242,16 @@ async def consumer_pass(queue: workqueue.WorkQueue,
                         guard: dlq_guard.DlqGuard | None = None) -> workqueue.ClaimStats:
     """Claim a batch, embed each job idempotently, ACK the successes.
 
-    With a guard, two extra behaviours close the "poison job re-injected every tick"
-    hole from Epic 138, at **one** extra pipeline round trip per pass:
-
-    * ids already inside their cooldown are ACKed without a model call — the producer
-      stops *new* enqueues, but the stream may still hold at-least-once duplicate
-      copies enqueued in earlier ticks, and those must not burn a call either;
-    * after ``drain`` reports dead-lettered ids, they are marked into the guard so the
-      *next* producer pass excludes them in SQL.
-
-    Both are fail-open (``active``/``mark`` swallow Redis errors), so a guard outage
-    degrades to plain Epic 138 behaviour, never to lost recall.
+    Suppression comes from two independent, fail-open sources merged by ``_suppressed``
+    at one batched read per pass: ids inside their dead-letter cooldown (Epic 139), and
+    ids waiting out a retry backoff in the delay ZSET (Epic 145). Both may still have
+    at-least-once duplicate copies sitting on the stream from earlier ticks; those must
+    be ACKed without a model call, because their authoritative copy returns on its own
+    (cooldown lapse / ``promote_due``) and re-embedding a leftover now would burn a call
+    — and, for a parked job, restart its ``attempts`` lineage. After ``drain`` reports
+    dead-lettered ids, they are marked into the guard so the *next* producer pass
+    excludes them in SQL. Every read is fail-open, so a Redis outage degrades to plain
+    Epic 138 behaviour, never to lost recall.
     """
     from app.providers.registry import embeddings_ready
 
@@ -243,7 +260,7 @@ async def consumer_pass(queue: workqueue.WorkQueue,
         return workqueue.ClaimStats()
 
     # One batched read for the whole pass; fail-open returns a set() on Redis error.
-    suppressed: set[str] = await _suppressed(guard)
+    suppressed: set[str] = await _suppressed(queue, guard)
 
     async def handler(item: workqueue.WorkItem) -> bool:
         job_id = item.value(JOB_ID_FIELD)

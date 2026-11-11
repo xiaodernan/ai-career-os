@@ -26,6 +26,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 141 | The signed-in first screen carries the landing/auth design language, without washing the light theme or growing the bundle | `dashboard/page.test.ts` source contract, copy census, build + bundle budget |
 | 143 | The RAG cache's saving is measured honestly and its invalidation boundary is named, not assumed | read-only `GET /internal/ops/cache`, pure-function verdict (0-rate is three states), off/memory/layered work-count baseline, 48 offline tests |
 | 144 | A transient provider blip gets a jittered backoff window to heal in, instead of burning `max_deliveries` in five ticks | Redis-ZSET delay queue + pure-function exponential/full-jitter fold, zero-drift opt-in (worker default ON), 34 offline tests + real-Redis end-to-end |
+| 145 | The producer stops re-enqueueing a job that is still sleeping out its backoff, so the delay is never bypassed | `parked_ids()` + dual-source `_suppressed(queue, guard)` unioned into the producer's SQL and the consumer's ACK path, both reads independent/fail-open, 58 offline tests |
 | — | (observed bug, backend-owned) Deleting a note/resume retires chunks by direct SQL without bumping the reader epoch, so the RAG cache can quote deleted content until TTL | needs the backend delete path to call the invalidation seam; backend was under concurrent edit — see findings below |
 
 ## Rules
@@ -878,4 +879,65 @@ Epic 138/139/140 regressions: `test_the_work_queue_delivers_each_job_once.py` 29
 fields). Full `verify_gates` green at commit. A real-Redis end-to-end case is the
 same shape Epic 136/139/140 use and is run by the local Redis check, not by the
 offline suite.
+
+## Epic 145 — the producer stops un-parking a job that is still sleeping (DONE)
+
+**The bug Epic 144 left behind, stated precisely.** Epic 144 parks a failed job in
+the delay ZSET and keeps it off the main stream, so `XREADGROUP >` cannot re-claim
+it early. But the DB is the source of truth, and a parked job still has
+`embedding IS NULL`. On the very next tick `producer_pass` ran its
+`SELECT j.id ... WHERE embedding IS NULL` and `XADD`-ed that same job back onto the
+main stream as a **fresh `attempts=0` message**. The consumer group claimed it
+immediately — the backoff was bypassed entirely. A persistently-failing provider
+therefore still got hammered every tick; Epic 144 paced a *message lineage*, but
+the producer re-seeded a new lineage before the old one matured. Worse, the
+consumer could burn a model call on an at-least-once duplicate copy of a job that
+was legitimately parked. This was found by self-review *after* Epic 144 was
+committed (`6590b9c`), not by a failing test — precisely the integration seam
+unit tests on the queue alone cannot see.
+
+**The fix: two sources of "do not re-enqueue / do not embed yet", unioned once.**
+`_suppressed(queue, guard)` in `embed_workers.py` now merges:
+
+* `DlqGuard.active()` — ids inside a dead-letter cooldown (Epic 139);
+* `WorkQueue.parked_ids()` — ids currently sitting in the delay ZSET (this Epic).
+
+Both passes call it. The producer pushes the union into the **SQL WHERE**
+(`NOT j.id = ANY($n::uuid[])`) *before* `LIMIT`, for the same reason as Epic 139:
+a Python post-filter would let suppressed ids fill the batch and starve older
+embeddable rows. The consumer checks the same set and ACKs a suppressed duplicate
+for free, so a leftover copy of a parked/cooling job never spends a model call;
+its authoritative copy returns on its own (`promote_due` / cooldown lapse).
+
+**`parked_ids()` is read-only and fail-open.** With backoff off or `id_field`
+unset it issues **no command** and returns an empty set (zero-drift). Otherwise
+`ZRANGE delay 0 -1`, split each `<origin>\x1f<fields JSON>` member, pull
+`fields[id_field]`; a corrupt member is skipped, duplicates collapse into the set.
+A Redis error returns empty. Crucially, the two sources are read
+**independently** with separate try/except: an outage in one must not blank the
+other and silently re-open that source's storm hole. Both are optimisations over
+the DB scan, never a correctness dependency — total failure degrades to exact
+Epic 138 behaviour ("enqueue everything"), so a Redis outage costs suppression,
+never recall.
+
+**What was explicitly not done.** No change to the ZSET schema, `promote_due`, or
+the delay/backoff math from Epic 144. No new endpoint or public surface. No
+attempt to make the DB producer aware of the delay set directly — the queue is
+the single authority for "this job is parked", and `_suppressed` is the one seam
+where that authority meets the producer's SQL. `parked_ids` is deliberately
+`ZRANGE 0 -1` (the whole small delay set), not a score-filtered read: a parked
+job's `not_before` is irrelevant to suppression — it must stay suppressed until
+`promote_due` moves it back to the stream, at which point it is no longer in the
+ZSET. Finding B (cached content surviving a backend delete) remains **open and
+backend-owned**, untouched here.
+
+**Verification.** `parked_ids()` contract (parse / dedup / corrupt-member skip /
+off→no-command / id_field-unset→no-command / Redis-down fail-open) in
+`test_the_retry_backoff_breaks_the_retry_storm.py`; and end-to-end dual-source
+suppression in `test_the_embed_work_queue_shares_work.py` (producer unions both
+sources, overlaps dedup, each source's outage preserves the other; consumer
+ACKs a parked duplicate without a model call and survives a guard outage;
+backoff-off zero drift; a source-contract test that both passes call
+`await _suppressed(queue, guard)` and no single-source call site remains).
+58 offline tests across the two files pass; full `verify_gates` green at commit.
 

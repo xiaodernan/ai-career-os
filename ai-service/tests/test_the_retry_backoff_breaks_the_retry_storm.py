@@ -91,6 +91,12 @@ class ZsetFakePool:
             return 1 if len(self.zcards[key]) < before else 0
         if cmd == "ZCARD":
             return len(self.zcards.get(a[1], []))
+        if cmd == "ZRANGE":
+            key, lo, hi = a[1], a[2], a[3]
+            rows = sorted(self.zcards.get(key, []))  # by (score, member)
+            lo_i = 0 if lo == "0" else int(lo)
+            hi_i = len(rows) - 1 if hi == "-1" else int(hi)
+            return [m.encode() for _, m in rows[lo_i:hi_i + 1]]
 
         # ---- streams (same model as Epic 140) ----
         if cmd == "XGROUP" and a[1].upper() == "CREATE":
@@ -381,6 +387,72 @@ async def test_delayed_len_is_fail_open():
     snap = await q.snapshot()
     assert snap["delayed_len"] == 0
     assert snap["ok"] is False, "but ok flips so the health report says unknown"
+
+
+# --------------------------------------------------------------- parked_ids (Epic 145)
+def _id_queue(pool, *, backoff_on=True, **kw):
+    """A queue whose id_field is set, so parked_ids has an id to extract."""
+    base = dict(backoff_base_ms=1000 if backoff_on else 0, id_field="job_id")
+    base.update(kw)
+    return _queue(pool, **base)
+
+
+async def test_parked_ids_lists_job_ids_waiting_out_backoff():
+    pool = ZsetFakePool(rng_value=1.0)
+    q = _id_queue(pool)
+    await q.enqueue({"job_id": "a"})
+    await q.enqueue({"job_id": "b"})
+    await q.drain(_false)  # both failures parked
+    assert await q.parked_ids() == {"a", "b"}
+
+
+async def test_parked_ids_drops_a_malformed_member_without_failing_the_read():
+    pool = ZsetFakePool(rng_value=0.0)
+    q = _id_queue(pool)
+    pool.zcards["jobs:delayed"] = [
+        (1.0, "1-0\x1f" + json.dumps({"job_id": "good"})),
+        (2.0, "garbage-no-separator"),
+        (3.0, "2-0\x1f" + json.dumps({"not_an_id": "x"})),
+    ]
+    assert await q.parked_ids() == {"good"}
+
+
+async def test_parked_ids_is_empty_with_no_command_when_backoff_off():
+    """Zero drift: an off queue issues no ZRANGE and suppresses nothing extra."""
+    pool = ZsetFakePool()
+    q = _id_queue(pool, backoff_on=False)
+    assert await q.parked_ids() == set()
+    assert not any(c[0] == "ZRANGE" for c in pool.commands)
+
+
+async def test_parked_ids_is_empty_with_no_command_when_id_field_unset():
+    """Without an id_field there is no id to suppress; do not even read Redis."""
+    pool = ZsetFakePool()
+    q = _queue(pool, backoff_base_ms=1000)  # no id_field
+    assert await q.parked_ids() == set()
+    assert not any(c[0] == "ZRANGE" for c in pool.commands)
+
+
+async def test_parked_ids_is_fail_open_on_redis_down():
+    class Down(ZsetFakePool):
+        async def execute(self, *args):
+            if str(args[0]).upper() == "ZRANGE":
+                raise resp.RespUnavailable("down")
+            return await super().execute(*args)
+
+    q = _id_queue(Down())
+    assert await q.parked_ids() == set(), "a failed read suppresses nothing, never loses recall"
+
+
+async def test_parked_ids_deduplicates_repeated_job_ids():
+    """Two parked attempts of the SAME job id collapse to one suppressed id."""
+    pool = ZsetFakePool(rng_value=0.0)
+    q = _id_queue(pool)
+    pool.zcards["jobs:delayed"] = [
+        (1.0, "1-0\x1f" + json.dumps({"job_id": "a", "attempts": "1"})),
+        (2.0, "2-0\x1f" + json.dumps({"job_id": "a", "attempts": "2"})),
+    ]
+    assert await q.parked_ids() == {"a"}
 
 
 # --------------------------------------------------------------- construction
