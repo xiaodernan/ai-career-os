@@ -5731,6 +5731,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (operator diagnostics). Measured: `test_the_second_question_is_free.py` and
   `test_the_cache_speaks_redis_without_a_client_library.py` 44/44 passing; full suite 2389 passed.)
 
+- [x] **122** The UI is a designed surface, not a form (frontend, partially shipped 2026-11-11).
+
+  (Shipped: token layer additions (`--shadow-halo`/`--shadow-glow`), an ambient body background,
+  `.glow-halo`/`.card-lift`/`.hairline` utilities; the landing hero now shows a static illustration
+  of the product at work (board + match ring + Copilot doorway, role=img); active nav item uses
+  `glow-halo`; timeline rows read via `hairline`. Still open: panel-origin transitions, per-surface
+  skeleton-shape pinning, dashboard hero.)
+
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 
   (`GatewayRateLimitFilter` delegates to `EdgeBudget` (InProcessBudget keeps the current behavior, identity map

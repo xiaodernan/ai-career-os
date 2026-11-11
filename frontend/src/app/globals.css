@@ -57,6 +57,8 @@
   --shadow-soft: 0 1px 2px 0 oklch(0.2 0.02 265 / 0.05), 0 1px 3px 0 oklch(0.2 0.02 265 / 0.06);
   --shadow-card: 0 1px 3px 0 oklch(0.2 0.02 265 / 0.06), 0 4px 12px -4px oklch(0.2 0.02 265 / 0.08);
   --shadow-pop: 0 4px 6px -2px oklch(0.2 0.02 265 / 0.05), 0 12px 32px -8px oklch(0.2 0.02 265 / 0.18);
+  --shadow-halo: 0 0 0 1px oklch(0.2 0.02 265 / 0.04), 0 0 24px -6px oklch(0.55 0.17 258 / 0.22);
+  --shadow-glow: 0 0 48px -12px oklch(0.55 0.17 258 / 0.32);
 
   /* Typography scale additions */
   --text-2xs: 0.6875rem;
@@ -188,6 +190,11 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* A faint ambient halo — high-key linear + two corner radials — so edges read as depth, not flatness. */
+    background:
+      radial-gradient(900px 520px at -10% -12%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 55%),
+      radial-gradient(760px 480px at 112% 112%, color-mix(in oklch, var(--secondary, var(--primary)) 10%, transparent), transparent 55%),
+      var(--background);
   }
   ::selection {
     background: color-mix(in oklch, var(--primary) 22%, transparent);
@@ -328,6 +335,36 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Visual system additions (Epic 122) — consistent elevation + hairlines */
+/* ------------------------------------------------------------------ */
+
+/* A gently elevated ring for focused/active surfaces (nav item, selected card). */
+.glow-halo {
+  box-shadow: var(--shadow-halo);
+}
+
+/* Hairline divider for surfaces that need a quiet separation line. */
+.hairline {
+  border-color: color-mix(in oklch, var(--border) 78%, transparent);
+}
+
+/* Subtle hover elevation for clickable surfaces (cards, rows). */
+.card-lift {
+  transition: transform 180ms var(--ease-out-soft), box-shadow 180ms var(--ease-out-soft);
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+/* A single hairline rule for inverted surfaces (e.g. above a paywalled action). */
+.hairline-solid {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--border);
 }
 
 /* Ensure interactive elements have a minimum touch target size */

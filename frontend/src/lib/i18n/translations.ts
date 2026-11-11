@@ -2056,6 +2056,14 @@ export const translations = {
         "Start with your resume — the system builds your knowledge base, finds matching jobs, and prepares you for interviews.",
       ctaButton: "Get started free",
       footerNote: "Personal project, active development",
+      preview: {
+        label: "Illustration of the CareerOS pipeline: three stages, a match score and the copilot",
+        applied: "Applied",
+        interview: "Interview",
+        offer: "Offer",
+        match: "Match",
+        copilot: "Copilot: draft my follow-up",
+      },
     },
     // The copilot's artifact cards -- what each kind of answer is called.
     artifacts: {
@@ -5019,6 +5027,14 @@ export const translations = {
         "从简历开始——系统会建立你的知识库、找到匹配的职位，并帮你准备面试。",
       ctaButton: "免费开始",
       footerNote: "个人项目，持续开发中",
+      preview: {
+        label: "CareerOS 投递流程示意：三个阶段、匹配分数与 Copilot",
+        applied: "已投递",
+        interview: "面试",
+        offer: "录用",
+        match: "匹配",
+        copilot: "Copilot：帮我起草跟进邮件",
+      },
     },
     // The copilot's artifact cards -- what each kind of answer is called.
     artifacts: {

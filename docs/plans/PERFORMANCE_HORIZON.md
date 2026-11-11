@@ -71,6 +71,16 @@ never refuses a caller who would have been admitted.
 the dev corpus, and add only the indexes a plan actually asks for.
 
 ## Epic 122 — the surface is designed
+**Shipped so far (2026-11-11, verified offline):**
+- Token layer: `--shadow-halo` / `--shadow-glow`, an ambient body background (two corner
+  radials over `--background`), and three utilities (`.glow-halo`, `.card-lift`, `.hairline[-solid]`).
+- The landing hero now carries a static illustration of the product at work (board + match ring
+  + Copilot doorway), drawn from the product's own tokens and labelled as an illustration.
+- Active nav item reads as focused via `glow-halo`; timeline rows use the quieter `hairline` border.
+
+**Still open:** transitions that explain where a panel came from; skeleton shapes pinned to the
+loaded layout for every surface; the dashboard hero proper.
+
 
 **Do.** A token layer (elevation, motion, type scale, focus), a hero that shows the
 product working, skeletons that match the shape of what lands, and transitions that

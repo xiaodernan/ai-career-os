@@ -72,7 +72,7 @@ const TimelineRow = React.memo(function TimelineRow({ event, locale }: {
     <span className="font-medium text-foreground">{event.title || t("timeline.kinds.unknown")}</span>
   );
   return (
-    <li className="flex items-start gap-3 rounded-lg border border-border/60 bg-card px-4 py-3 shadow-soft">
+    <li className="flex items-start gap-3 rounded-lg border hairline bg-card px-4 py-3 shadow-soft">
       <span
         className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted text-muted-foreground [&_svg]:size-4"
         aria-hidden
