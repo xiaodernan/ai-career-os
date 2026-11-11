@@ -26,9 +26,11 @@ NOW = 1_000_000.0
 FRESH_HB = {"last_tick": NOW - 10, "delivered": 4, "dead_lettered": 0}
 
 
-def _snap(*, ok=True, stream_len=0, pending=0, dlq_len=0, dlq_enabled=True):
+def _snap(*, ok=True, stream_len=0, pending=0, dlq_len=0, dlq_enabled=True,
+          delayed_len=0, delayed_enabled=False):
     return {"ok": ok, "stream_len": stream_len, "pending": pending,
-            "dlq_len": dlq_len, "dlq_enabled": dlq_enabled}
+            "dlq_len": dlq_len, "dlq_enabled": dlq_enabled,
+            "delayed_len": delayed_len, "delayed_enabled": delayed_enabled}
 
 
 def _guard(*, enabled=True, cooldown_s=900, cooled_count=0):
@@ -160,13 +162,53 @@ def test_every_verdict_is_in_the_declared_set():
 
 def test_raw_readings_are_returned_alongside_the_verdict():
     """A chart/alert needs the exact number, not just the word 'degraded'."""
-    r = _report(_snap(stream_len=7, pending=2, dlq_len=3, dlq_enabled=True, ok=True),
+    r = _report(_snap(stream_len=7, pending=2, dlq_len=3, dlq_enabled=True,
+                      delayed_len=5, delayed_enabled=True, ok=True),
                 _guard(enabled=True, cooldown_s=600, cooled_count=4), FRESH_HB)
     assert r["queue"] == {"stream_len": 7, "pending": 2, "dlq_len": 3,
-                          "dlq_enabled": True, "ok": True}
+                          "dlq_enabled": True, "delayed_len": 5,
+                          "delayed_enabled": True, "ok": True}
     assert r["guard"] == {"enabled": True, "cooldown_s": 600, "cooled_count": 4}
     assert r["freshness"]["fresh"] is True
     assert r["backend"] == "redis"
+
+
+# --------------------------------------------------------------- delay set (Epic 144)
+def test_parked_jobs_are_reported_without_flipping_a_healthy_verdict():
+    """A backoff window is expected work-in-waiting, NOT degradation.
+
+    The honest opposite of the silent black hole: if we folded delayed_len into
+    the verdict we would cry wolf every time a provider hiccupped and a job took
+    a breath. But we must still *report* it, or a stuck delay set is invisible.
+    """
+    r = _report(_snap(delayed_len=9, delayed_enabled=True), _guard(), FRESH_HB)
+    assert r["verdict"] == "healthy", "backoff is pacing, not failing"
+    assert r["queue"]["delayed_len"] == 9
+    assert r["queue"]["delayed_enabled"] is True
+
+
+def test_delay_set_is_still_observed_when_the_queue_is_unreadable():
+    """unknown wins; the delay number is still passed through for a chart."""
+    r = _report(_snap(ok=False, delayed_len=4, delayed_enabled=True),
+                _guard(), FRESH_HB)
+    assert r["verdict"] == "unknown"
+    assert r["queue"]["delayed_len"] == 4
+
+
+def test_an_old_snapshot_without_delay_keys_is_backward_compatible():
+    """A pre-Epic-144 caller / a half-rolled-out reader must not break the fold."""
+    legacy = {"ok": True, "stream_len": 2, "pending": 0, "dlq_len": 0,
+              "dlq_enabled": True}
+    r = h.health_report(legacy, _guard(), FRESH_HB, mode="redis", now=NOW)
+    assert r["verdict"] == "healthy"
+    assert r["queue"]["delayed_len"] == 0
+    assert r["queue"]["delayed_enabled"] is False
+
+
+def test_untrusted_delay_readings_are_coerced_to_zero():
+    r = _report(_snap(delayed_len="lots", delayed_enabled="yes"), _guard(), FRESH_HB)
+    assert r["queue"]["delayed_len"] == 0
+    assert r["queue"]["delayed_enabled"] is True  # bool("yes") is a known flag
 
 
 def test_untrusted_readings_are_coerced_to_zero():

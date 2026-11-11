@@ -72,6 +72,18 @@ class Settings(BaseSettings):
     # its own when the window lapses; 0 disables suppression (pure Epic 138 behaviour).
     work_queue_dlq_cooldown_s: int = 900
     work_queue_dlq_guard_key: str = "careeros:jobs:embed:dlq:cooldown"
+    # Retry backoff (Epic 144). A failed job is parked in a Redis ZSET for a
+    # jittered delay instead of being re-queued onto the stream for the next tick
+    # to re-claim immediately. Without this, a transient provider blip that would
+    # heal in 30s can burn all `max_deliveries` attempts and be dead-lettered
+    # within five ticks. `base_ms`: the first retry draws from [0, base_ms], the
+    # second from [0, 2*base_ms], ... capped at `cap_ms`, with FULL jitter (uniform
+    # over the window) to de-correlate workers that failed on the same blip — a
+    # fixed/exponential-only delay would synchronise them into a retry storm.
+    # 0 disables backoff and restores the exact pre-Epic-144 immediate-requeue
+    # path (also the default of the WorkQueue constructor, so opt-in is per-worker).
+    work_queue_backoff_base_ms: int = 500
+    work_queue_backoff_cap_ms: int = 30_000
     # Read-only queue health (Epic 140). `stale_s`: a consumer heartbeat older
     # than this means the loop stopped (report "stalled"); keep it comfortably
     # above the loop interval or a slow-but-healthy loop looks dead. `backlog_warn`:

@@ -500,10 +500,13 @@ async def test_snapshot_reports_stream_pending_and_dlq_without_mutating():
         "pending": 0,          # nothing has been XREADGROUP-delivered yet
         "dlq_len": 0,
         "dlq_enabled": True,
+        "delayed_len": 0,      # Epic 144: backoff off => no delay set to read
+        "delayed_enabled": False,
         "ok": True,
     }
     new_cmds = [c for c in pool.commands[len(before):]]
-    # Read-only: XLEN on both streams + XPENDING summary. No XREADGROUP / XACK / XADD.
+    # Read-only: XLEN on both streams + XPENDING summary. No XREADGROUP / XACK /
+    # XADD, and (zero-drift) NO ZCARD: backoff off must not touch a ZSET at all.
     assert all(c[0] in ("XLEN", "XPENDING") for c in new_cmds), new_cmds
     assert pool.groups == set(), "an observer must not create the consumer group"
     assert pool.pel == pel_before, "an observer must not touch the PEL"
@@ -529,7 +532,8 @@ async def test_queue_len_and_dlq_len_are_individually_fail_open():
     assert await q.dlq_len() == 0
     snap = await q.snapshot()
     assert snap == {"stream_len": 0, "pending": 0, "dlq_len": 0,
-                    "dlq_enabled": True, "ok": False}, \
+                    "dlq_enabled": True, "delayed_len": 0,
+                    "delayed_enabled": False, "ok": False}, \
         "a Redis-down read must report ok=False so the health report says unknown, " \
         "not healthy"
 

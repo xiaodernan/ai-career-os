@@ -39,7 +39,7 @@ def _unknown_report(mode: str, *, reason: str = "redis-unavailable") -> dict:
     """A well-formed report whose snapshot says 'we could not read Redis'."""
     report = health.health_report(
         {"ok": False, "stream_len": 0, "pending": 0, "dlq_len": 0,
-         "dlq_enabled": False},
+         "dlq_enabled": False, "delayed_len": 0, "delayed_enabled": False},
         {"enabled": False, "cooldown_s": 0, "cooled_count": 0},
         queue_observer.snapshot_heartbeat(),
         mode=mode, now=time.time(),
@@ -76,7 +76,7 @@ async def read_status() -> dict:
     if mode != "redis":
         return health.health_report(
             {"ok": True, "stream_len": 0, "pending": 0, "dlq_len": 0,
-             "dlq_enabled": False},
+             "dlq_enabled": False, "delayed_len": 0, "delayed_enabled": False},
             {"enabled": False, "cooldown_s": 0, "cooled_count": 0},
             queue_observer.snapshot_heartbeat(), mode=mode,
             now=time.time(), stale_after_s=_stale_s(),

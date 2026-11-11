@@ -77,7 +77,12 @@ def _queue(pool: resp.RespPool) -> workqueue.WorkQueue:
                     if max_deliveries else ""),
         # When the DLQ is on, name the id field so drain() reports dead-lettered job
         # ids for consumer_pass to cool down. With the DLQ off this is inert.
-        id_field=JOB_ID_FIELD if max_deliveries else "")
+        id_field=JOB_ID_FIELD if max_deliveries else "",
+        # Epic 144: pace retries so a transient blip can heal. The cap bounds the
+        # exponential ceiling; the full-jitter shape itself is a pure function in
+        # app.core.backoff (a measurement constant, not a config knob).
+        backoff_base_ms=int(getattr(settings, "work_queue_backoff_base_ms", 500) or 0),
+        backoff_cap_ms=int(getattr(settings, "work_queue_backoff_cap_ms", 30_000) or 0))
 
 
 def _guard(pool: resp.RespPool) -> dlq_guard.DlqGuard:

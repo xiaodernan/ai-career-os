@@ -33,6 +33,13 @@ The verdict precedence encodes the honest answer to "is this queue working?"::
                line: work is arriving faster than it is being drained.
     healthy    live consumer, no poison, no meaningful backlog.
 
+Epic 144 adds ``delayed_len`` to the snapshot: jobs parked in the backoff ZSET,
+waiting out a retry window. It is reported as a first-class number but, like
+``stream_len``, deliberately does NOT change the verdict — a parked job is
+expected work-in-waiting, not degradation. It exists so the delay set can never
+become a silent black hole (a job there is on no stream/PEL/DLQ); a sustained
+climb with a fresh heartbeat is a chart/operator signal, not a false alarm.
+
 Pure functions over plain dicts -- no Redis client, no clock of its own (``now``
 is passed in), no new dependency -- so every branch is offline-verifiable. The
 same shape is what the ``/internal/ops/workqueue`` endpoint returns and what a
@@ -193,6 +200,13 @@ def health_report(snapshot: dict, guard: dict, heartbeat: dict | None, *, mode: 
             "pending": _int(snapshot.get("pending")),
             "dlq_len": _int(snapshot.get("dlq_len")),
             "dlq_enabled": bool(snapshot.get("dlq_enabled")),
+            # Epic 144: the backoff delay set is first-class raw observability so a
+            # parked job is never a silent black hole. Like stream_len, it is
+            # reported but does NOT by itself flip the verdict: a normal backoff
+            # window is expected work-in-waiting, not degradation. A persistent
+            # climb is something an operator charts, not an alert we cry wolf on.
+            "delayed_len": _int(snapshot.get("delayed_len")),
+            "delayed_enabled": bool(snapshot.get("delayed_enabled")),
             "ok": bool(snapshot.get("ok", False)),
         },
         "guard": {

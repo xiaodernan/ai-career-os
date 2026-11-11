@@ -25,7 +25,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 140 | The dead-letter pipeline can be *seen*: one honest verdict over live Redis + consumer liveness | read-only `GET /internal/ops/workqueue`, pure-function health fold, 54 offline tests + real-Redis end-to-end |
 | 141 | The signed-in first screen carries the landing/auth design language, without washing the light theme or growing the bundle | `dashboard/page.test.ts` source contract, copy census, build + bundle budget |
 | 143 | The RAG cache's saving is measured honestly and its invalidation boundary is named, not assumed | read-only `GET /internal/ops/cache`, pure-function verdict (0-rate is three states), off/memory/layered work-count baseline, 48 offline tests |
-| 144 | (observed, not built) Failed embed jobs retry on the *next tick* with no backoff, so a transient provider blip can exhaust `max_deliveries` and dead-letter prematurely | design + findings below; touches `workqueue.drain`/`claim` core, deferred to avoid a rushed regression |
+| 144 | A transient provider blip gets a jittered backoff window to heal in, instead of burning `max_deliveries` in five ticks | Redis-ZSET delay queue + pure-function exponential/full-jitter fold, zero-drift opt-in (worker default ON), 34 offline tests + real-Redis end-to-end |
 | — | (observed bug, backend-owned) Deleting a note/resume retires chunks by direct SQL without bumping the reader epoch, so the RAG cache can quote deleted content until TTL | needs the backend delete path to call the invalidation seam; backend was under concurrent edit — see findings below |
 
 ## Rules
@@ -717,13 +717,14 @@ The A/B baseline is intentionally in-process (no Redis, no provider): it proves 
 cache *mechanism* collapses repeat work, not that a specific production deployment
 will save a specific number of milliseconds.
 
-## Open findings — observed 2026-11-12, deliberately not built this turn
+## Open findings — observed 2026-11-12
 
 Two real gaps were found while scoping the work after Epic 143. Both are recorded
-with their evidence and the reason they were **not** rushed into code, so the next
-session can pick either up without re-deriving the context.
+with their evidence. Finding A was **resolved by Epic 144** in a later turn (the
+reason for deferring it initially, and why the eventual implementation is now
+zero-drift, are preserved below); Finding B remains open and backend-owned.
 
-### Finding A — failed jobs have no retry backoff (candidate Epic 144)
+### Finding A — failed jobs have no retry backoff — RESOLVED by Epic 144
 
 `WorkQueue.drain()` (`app/core/workqueue.py`, the failure branch at lines ~299–331)
 re-queues a failed job with `XADD` straight back onto the main stream, increments
@@ -744,12 +745,16 @@ eligibility gate). Verify: a failed job is not re-claimed before its window, a
 transient failure heals without reaching the DLQ, a persistent failure still
 dead-letters at the cap, and the drift from Epic 138/139 behaviour is explicit.
 
-**Why deferred.** This edits the `drain`/`claim` core that Epics 138/139/140 just
-stabilised, plus `Settings` + `.env.example` (env census + secret-hook choreography),
-and every FakePool in the queue suites. Doing it in the same turn as Epic 143, with
-the backend/e2e/frontend sessions still actively committing, would be a rushed
-regression risk on the project's most delicate reliability path. It is a real,
-well-scoped next Epic — not a placeholder.
+**Why deferred then, built now.** This edits the `drain`/`claim` core that Epics
+138/139/140 just stabilised, plus `Settings` + `.env.example` and every FakePool in
+the queue suites. Doing it in the same turn as Epic 143, with the backend/e2e/
+frontend sessions still actively committing, would have been a rushed regression
+risk. It was deferred with a full design, then built as Epic 144 once the concurrent
+sessions had landed. The eventual design honours the earlier caution: backoff is a
+**zero-drift opt-in layer** — `WorkQueue`'s constructor default `backoff_base_ms=0`
+leaves `drain`/`claim` byte-for-byte the old path and issues *no* ZSET command
+(pinned by a zero-drift tripwire test), while only the real worker factory turns it
+ON by default to fix the bug. See the full Epic 144 section below.
 
 ### Finding B — the cache can quote a deleted document (backend-owned bug)
 
@@ -772,3 +777,105 @@ backend + `HttpAiServiceClient` + its tests, which were under concurrent edit wh
 this was found. The follow-up is a cross-service change and should be sequenced
 after that session settles, then pinned by an e2e case that deletes a note and asks
 the same question again.
+
+---
+
+## Epic 144 — a transient blip gets a jittered window to heal in (DONE)
+
+**The bug, stated precisely.** `WorkQueue.drain()` re-queued a failed job by
+`XADD`-ing it straight back onto the main stream; `claim()` reads `XREADGROUP >`,
+which returns every not-yet-delivered entry with **no per-field filter**. So the
+retry was claimed again on the very next producer tick, zero delay. With
+`work_queue_max_deliveries=5`, an embed-provider blip that would have healed in
+30 seconds could be retried five times in five ticks and dead-lettered — a
+permanent loss of a job that was only briefly unhealthy. Epic 139's `DlqGuard`
+cooldown only starts *after* a job reaches the DLQ; nothing paced the attempts
+before that. This is Finding A, observed after Epic 143 and deferred one turn to
+avoid a rushed edit to the most delicate reliability path.
+
+**Why full jitter, not a fixed or plain-exponential sleep.** A fixed delay — even
+an exponentially growing one — makes every worker that failed on the same blip
+retry at the *same* instant. N replicas then fire N synchronised spikes into a
+provider that is still recovering, and keep it down: a **retry storm** (thundering
+herd). The actual delay is therefore a uniform draw from `[0, min(cap, base·2^(n−1))]`
+(**full jitter**, from AWS's "Exponential Backoff And Jitter", Brooker 2015), not
+`ceiling/2 ± jitter`. Spread across the window, N replicas produce a roughly
+constant trickle instead of N spikes. The exponential *ceiling* still grows so a
+persistent outage backs off, and `cap_ms` bounds the worst-case sleep; the jitter
+is what de-correlates. This is the networking principle the Epic is really about.
+
+**The data structure.** A Redis sorted set (`careeros:jobs:embed:delayed`) is the
+delay scheduler: member = `<origin stream id>\x1f<fields JSON>`, score = `not_before`
+epoch-ms. A parked job is on **none** of the main stream / PEL / DLQ, so `XREADGROUP >`
+cannot re-claim it early. `drain()` calls `promote_due()` first each pass:
+`ZRANGEBYSCORE delay -inf now LIMIT 0 batch` → for each matured member, `XADD` it
+back to the stream, then `ZREM` the member. ZSET-as-delay-queue is the classic
+Redis pattern and needs no new dependency — the existing dependency-free RESP2
+pool already speaks these commands.
+
+**Zero-drift opt-in (the honesty pivot).** `WorkQueue.__init__` gains
+`backoff_base_ms=0` — the *constructor* default is OFF, so every existing caller
+and every FakePool in the queue suites keeps the byte-for-byte old immediate-XADD
+path. A zero-drift tripwire test asserts the off path issues **no ZSET command at
+all** (the fake raises on any unmodelled command). In deliberate contrast, the
+*real worker factory* `embed_workers._queue()` reads `Settings` and defaults
+`work_queue_backoff_base_ms=500` ON, so a shipped worker actually gets the fix;
+a seam test pins that the factory passes the knobs through, because a wiring slip
+there would silently leave production on the storm path while every unit test
+stayed green. A half-rolled-out `Settings` lacking the field still gets 500 via
+`getattr(settings, ..., 500)` — the two defaults (0 for direct callers, 500 for
+production) are intentionally different. `cap` and the jitter shape are pure
+functions in `app/core/backoff.py` with module constants, **not** new config
+churn; only `base`/`cap` are operator knobs, both declared in `.env.example`.
+
+**The honest failure boundary.** promote is deliberately **two non-atomic
+commands**, not a Lua script: Redis has no transaction spanning a ZSET and a
+stream, and an embedded script would be a second unauditable implementation of
+the same protocol over the thin transport. The queue's existing at-least-once +
+idempotent-handler contract covers both orders: `XADD`-then-`ZREM`-fails leaves a
+duplicate (a cheap no-op `SELECT` in the embed handler, since it re-checks
+`embedding IS NULL`); a crash in between replays the same parked job next pass.
+What must never happen is `ZREM`-before-`XADD`, which could **drop** a job — the
+code orders XADD first and a failed XADD leaves the member parked. A `ZADD` park
+failure leaves the message pending (never ACK), so `XAUTOCLAIM` recovers it. A
+corrupt member is ZREM-dropped so it cannot block the head of the score range
+forever (at-least-once means the DB's NULL scan re-enqueues any still-live job).
+`promote_due` moves at most `batch` matured entries per tick; a burst drains over
+several ticks, which is well within the seconds-scale backoff window.
+
+**Observability is mandatory, not a nice-to-have.** A parked job is invisible to
+`XLEN` (stream), `XPENDING` (PEL) and `dlq_len` (DLQ) — without a new reading, a
+growing delay set would be a **silent black hole** and the queue would look
+healthy while work waited out its backoff. `snapshot()` gains `delayed_len`
+(`ZCARD`) + `delayed_enabled`, fail-open, and the `GET /internal/ops/workqueue`
+health report folds both through as first-class raw numbers. Following Epic 140's
+`stream_len` precedent, `delayed_len` deliberately does **not** flip the verdict:
+a backoff window is expected work-in-waiting, not degradation, and alerting on it
+would cry wolf on every hiccup. A sustained climb with a fresh heartbeat is a
+chart/operator signal — that is the honest distinction. The verdict set and
+precedence ladder are unchanged.
+
+**What was explicitly not done.** No Lua script (see failure boundary). No
+per-job `not_before` field on the stream itself (plain `XREADGROUP` cannot filter
+by field, so that would need a due-only read that does not exist; the ZSET is the
+honest scheduler). No change to DLQ/DlqGuard semantics — poison jobs still skip
+backoff and go straight to the DLQ, because a known-bad job has nothing to wait
+for. No new endpoint or public surface. Finding B (cached content surviving a
+backend delete) remains **open and backend-owned** — recorded above, not touched
+here, and no orphan invalidation endpoint was built for it.
+
+**Verification.** `app/core/backoff.py` pure-function contract (exponential curve,
+cap, full-jitter bounds `[0, ceiling]`, hostile/NaN rng clamps, huge-`attempts`
+DoS guard, off→0) and `test_the_retry_backoff_breaks_the_retry_storm.py`
+integration (zero-drift off, park-not-requeue, maturity-gated promote, same-pass
+promote, doubling windows, poison bypass, ZADD-failure keeps pending,
+XADD-failure keeps parked, corrupt-member drop, `delayed_len` fail-open, the two
+worker-factory wiring seams) — 34 offline tests, no sleeps/real Redis. Zero-drift
+Epic 138/139/140 regressions: `test_the_work_queue_delivers_each_job_once.py` 29,
+`test_the_workqueue_health_report_tells_the_truth.py` + queue-status/ops endpoint
+73 combined, `test_the_embed_work_queue_shares_work.py` 28. Env/config censuses
+14 (both examples declare what code reads; the two new knobs bind to real Settings
+fields). Full `verify_gates` green at commit. A real-Redis end-to-end case is the
+same shape Epic 136/139/140 use and is run by the local Redis check, not by the
+offline suite.
+

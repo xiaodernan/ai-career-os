@@ -67,6 +67,8 @@ $tests = @(
   "ai-service/tests/test_the_work_queue_delivers_each_job_once.py",
   "ai-service/tests/test_the_embed_work_queue_shares_work.py",
   "ai-service/tests/test_the_dead_letter_guard_bounds_poison_jobs.py",
+  "ai-service/tests/test_the_backoff_is_exponential_and_jittered.py",
+  "ai-service/tests/test_the_retry_backoff_breaks_the_retry_storm.py",
   "ai-service/tests/test_the_workqueue_health_report_tells_the_truth.py",
   "ai-service/tests/test_the_queue_observer_keeps_a_honest_heartbeat.py",
   "ai-service/tests/test_the_queue_status_reads_without_breaking.py",

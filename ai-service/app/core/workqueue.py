@@ -37,12 +37,13 @@ used by the cache and the task bus. No new dependency, no new infrastructure.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
-from app.core import resp
+from app.core import backoff, resp
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +69,8 @@ class ClaimStats:
     reclaimed: int = 0      # recovered from another consumer's PEL
     ack_failed: int = 0
     dead_lettered: int = 0  # poison jobs moved out of the PEL into the DLQ
+    delayed: int = 0        # failures parked in the delay ZSET (Epic 144; 0 when off)
+    promoted: int = 0       # due jobs moved from the delay ZSET back to the stream
     # The ids of jobs that were dead-lettered, read from the item field named by
     # WorkQueue's `id_field` (empty tuple when no id_field is configured). The embed
     # worker uses these to cool the ids down in its DlqGuard so the producer cannot
@@ -89,12 +92,24 @@ class WorkQueue:
     payload field whose value identifies the job; when set, ``drain`` reports the
     ids of dead-lettered jobs in ``ClaimStats.dead_lettered_ids`` so a caller can
     suppress them upstream, without this generic queue knowing about that store.
+
+    ``backoff_base_ms`` (0 = off, the default) enables delayed retries: instead of
+    ``XADD``-ing a failed job straight back onto the stream for the next tick to
+    re-claim, it is parked in a Redis sorted set ``delay_zset`` (default
+    ``<stream>:delayed``) with a score of ``now + full_jitter(attempts)``. ``drain``
+    calls ``promote_due`` first each pass to move matured entries back. With the
+    default 0 the failure path is byte-for-byte the pre-Epic-144 ``XADD`` path:
+    no sorted-set command is ever issued, so existing callers and fakes are inert.
+    ``backoff_cap_ms`` bounds the exponential ceiling (see ``app.core.backoff``).
     """
 
     def __init__(self, pool: resp.RespPool, *, stream: str, group: str, consumer: str,
                  min_idle_ms: int = 60_000, batch: int = 16, maxlen: int = 0,
                  max_deliveries: int = 0, dlq_stream: str = "",
-                 id_field: str = "") -> None:
+                 id_field: str = "", backoff_base_ms: int = 0,
+                 backoff_cap_ms: int = backoff.DEFAULT_CAP_MS,
+                 delay_zset: str = "", now_ms: Callable[[], int] | None = None,
+                 rng: backoff.Rng | None = None) -> None:
         if min_idle_ms <= 0 or batch <= 0:
             raise ValueError("min_idle_ms and batch must be positive")
         if maxlen < 0:
@@ -103,6 +118,8 @@ class WorkQueue:
             raise ValueError("max_deliveries must be >= 0 (0 disables the DLQ)")
         if max_deliveries and not dlq_stream:
             raise ValueError("max_deliveries needs a dlq_stream to move poison jobs to")
+        if backoff_base_ms < 0 or backoff_cap_ms < 0:
+            raise ValueError("backoff_base_ms / backoff_cap_ms must be >= 0")
         self.pool = pool
         self.stream = stream
         self.group = group
@@ -113,6 +130,13 @@ class WorkQueue:
         self.max_deliveries = max_deliveries
         self.dlq_stream = dlq_stream
         self.id_field = id_field
+        # Epic 144: 0 keeps the old immediate-requeue path. Injected clock/rng keep
+        # the whole delay schedule deterministic and offline-testable.
+        self.backoff_base_ms = int(backoff_base_ms)
+        self.backoff_cap_ms = int(backoff_cap_ms)
+        self.delay_zset = delay_zset or f"{stream}:delayed"
+        self._now_ms = now_ms or (lambda: int(time.time() * 1000))
+        self._rng = rng
         self._group_ready = False
 
     # -------------------------------------------------------------- wire helpers
@@ -220,6 +244,109 @@ class WorkQueue:
             return 0
         return int(await self.pool.execute("XACK", self.stream, self.group, *stream_ids) or 0)
 
+    # ---------------------------------------------------------- delayed retries (Epic 144)
+    async def promote_due(self) -> int:
+        """Move matured entries from the delay ZSET back onto the main stream.
+
+        A failed job is parked with score ``now + full_jitter(attempts)``. Once
+        that instant passes, its member must return to the stream for ``claim``
+        to pick up. This is the promote half, called at the top of every ``drain``
+        pass so a matured job costs no extra tick. Returns how many were promoted.
+
+        The move is deliberately TWO non-atomic commands, not a Lua script:
+
+            ZRANGEBYSCORE delay -inf now LIMIT 0 batch   -> matured members
+            XADD stream * <fields> ; ZREM delay member   -> per member
+
+        Redis has no transaction spanning a ZSET and a stream, and embedding a Lua
+        script would be a second, unauditable implementation of the same protocol
+        for the dependency-free transport. The queue's existing at-least-once +
+        idempotent-handler contract already covers both failure orders:
+        XADD-then-ZREM-fails leaves a duplicate (a cheap no-op SELECT in the embed
+        handler); a crash in between replays the same parked job next pass. What
+        must NEVER happen is ZREM-before-XADD, which could *drop* a job — hence the
+        order here.
+
+        With backoff off this is a zero-command no-op, so the default path stays
+        byte-for-byte the pre-Epic-144 behaviour.
+        """
+        if self.backoff_base_ms <= 0:
+            return 0
+        now = self._now_ms()
+        try:
+            members = await self.pool.execute(
+                "ZRANGEBYSCORE", self.delay_zset, "-inf", str(now),
+                "LIMIT", "0", str(self.batch)) or []
+        except (resp.RespUnavailable, resp.RespError, OSError) as e:
+            log.warning("work queue promote_due read failed: %s (parked jobs stay put)", e)
+            return 0
+
+        promoted = 0
+        for member in members:
+            raw = member.decode() if isinstance(member, bytes) else str(member)
+            try:
+                origin_id, payload = raw.split("\x1f", 1)
+                fields = json.loads(payload)
+                if not isinstance(fields, dict):
+                    raise ValueError("payload is not a JSON object")
+            except (ValueError, TypeError) as e:
+                # A corrupt member would sit at the head of the score range forever
+                # and block every later promote. Drop it. At-least-once means the
+                # DB's embedding-IS-NULL source of truth re-enqueues any still-live
+                # job, so dropping a *record* cannot lose *work*.
+                log.error("work queue dropping a corrupt delay member: %s (%s)",
+                          raw[:120], e)
+                try:
+                    # Use the decoded string, not the raw RESP bytes: the member we
+                    # wrote via ZADD was a str, and matching on a consistent str
+                    # avoids a bytes/str mismatch on transports that decode replies.
+                    await self.pool.execute("ZREM", self.delay_zset, raw)
+                except (resp.RespUnavailable, resp.RespError, OSError):
+                    pass
+                continue
+
+            flat: list[Any] = []
+            for k, v in fields.items():
+                flat.extend((k, v))
+            cmd: list[Any] = [self.stream]
+            if self.maxlen:
+                cmd += ["MAXLEN", "~", str(self.maxlen)]
+            try:
+                await self.pool.execute("XADD", *cmd, "*", *flat)
+            except (resp.RespUnavailable, resp.RespError, OSError) as e:
+                # XADD failed: leave the member parked for the next pass. ZREM must
+                # never run before a successful XADD, or the job would be lost.
+                log.warning("work queue promote XADD failed for %s: %s (stays parked)",
+                            origin_id, e)
+                continue
+            try:
+                # `raw` is the decoded member (a str), exactly what ZADD wrote.
+                # Passing the decoded form is symmetric with the write and robust
+                # to transports that hand back reply bytes.
+                await self.pool.execute("ZREM", self.delay_zset, raw)
+            except (resp.RespUnavailable, resp.RespError, OSError) as e:
+                # Duplicate-later, never loss: the idempotent handler absorbs it.
+                log.warning("work queue promote ZREM failed for %s: %s (duplicate "
+                            "possible; handler is idempotent)", origin_id, e)
+            promoted += 1
+        return promoted
+
+    async def delayed_len(self) -> int:
+        """Entries parked in the delay ZSET (fail-open, read-only). Off -> 0.
+
+        Non-zero means jobs are inside their backoff window, NOT that they are
+        stuck: ``promote_due`` returns them to the stream once ``not_before``
+        passes. A *persistently growing* value with a fresh consumer heartbeat is
+        the signal an operator watches (a provider is failing repeatedly), and it
+        is why the delay set is observable rather than a silent black hole.
+        """
+        if self.backoff_base_ms <= 0:
+            return 0
+        try:
+            return int(await self.pool.execute("ZCARD", self.delay_zset) or 0)
+        except Exception:
+            return 0
+
     async def pending_counts(self) -> dict[str, int]:
         """`{stream_id: delivery_count}` for this group's PEL, from Redis.
 
@@ -265,11 +392,21 @@ class WorkQueue:
         attempt count travel with the message, so it stays correct across a worker
         crash (the orphan XAUTOCLAIM later picks up carries its ``attempts`` field).
 
+        With ``backoff_base_ms`` set (Epic 144), a *non-poison* failure is parked in
+        ``delay_zset`` with score ``now + full_jitter(attempts)`` instead of being
+        XADD-ed straight back onto the stream. ``promote_due`` at the top of each
+        pass returns matured entries to the stream. This spaces out retries so a
+        transient provider blip can heal instead of burning all ``max_deliveries``
+        within five ticks. With the default 0 the failure path is the original
+        immediate-XADD, byte for byte.
+
         With ``max_deliveries`` set, a job whose re-queued attempt reaches the limit
         is moved to ``dlq_stream`` instead: XADD the DLQ entry **first**, then ACK
         the main-stream copy, so a failed DLQ write leaves it pending (never dropped).
-        Without a DLQ, ``max_deliveries=0`` keeps the original behaviour: a failed
-        job is re-queued indefinitely, its attempts still visible for an operator.
+        Backoff never delays a poison job's trip to the DLQ — a known-bad job has
+        nothing to wait for. Without a DLQ, ``max_deliveries=0`` keeps the original
+        behaviour: a failed job is re-queued (or parked) indefinitely, its attempts
+        still visible for an operator.
 
         Both the retry re-queues and the DLQ adds are trimmed with ``MAXLEN ~ maxlen``.
         That matters because the DB (``embedding IS NULL``) is the source of truth: a
@@ -281,10 +418,14 @@ class WorkQueue:
         producer-side decision, deliberately kept out of this generic queue.)
         """
         await self.ensure_group()
+        # Epic 144: return any matured parked jobs to the stream BEFORE claiming,
+        # so they are eligible in this same pass. Off => zero-command no-op.
+        promoted = await self.promote_due()
         items = await self.claim()
         acked: list[str] = []
         dead_lettered = 0
         dead_lettered_ids: list[str] = []
+        delayed = 0
         failed = 0
         for item in items:
             try:
@@ -310,6 +451,33 @@ class WorkQueue:
                     "origin_id": item.stream_id,
                     "dlq_at": str(int(time.time())),
                 })
+            # Epic 144: a NON-poison failure with backoff on is parked in the delay
+            # ZSET instead of being XADD-ed straight back. It stays out of the main
+            # stream (so `XREADGROUP >` cannot re-claim it) until `not_before`.
+            # Poison jobs deliberately skip this: a known-bad job has nothing to
+            # wait for, and the DLQ + DlqGuard cooldown already pace it.
+            if not poison and self.backoff_base_ms > 0:
+                payload = json.dumps(fields, sort_keys=True, separators=(",", ":"))
+                member = f"{item.stream_id}\x1f{payload}"
+                delay = backoff.full_jitter_ms(
+                    attempts, base_ms=self.backoff_base_ms,
+                    cap_ms=self.backoff_cap_ms, rng=self._rng)
+                not_before = self._now_ms() + delay
+                try:
+                    await self.pool.execute(
+                        "ZADD", self.delay_zset, str(not_before), member)
+                except (resp.RespUnavailable, resp.RespError, OSError) as e:
+                    # Park failed: leave the message pending so XAUTOCLAIM can
+                    # recover it. Never ACK; a lost park would lose the retry.
+                    log.warning("work queue delay ZADD failed for %s: %s (stays pending)",
+                                item.stream_id, e)
+                    failed += 1
+                    continue
+                # Park succeeded: the old copy can leave the PEL; the retry now
+                # lives in the delay set, not on the stream.
+                acked.append(item.stream_id)
+                delayed += 1
+                continue
             flat: list[Any] = []
             for k, v in fields.items():
                 flat.extend((k, v))
@@ -350,7 +518,8 @@ class WorkQueue:
         return ClaimStats(delivered=len(items), reclaimed=0,
                           ack_failed=len(acked) - ack_count + failed,
                           dead_lettered=dead_lettered,
-                          dead_lettered_ids=tuple(dead_lettered_ids))
+                          dead_lettered_ids=tuple(dead_lettered_ids),
+                          delayed=delayed, promoted=promoted)
 
     async def pending(self) -> int:
         """Best-effort PEL length for this group (observability)."""
@@ -402,11 +571,21 @@ class WorkQueue:
         Returns a plain dict so it can cross the JSON/HTTP boundary and be folded
         into the pure-function health report without carrying a Redis client:
 
-        ``stream_len``  — entries retained on the main stream (``XLEN``).
-        ``pending``     — entries in this group's PEL (``XPENDING`` summary).
-        ``dlq_len``     — entries on the dead-letter stream (``XLEN``).
-        ``dlq_enabled`` — whether a DLQ is configured at all.
-        ``ok``          — whether **all** reads succeeded.
+        ``stream_len``     — entries retained on the main stream (``XLEN``).
+        ``pending``        — entries in this group's PEL (``XPENDING`` summary).
+        ``dlq_len``        — entries on the dead-letter stream (``XLEN``).
+        ``dlq_enabled``    — whether a DLQ is configured at all.
+        ``delayed_len``    — jobs parked in the backoff ZSET (``ZCARD``; Epic 144).
+        ``delayed_enabled``— whether backoff is on at all.
+        ``ok``             — whether **all** reads succeeded.
+
+        ``delayed_len`` is important for honesty: a parked job is on *none* of the
+        stream / PEL / DLQ, so without this reading a growing delay set would be a
+        silent black hole — the queue would look healthy while work waited out its
+        backoff. Non-zero is not itself unhealthy (it is the expected cost of
+        spacing retries); a persistent climb with a fresh heartbeat is the signal.
+        With backoff off, ``delayed_enabled=False`` and no ``ZCARD`` is issued, so
+        pre-Epic-144 observers see an unchanged command set.
 
         ``ok`` is the honest part. A fail-open 0 is indistinguishable from a
         genuinely empty queue, so an observer that only returned zeroes could not
@@ -445,16 +624,26 @@ class WorkQueue:
                 return int(rows[0]) if rows else 0
             return await _observe(read())
 
+        async def _delayed() -> tuple[int, bool]:
+            # Backoff off is a known state, not a failed read: return 0 WITHOUT a
+            # ZCARD so an off queue issues exactly the pre-Epic-144 command set.
+            if self.backoff_base_ms <= 0:
+                return 0, True
+            return await _observe(self.pool.execute("ZCARD", self.delay_zset))
+
         # Independent reads; asyncio.gather keeps the observer to one event-loop
-        # round-trip instead of summing three network latencies. Each degrades on
-        # its own so a partial failure blanks one number, not the whole report.
-        (stream_len, ok1), (pending, ok2), (dlq_len, ok3) = await asyncio.gather(
-            _xlen(self.stream), _pending(), _xlen(self.dlq_stream),
-        )
+        # round-trip instead of summing network latencies. Each degrades on its own
+        # so a partial failure blanks one number, not the whole report.
+        (stream_len, ok1), (pending, ok2), (dlq_len, ok3), (delayed_len, ok4) = \
+            await asyncio.gather(
+                _xlen(self.stream), _pending(), _xlen(self.dlq_stream), _delayed(),
+            )
         return {
             "stream_len": stream_len,
             "pending": pending,
             "dlq_len": dlq_len,
             "dlq_enabled": bool(self.dlq_stream),
-            "ok": ok1 and ok2 and ok3,
+            "delayed_len": delayed_len,
+            "delayed_enabled": self.backoff_base_ms > 0,
+            "ok": ok1 and ok2 and ok3 and ok4,
         }
