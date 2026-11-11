@@ -5781,8 +5781,8 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **127** A route that ships too much Java goes red (frontend/CI, verified 2026-11-11).
 
   (`frontend/scripts/bundle-budget.mjs` recomputes each page route's gzipped first-load
-  weight from `app-build-manifest.json` and fails over 340 kB; heaviest route on this host is
-  /applications at ~302 kB. `npm run budget` runs the production build first; CI gained a
+  weight from `app-build-manifest.json` and fails over 310 kB (tightened from 340 on 2026-11-12); heaviest
+  route on this host is /jobs/[id] at ~300 kB. `npm run budget` runs the production build first; CI gained a
   dedicated `budget` job wired into `offline-gate`. The one network dependency of that job
   (Google Fonts) is gone as of the self-hosted @fontsource move (fonts are inlined in the
   standalone image).)
@@ -5823,6 +5823,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   XREAD BLOCK; fail-open to the memory feed on a Redis outage; the owner gate stays fail-closed.
   Cross-replica owner resolution is the documented remaining step. Verified by a fake-streams
   Redis suite (6/6); full ai-service suite 2410 passed; verify_gates 267/267.)
+
+- [x] **141** The ten-thousandth timeline row is not drawn until it is wanted (frontend, verified 2026-11-12).
+
+  (`components/common/virtual-list.tsx`: dependency-free, fixed-height windowed list -- a pure
+  `computeWindow()` (clamped edges, zero-height-safe, unit-tested without a layout) plus a
+  `VirtualList` component (absolute-positioned rows, full track height, `aria-setsize` /
+  `aria-posinset` so AT is told the honest row count, ResizeObserver-measured viewport,
+  SSR-deterministic at-rest window). Rows are fixed-height by design (72 px, single-line
+  truncation with a `title` fallback); the timeline engages the window past 100 rows
+  (`VIRTUAL_THRESHOLD`), and below that the DOM is byte-identical to before the change.
+  virtual-list.test.tsx 7/7; timeline page suite green; vitest 1212 passed; `tsc --noEmit`
+  clean; production build exit 0; `/timeline` 237 kB gzip (+5.4 kB for the windowing code);
+  bundle budget tightened 340 -> 310 kB gzip across all 35 routes, heaviest `/(app)/jobs/[id]/page`
+  at 299.6 kB. Honest bound: the virtualization path has not run in a browser here (no feed
+  over 100 rows is seeded) -- it is pinned by the pure math and the SSR markup; a live scroll
+  walkthrough on a seeded long feed remains the follow-up.)
 
 - [x] **120** Edge rate limit is one budget across replicas (gateway, verified 2026-11-11).
 

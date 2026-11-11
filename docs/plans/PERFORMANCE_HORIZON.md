@@ -50,7 +50,7 @@ document invalidates the key, and the Redis client's protocol behaviour is pinne
 a fake server that fragments its replies.
 
 ## Epic 119 — the ten-thousandth row costs nothing to draw **DONE (verified 2026-11-11)**
-**Scope as shipped:** memoised rows and derivations on the timeline, inbox, and Kanban board (react-memo on TimelineRow and KanbanCard, memoised visible/items/rows/kindGroups), so parent re-renders no longer redo per-row string/filter work. Virtual rendering of full windows still open (tracked with Epic 123/124).
+**Scope as shipped:** memoised rows and derivations on the timeline, inbox, and Kanban board (react-memo on TimelineRow and KanbanCard, memoised visible/items/rows/kindGroups), so parent re-renders no longer redo per-row string/filter work. Virtual rendering shipped as Epic 141 (see the `Epic 141` section below; `components/common/virtual-list.tsx`).
 
 
 **Measured.** The board, the timeline and the inbox all render windows of rows, and
@@ -59,6 +59,30 @@ every window re-derives strings, sorts and formats per render.
 **Do.** Memoise the pure derivations per row identity, keep the sort keys stable
 (`(at, kind, refId)`), and virtualise the longest lists rather than drawing the whole
 window.
+
+## Epic 141 — the ten-thousandth row is not drawn until it is wanted **DONE (verified 2026-11-12)**
+
+**Measured.** Every row the timeline owned was in the DOM whether or not the reader ever
+scrolled to it -- the merge is server-side (Epic 81) but the *draw* was always client-side.
+Past a few hundred events the longest read path in the product pays for rows nobody sees.
+
+**Shipped (2026-11-12, verified offline):**
+- `components/common/virtual-list.tsx` -- a dependency-free, fixed-height windowed list:
+  pure `computeWindow()` (clamped edges, zero-height-safe, exercised by unit tests without
+  a layout) + a `VirtualList` component (absolute-positioned rows, full track height,
+  `aria-setsize`/`aria-posinset` so AT is told the honest row count, ResizeObserver-measured
+  viewport, SSR-deterministic at-rest window).
+- Rows are fixed-height by design (72 px, single-line truncation with `title` fallback);
+  variable-height rows belong to the full-render path, and this component says so.
+- The timeline uses the window only past 100 rows (`VIRTUAL_THRESHOLD`); below that, the
+  DOM is byte-identical to before the change (unit/e2e small-feeds behave exactly as before).
+
+**Verification (offline, 2026-11-12):** `virtual-list.test.tsx` 7/7 (window math edges,
+SSR at-rest window, aria counts, total track height); timeline page suite green; vitest
+full suite green; `tsc --noEmit` clean; production build exit 0. Honest bound: the
+virtualization path itself has not run in a browser here (no feed over 100 rows is
+seeded) -- the path is pinned by the pure math and the SSR markup, not by a live scroll
+session. A live walkthrough on a seeded long feed remains the follow-up.
 
 ## Epic 120 — the edge's budget is one budget **DONE (verified 2026-11-11)**
 
@@ -233,7 +257,8 @@ shared base is ~103 kB.
 **Shipped (2026-11-11, verified offline):**
 - `frontend/scripts/bundle-budget.mjs` -- recomputes each page route's first-load weight
   from `.next/app-build-manifest.json` the way the table does (unique chunks per route,
-  gzip-compressed), prints the table, and exits 1 when any route exceeds **340 kB gzip**.
+  gzip-compressed), prints the table, and exits 1 when any route exceeds **310 kB gzip** (tightened from 340 on 2026-11-12; heaviest
+route `/(app)/jobs/[id]/page` measured 299.6 kB gzip across 35 routes).
 - `npm run budget` (= `npm run build && node scripts/bundle-budget.mjs`); README Tests
   section documents it.
 - CI: a dedicated `budget` job (its own runner, so the fast vitest+tsc job stays fast),

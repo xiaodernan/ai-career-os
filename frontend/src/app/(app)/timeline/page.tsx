@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { QueryBoundary } from "@/components/common/query-boundary";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { VirtualList } from "@/components/common/virtual-list";
 import { useTimeline } from "@/lib/hooks/timeline";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -26,6 +27,11 @@ import type { TimelineEntry } from "@/lib/api/types";
 // `kind` is the one narrowing the timeline accepts in the URL, and a `?kind=bogus` narrows
 // to the rows with that exact kind (which honestly can be none) rather than to nothing at all.
 const PAGE_DEFAULTS: { kind?: string } = { kind: undefined };
+
+/** Constant row geometry: the windowed path requires a row that never wraps. */
+const ROW_HEIGHT = 72;
+/** Below this, the full render stays -- byte-identical to before the windowing work. */
+const VIRTUAL_THRESHOLD = 100;
 
 /**
  * The timeline (Epic 81): one ordered read over what the loop has written
@@ -55,7 +61,7 @@ const KIND_VISUALS: Record<string, { icon: LucideIcon; labelKey: string; href?: 
   unknown: { icon: History, labelKey: "timeline.kinds.unknown" },
 };
 
-const TimelineRow = React.memo(function TimelineRow({ event, locale }: {
+const RowBody = React.memo(function RowBody({ event, locale }: {
   event: TimelineEntry;
   locale: "en" | "zh";
 }) {
@@ -64,28 +70,29 @@ const TimelineRow = React.memo(function TimelineRow({ event, locale }: {
     KIND_VISUALS[event.kind] ?? KIND_VISUALS.unknown;
   const Icon = visual.icon;
   const href = visual.href?.(event.refId);
+  const title = event.title || t("timeline.kinds.unknown");
   const titleNode = href ? (
-    <Link href={href} className="text-foreground hover:underline underline-offset-4">
-      {event.title || t("timeline.kinds.unknown")}
+    <Link href={href} title={title} className="block truncate text-foreground hover:underline underline-offset-4">
+      {title}
     </Link>
   ) : (
-    <span className="font-medium text-foreground">{event.title || t("timeline.kinds.unknown")}</span>
+    <span title={title} className="block truncate font-medium text-foreground">{title}</span>
   );
   return (
-    <li className="flex items-start gap-3 rounded-lg border hairline bg-card px-4 py-3 shadow-soft">
+    <div className="flex h-16 items-center gap-3 rounded-lg border hairline bg-card px-4 shadow-soft">
       <span
-        className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted text-muted-foreground [&_svg]:size-4"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted text-muted-foreground [&_svg]:size-4"
         aria-hidden
       >
         <Icon aria-hidden />
       </span>
       <span className="min-w-0 flex-1 space-y-0.5">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-foreground">{titleNode}</span>
-          <Badge variant="outline" className="text-2xs">{t(visual.labelKey)}</Badge>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 flex-1">{titleNode}</span>
+          <Badge variant="outline" className="shrink-0 text-2xs">{t(visual.labelKey)}</Badge>
         </span>
         {event.summary ? (
-          <span className="block text-sm text-muted-foreground">{event.summary}</span>
+          <span className="block truncate text-sm text-muted-foreground" title={event.summary}>{event.summary}</span>
         ) : null}
       </span>
       <time
@@ -94,9 +101,20 @@ const TimelineRow = React.memo(function TimelineRow({ event, locale }: {
       >
         {formatDateTime(event.at, locale)}
       </time>
+    </div>
+  );
+});
+
+/** One fixed-height li per row: the full render below the threshold keeps the plain list. */
+function TimelineRow({ event, locale }: { event: TimelineEntry; locale: "en" | "zh" }) {
+  return (
+    <li className="h-[72px]">
+      <RowBody event={event} locale={locale} />
     </li>
   );
-})
+}
+
+const rowKey = (event: TimelineEntry) => `${event.kind}:${event.refId}:${event.at}`;
 
 export default function TimelinePage() {
   const { t, locale } = useLocale();
@@ -188,11 +206,26 @@ export default function TimelinePage() {
               </p>
             );
           }
+          // Epic 141: past the threshold, the window engages -- a reader who opened the
+          // timeline to look at one recent event no longer pays to draw ten thousand.
+          // Below it the DOM is byte-identical to the pre-windowing page.
+          if (visible.length > VIRTUAL_THRESHOLD) {
+            return (
+              <VirtualList
+                items={visible}
+                rowHeight={ROW_HEIGHT}
+                getKey={rowKey}
+                renderItem={(event) => <RowBody event={event} locale={locale} />}
+                className="h-[70vh] overflow-y-auto"
+                aria-label={t("timeline.title")}
+              />
+            );
+          }
           return (
             <ol className="flex flex-col gap-2">
               {visible.map((event) => (
                 <TimelineRow
-                  key={`${event.kind}:${event.refId}:${event.at}`}
+                  key={rowKey(event)}
                   event={event}
                   locale={locale}
                 />

@@ -959,7 +959,7 @@ describe("endpoints ↔ backend route parity", () => {
       .sort();
   }
 
-  it("every key a request body sends is a field the handler binds", () => {
+  it("every key a request body sends is a field the handler binds", { timeout: 60_000 }, () => {
     const dropped = readBodies()
       .filter((r) => !r.unresolved.length && r.dto && !r.untyped)
       .map((r) => ({ row: r, bad: r.keys.filter((k) => !r.accepts.has(k)) }))

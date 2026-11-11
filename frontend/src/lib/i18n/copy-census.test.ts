@@ -111,7 +111,11 @@ describe("the browser's copy", () => {
     // series' three motion primitives: components/ui/aurora.tsx,
     // components/ui/gradient-text.tsx, components/ui/reveal.tsx (AuroraBackground,
     // GradientText, Reveal).
-    expect(browserSources().length).toBe(167);
+    // overrides (AuroraBackground, GradientText, Reveal). 168 with the windowed list
+    // (Epic 141): components/common/virtual-list.tsx, the longest-read rendering path.
+    // It carries zero user-facing copy of its own (aria-label comes in via props);
+    // it is a new browser source, so the population moved.
+    expect(browserSources().length).toBe(168);
   });
 
   it("finds a sentence, however long it is", () => {
