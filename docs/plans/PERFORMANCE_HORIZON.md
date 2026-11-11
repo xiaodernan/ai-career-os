@@ -243,8 +243,10 @@ was spent on nobody.
   `exchange()` refuses before dispatch when the budget already passed
   (`AI_SERVICE_UNAVAILABLE`, one clock read, no I/O).
 - ai-service carries the value into a context variable (echoed on the answer); the most
-  expensive route (`/internal/rag/answer`) has a backstop: a past-due budget refuses with
-  `SERVICE_DEADLINE_EXCEEDED` (503) without retrieving anything.
+  expensive route (`/internal/rag/answer`) has two checkpoints: before retrieval (a budget
+  already gone refuses with `SERVICE_DEADLINE_EXCEEDED`, 503, nothing retrieved) and after
+  retrieval (retrieval can burn the whole budget; the model is never asked -- pinned by a
+  scripted-budget test, 2026-11-11).
 - Documented in MICROSERVICES.md §6. A deadline is work conservation, never a permission
   problem; `x-request-deadline-ms` is echoed, garbage is ignored.
 

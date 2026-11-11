@@ -92,6 +92,12 @@ async def rag_answer(req: AnswerReq, ctx: Ctx = Depends(require_internal)):
     r = await retrieve(req.query, user_id=ctx.user_id, run_id=run_id,
                        context_summary=req.context_summary, top_k=req.top_k,
                        kinds=req.kinds, document_ids=req.document_ids)
+    # The second checkpoint: retrieval can burn the whole budget by itself (a miss
+    # storm on a cold corpus). If the caller is gone by the time the evidence is in,
+    # the model call that follows is pure waste -- stop before it.
+    remaining = deadline_remaining_ms()
+    if remaining is not None and remaining <= 0:
+        raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     evidence = r["evidence"]
     user_prompt = (
         f"User question: {req.query}\n\n"

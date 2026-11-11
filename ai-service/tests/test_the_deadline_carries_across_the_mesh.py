@@ -65,6 +65,33 @@ def test_a_past_deadline_is_refused_before_the_engine_works(monkeypatch):
     assert called == []
 
 
+def test_retrieval_can_burn_the_budget_and_the_model_is_not_asked(monkeypatch):
+    calls = []
+
+    async def _retrieve(*args, **kwargs):
+        calls.append("retrieve")
+        return {"evidence": [{"n": 1, "quote": "x"}], "context_block": "ctx",
+                "understanding": {}}
+
+    async def _ask_explode(*args, **kwargs):
+        calls.append("ask")
+        raise AssertionError("the model must not be asked when the budget passed during retrieval")
+
+    budget = iter([60_000, -1])  # entering with budget; leaving retrieval without it
+
+    monkeypatch.setattr("app.api.rag.retrieve", _retrieve)
+    monkeypatch.setattr("app.api.rag.ask", _ask_explode)
+    monkeypatch.setattr("app.api.rag.deadline_remaining_ms", lambda: next(budget))
+
+    deadline = str(int(time.time() * 1000) + 60_000)
+    r = client.post("/internal/rag/answer", json={"query": "hello"},
+                    headers={**AUTH, DEADLINE: deadline})
+
+    assert r.status_code == 503
+    assert r.json()["detail"]["code"] == SERVICE_DEADLINE_EXCEEDED.code
+    assert calls == ["retrieve"]  # retrieval ran; the model never got asked
+
+
 def test_the_deadline_is_echoed_not_minted(monkeypatch):
     deadline = str(int(time.time() * 1000) + 60_000)
 
