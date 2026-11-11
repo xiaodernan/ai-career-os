@@ -179,6 +179,22 @@ call is on the critical path of every page and is read-mostly.
   stays the fallback. Actuator redis health stays disabled, so liveness cannot flip on a
   cache outage.
 
+**Defect found by e2e and fixed (2026-11-12).** The yml literal `cache: off` was parsed by
+YAML 1.1 as the boolean `false`, so `@Value("${careeros.dashboard.cache:off}")` received the
+string `false` -- `"off".equals(mode)` was false, `"caffeine".equals(mode)` was false, and
+every read took the Redis branch. The dev Docker stack ran the cache for weeks while the docs
+and this horizon said passthrough; the Prometheus counter read `backend="false"` the whole
+time. Found by the `golden-journey` spec: the browser's dashboard prefetch (login redirect)
+populated the pre-write 0/0 snapshot, and the test's read after PATCH returned it verbatim
+(`kanban 0/0`, `recentRuns` containing a run committed 5s before the app did). A/B reproduced
+it deterministically: prime-once-then-write -> 0/0, no prime -> 1/1. The prod path was never
+affected (the env var `CAREEROS_DASHBOARD_CACHE` arrives intact as a string); the defect was
+the yml literal alone. Fixed in the yml (`cache: "off"`), hardened in `DashboardCache`
+(normalizes `""`, `off`, `false`, `0`, `no` to off; any unrecognized spelling fails closed to
+off with a warn -- a typo loses the cache, never correctness), and pinned with tests
+(`aBareYmlOffIsNotABackend`, `anUnknownBackendFailsClosedToOff`,
+`aQuotedOrEnvSpellingReachesTheRightBackend` -- `DashboardCacheTest` now 9/9).
+
 **Verification (offline, 2026-11-11):** `DashboardCacheTest` 6/6 (off passthrough, caffeine
 round-trip, TTL expiry, poisoned-entry eviction, Redis-outage fail-open, hit/miss counters);
 `DashboardServiceMetricsTest` + `DashboardServiceKanbanTest` updated for the new constructor

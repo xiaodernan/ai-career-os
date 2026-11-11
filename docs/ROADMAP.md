@@ -5764,8 +5764,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   entries evicted; `careeros:v1:dashboard:<uuid>` keys; Prometheus counters
   `careeros.dashboard.cache`. Enable with `CAREEROS_DASHBOARD_CACHE=redis` in
   `.env.prod` (the prod override carries no interpolation for it; env_file is the
-  pass-through); Actuator redis health stays disabled. DashboardCacheTest 6/6;
-  backend unit suite (`*Test`) green; live-Redis round-trip not run here (no Docker).)
+  pass-through); Actuator redis health stays disabled. DashboardCacheTest 9/9;
+  backend unit suite (`*Test`) green; live-Redis round-trip not run here (no Docker).
+  2026-11-12: the dev yml's bare `cache: off` was YAML 1.1-parsed as boolean false,
+  silently enabling the Redis branch in the dev stack (found by e2e; fixed by quoting
+  the yml and normalizing the property defensively). See PERFORMANCE_HORIZON.md.)
 
 - [x] **126** The matches digest reads in index order (backend, verified 2026-11-11).
 

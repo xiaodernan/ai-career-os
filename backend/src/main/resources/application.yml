@@ -201,7 +201,11 @@ app:
 # flip on a cache outage.
 careeros:
   dashboard:
-    cache: off
+    # YAML 1.1 parses a bare `off` as the boolean false, so an unquoted spelling would
+    # reach @Value as the string "false" and silently select the Redis branch instead of
+    # the pass-through. Keep the quotes; DashboardCache also normalizes "false" back to
+    # off, but the yml is the source of the trap.
+    cache: "off"
     cache-ttl-seconds: 45
 
 eureka:

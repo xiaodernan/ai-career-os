@@ -7,6 +7,7 @@ import com.careeros.report.dto.DashboardDtos.DashboardResponse;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,6 +36,13 @@ import org.springframework.stereotype.Component;
  *   <li>{@code redis} -- shared across replicas via {@link StringRedisTemplate}, same
  *       connection the sliding-window rate limiter already uses.</li>
  * </ul>
+ *
+ * <p>Spelling matters: YAML 1.1 parses a bare `off` as the boolean {@code false},
+ * so a yml config arrives here as the string {@code false}. The constructor normalizes
+ * the empty string, {@code off}, {@code false}, {@code 0} and {@code no} to off, and
+ * anything it does not recognize fails closed to off with a warn -- a typo loses the
+ * cache, not correctness. The yml in this repository spells the value quoted for the
+ * same reason.
  *
  * <p>Fail-open on every branch, the limiter's own posture: a Redis outage is a cache
  * miss plus a warn log line, never a failed dashboard. A payload that fails to
@@ -65,9 +73,20 @@ public class DashboardCache {
                           ObjectMapper mapper,
                           @Value("${careeros.dashboard.cache:off}") String mode,
                           @Value("${careeros.dashboard.cache-ttl-seconds:45}") long ttlSeconds) {
-        String normalized = mode == null ? "off" : mode.trim().toLowerCase();
-        // A blank value is the actuator-token pattern: unset pass-through, never "redis".
-        this.mode = normalized.isBlank() ? "off" : normalized;
+        // YAML 1.1 parses a bare `off` as the boolean false, so a yml spelling of the
+        // intended value arrives here as the string "false" (an env var arrives intact,
+        // which is why prod was correct and the dev yml was not). Unknown spellings fail
+        // closed to off: a typo loses the cache, not correctness.
+        String normalized = mode == null ? "off" : mode.trim().toLowerCase(Locale.ROOT);
+        this.mode = switch (normalized) {
+            case "", "off", "false", "0", "no" -> "off";
+            case "caffeine", "redis" -> normalized;
+            default -> {
+                log.warn("careeros.dashboard.cache={} is not a known backend (off|caffeine|redis); running as off",
+                        mode);
+                yield "off";
+            }
+        };
         this.ttl = Duration.ofSeconds(Math.max(1, ttlSeconds));
         this.redis = redis;
         this.registry = registry;

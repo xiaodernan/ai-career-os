@@ -88,6 +88,41 @@ class DashboardCacheTest {
     }
 
     @Test
+    void aBareYmlOffIsNotABackend() {
+        // YAML 1.1 parses a bare `off` as the boolean false, so @Value receives "false".
+        // The constructor must normalize it to the off backend: passthrough, never redis.
+        // This is the configuration trap that had the dev stack serving a pre-write
+        // snapshot of the dashboard for one TTL after every write.
+        DashboardCache cache = cache("false", 45);
+
+        assertThat(cache.mode()).isEqualTo("off");
+        assertThat(cache.get(UUID.randomUUID())).isEmpty();
+        cache.put(UUID.randomUUID(), sample());
+        verify(ops, times(0)).set(anyString(), anyString(), any(Duration.class));
+    }
+
+    @Test
+    void anUnknownBackendFailsClosedToOff() {
+        // A typo loses the cache, never correctness: redis is only reachable as "redis",
+        // never by any string the yml might accidentally hand over.
+        DashboardCache cache = cache("cach", 45);
+
+        assertThat(cache.mode()).isEqualTo("off");
+        assertThat(cache.get(UUID.randomUUID())).isEmpty();
+        cache.put(UUID.randomUUID(), sample());
+        verify(ops, times(0)).set(anyString(), anyString(), any(Duration.class));
+    }
+
+    @Test
+    void aQuotedOrEnvSpellingReachesTheRightBackend() {
+        // The prod path: the env var arrives intact as the string "redis".
+        assertThat(cache("redis", 45).mode()).isEqualTo("redis");
+        assertThat(cache("caffeine", 45).mode()).isEqualTo("caffeine");
+        // Spaced and mixed-case spellings are normalised, not rejected.
+        assertThat(cache("  Redis ", 45).mode()).isEqualTo("redis");
+    }
+
+    @Test
     void caffeineRoundTripServesWhatItStored() throws Exception {
         DashboardCache cache = cache("caffeine", 45);
         UUID user = UUID.randomUUID();
