@@ -5780,8 +5780,9 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (`frontend/scripts/bundle-budget.mjs` recomputes each page route's gzipped first-load
   weight from `app-build-manifest.json` and fails over 340 kB; heaviest route on this host is
   /applications at ~302 kB. `npm run budget` runs the production build first; CI gained a
-  dedicated `budget` job wired into `offline-gate`. Local build verified (33 routes,
-  exit 0); the Google Fonts fetch is the one network dependency of that job, and CI has it.)
+  dedicated `budget` job wired into `offline-gate`. The one network dependency of that job
+  (Google Fonts) is gone as of the self-hosted @fontsource move (fonts are inlined in the
+  standalone image).)
 
 - [x] **128** A request carries its own deadline (edge/backend/engine, verified 2026-11-11).
 
