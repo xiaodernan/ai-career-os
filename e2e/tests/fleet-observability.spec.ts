@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { unwrap } from "./fixtures";
 
 /**
  * The Spring Cloud surface, watched from the browser (Epics 100/105/108).
@@ -28,11 +29,11 @@ test("the monitoring page names the fleet the backend serves", async ({ api, aut
     `the engine the backend routes to must be in the fleet's answer: ${serviceNames}`
   ).toBe(true);
 
-  const resilience = await unwrap<{ breakers?: Array<{ name?: string; state?: string }> }>(
+  const resilience = await unwrap<{ circuitBreakers?: Array<{ name?: string; state?: string }> }>(
     await api.get("/system/resilience")
   );
   expect(
-    resilience.breakers?.length ?? 0,
+    resilience.circuitBreakers?.length ?? 0,
     "the bridge reports its circuit breakers even when all of them are closed"
   ).toBeGreaterThan(0);
 
