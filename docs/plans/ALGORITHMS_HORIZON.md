@@ -17,7 +17,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 132 | The primitives exist and are measured | `test_the_algorithms_module.py` (50) |
 | 133 | The top-K helper uses the *right* heap for the scale | measurement + stability/streaming contract; fusion keeps its sort on purpose |
 | 134 | A rerank that costs no model call is available and honest | `RERANK_MODE=bm25`, mode census, 10 offline rerank tests |
-| 135 | (next) The lexical channel can be scored in-process without pg_trgm when the corpus is small | to be measured |
+| 135 | The lexical channel can be scored in-process without pg_trgm when the corpus is small | CLOSED with evidence — pg_trgm's only live use is trigram near-miss recall, which term scoring cannot replace; no measured corpus bottleneck; BM25 rerank already shipped in 134 |
 | 136 | N embed replicas do a job once, and a crashed worker's job comes back | `WorkQueue` consumer-group semantics (fake + real Redis), 12 + 12 offline tests |
 | 137 | The auth door carries the landing's design language, without its light-panel pitfalls | `layout.test.ts` source contract, copy census, build + bundle budget |
 | 138 | A poison job stops burning a worker on every retry; a failed retry never drops the job | re-queue + `attempts` + bounded DLQ, 9 offline tests + real-Redis end-to-end |
@@ -32,6 +32,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 148 | A long agent run cannot grow the timeline's DOM or reducer without bound: the trace window is O(cap), and what it folds away is counted, not hidden | pure `foldTrace` / `settleTraceFold` with injected `cap`, zero drift vs the old reducer, honest `tracesOmitted` surfaced in en/zh; 17 offline tests + source-contract |
 | 149 | A concurrent spring-cloud merge is reconciled: the dev edge activates the same registry profile as the backend, and the count/timeout censuses tell the truth again | dev `docker-compose.yml` gateway gets `SPRING_PROFILES_ACTIVE=eureka` + `EUREKA_DEFAULT_ZONE`; `gateway-edge` spec counted in e2e/README + PRODUCT.md (69/69) and its alias registered; `.env.example` backoff comment stops masquerading as a Redis timeout; 17 + 22 offline gates |
 | 150 | The two read-only ops verdicts get a real consumer: a backend collector scrapes their measured numbers into Prometheus, and their `no backend caller` markers become true | `AiOpsMetrics` (`@Scheduled` + `Gauge`) over `GET /internal/ops/{workqueue,cache}`, 7 excused-by-name signals, fail-open keeping last reading; backend `AiServiceClient` seam + `HttpAiServiceClient` GETs with a nil system id; API.md ledger 10→8; 7 offline backend tests + 31 contract/meter gates |
+| 151 | A task's owner is decidable on any replica, not just the one that made it: the mirror that carries the frames also carries ownership, so the gate stops failing closed on a sibling | `aowner()` memory-first then `XREVRANGE` over the mirrored `owner` field; `_require_owner` async; owner never enters a wire frame or `state()`; 6 offline tests (fake-streams Redis) + 59 contract/census gates; MICROSERVICES §6 and PERFORMANCE_HORIZON legacy note reconciled |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1404,3 +1405,101 @@ sub-minute incident probe. The refresh adds one authenticated GET per endpoint
 per minute of backend traffic — bounded, and itself measured by `scrape_ok`.
 Finally, this chapter names no transport-liveness noun, so the docs' vocabulary
 census stays at its honest 13 lines and that ledger does not move.
+
+## Epic 135 — closed with evidence: pg_trgm is not a term-scoring stand-in **CLOSED (2026-11-12)**
+
+The roadmap once carried one `(next)` line: "the lexical channel can be scored
+in-process without pg_trgm when the corpus is small." Worked from the sources
+rather than the phrase, that claim does not survive contact with the code, and
+shipping a BM25 scorer for it would have been two things this horizon forbids
+at once — a behaviour change dressed as an optimisation, and a second scorer
+for a job another scorer already does.
+
+**Where pg_trgm is actually used.** The backend's `/jobs` and `/search` rank
+with tsvector + `ts_rank`, ILIKE and pgvector; they never touch pg_trgm. The
+only live trigram call is `ai-service/app/rag/store.py:trigram_search`, one of
+the three RAG recall lanes, and its own docstring names its job: "Catch
+misspellings / rare exact tokens via pg_trgm on chunk text," implemented as
+`similarity(c.text, $2) > 0.15`. That is a *near-miss* lane — it exists to find
+a chunk whose spelling is close to the query but whose exact terms are absent.
+Okapi BM25 (already in `app/algorithms`, already reranking under
+`RERANK_MODE=bm25` since Epic 134) scores exact-term TF-IDF relevance. It cannot
+return a document that shares no term with the query, so substituting one for
+the other would silently drop the misspelling recall lane. That is a real
+behaviour change, not a complexity win.
+
+**No measured bottleneck to fix.** There is no query plan, no profile and no
+timing record anywhere in the repo naming pg_trgm as a cost, and no seed giving
+the chunk corpus a size at which an in-process pass would win. The "small
+corpus" premise in the phrase referred to the ~40 job rows — which, as above,
+do not use trigram scoring at all. Optimising an unmeasured path while changing
+what it returns is exactly the shape the Definition of Done rejects.
+
+**Disposition.** The roadmap row is corrected to `CLOSED with evidence` with
+the three reasons inline; no scorer was added, no recall lane was touched, and
+Epic 134's BM25 rerank remains the one place term scoring is paid for. If a
+future profile does put a number on the trigram lane's cost, the honest next
+step is to *measure it first* and then decide whether a near-miss-preserving
+in-process index can match `similarity()` — not to relabel BM25 as its
+equivalent. No census was relaxed to close this row.
+
+## Epic 151 — a sibling replica can settle whose task it is **DONE (verified 2026-11-12)**
+
+Epic 131 made every task's frame feed replayable from a Redis stream, so a
+subscriber on any replica can follow a task another replica owns. One question
+was deliberately left on the in-process dictionary: `owner()` read only
+`_TASKS`, so a request that landed on a node which had not run the task answered
+the same 404 as a task that never existed. The backend relay absorbed that by
+walking every door until one stopped refusing (`SseRelayService.consume`, the
+first 200 wins). A refusal is a slow, ambiguous way to ask "who owns this?" —
+and it means a task is only reachable while its home node answers.
+
+**Ownership rides with the frames, not beside them.** The one design that keeps
+a single source of truth is to put the owner on the mirrored event itself.
+`publish()` now copies the payload onto the mirror with one extra top-level
+field, `owner`, next to `event`/`data`/`ts`. The in-memory list and the frames
+built from it keep the exact three keys they always had — the SSE generator
+forwards only `event` and `data`, and `state()` projects only its four declared
+fields — so the ownership field never reaches a browser. No second redis key,
+no ownership store to keep in sync: the same `XREVRANGE` that `peek()` uses to
+answer a foreign task's state also answers who may read it (`_Backplane.holder`).
+
+**Memory-first, then the mirror; fail-closed either way.** `aowner()` answers
+from `_TASKS` on the home node with no new wire command, and reads the last
+mirrored event only when the task is not local. `_require_owner` becomes async
+to make that read possible; the synchronous `owner()` stays as the memory-only
+form and is what `aowner()` calls first, so it is not an orphan. The refusal
+did not get looser: a stranger, a task recorded with no owner, and a sibling
+whose mirror is unreachable all still get the identical 404 a missing task
+gets. Three offline cases pin each of those, plus the home-node no-extra-read
+case and the guarantee that `owner` stays off both the wire frames and the
+state projection. `test_a_sibling_replica_can_settle_whose_task_it_is.py`
+measures all six against the existing fake-streams Redis.
+
+**Backend untouched, and still correct.** `SseRelayService.consume` already
+walks doors in order and stops at the first 200. With a sibling able to settle
+ownership, the first healthy node can now answer instead of every node but one
+refusing; the walk and its 404-tolerant fallback are unchanged, and its own
+test pinning "knock past a 404" still describes real behaviour for the moment
+the mirror is down. No Java source, no meter roster and no public route moved.
+
+**Census sync, not relaxation.** The only contract that moved was the one that
+must: `test_response_shape_contract.py`'s liveness-interval definer ledger saw
+its `subscribe` declaration shift 258 → 275 and its two consumer reads 265/262
+→ 282/279, because this chapter's `holder()` reader and the frame-safety comment
+sit above `subscribe` in the same file. The signature, its number and both
+consumers are unchanged, so the ledger was updated in place with the reason
+written beside it. The frame-payload census did not move: no `publish(` call
+site's data argument changed, and `owner` is attached on the mirror branch,
+which that walk does not read. The docs' vocabulary ledger stays at 13 — this
+chapter, like Epic 150's, names no transport-liveness noun. The API honesty
+ledger is unchanged: the app still reaches these routes only through
+`/internal/stream/{id}`, so no `UNREACHED_BY_THE_APP` reason was edited.
+
+**Verification.** `test_the_task_bus_can_scale_out_through_redis_streams.py`,
+`test_the_route_that_hands_out_a_task_stream_knows_whose_task_it_is.py` and
+`test_stream_event_contract.py` pass together (20) after the change; the full
+contract/census set (`test_response_shape_contract.py`, `test_api_doc_contract.py`,
+`test_internal_contract.py`, `test_stream_event_contract.py`) passes (59); the
+six new offline cases pass. No test was skipped, relaxed or re-baselined
+downward to close this Epic.

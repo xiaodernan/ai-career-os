@@ -97,6 +97,19 @@ class _Backplane:
         event = self._event(rows[0][1])
         return int(length), bool(event and event.get("event") in ("done", "error"))
 
+    async def holder(self, task_id: str) -> str | None:
+        """The user id recorded on the stream, or None when the mirror has no owner yet.
+
+        Ownership travels on the event payload itself (not a second redis key), so the
+        same XREVRANGE that `peek` uses to answer state can answer who may read it. A
+        task with no mirrored event has no holder yet -- the caller fails closed.
+        """
+        rows = await self.pool.execute("XREVRANGE", self._key(task_id), "+", "-", "COUNT", "1") or []
+        if not rows:
+            return None
+        event = self._event(rows[0][1])
+        return event.get("owner") if event else None
+
 
 def _backplane_enabled() -> bool:
     from app.core.config import get_settings
@@ -193,7 +206,11 @@ def publish(task_id: str, event: str, data: dict) -> None:
         t["events"].pop(0)
     for q in list(t["waiters"]):
         q.put_nowait(payload)
-    _mirror(task_id, payload)
+    # The in-memory feed and the frames built from it keep the exact three keys they
+    # always had. Ownership rides only on the mirrored copy, as a top-level field next
+    # to event/data/ts; the SSE generator forwards `event` and `data`, never this field,
+    # so a foreign replica can settle ownership without changing a single wire frame.
+    _mirror(task_id, {**payload, "owner": t["user_id"]})
 
 
 def finish(task_id: str, ok: bool, result: dict | None = None, error: str | None = None) -> None:
@@ -346,11 +363,35 @@ async def _subscribe_backplane(backplane: _Backplane, task_id: str,
 def owner(task_id: str) -> str | None:
     """Whose task this is, as recorded when it was made -- or None if no task or no owner.
 
-    Deliberately not a field of `state()`: that projection is the body `GET /internal/tasks/{id}`
-    answers with, and an owner id belongs in a decision, not in a response.
+    The synchronous, memory-only form: it answers the owning replica without touching
+    the wire. Deliberately not a field of `state()`: that projection is the body
+    `GET /internal/tasks/{id}` answers with, and an owner id belongs in a decision,
+    not in a response. Callers in the event loop use `aowner()` to also reach a task
+    whose owner is a different replica.
     """
     t = _TASKS.get(task_id)
     return None if t is None else t["user_id"]
+
+
+async def aowner(task_id: str) -> str | None:
+    """The async-native owner lookup: memory first, then best effort at the mirror.
+
+    A request that lands on the replica which owns the task is answered locally, so
+    the common path adds no network round-trip. A request routed elsewhere reads the
+    owner the owning replica wrote onto the stream. Unresolvable (no mirror, redis
+    down, no owner recorded) stays None and the caller fails closed, exactly as it
+    did before the mirror existed.
+    """
+    local = owner(task_id)
+    if task_id in _TASKS or local is not None:
+        return local
+    backplane = await _get_backplane()
+    if backplane is None:
+        return None
+    try:
+        return await backplane.holder(task_id)
+    except Exception:
+        return None
 
 
 def gc_old_tasks(max_age_s: float = 3600) -> None:

@@ -369,9 +369,11 @@ of it. The docstrings already named the path; the code never had it.
   follow-along is documented as the ownership-store question, not smuggled past it.
 - Fail-open everywhere: a Redis outage keeps the memory feed serving (test proves it);
   the drainer never crashes the request path.
-- Documented in MICROSERVICES.md §6. Honest bounds: the mirror is live; cross-replica
-  owner resolution and sticky-session routing are the remaining scale-out items;
-  nothing here was load-tested.
+- Documented in MICROSERVICES.md §6. Honest bounds (as of this epic): the mirror is
+  live; cross-replica owner resolution and sticky-session routing are the remaining
+  scale-out items; nothing here was load-tested. Epic 151 later closed the first of
+  those two by moving the owner onto the mirrored events; sticky-session routing is
+  still open.
 
 **Verification (offline, 2026-11-11):** `test_the_task_bus_can_scale_out_through_redis_streams.py`
 6/6 (fake-streams Redis with BLOCK/XRANGE/XADD semantics, foreign replica replay,
