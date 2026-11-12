@@ -96,9 +96,11 @@ which is why the acceptance had not noticed.
     posture all along; the forced `eureka` profile resolved nothing (the route asked for
     service id `backend`, the registry held `CAREER-OS-BACKEND`, and its VIP was
     `career-os-backend`), so the edge answered `backend-unavailable` for every call, its
-    catch-all probe pinned `unhealthy`, and docker kept the edge unhealthy through weeks
-    of rebuilds. The registry path stays one env var away (`SPRING_PROFILES_ACTIVE=eureka`)
-    and now actually resolves.
+    catch-all probe pinned unhealthy, and docker kept the edge unhealthy through weeks
+   of rebuilds — now gated by `test_the_dev_edge_is_honest_about_its_registry.py` (Epic 165);
+   a future flip of this posture reds the suite rather than recreating the outage.
+   The registry path stays one env var away (`SPRING_PROFILES_ACTIVE=eureka`) and now
+   actually resolves.
   - Lease tuning (env-overridable): renewal 10s, expiration 30s on backend/gateway for responsive
     updates in opt-in discovery setups.
 - **Topology visibility**: backend exposes authenticated `GET /api/v1/system/topology` (registry mode
