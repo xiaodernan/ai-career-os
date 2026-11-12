@@ -40,6 +40,8 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 156 | Three protocols the offline provider cannot contradict — structured output, server-sent streaming and tool calls — are attested against the real gateway, and stay inert (zero socket) offline | `test_the_live_gateway_speaks_three_protocols.py`: module-level opt-in skip, env-only key, a self-managed client injected into the production `OpenAICompatProvider` so it coexists with Epic 155 on one opt-in run; asserts a `json_mode` object the app's `_coerce_json` accepts, streamed fragments reassembled with a real closing usage, and a tool reply whose id and dict arguments the agent loop can echo; verified `gpt-6-sol` 2 passed / 39s, offline 1 skipped / 0.6s; reconciles the merged deadline-mesh e2e case (PRODUCT.md 69/69 → 70/70); zero production code, zero new dependency/provider/knob |
 | 157 | The process-wide outbound HTTP pool stops hiding its concurrency ceiling in an httpx-version default: the limit that decides production throughput is explicit, and the zero-drift premise that keeps the client timeout alone is a gate | `registry._SHARED_LIMITS` (max 100 / idle-connection 20, measured httpx 0.28.1 defaults, byte-for-byte preserving); client-level `timeout` deliberately untouched (all 10 provider calls pass their own, 60–600s); `test_the_shared_provider_client_is_bounded.py` pins the limit values, that the factory applies them, and that every provider outbound call still carries a per-request timeout; added to both `verify_gates` scripts; no new meter/knob/env/route |
 | 158 | The job board's front door joins the dashboard, inbox and resume manager, and the real gateway proves the JD analyzer keeps its honesty-bearing evidence shape — both as pinned, reproducible contracts | `resumes/page.tsx` front-door band (CSS-only, zero new client JS/copy/i18n/component; its source contract pins no CTA because the header has no actions — the dropzone below does the work) + `test_the_real_jd_analyzer_keeps_its_evidence.py` (opt-in, env-only key, zero socket offline; real `gpt-6-sol` yields a dict whose every required skill quotes the JD verbatim); measured 1 passed / 52.8s live, 1 skipped offline; DEPLOYMENT.md records both; `.env` back to the offline `mock` default; zero production code, dependency, provider or knob |
+| 159 | The interview board — a headline action for every candidate — wears the same front door, its real controls left intact | `interviews/page.tsx` front-door band (CSS-only, zero new JS/copy/i18n/component); unlike the resume manager this header has actions, so the primary `variant="ai"` start-interview CTA carries `glow-halo` + `glow-on-hover` while the server search / application filter / mode dropdown are untouched; `page.front-door.test.ts` 7 source assertions; 63 gates pass; clean build + 310 kB budget (interviews 279.9→280.3 kB, the pure-CSS band's measured weight) |
+| 160 | The reranker's silent-degradation path is shown to stay untaken on a real model, and a measured backend N+1 is left as an honest next step rather than a speculative rewrite | `test_the_real_rerank_keeps_its_scores_contract.py` (opt-in, env-only key, zero socket offline): spies the raw `ask_json` answer, pins `scores` as a full dict of 0..1 numbers, that every returned chunk carries a parsed `rerank` (the anti-degradation invariant), and that relevant snippets outscore unrelated ones — no exact score/wording; measured `gpt-6-sol` 1 passed live / 1 skipped offline, shape drift did not reproduce so no defensive code added; `NotificationService` write-path N+1 (≈90+ DB round trips per markAllRead) recorded as a zero-drift next step (pure `stateForLoaded` + `shownByKey`, behaviour-test-backed) pending a low-concurrency window; zero production code/dependency/knob |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1864,3 +1866,68 @@ runs override `LLM_PROVIDER` explicitly in the command, as DEPLOYMENT.md now rec
 opt-in tests. Epic 156's opt-in command there was also corrected to name `LLM_PROVIDER`, which the
 restored default made load-bearing. Zero production code, dependency, provider, Settings field,
 route or meter roster.
+
+## Epic 159 — the interview board wears the front door (CSS only) **DONE (measured 2026-11-12)**
+
+The interview rehearsal board is a headline action for every candidate, so its header gained the
+same band as the dashboard, jobs board, inbox and resume manager: `GradientText` title, shimmer
+hairline, dark-only aurora and CSS-only stagger over the shared `PageHeader`. Unlike the resume
+manager it *has* actions, so the primary `variant="ai"` start-interview CTA carries both the AI
+halo and the shared hover lift, while the server-side search, application filter and mode dropdown
+are left intact — the band only gives their row an entrance. Zero new client JS, copy, i18n key,
+component file or globals rule; copy census stays at 169. `page.front-door.test.ts` (7 source
+assertions) pins the whole language plus the "no invented control/copy" boundary. Measured: 63
+gates pass across all four front doors and the i18n/globals censuses; a clean build and the 310 kB
+per-route budget pass over 35 routes, `/interviews` moving 279.9 → 280.3 kB — the pure-CSS band's
+weight, not a JS change. Committed as front-door part 5 (`16b3ee2`).
+
+## Epic 160 — the reranker's silent fallback is shown untaken, and a real N+1 is left honest **DONE (measured 2026-11-12)**
+
+`rerank.py` trusts one line to parse a real model's answer:
+`{int(k): float(v) for k, v in (out.get("scores") or {}).items()}`. The offline suite cannot
+contradict it — the mock returns a well-formed `{"scores": {...}}` by construction. An audit
+flagged that a provider returning `scores` as a list, or a value as `null`, would raise inside that
+line and drop the whole pass into `except: return candidates[:top_n]` — the reader loses relevance
+ranking with **no error signal**. The audit was careful to call it a *potential* drift the real
+gateway had not reproduced. This epic turns "not reproduced" into a measured, reproducible
+contract rather than a speculative defensive rewrite.
+
+`test_the_real_rerank_keeps_its_scores_contract.py` drives the production `rerank` seam against a
+real `gpt-6-sol` and spies the raw `ask_json` answer **before** production parses it. It pins two
+things, neither of them prose: **structure** — `scores` is a dict covering every numbered snippet,
+each value a number in 0..1; and **the anti-degradation invariant** — every returned chunk carries
+a parsed `rerank` equal to its raw score, because the silent fallback returns chunks with no
+`rerank` field at all, so that single assertion is what catches the drift this file exists for.
+It also pins a semantic shape, measured on the full score map so the `top_n` slice cannot make it
+vacuous: query-relevant snippets outscore unrelated ones on average. No exact score, count or
+wording is fixed. Inert offline (one skip, zero socket, env-only key, no token literal), one async
+test on one loop so it coexists with the registry's cached client. Measured live `1 passed` with
+the model scoring the five Redis/PostgreSQL/asyncio/BM25 snippets 0.38–0.95 and all five unrelated
+ones exactly 0.0; production parsed and ordered them without falling back. **The potential drift
+did not reproduce, so no defensive production code was added** — a measurement, not a claim. Writing
+the test surfaced one honest bug in the test itself (the score map is keyed by index `"0".."9"`, not
+by chunk id `"c0".."c9"`) that only a real run exposed; the first opt-in run failed on it and the
+fix was to read the right key, not to loosen the assertion.
+
+**A real N+1, recorded as a next step rather than rewritten on spec.** `backend`'s
+`NotificationService` write endpoints (`markRead` / `markAllRead` / `dismissRead` / `dismiss`,
+`service/NotificationService.java:171–230`) each build the visible inbox once through
+`visibleByKey()` → `inbox()` → `shown()` — which already loads every state row in one
+`states.findByUserId` — then re-query each key with `stateFor()` = `findByUserIdAndSignalKey`
+(N single-row selects), and finally rebuild the whole inbox again for the response. One
+`markAllRead` over a full 40-row inbox is roughly 90+ DB round trips; four endpoints and the
+scheduler's recurring visibility walk all pay it. The lines that would actually dominate — a
+per-saved-search `COUNT(*)` inside candidate synthesis and the second full inbox rebuild — are
+the ones tangled with dismiss visibility and JPA transaction semantics, so a speculative rewrite
+here would risk the very behaviour drift this horizon refuses. The **zero-drift path is designed
+and left for a low-concurrency window**: add a pure `stateForLoaded(key, userId, loaded)` that
+reuses an already-loaded state or constructs a fresh one (strictly equivalent to
+`stateFor().orElseGet(new)`); expose the state `shown()` already holds via a `shownByKey` mapping
+(no new query); have the four inbox writes consume it so the N single-row selects disappear,
+while `stateFor` stays for `markPushed` / `markNotified` (which take keys from outside the visible
+set). It must land with a pure-function unit test for the reuse/construct split and lean on the
+existing 562-line `NotificationServiceTest` behaviour suite as the zero-drift backstop, and it must
+respect `SelfInvokedTransactionContractTest` (the design adds no transactional self-call). No
+production code changed in this epic for that finding; it is written down so the next session
+picks up a measured, designed task rather than rediscovering it. Zero production code, dependency,
+provider, knob, route or meter roster across Epic 160.

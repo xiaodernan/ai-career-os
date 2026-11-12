@@ -1139,6 +1139,37 @@ Known limits of this escape hatch, stated honestly:
   one — the literal-`\n` build args that broke every `docker compose` invocation until
   `feat(build): make the stack buildable again` landed), not a permanent state to route around.
 
+#### The reranker keeps its score contract on a real model (Epic 160)
+
+`rerank.py` parses one line that a mock always satisfies but a real provider could break:
+`{int(k): float(v) for k, v in (out.get("scores") or {}).items()}`. If a gateway ever returned
+`scores` as a list, or a value as `null`, that raises and the whole pass **silently** falls back
+to RRF order (`except: return candidates[:top_n]`) — the reader loses relevance ranking with no
+error signal. An audit flagged this as a *potential* drift the real gateway had not reproduced.
+`ai-service/tests/test_the_real_rerank_keeps_its_scores_contract.py` turns "not reproduced" into
+a measured contract: it drives the production `rerank` seam against a real `gpt-6-sol`, watches
+the raw `ask_json` answer before production parses it, and pins **structure, not prose** —
+`scores` is a dict covering every numbered snippet, each value a number in 0..1; every returned
+chunk carries a parsed `rerank` equal to its raw score (this is what catches the silent
+degradation, since the fallback returns chunks with no `rerank` field); and query-relevant
+snippets outscore unrelated ones on average. No exact score, count or wording is fixed.
+
+Inert by default, like its siblings — a plain `pytest` / CI / pre-commit run skips before any
+socket opens (measured `1 skipped in 1.28s`), env-only key, no token literal:
+
+```bash
+cd ai-service
+CAREEROS_REAL_LLM=1 LLM_PROVIDER=openai_compat \
+  pytest tests/test_the_real_rerank_keeps_its_scores_contract.py -q
+```
+
+Verified on this stack on 2026-11-12 against `gpt-6-sol` @ `https://wkapi.pro/v1`: the model
+returned `{"scores": {"0":0.95, "1":0.0, ..., "9":0.0}}` — a full dict of floats in 0..1 —
+scoring the five Redis/PostgreSQL/asyncio/BM25 snippets 0.38–0.95 and all five unrelated ones
+exactly 0.0; production parsed and ordered them without degradation. The potential shape drift
+did **not** reproduce, so no defensive production code was added (a measurement, not a claim).
+Zero production code, dependency, provider, Settings field, route or meter.
+
 ## Tests
 
 See the [README](../README.md) Tests section: frontend `vitest`, ai-service
