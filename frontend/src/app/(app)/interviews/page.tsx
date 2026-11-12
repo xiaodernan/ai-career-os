@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Briefcase, CalendarClock, FileBarChart, MessagesSquare, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { GradientText } from "@/components/ui/gradient-text";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
 import { QueryBoundary } from "@/components/common/query-boundary";
@@ -107,11 +108,51 @@ export default function InterviewsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader
-        title={t("interviews.title")}
-        description={t("interviews.description")}
-        actions={
-          <div className="flex flex-wrap items-center justify-end gap-2">
+      {/* The interview rehearsal board is a headline action for every candidate, so its header
+          carries the same front-door band the dashboard, jobs board, inbox and resume manager
+          established: static light-theme washes, a dark-only aurora (screen-blend over a light
+          Card would wash it white -- the trap Epic 137 documented), a shimmer hairline and a
+          CSS-only staggered entrance. Every layer is a plain decorated span/div, so the band adds
+          zero client JS and leaves the route budget untouched; all motion is decorative and
+          `prefers-reduced-motion` stays authoritative via globals.css. The search box, filter and
+          start CTA below are real controls and are untouched -- only their entrance and the primary
+          CTA's affordance gain the designed language. */}
+      <section className="animate-fade-up relative overflow-hidden rounded-2xl border hairline bg-card/60 shadow-card">
+        {/* Light-theme ambient washes: static gradients, zero per-frame cost. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 16%, transparent), transparent)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-28 -left-24 h-64 w-64 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 9%, transparent), transparent)",
+          }}
+        />
+        {/* Dark-theme aurora: screen-blend light only ever composited over a dark surface. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden overflow-hidden dark:block">
+          <span className="aurora-blob aurora-blob-1 opacity-30" />
+          <span className="aurora-blob aurora-blob-2 opacity-30" />
+          <div className="aurora-grid opacity-30" />
+        </div>
+        {/* Shimmer hairline crowns the band -- the same premium separator the dashboard uses. */}
+        <span aria-hidden className="shimmer-rule absolute inset-x-0 top-0 block h-px" />
+        <div className="relative px-6 py-6">
+          <PageHeader
+            title={<GradientText className="italic">{t("interviews.title")}</GradientText>}
+            description={
+              <span className="animate-fade-up block" style={{ animationDelay: "90ms" }}>
+                {t("interviews.description")}
+              </span>
+            }
+            actions={
+              <div className="animate-fade-up flex flex-wrap items-center justify-end gap-2" style={{ animationDelay: "160ms" }}>
             {/* The question 70.4 gave this route and this board never asked. It is the server's
                 search, not a filter over the rows in hand: the pager counts the matches, so page
                 two of a word is the second page of the matches -- and the characters are read as
@@ -166,7 +207,7 @@ export default function InterviewsPage() {
             )}
             <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ai" loading={create.isPending}>
+              <Button variant="ai" className="glow-halo glow-on-hover" loading={create.isPending}>
                 <Plus aria-hidden />
                 {t("interviews.startInterview")}
               </Button>
@@ -185,7 +226,9 @@ export default function InterviewsPage() {
             </DropdownMenu>
           </div>
         }
-      />
+          />
+        </div>
+      </section>
 
       {applicationId && (
         // The chip is the answer to "why is this list short": it names the card
