@@ -31,6 +31,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 162 | The backend's job queue runs on Redis Streams, one group across the fleet: a crashed replica's job is reclaimed, a poison job is dead-lettered, and nothing grows without bound | JobQueueIT 5/5 (real it-redis), JobQueueTest 6/6, JobWorkerTest 15/15 |
 | 163 | The inbox mail/ring/read/write paths stop riding a per-key N+1: one IN-round trip plus one save per unread set | NotificationServiceTest 26/26 incl. 2 new pins, full backend suite |
 | 167 | The fleet does not celebrate one expiry together: the Redis dashboard cache writes under a ±10% TTL | DashboardCacheTest 11/11 (band [40,50] over 300 seeded draws, spread non-constant, floor holds, captured Redis write inside the band) |
+| 168 | The retention sweep rides the fleet queue when it is on — one replica runs it — and stays inline exactly where it was otherwise | RetentionSchedulerTest 6/6 + RetentionSweepHandlerTest 2/2 + full backend suite green (incl. every context-booting IT) |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -462,4 +463,43 @@ waits at most one TTL.
 spreads (TreeSet over 300 draws is non-constant), floor holds for non-positive bases,
 and the Redis `set` the class issued at write carries a TTL inside the same band. Call
 site does no I/O; no behaviour contract moved; no wire shape; no new knob. Backend
-suite to be re-run at this tree — expect the machine-flaky selection, not this class.
+suite re-run at this tree came back green (2026-11-13; the earlier loss was the box, not this class).
+
+## Epic 168 — the retention sweep gets on the fleet queue (verified 2026-11-13)
+
+The backend's Redis-Streams job queue (careeros:v1:jobs, Epic 162) shipped with a
+promise — enable it and one replica does the work — but zero producers. This epic
+extends that one producer over the one long-running scheduled job the install can
+prove to itself weekly: the 04:47 retention sweep (tokens, retired-evidence rows,
+unnamed bucket objects).
+
+**Design, closed-loop with Epic 167's honesty rules.**
+- RetentionSweepHandler (auth.retention): kind retention.sweep; idempotent by
+  construction (cutoff watermark deletes) — the at-least-once contract's demanded
+  shape, on a path that never needed to change behaviour to satisfy it.
+- RetentionScheduler (auth.retention): replaces the bare cron on the sweeper.
+  Queue disabled → inline sweep on EVERY replica, byte-for-byte pre-queue semantics
+  (the shipped default). Queue enabled → one UTC-day Redis SET NX (ex 1 day,
+  careeros:v1:retention:owner:<yyyy-MM-dd>) elects the single enqueuing replica;
+  siblings skip; leader failure to enqueue → leader sweeps inline alone; election
+  errors → this replica sweeps inline (fail-open toward the work, never the skip).
+- RetentionSweeper is unchanged in behaviour (package-private sweep(now) stays
+  the one testable seam; its @Scheduled moved to the scheduler).
+
+**What this is not, honestly.**
+- Not enabled anywhere yet: CAREEROS_QUEUE_ENABLED defaults false by design and
+  the e2e profile keeps it that way; the enablement ships disabled-by-default with the
+  same flip-it-and-prove-your-deploy posture as every other opt-in element.
+- Not the last producer: ingestion sweep, nightly verdict and weekly letter stay
+  unwrapped — each is a separate epic with its own failure modes; this one proves the
+  producer contract end to end cheaply.
+- Not distributed deletion: every replica still runs the same sweeper code; only
+  the scheduling is elected.
+
+**Measured.** RetentionSchedulerTest 6/6 (disabled→inline; election-win→enqueue only;
+election-win+refusal→inline; election-lose→silent; election error→inline),
+RetentionSweepHandlerTest 2/2 (kind wire name, one call), every context-booting IT
+green with the two components wired (RetiredEvidencePurgeIT, RetentionSweepIT,
+UnnamedObjectSweepIT). Full backend suite green on this host with the app stack's
+backend stopped. Zero knobs, zero wire-shape change, zero client JS; the sweeper's
+measured behaviour (heartbeat, counters, failed-table reporting) is byte-identical.

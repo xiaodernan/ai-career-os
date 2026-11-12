@@ -6155,6 +6155,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   untouched). RateLimitIT back to 6/6, JobQueueIT 5/5, full backend suite green
   at this tree with the backend stopped.)
 
+- [x] **168** The retention sweep gets on the fleet queue — one replica runs it,
+  inline is byte-for-byte pre-queue semantics otherwise (2026-11-13).
+
+  (`RetentionScheduler` replaces the bare 04:47 cron: queue disabled → every replica
+  sweeps inline exactly as shipped; queue enabled → one UTC-day Redis
+  `SET NX EX 1d` on `careeros:v1:retention:owner:<yyyy-MM-dd>` elects the single
+  enqueuing replica; siblings skip; a refused enqueue → the leader sweeps inline
+  alone; election errors → this replica sweeps inline — fail-open toward the work,
+  never the skip. `RetentionSweepHandler` claims `retention.sweep`; the sweeper
+  behaviour is byte-identical — only scheduling is elected. Not enabled anywhere
+  (`CAREEROS_QUEUE_ENABLED=false` default; e2e unchanged); ingestion sweep,
+  nightly verdict and weekly letter are deliberately not wrapped. Measured:
+  `RetentionSchedulerTest` 6/6, `RetentionSweepHandlerTest` 2/2, full backend suite
+  green on this host with the app stack's backend stopped, every context-booting
+  IT green with the two components wired. Zero client JS, zero knobs, zero wire
+  shape.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

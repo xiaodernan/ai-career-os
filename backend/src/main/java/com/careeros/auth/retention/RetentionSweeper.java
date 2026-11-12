@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -95,11 +94,6 @@ public class RetentionSweeper {
         this.unnamed = unnamed;
         this.props = props;
         this.metrics = metrics;
-    }
-
-    @Scheduled(cron = "${careeros.retention.cron:0 47 4 * * *}")
-    public void nightly() {
-        sweep(OffsetDateTime.now());
     }
 
     /**
