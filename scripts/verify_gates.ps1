@@ -49,6 +49,7 @@ $tests = @(
   "ai-service/tests/test_the_topology_page_reads_the_fleet_the_backend_writes.py",
   "ai-service/tests/test_the_resilience_page_reads_the_breakers_the_backend_writes.py",
   "ai-service/tests/test_the_compose_files_parse.py",
+  "ai-service/tests/test_the_dev_edge_is_honest_about_its_registry.py",
   "ai-service/tests/test_the_load_balancer_health_check_stays_on.py",
   "ai-service/tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py",
   "ai-service/tests/test_the_spring_cloud_services_publish_build_sha_in_info.py",

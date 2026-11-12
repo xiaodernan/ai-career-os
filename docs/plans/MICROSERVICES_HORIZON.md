@@ -1,10 +1,13 @@
-# Microservices horizon — next epics (planned)
+# Microservices horizon — registry and edge epics
 
-> **Status:** planning doc (2026-11-10). Everything in this file is **not implemented**.
-> Verified-current Spring Cloud state is recorded in `docs/ROADMAP.md` (Epics 108.x) and
-> `docs/MICROSERVICES.md`. Do not claim any of these are shipped until a real gate/test exists.
+> **Status:** planning doc (2026-11-10), with landed records appended as they pass
+> their gates — that is how 109–114 and the newest entry landed: gate green, then
+> this file says DONE and the roadmap checklist carries the date and numbers.
+> Verified-current Spring Cloud state is recorded in `docs/ROADMAP.md` (Epics 108.x)
+> and `docs/MICROSERVICES.md`. Do not claim any item shipped until its gate exists
+> and is green locally.
 >
-> Pick the top un-done item; implement; move into ROADMAP when the gate is green locally.
+> Pick the top un-done item; implement; move into ROADMAP when the gate is green.
 
 ## What is already in place (measured 2026-11-10)
 
@@ -75,6 +78,27 @@ that does not exist relative to it. Two-node boot stays documented manual verifi
 unset keeps dev behavior. `ConfigServerTokenGateTest` proves refusal, admission, wrong-token refusal
 and anonymous health probe (suite 9/9 green). Honest scope: a single opaque shared token (sufficient
 for a single-node native server), not mTLS; mTLS and per-service client identity remain next-horizon.
+
+## Epic 165 — the dev edge and its registry tell the same story, gated (2026-11-13)
+
+The dev `docker-compose.yml` forced the gateway onto the `eureka` profile to match
+prod; the resulting outage (2026-11-12, `no servers available for service: backend`
+for 30+ minutes after a routine backend rebuild, because the lone registry with
+self-preservation OFF evicted and re-registered the backend, and the dev eureka
+client carries no refresh interval) is recorded in the dev edge's own comment. The
+registry experiment is closed; what was missing is enforcement: a well-meaning
+future merge could flip the dev edge back to `eureka` and recreate the incident
+without any gate noticing.
+
+The new gate `test_the_dev_edge_is_honest_about_its_registry.py` reads both compose
+files and both discovery profile texts (no Docker, no socket) and pins the invariant
+in both directions: the dev edge carries NO profile (absence is the documented
+single-node posture) and carries the documented `GATEWAY_BACKEND_URI`; the dev
+backend still registers in the demo registry (panel-facing; the split is deliberate);
+the prod edge and its backend activate `eureka` with one shared zone; the lone dev
+registry evicts (`EUREKA_SELF_PRESERVATION:false`) while the two-node peer overlay
+preserves; and the dev comment keeps the 2026-11-12 incident it exists to explain.
+Wired into both `verify_gates` scripts — 569 passed at this tree.
 
 ## Sequencing notes
 - 109 and 112 unblock real-world operability questions; 110–111 tighten the observability loop; 113–114 are advanced and only worth doing when a second instance is needed.

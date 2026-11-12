@@ -6114,6 +6114,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; build exit 0; budget OK (`/page` 196.7 kB, unchanged); container
   rebuilt and serving. Zero client JS, copy, i18n key or globals rule.)
 
+- [x] **165** The dev edge and its registry tell the same story, gated (2026-11-13).
+
+  (`test_the_dev_edge_is_honest_about_its_registry.py` reads both compose files and
+  both discovery profiles offline and pins the posture in both directions: dev edge
+  carries no profile (the documented single-node posture — any value re-locks the
+  simple client out) with the documented `GATEWAY_BACKEND_URI`; the dev backend still
+  registers in the demo registry; prod edge and backend activate `eureka` with one
+  shared zone; the lone registry evicts, the peer overlay preserves; the dev comment
+  keeps the 2026-11-12 incident that forced the decision. A future flip back to
+  `eureka` now goes red without anyone needing to remember the story. Wired into
+  both verify_gates scripts — 569 passed. Zero product code.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
