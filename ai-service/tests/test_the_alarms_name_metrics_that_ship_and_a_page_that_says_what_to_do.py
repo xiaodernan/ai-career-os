@@ -83,6 +83,7 @@ RAG_CACHE_INVALIDATOR = BACKEND / "src" / "main" / "java" / "com" / "careeros" /
 # Epic 150: the backend's Prometheus collector over the ai-service's two read-only ops verdicts.
 AI_OPS_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" / "service" / "AiOpsMetrics.java"
 RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
+QUEUE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "queue" / "QueueMetrics.java"
 DASHBOARD_CACHE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "DashboardCache.java"
 GATEWAY_RATE_LIMIT_FILTER = ROOT / "gateway" / "src" / "main" / "java" / "com" / "careeros" / "gateway" / "GatewayRateLimitFilter.java"
 # The population of MeterRegistry users the roster must cover. The gateway joined it
@@ -115,6 +116,11 @@ METRICS = {
     "careeros_signals_last_delivered_timestamp": (SIGNAL_METRICS, "careeros.signals.last.delivered.timestamp"),
     "careeros_signals_last_sweep_timestamp": (SIGNAL_METRICS, "careeros.signals.last.sweep.timestamp"),
     "careeros_push_delivery_total": (PUSH_METRICS, "careeros.push.delivery"),
+    # Epic 162: the backend's Redis-Streams job queue's one meter. Ships unwired and
+    # disabled by default (`CAREEROS_QUEUE_ENABLED=false`), so the series reads zero by
+    # construction; DEPLOYMENT.md excuses it by name, and the alarm belongs to the
+    # enablement epic with its call site and baseline.
+    "careeros_queue_jobs_total": (QUEUE_METRICS, "careeros.queue.jobs"),
     "careeros_reminders_last_tick_timestamp": (PUSH_METRICS, "careeros.reminders.last.tick.timestamp"),
     "careeros_retention_deleted_rows_total": (RETENTION_METRICS, "careeros.retention.deleted_rows"),
     "careeros_retention_last_sweep_timestamp": (RETENTION_METRICS, "careeros.retention.last.sweep.timestamp"),
