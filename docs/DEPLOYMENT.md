@@ -838,6 +838,14 @@ share one `async` test / one loop — splitting them into two function-scoped-lo
 tests closes cached connections on an already-closed loop (`RuntimeError: Event
 loop is closed`), exactly as the module docstring records.
 
+The same trap applies to a **combined** opt-in invocation: the four real-model
+modules in one pytest process share whatever event loop ran first, so a module
+whose client is cached (`registry`'s lru) inherits a loop already closed by the
+module before it. Run them one module per process — `pytest <file>` — or rely on
+CI's separate step; the modules are mutually incompatible in a single run by
+construction (measured 2026-11-13: 155/156/160 pass in a combined run, 158 fails
+with `RuntimeError: Event loop is closed`; each module is green alone).
+
 #### Three protocols the offline provider cannot express (Epic 156)
 
 Epic 155 proved the transport seam with plain text. `ai-service/tests/test_the_live_gateway_speaks_three_protocols.py`
