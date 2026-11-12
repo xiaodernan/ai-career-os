@@ -34,7 +34,14 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   timeout: 90_000,
-  expect: { timeout: 15_000 },
+  // Measured on this suite, on a box sharing the Docker stack and builds: a single
+  // visibility expect per full run forgets its window 15-20s, reliably one spec per
+  // run but never the same one twice (command-palette:98, forward-surfaces,
+  // golden-journey:825, locale:107), every flaked spec green in isolation at the same
+  // HEAD. A 30s per-expect budget matches the already-shipped 20-30s visibility writes
+  // elsewhere on this suite and costs nothing but a slightly slower red on a real break;
+  // the assertions themselves are unchanged. See e2e/README "when the runner itself falls over".
+  expect: { timeout: 30_000 },
   /**
    * The HTML reporter is opt-in (`E2E_HTML=1`).
    *
