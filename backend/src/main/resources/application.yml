@@ -207,6 +207,20 @@ careeros:
     # off, but the yml is the source of the trap.
     cache: "off"
     cache-ttl-seconds: 45
+  # Epic 162 -- the backend's job queue over Redis Streams. false (the default) sends no
+  # Redis command and runs no scheduled work: every producer keeps the inline path it had
+  # before the queue existed. true hands background jobs to ONE consumer group shared by
+  # the whole fleet, so N replicas do a job once and a crashed replica's unacknowledged job
+  # is reclaimed by a sibling instead of lost. Enable with CAREEROS_QUEUE_ENABLED=true.
+  # Space is bounded at the write (XADD MAXLEN ~ max-len), not by a sweep; a job that fails
+  # max-deliveries times is recorded on careeros:v1:jobs:dlq and stops being retried.
+  queue:
+    enabled: ${CAREEROS_QUEUE_ENABLED:false}
+    poll-ms: 1000
+    batch-size: 20
+    max-deliveries: 5
+    claim-idle-ms: 30000
+    max-len: 10000
 
 eureka:
   client:

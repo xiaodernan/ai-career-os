@@ -1091,8 +1091,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # route — the backend publishes these as Micrometer gauges, not a JSON body — but this walk
     # reads declarations rather than routes, so the receipt joins the census and its components
     # must stay plain names the shared opener can read.
-    assert len(declared) == 210, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 210 measured"
+    # 212 with Epic 162's pair in `JobStream`: `Entry`, one drained queue record (id and its
+    # fields), and `Pending`, one row of the PEL the worker claims from — both are the transport's
+    # own port types, reaching no route, held to the opener like `Purge` and `Reading`. Landed in
+    # the same series as the two receipt pins above; the 210 cannot silently absorb two more.
+    assert len(declared) == 212, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 212 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
