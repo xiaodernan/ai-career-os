@@ -148,7 +148,7 @@ export default function TimelinePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={t("timeline.title")} description={t("timeline.description")} />
+      <PageHeader frontDoor title={t("timeline.title")} description={t("timeline.description")} />
       {(offeredKinds.length > 0) ? (
         <section
           className="flex flex-wrap items-center gap-1.5"

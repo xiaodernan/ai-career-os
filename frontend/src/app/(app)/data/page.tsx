@@ -196,6 +196,7 @@ export default function DataPortabilityPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader
+        frontDoor
         title={t("data.title")}
         description={t("data.description")}
       />

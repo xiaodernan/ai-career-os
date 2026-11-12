@@ -60,7 +60,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <PageHeader title={t("settings.title")} description={t("settings.description")} />
+      <PageHeader frontDoor title={t("settings.title")} description={t("settings.description")} />
 
       {/* Account */}
       <Card>

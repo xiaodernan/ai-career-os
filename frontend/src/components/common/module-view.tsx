@@ -64,6 +64,7 @@ export function ModuleView<T>({
   return (
     <div className="space-y-6">
       <PageHeader
+        frontDoor
         title={title}
         description={description}
         actions={

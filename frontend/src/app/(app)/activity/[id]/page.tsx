@@ -191,6 +191,7 @@ export default function ActivityRunPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        frontDoor
         title={
           <span className="flex flex-wrap items-center gap-3">
             <AgentRunTitle run={run} />

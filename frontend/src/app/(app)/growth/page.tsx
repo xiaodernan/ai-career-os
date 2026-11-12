@@ -80,6 +80,7 @@ export default function GrowthPage() {
   return (
     <div className="space-y-4">
       <PageHeader
+        frontDoor
         title={t("growth.title")}
         description={t("growth.description")}
       />

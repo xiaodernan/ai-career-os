@@ -103,6 +103,7 @@ export default function IngestionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <PageHeader
+        frontDoor
         title={t("ingestion.title")}
         description={t("ingestion.sweepDescription")}
       />

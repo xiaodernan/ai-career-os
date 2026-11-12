@@ -203,7 +203,7 @@ export default function RepliesPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title={t("replies.title")} description={t("replies.description")} />
+      <PageHeader frontDoor title={t("replies.title")} description={t("replies.description")} />
 
       {/* The search is the server's, not a filter over this page: the pager below counts the
           matches, so page two of a search is the second page of the matches rather than the
