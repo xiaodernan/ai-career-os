@@ -1136,6 +1136,15 @@ describe("normalizeDashboard", () => {
       },
       recommendedJobs: [{ id: "j2", title: "Senior Eng", companyName: "Acme", matchOverall: 0.81 }],
       recentRuns: [{ id: "r1", agent: "match", trigger: "manual", status: "success", inputTokens: 100, outputTokens: 40 }],
+      recentActivity: [
+        {
+          id: "evt-1",
+          applicationId: "app-1",
+          kind: "status",
+          payload: { from: "applied", to: "interview" },
+          createdAt: "2026-10-27T12:00:00Z",
+        },
+      ],
     };
     // pipeline reaches into kanban.statusCounts (previously always empty)
     expect(normalizePipeline(payload)).toEqual(
@@ -1161,6 +1170,17 @@ describe("normalizeDashboard", () => {
     expect(d.skillGaps).toEqual([{ skill: "Rust" }, { skill: "gRPC" }]);
     expect(d.recommendedJobs?.[0]).toMatchObject({ id: "j2", title: "Senior Eng" });
     expect(d.recentRuns?.[0]).toMatchObject({ id: "r1", agent: "match", status: "success" });
+    // The event log the backend sent now reaches the card: the reader maps the record's own five
+    // components and passes the free payload map through untouched.
+    expect(d.recentActivity).toEqual([
+      {
+        id: "evt-1",
+        applicationId: "app-1",
+        kind: "status",
+        payload: { from: "applied", to: "interview" },
+        createdAt: "2026-10-27T12:00:00Z",
+      },
+    ]);
   });
 
   it("scales the reported 0..1 average match into the percentage the ring draws", () => {
@@ -1251,6 +1271,42 @@ describe("normalizeDashboard", () => {
     })!;
     expect(d.metrics!.needsAttention).toBe(0);
     expect(d.attention).toBeUndefined();
+  });
+
+  it("passes every event payload through and keeps a kind the card does not know yet", () => {
+    // The map's keys have five different writers, so the mapper reads none of them; it hands the
+    // whole map to the card. A newer kind must survive the round trip -- dropping a real event is
+    // the exact bug this reader closes -- and the card renders its neutral line.
+    const d = normalizeDashboard({
+      kanban: { statusCounts: {}, total: 0, offers: 0 },
+      recentActivity: [
+        { id: "e1", kind: "reply", payload: { subject: "Re: role", mail_id: "m1" } },
+        { id: "e2", kind: "a_future_kind", payload: { anything: 42 } },
+      ],
+    })!;
+    expect(d.recentActivity).toEqual([
+      { id: "e1", applicationId: undefined, kind: "reply", payload: { subject: "Re: role", mail_id: "m1" }, createdAt: undefined },
+      { id: "e2", applicationId: undefined, kind: "a_future_kind", payload: { anything: 42 }, createdAt: undefined },
+    ]);
+  });
+
+  it("drops an event with no id of its own, the way the attention row does", () => {
+    // Every row links to its application; a row the mapper cannot key or point at is not rendered
+    // rather than rendered as a dead list item.
+    const d = normalizeDashboard({
+      kanban: { statusCounts: {}, total: 0, offers: 0 },
+      recentActivity: [{ kind: "note", payload: { note: "orphan" } }, { id: "ok", kind: "note", payload: { note: "kept" } }],
+    })!;
+    expect(d.recentActivity).toHaveLength(1);
+    expect(d.recentActivity![0].id).toBe("ok");
+  });
+
+  it("leaves the card off the page when the backend sent no events", () => {
+    const d = normalizeDashboard({
+      kanban: { statusCounts: {}, total: 0, offers: 0 },
+      recentActivity: [],
+    })!;
+    expect(d.recentActivity).toBeUndefined();
   });
 });
 

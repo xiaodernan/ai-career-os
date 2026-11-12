@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   FileText,
   Gauge,
+  History,
   Library,
   ListChecks,
   Sparkles,
@@ -36,6 +37,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
 import { AttentionRow } from "@/components/dashboard/attention-row";
+import { RecentActivityRow } from "@/components/dashboard/recent-activity";
 import { APPLICATION_STAGES, stageLabel, stageMeta } from "@/lib/pipeline";
 import { useUpdateApplication } from "@/lib/hooks/actions";
 import { snoozeReminder, reminderPatch } from "@/lib/application-edit";
@@ -99,6 +101,11 @@ export default function DashboardPage() {
   // `attention` carries the first few rows, `metrics.needsAttention` the full count.
   const attention = data?.attention ?? [];
   const attentionTotal = metrics?.needsAttention ?? attention.length;
+  // The event log the backend computes, caches and sends beside the attention rows (Epic 153).
+  // It used to travel all the way to the browser and be dropped by the mapper; the card below is
+  // the reader. Both lists come off the same application_events table, but answer different
+  // questions: `attention` is "what is waiting on you now", this is "what happened recently".
+  const recentActivity = data?.recentActivity ?? [];
 
   // The dashboard aggregate may omit sections; fall back to the real list
   // endpoints (never to invented data) so the Command Center stays useful.
@@ -446,6 +453,44 @@ export default function DashboardPage() {
                       })}
                     </p>
                   ) : null}
+                </CardContent>
+              </Card>
+
+              {/* The five newest application_events the backend already computed, cached and sent
+                  (Epic 153). The mapper now hands them over instead of dropping them at the wire;
+                  this card is the reason that field exists. */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <SectionHeading
+                    eyebrow={t("eyebrows.history")}
+                    icon={<History className="size-4" aria-hidden />}
+                    title={t("dashboard.recentActivity")}
+                    description={t("dashboard.recentActivityDescription")}
+                  />
+                </CardHeader>
+                <CardContent>
+                  {dashboard.isPending ? (
+                    <LoadingListSkeleton rows={2} />
+                  ) : dashboard.isError ? (
+                    <ErrorState
+                      title={t("dashboard.activityFailed")}
+                      error={dashboard.error}
+                      onRetry={() => void dashboard.refetch()}
+                      retrying={dashboard.isFetching}
+                    />
+                  ) : !recentActivity.length ? (
+                    <EmptyState
+                      icon={<History aria-hidden />}
+                      title={t("dashboard.noRecentActivity")}
+                      description={t("dashboard.noRecentActivityDescription")}
+                    />
+                  ) : (
+                    <ul className="divide-y divide-border/60">
+                      {recentActivity.map((row) => (
+                        <RecentActivityRow key={row.id} row={row} />
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
 

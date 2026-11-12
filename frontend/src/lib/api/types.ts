@@ -822,6 +822,28 @@ export interface FollowUpItem {
   suggestedMessage?: string | null;
 }
 
+/**
+ * One audit row of an application's history, as `DashboardResponse.recentActivity` puts it on
+ * the wire: `{id, applicationId, kind, payload, createdAt}` (the `RecentActivity` record). The
+ * backend reads the newest five `application_events` for the caller, so this is the reader's own
+ * data, not an aggregate or a second guess.
+ *
+ * `kind` is one of the five the backend actually writes (`status`, `note`, `reminder`, `outcome`,
+ * `reply`) — but it travels as a plain `String`, so a newer writer can add one; the component
+ * names what it knows and falls back to a neutral line rather than dropping a real event.
+ * `payload` is the event's free `Map<String, Object>`: `status` carries `{from,to}`, `note` the
+ * `{note}` text, `reminder` `{reminder_at}` or `{cleared:true}`, `outcome` the `{field}`, and
+ * `reply` `{subject,sender,mail_id,intent}`. It is passed through untouched — the row reads the
+ * keys its own kind owns, the same way `TimelineService` does on the server.
+ */
+export interface RecentActivityItem {
+  id: string;
+  applicationId?: string;
+  kind?: string;
+  payload?: Record<string, unknown>;
+  createdAt?: string;
+}
+
 export interface DashboardPayload {
   metrics?: DashboardMetrics;
   /** either {status: count} or [{status,count}] */
@@ -837,6 +859,8 @@ export interface DashboardPayload {
   }) | null;
   score?: ResumeScore | number | null;
   recentRuns?: ActivityRun[];
+  /** The five newest `application_events` for this caller, each linking back to its application. */
+  recentActivity?: RecentActivityItem[];
   activity?: ActivityRun[];
   greeting?: string | null;
   [key: string]: unknown;

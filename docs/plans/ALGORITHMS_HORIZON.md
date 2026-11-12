@@ -34,6 +34,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 150 | The two read-only ops verdicts get a real consumer: a backend collector scrapes their measured numbers into Prometheus, and their `no backend caller` markers become true | `AiOpsMetrics` (`@Scheduled` + `Gauge`) over `GET /internal/ops/{workqueue,cache}`, 7 excused-by-name signals, fail-open keeping last reading; backend `AiServiceClient` seam + `HttpAiServiceClient` GETs with a nil system id; API.md ledger 10→8; 7 offline backend tests + 31 contract/meter gates |
 | 151 | A task's owner is decidable on any replica, not just the one that made it: the mirror that carries the frames also carries ownership, so the gate stops failing closed on a sibling | `aowner()` memory-first then `XREVRANGE` over the mirrored `owner` field; `_require_owner` async; owner never enters a wire frame or `state()`; 6 offline tests (fake-streams Redis) + 59 contract/census gates; MICROSERVICES §6 and PERFORMANCE_HORIZON legacy note reconciled |
 | 152 | A long-lived service stops accumulating one Redis key and one dict entry per task: the task feed's space is bounded, and reclamation rides the clock that already ticks | `_MIRROR_TTL_S=3600` module constant + `pipeline([XADD, PEXPIRE])` write-time renewal (one round trip); `gc_old_tasks()` wired into all three existing embed loops via local imports; zero new tick/knob/resp command; memory mode sends no new Redis command; 4 source-contract + 2 runtime offline tests; liveness-interval line pin 275→291 / 282,279→298,295 |
+| 153 | The dashboard event log the backend computes, caches and sends is no longer dropped at the browser boundary: the last unread component of `DashboardResponse` gets a real reader and a card a reader can act on | pure `normalizeRecentActivity` (five own components, free payload passed through, id-required, unknown kind kept); `recent-activity.tsx` renders all five wired kinds plus an honest neutral line for a stranger, linking each row to its application; honesty ledger 18→19 sites / diff set emptied, 8 mapper + 8 row tests; copy census 168→169, en/zh 15 keys, build + bundle budget |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1594,3 +1595,61 @@ censuses most likely to see a new time constant or knob 29 passed -- evidence
 that the module-constant TTL really does stay out of the knob and lifetime
 ledgers. Full ai-service suite, backend `mvn test`, `verify_gates.sh` and the
 pre-commit hook all pass; no test was skipped or re-baselined downward.
+
+## Epic 153 — the dashboard's last unread component gets a reader **DONE (measured 2026-11-12)**
+
+**The gap was a wire field, not a missing endpoint.** `DashboardService.recentActivity(UUID)`
+(`report/service/DashboardService.java:148`) queries `application_events` newest-first with
+`Paging.first(RECENT_LIMIT=5)`, maps each row through `toActivity` into the
+`RecentActivity(UUID id, UUID applicationId, String kind, Map<String,Object> payload,
+OffsetDateTime createdAt)` record (`report/dto/DashboardDtos.java:37`), includes it as the
+eleventh component of `DashboardResponse`, and caches the whole response through the Epic 125
+L1/L2 `DashboardCache`. `DashboardCacheTest.sample()` even builds a `RecentActivity` to verify
+the cache round-trips it. The field is real, maintained and paid for on every dashboard read.
+
+**It was thrown away at the browser boundary.** The comment in `normalizeDashboard`
+(`frontend/src/lib/api/normalize.ts:1263`) already listed `recentActivity[]` among the response's
+components, but the mapper's return had no such key, `DashboardPayload` (`types.ts`) had no such
+field, and a full frontend search found it only in two test fixtures and that comment -- no reader,
+no render. `ai-service/tests/test_response_field_contract.py` pinned this precisely:
+`_emitted("DashboardResponse") - read_off_d == {"recentActivity"}`, with a comment saying the
+record carried it for a future reader to notice. This epic is that reader. The consumer is the
+signed-in reader looking at their own dashboard, which is a harder consumer than an operator who
+might curl an endpoint -- so it clears the "no write-only machines" rule on evidence.
+
+**A pure reader, then a card.** `normalizeRecentActivity(raw)` is a module-level mapper that reads
+only the record's five own camelCase components and passes the free `payload` map through
+untouched: its keys have five different writers (`ApplicationService.writeEvent` emits `status`
+`{from,to}`, `note` `{note}`, `reminder` `{reminder_at}`/`{cleared}`, `outcome` `{field}` with
+`offer_compensation`/`rejection_reason`; `InboundReplyService.file` emits `reply`
+`{mail_id,sender,subject,intent}`), so reading any of them in the mapper would be guessing at
+shapes no single producer pins. A row with no `id` is dropped exactly as an attention row is,
+because every line links to its application. `recent-activity.tsx` owns that vocabulary instead:
+it renders a human sentence per kind, names the two outcome fields the product writes, resolves a
+`status` move's stage through the stages table, and gives a newer, unknown kind a neutral line
+rather than filtering a real event out -- the exact defect this card closes. Rows with an
+`applicationId` link to `/applications?application=...`; a row cached before that id existed still
+renders as text. All copy is en/zh through `t()`, so the card is readable in both languages.
+
+**Honesty ledger advanced, never relaxed.** The Python static census counts every accessor read in
+the browser mappers and binds each one to a Java record component. This change registered
+`RecentActivity` as a new `("java", …)` producer, registered `normalizeRecentActivity` in `READERS`,
+and moved the counts it actually measured: `normalizeDashboard` sites 18 → 19 (the one new
+`list(d, "recentActivity")`), receiver `d` 10 → 11, `PRODUCERS` 88 → 89, mapper population 52 → 53,
+named accessor calls 398 → 404, whole-oracle reads 409 → 415, derived locals 99 → 103. The
+`_emitted("DashboardResponse") - read_off_d` difference went from `{"recentActivity"}` to the empty
+set: **every component of `DashboardResponse` now has a reader.** Each moved number carries the
+reason beside it; no assertion was deleted or re-baselined downward. Two `payload` sub-steps were
+split onto separate lines (`const payloadMap = pick(...)` then `rec(payloadMap)`) so the field
+census can still name the local, following `normalizeResumeScore`'s existing pattern.
+
+**Verification.** `test_response_field_contract.py` 18 passed, and the four static censuses most
+likely to see a new reader or key (`response_field`, `stream_event`, lifetime ledger, config-knob
+ledger) 40 passed. Frontend `recent-activity.test.tsx` 8 cases (each kind's copy, cleared-vs-set
+reminder, both outcome fields plus a stranger, stage badge, id-required link, payload-less row,
+event instant) and `normalize.test.ts` 3 new boundary cases (payload pass-through with an unknown
+kind, id-required drop, empty-array omission) pass; full frontend suite 131 files / 1250 tests
+green. `used-keys` and `translations` gates confirm all 15 new en/zh keys are asked for by name
+and non-blank in both languages; `copy-census` browser sources moved 168 → 169 with the new card
+(and no English literal was introduced). `next build` and the 340 kB route budget are the final
+gate. No backend source changed; `docs/API.md` notes the field is now consumed.

@@ -531,7 +531,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # `normalizeApplyPacket` plus the three component readers it calls, which are private and so
     # reach the field gate's census the same way `changeFrom` does. 52 with 1076949's
     # `normalizeCoverLetter`, the kept-letter reader the field gate now binds to `LetterItem`.
-    assert population and population.group(1) == "52", \
+    # 53 with Epic 153's `normalizeRecentActivity`, the dashboard event-log reader; this file only
+    # echoes that pin, so the two move together or one of them is stale.
+    assert population and population.group(1) == "53", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 

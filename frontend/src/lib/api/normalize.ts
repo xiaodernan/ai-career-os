@@ -34,6 +34,7 @@ import type {
   NotificationItem,
   NightlyReport,
   NightlyVerdict,
+  RecentActivityItem,
   ResumeScore,
   SavedSearch,
   SearchResults,
@@ -1255,6 +1256,41 @@ function normalizeFollowUp(raw: unknown): FollowUpItem {
   };
 }
 
+/**
+ * One row of the dashboard's activity list (`reports/dashboard` → `recentActivity`): the newest
+ * five `application_events`, read off the `RecentActivity` record the backend declares in
+ * `DashboardDtos.java`. `applicationId` is what the card links back to, so a row without an `id`
+ * of its own is dropped for the same reason an attention row is -- every line points somewhere.
+ *
+ * `payload` is a free `Map<String, Object>` whose keys belong to the *kind* of event (`status`
+ * carries `{from,to}`, `note` a `{note}`, `reminder` `{reminder_at}`/`{cleared}`, `outcome` a
+ * `{field}`, `reply` `{subject,sender,mail_id,intent}`). It is passed through untouched here: the
+ * number of keys a `Map` can hold has no single producer to pin against, so reading them in this
+ * mapper would be guessing at shapes the backend writes in five different methods. The card,
+ * which owns that vocabulary, reads the keys its own kind needs and says a neutral line for a
+ * kind it does not know -- a real event is never silently dropped just because it is newer than
+ * the card's word for it.
+ *
+ * The names below are the record's own five components, camelCase and nothing else. This reader
+ * is why `recentActivity` stops being the one component of `DashboardResponse` the mapper left
+ * on the wire for nobody.
+ */
+function normalizeRecentActivity(raw: unknown): RecentActivityItem | null {
+  const id = str(raw, "id");
+  if (!id) return null;
+  // Two lines, as `normalizeResumeScore` does for its own nested map: `rec` takes the map that
+  // `pick` read, rather than wrapping the call, so this local stays nameable to the field census.
+  const payloadMap = pick(raw, "payload");
+  const payload = rec(payloadMap);
+  return {
+    id,
+    applicationId: str(raw, "applicationId"),
+    kind: str(raw, "kind"),
+    payload: payload ?? undefined,
+    createdAt: str(raw, "createdAt"),
+  };
+}
+
 export function normalizeDashboard(raw: unknown): DashboardPayload | null {
   // `api.get` already unwraps the {success,data} envelope, so what arrives here is
   // `DashboardResponse` and nothing else: { kanban{statusCounts,total,offers}, interviews,
@@ -1298,6 +1334,13 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
     .map(normalizeAttention)
     .filter((row): row is AttentionItem => row !== null);
   const followUps = list(d, "followUps", "follow_ups").map(normalizeFollowUp);
+  // The dashboard's own event log: the backend wrote these five rows, cached them with the rest
+  // of the response, and sent them across the wire. Reading them here is what gives the activity
+  // card a real source; before this line the component was the one part of `DashboardResponse`
+  // that travelled all the way to the browser and was then thrown away.
+  const recentActivity = list(d, "recentActivity")
+    .map(normalizeRecentActivity)
+    .filter((row): row is RecentActivityItem => row !== null);
   return {
     // `Kanban.total` is a primitive `long`, so `applications` is never missing on a served
     // payload and the old "hide the strip when every metric is null" guard had no reachable
@@ -1322,6 +1365,7 @@ export function normalizeDashboard(raw: unknown): DashboardPayload | null {
       : null,
     score: resumeScore,
     recentRuns: runs.length ? runs : undefined,
+    recentActivity: recentActivity.length ? recentActivity : undefined,
   };
 }
 

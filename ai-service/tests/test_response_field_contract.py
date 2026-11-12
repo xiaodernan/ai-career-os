@@ -131,6 +131,11 @@ PRODUCERS = {
     # built from the ai-service's ranked contacts. The record is declared in the same file as
     # `DashboardResponse`, which is the envelope the reader drills it out of.
     "FollowUpItem": ("java", "report/dto/DashboardDtos.java"),
+    # One row of the dashboard's activity card (Epic 153): the `List<RecentActivity>` the backend
+    # reads off `application_events` and sends beside `recentRuns`. Its `payload` is a free
+    # `Map<String, Object>`, so the reader passes it through and the card reads the keys its own
+    # kind owns -- the same shape `TimelineService` switches on, without a single producer to pin.
+    "RecentActivity": ("java", "report/dto/DashboardDtos.java"),
     # The event `payload` is a free `Map<String, Object>` with two writers, so each is read from the
     # method that fills it rather than unioned into one: a status change is `applyStatusChange`
     # (`{from,to}`, reached from both PATCH and the kanban reorder), and the note/reminder branches
@@ -350,7 +355,8 @@ READERS: dict[str, dict] = {
         # including five whole returned fields (`pipelineItems`, `suggestion`, `insights`,
         # `attention`, `empty`), the `normalizeResumeScore(d)` fallback (`d` has no `score`), and the
         # flat numeric aliases (`applicationCount`, `in_pipeline`, `offerCount`, `gapCount`, …).
-        # `recentActivity` is the one component the mapper still never reads, and says so below.
+        # Epic 153 wired the last component the mapper left unread -- `recentActivity` -- to the
+        # activity card; the ledger's set difference below went from naming that surplus to empty.
         "record_of": {"d": "DashboardResponse", "kanban": "Kanban",
                       "currentResume": "ResumeSummary", "skillGapDigest": "SkillGapDigest"},
         "drilled": {"kanban": ("d", "kanban"),
@@ -937,6 +943,23 @@ READERS: dict[str, dict] = {
         # it into the record's own field names). A snake_case twin beside each live name would be
         # a second shape the mapper silently reinterprets.
         "record_of": {"raw": "FollowUpItem"},
+        "drilled": {},
+        "elements": {},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeRecentActivity": {
+        # The dashboard's activity card (Epic 153): one row of `DashboardResponse.recentActivity`,
+        # the `List<RecentActivity>` the backend built from the caller's newest five
+        # `application_events`. `raw` is that row, and the five names read here are exactly the
+        # record's five components -- camelCase, because `DashboardResponse` is the only producer
+        # on this direction and a Java record speaks its own component names. `payload` is a free
+        # `Map<String, Object>` with five different writers (see TimelineService's switch), so it
+        # is passed through rather than drilled: there is no single component set to pin a read
+        # against, and the card owns that vocabulary. `id` decides whether a row renders at all
+        # (every line links to its application), so it is read first and a row without one is
+        # dropped -- guarding the array's element type, not a shape the endpoint can produce.
+        "record_of": {"raw": "RecentActivity"},
         "drilled": {},
         "elements": {},
         "blind": {},
@@ -1981,13 +2004,14 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     # `NightlyVerdict`, the third row that file declares; 81 with the apply receipt, whose reader
     # (`normalizeApplyResult`, `a0eb950`) had been bound to a producer the table never named.
     # 87 with the kept-letter wave's two records: `LetterItem` (1076949), which `normalizeCoverLetter`
-    # reads, and `LetterHit` (a7ea329), the seventh hit the search palette binds.
-    assert len(PRODUCERS) == 88, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    # reads, and `LetterHit` (a7ea329), the seventh hit the search palette binds. 89 with Epic 153's
+    # `RecentActivity`, the dashboard's event-log row -- one more Java record from the same DTO file.
+    assert len(PRODUCERS) == 89, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 53), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 54), ("pyadd", 1),
                                       ("pyappend", 6), ("pycons", 1), ("pyconst", 4),
                                       ("pydantic", 3), ("pyfunc", 6), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -2010,7 +2034,9 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     assert "nosuchkind" in raised and "BaseModel" not in raised, \
         (f"{raised}: an unknown kind must be named as itself -- pointing at a pydantic model is the "
          "misattribution this branch exists to remove")
-    assert len(PRODUCERS) == 88, "the planted row is still in the table the census above measured"
+    # The planted row is gone again; 89 is the shipped table's own count (Epic 153 added
+    # `RecentActivity`), the same number the census at the top of this test measured.
+    assert len(PRODUCERS) == 89, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2619,15 +2645,18 @@ def test_no_mapper_is_left_unbound():
     # `normalizeNightlyVerdict`, the same card's one-answer read; 47 with 19.2's
     # `normalizeApplyResult`, the apply receipt's four names (`a0eb950` added the reader without
     # moving this population, so the pin had fallen one behind the file). 52 with 1076949's
-    # `normalizeCoverLetter`, the ten names the kept-letter drawer reads off `LetterItem`.
-    assert len(population) == 52, sorted(population)
+    # `normalizeCoverLetter`, the ten names the kept-letter drawer reads off `LetterItem`. 53 with
+    # Epic 153's `normalizeRecentActivity`, the five names the dashboard's activity card reads off
+    # the `RecentActivity` row the backend computes, caches and sends on `DashboardResponse`.
+    assert len(population) == 53, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
                        "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume",
-                       "pathOf", "statusCountsToRows"]
+                       "normalizeRecentActivity", "pathOf", "statusCountsToRows"]
     assert sorted(n for n in private if n in population) == \
         ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
-         "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume"], \
+         "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume",
+         "normalizeRecentActivity"], \
         "the private half of this census is what #160 added; if it reads empty, the ban is exported-only again"
 
 
@@ -2772,24 +2801,26 @@ def test_the_reads_are_actually_found():
         "letters": ["snippet"],
     }
     dash = _sites("normalizeDashboard")
-    assert len(dash) == 18
+    assert len(dash) == 19
     assert {s["receiver"] for s in dash} == {"d", "kanban", "currentResume", "skillGapDigest"}
-    assert sum(1 for s in dash if s["receiver"] == "d") == 10
+    assert sum(1 for s in dash if s["receiver"] == "d") == 11
     assert sum(1 for s in dash if s["receiver"] == "kanban") == 3
     assert sum(1 for s in dash if s["receiver"] == "currentResume") == 4
-    # 18, down from the 41 this reader had when #129 measured it: 26 sites had no author on
+    # 19, down from the 41 this reader had when #129 measured it: 26 sites had no author on
     # DashboardResponse / Kanban / ResumeSummary / SkillGapDigest -- the envelope pick, the whole
     # `metrics`/`stats`/`summary` layer (10 sites), five returned fields nobody produced, the
     # `normalizeResumeScore(d)` fallback and the flat numeric aliases. The seventeenth is the
     # attention card's `list(d, "attention")`: the row list the backend now sends beside the count,
     # and the one component of that record no site read before it. The eighteenth is the
-    # follow-up tile's `list(d, "followUps")` (11.3) -- the same shape, the same reason.
+    # follow-up tile's `list(d, "followUps")` (11.3) -- the same shape, the same reason. The
+    # nineteenth is Epic 153's `list(d, "recentActivity")`, which closes the ledger's last
+    # producer-side surplus: the event log the backend computed, cached and sent all the way to
+    # the browser, where `normalizeDashboard` used to throw it away.
     read_off_d = {k for s in dash if s["receiver"] == "d" for k in s["keys"]}
-    assert _emitted("DashboardResponse") - read_off_d == {"recentActivity"}
-    # The one component the mapper still never reads. `recentActivity` rows are an event log the
-    # dashboard page renders from its own query, not off this payload, so the record carries it and
-    # the browser ignores it; that is a producer-side surplus, not a dead read, and it stays listed
-    # here so a future reader has to notice it rather than inherit a silently growing set.
+    # Every component of `DashboardResponse` now has a reader. `recentActivity` used to be the one
+    # the mapper left on the wire for nobody; Epic 153 wired it to the activity card, so the set
+    # difference is empty rather than naming that surplus.
+    assert _emitted("DashboardResponse") - read_off_d == set()
     assert {k for s in dash if s["receiver"] == "kanban" for k in s["keys"]} & _emitted("Kanban") == \
         _emitted("Kanban")
     assert {key for s in dash if s["receiver"] == "currentResume" for key in s["keys"]} & \
@@ -3449,8 +3480,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # records the backend now answers with; 46 with 20.2's `normalizeNightlyVerdict`, seven
     # names off the record that answers the same card with one word; 47 with the apply receipt's
     # reader, which had been added to the table's bindings without joining this count. 52 with
-    # 1076949's `normalizeCoverLetter`, the kept-letter reader the drawer's shelf mounts.
-    assert len(population) == 52, f"the census population moved: {population}"
+    # 1076949's `normalizeCoverLetter`, the kept-letter reader the drawer's shelf mounts. 53 with
+    # Epic 153's `normalizeRecentActivity`, the activity card's row reader.
+    assert len(population) == 53, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3478,7 +3510,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # `normalizeNightlyVerdict`, none of them folded; 364 with the apply receipt's six reads --
     # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls. 403 with
     # the kept-letter and reply waves' fourteen, the same calls the key-position census counts.
-    assert len(whole) == 409, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    # 415 with Epic 153: `normalizeRecentActivity`'s five reads off the `RecentActivity` row plus the
+    # one `list(d, "recentActivity")` that finally hands the card its source -- six named reads.
+    assert len(whole) == 415, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     table_reads = _key_read_calls(_search_groups_table())
     # a7ea329 taught the table to read: the letters href asks a hit for its card id so the palette can
     # deep-link to that application. It is the only named read outside every mapper, and it is bound
@@ -3655,7 +3689,9 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # kept-letter and reply waves' fourteen: 1076949's `normalizeCoverLetter` quotes ten names,
     # 43539de and 18433e9/f1ad0cf add the application's and the packet's letter and rehearsal
     # totals, and a7ea329's letter hit reads `applicationId` in `SEARCH_GROUPS`' href.
-    assert len(calls) == 424, (f"{len(calls)} accessor calls hand something to a key position: "
+    # Epic 153 added six: the five the `normalizeRecentActivity` reader makes (four `str` and one
+    # `pick` for `payload`) and the `list(d, "recentActivity")` that hands it its rows.
+    assert len(calls) == 430, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
@@ -4244,7 +4280,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # seven paired reads in `normalizeNightlyVerdict`; 362 with the apply receipt's six --
     # `normalizeIngestionRun`'s two new pairs and `normalizeApplyResult`'s four calls. 401 with
     # the kept-letter and reply waves' fourteen, the calls the key-position census above lists.
-    assert len(paired) == 407, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    # Epic 153's six (the new reader's five plus the dashboard's `list(d, "recentActivity")`) move
+    # this from 407. It stays the population both the bare-read census below and its oracle draw on.
+    assert len(paired) == 413, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4261,8 +4299,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # 20.1's ten quoted calls in `normalizeNightlyReport`; 347 with 20.2's seven quoted
     # calls in `normalizeNightlyVerdict`; 353 with the apply receipt's six quoted calls (two
     # in `normalizeIngestionRun`, four in `normalizeApplyResult`). 392 with the kept-letter and
-    # reply waves' fourteen quoted calls, the same ones again.
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 398, \
+    # reply waves' fourteen quoted calls, the same ones again. 404 with Epic 153's six quoted
+    # calls: four `str`, one `pick` in `normalizeRecentActivity`, and the dashboard's `recentActivity`.
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 404, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4317,7 +4356,9 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     # ten reads in `normalizeNightlyReport`; 356 with 20.2's seven reads in
     # `normalizeNightlyVerdict`; 362 with the apply receipt's six, the same calls the census above
     # gained. 401 with the kept-letter and reply waves' fourteen, the same calls again.
-    assert len(walked) == 407, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    # Epic 153's six (the new reader's five plus the dashboard's `list(d, "recentActivity")`) move
+    # this from 407. The spread-receiver census and its oracle still draw the same population.
+    assert len(walked) == 413, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
@@ -4403,7 +4444,10 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     # 92 with 19.6's voice-state reader; 93 with 20.1's `const steps = list<unknown>(raw, "steps")`;
     # 94 with the apply receipt's `const applied = rec(pick(raw, "appliedCounts", "applied_counts"))`,
     # a local whose accessor is handed another call and therefore joins the refused-by-name list below.
-    assert len(walked) == 99, (f"{len(walked)} locals are built by an accessor call: the population this "
+    # Epic 153 adds four: `id` and `payloadMap` in `normalizeRecentActivity` (the `payload` map is
+    # read by `pick` into a nameable local, then narrowed by `rec`), and `recentActivity` plus its
+    # `.filter` result in `normalizeDashboard`. They move this from 99.
+    assert len(walked) == 103, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "

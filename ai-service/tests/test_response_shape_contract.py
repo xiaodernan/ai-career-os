@@ -945,8 +945,11 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # 68 with the kept letter's `normalizeCoverLetter` (1076949): the drawer reads a saved
     # letter's row through the same opener as every other row, so the count moved with the
     # letters wave; the sentence's split becomes 59 exported and 9 module-private.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 68, \
-        "59 exported mappers and 9 module-private ones, all through one opener"
+    # 69 with Epic 153's `normalizeRecentActivity`: the dashboard's event-log row is a tenth
+    # module-private mapper (it is composed only by `normalizeDashboard`, never exported), so the
+    # split moves to 59 exported and 10 module-private -- the ban above has to reach it too.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 69, \
+        "59 exported mappers and 10 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -3563,7 +3566,11 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1705 rather than 1671 since the fleet's trace kind union grew the handoff
         # branch (Epic 105's edge) and the monitoring section above it moved (+34 lines
         # since the ServiceTopology note below first moved it).
-        ("types.ts", 1705, "kind:"),
+        # 1729 rather than 1705 since Epic 153's `RecentActivityItem` interface joined above
+        # the union (+9 lines with its doc comment) and the concurrent brand-failure-surface
+        # merge (Epic 142) grew the types above it (+15); the union's `| "message"` arm itself
+        # is byte-for-byte what it was. A red here is those two edits, not a changed frame name.
+        ("types.ts", 1729, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

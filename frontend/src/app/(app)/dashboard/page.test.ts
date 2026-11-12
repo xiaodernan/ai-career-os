@@ -84,3 +84,23 @@ describe("the dashboard front door carries the designed visual language", () => 
     expect(page).toContain("actions={");
   });
 });
+
+describe("the recent-activity card reads the event log the backend sends", () => {
+  // The mapper used to carry `recentActivity` across the wire and drop it at the browser boundary.
+  // These pins keep the whole chain visible in one place: the payload field, the row component, and
+  // the three copy keys that make the card -- plus its empty and error states -- say something real.
+  it("wires the field, the row and the card's own copy", () => {
+    expect(page).toContain('import { RecentActivityRow } from "@/components/dashboard/recent-activity"');
+    expect(page).toContain("data?.recentActivity");
+    expect(page).toContain("<RecentActivityRow");
+    for (const key of [
+      "dashboard.recentActivity",
+      "dashboard.recentActivityDescription",
+      "dashboard.noRecentActivity",
+      "dashboard.noRecentActivityDescription",
+      "dashboard.activityFailed",
+    ]) {
+      expect(page).toContain(`t("${key}")`);
+    }
+  });
+});
