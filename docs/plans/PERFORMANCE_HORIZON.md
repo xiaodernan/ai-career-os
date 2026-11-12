@@ -1,4 +1,4 @@
-# Performance horizon — Epics 118–131
+# Performance horizon — Epics 118+
 
 The product's loop is complete. What this horizon adds is not another screen: it is
 **the cost of the work the loop already does**. Three questions drive every slice
@@ -28,6 +28,8 @@ Docker-dependent suite that could not run is recorded as not run.
 | 129 | The applications board ships when it is needed | bundle budget |
 | 130 | The auth door sells the same product the landing does | vitest + budget |
 | 131 | The task feed is a Redis Stream when scale-out asks for it | fake-streams suite |
+| 162 | The backend's job queue runs on Redis Streams, one group across the fleet: a crashed replica's job is reclaimed, a poison job is dead-lettered, and nothing grows without bound | JobQueueIT 5/5 (real it-redis), JobQueueTest 6/6, JobWorkerTest 15/15 |
+| 163 | The inbox mail/ring/read/write paths stop riding a per-key N+1: one IN-round trip plus one save per unread set | NotificationServiceTest 26/26 incl. 2 new pins, full backend suite |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -381,3 +383,61 @@ redis-down equivalence, queue-shed); full ai-service suite 2410 passed; verify_g
 267/267 (gate now includes the backplane suite). The interval census moved from one
 definer to one definer + two module-local consumers (renamed in the module), annotated;
 the frame-census moved 2 -> 5 yields with the reason in the assertion text.
+
+## Epic 162 — the backend's job queue over Redis Streams ** landed green (2026-11-13)**
+
+Landed as the parallel session's in-flight epic; this entry records what the work is
+and how this box proved it out. One consumer group (`backend`) is shared by every
+replica of the backend: a job is handed to one consumer, a crashed replica's
+unacknowledged job is reclaimed by a sibling (`XCLAIM` re-checks idle time), and a
+job failing `max-deliveries` times is written to `careeros:v1:jobs:dlq` and never
+retried. Space is bounded at the write (`XADD MAXLEN ~ max-len`), not by a sweep, and
+a job's tags ride the registered handler's own name, never the wire field.
+`CAREEROS_QUEUE_ENABLED=false` (the default) sends no Redis command and runs no
+scheduled work: every producer keeps its inline path.
+
+Production wiring is deliberately NOT shipped here: no producer is wired to the queue
+yet — this is the transport and its bounds, proven in isolation. Turning it on with a
+real call site is the next epic's decision, with its own e2e.
+
+**Two breaks were left in the in-flight state; they were fixed here without touching
+the design.** `QueueMetrics.JOBS` was package-private while the cross-package IT reads
+it off the registry (the meter's name is its contract — now public); and `JobQueueIT`
+asserted two bulk `>` reads of size 20 split across replicas, which Redis does not do
+— the read offers the whole un-delivered queue to the asker, capped by `count`. The
+test now alternates unit reads, the interleaving a real fleet produces, which proves
+exclusivity and both-replica progress deterministically. The same suite storms 300
+individual XADDs, past this shared box's 500 ms Redis command window (which exists to
+fail fast in production); this class alone registers a 5 s timeout. The production
+default is untouched.
+
+**Measured on real `careeros-it-redis`:** JobQueueIT 5/5 (121 s), JobQueueTest 6/6,
+JobWorkerTest 15/15 — green on this host. Suite-level runs on this portable sandbox
+also surface sandbox flakiness that is not the epic's (RateLimitIT under docker-desktop
+stalls; re-ran green with no code change).
+
+## Epic 163 — the inbox write paths stop riding a per-key N+1 **DONE (verified 2026-11-13)**
+
+The inbox's mail/ring/read/clear paths rebuilt the synthesized inbox via `inbox()`
+— calling `shown()` twice per public write — and then selected one state row per key
+(`states.findByUserIdAndSignalKey` -> `orElseGet(fresh)`) before saving each. A
+`markAllRead` showing N unread episodes cost about 2N round trips on the read side
+plus N saves, on top of two full candidate syntheses; the mail/ring latches paid the
+same per-key price.
+
+**The refactor, zero production-shape drift.** `shown()` is walked once per public call
+and `foldInbox` is the one fold every inbox-shaped answer goes through (no hand-rolled
+second fold, so the two surfaces cannot disagree); `inbox()` is `foldInbox(shown(userId))`.
+Every batch write goes through one `states.findByUserIdAndSignalKeyIn` IN-round trip plus
+one `saveAll` — a miss mints the fresh row exactly as the old `stateFor` did, so the
+latch semantics are unchanged. `dismissRead`/`dismiss`/`markRead`/`markAllRead` fold the
+just-applied writes into the walked snapshot in memory, byte-identical to a re-read after
+the flush; `markNotified`/`markPushed` share the same helper under a documented
+`STATE_BATCH_CAP=500` clamp; the per-key `findByUserIdAndSignalKey` is gone.
+
+**Honesty boundary.** The saving is a call-side shape — ones, not N — pinned by tests,
+not a wall-clock number on a rested DB; no ranking changed, no wire shape moved.
+`NotificationServiceTest` 26/26 with two new pins (one IN-round trip and one save per
+`markAllRead`, zero per-key `save`), plus dedup of repeated read keys into one row per
+episode. The whole backend suite runs green on this host apart from the box-flaky
+`RateLimitIT` (re-ran green; environment, not this code).

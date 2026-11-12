@@ -6071,6 +6071,32 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `career-os-backend/default`, actuator health, enabling the client, and the fail-safe optional import) and linked it
   from `docs/DEPLOYMENT.md`'s Config Server section. Documentation-only.)
 
+- [x] **162** The backend's job queue lands on Redis Streams (2026-11-13).
+
+  (One `backend` consumer group shared by every replica: hand-out to one consumer,
+  `XCLAIM` reclaims a crashed replica's unacknowledged job, `max-deliveries` failures
+  go to `careeros:v1:jobs:dlq`, bounded at the write via `XADD MAXLEN ~ max-len`, opt-in
+  `CAREEROS_QUEUE_ENABLED=false` default keeps zero Redis commands until a producer is
+  wired. The parallel session's in-flight epic; its two breaks repaired here: the public
+  meter constant its IT reads cross-package, and its false split-across-replicas bulk-read
+  assertion replaced by the interleaving Redis actually offers (alternating unit reads).
+  Measured on real `careeros-it-redis`: JobQueueIT 5/5, JobQueueTest 6/6, JobWorkerTest
+  15/15. Producers are NOT wired here by design; the call-site decision is the next
+  epic's with its own e2e.)
+
+- [x] **163** The inbox write paths stop riding a per-key N+1 (2026-11-13).
+
+  (The mail/ring/read/clear paths rebuilt the inbox synthesis twice per public write and
+  selected one state row per key, then saved per key. `shown()` is now walked once and
+  folded by the one shared `foldInbox`; every batch write goes through one
+  `findByUserIdAndSignalKeyIn` IN-round trip plus one `saveAll`; the just-applied writes
+  are folded in memory instead of re-synthesizing; latch calls share a documented
+  `STATE_BATCH_CAP=500` clamp; the per-key `findByUserIdAndSignalKey` is gone.
+  NotificationServiceTest 26/26 with two new pins (one IN-query and one save per
+  `markAllRead`, zero per-key `save`); call-side shape only — no wall-clock claim, no wire
+  or ranking change. The backend suite is green on this host apart from the box-flaky
+  `RateLimitIT` (environment; re-ran green).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
