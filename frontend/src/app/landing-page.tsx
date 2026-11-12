@@ -68,10 +68,10 @@ export function LandingPage() {
               <span className="hidden sm:inline">{locale === "en" ? "中文" : "EN"}</span>
             </Button>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/auth/login">{t("landing.signIn")}</Link>
+              <Link href="/login">{t("landing.signIn")}</Link>
             </Button>
             <Button variant="ai" size="sm" asChild className="glow-on-hover">
-              <Link href="/auth/register">
+              <Link href="/register">
                 {t("landing.getStarted")}
                 <ArrowRight className="size-3.5" aria-hidden />
               </Link>
@@ -98,13 +98,13 @@ export function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button variant="ai" size="lg" asChild className="glow-on-hover">
-              <Link href="/auth/register">
+              <Link href="/register">
                 {t("landing.startFree")}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href="/auth/login">{t("landing.signIn")}</Link>
+              <Link href="/login">{t("landing.signIn")}</Link>
             </Button>
           </div>
           <p className="mx-auto mt-5 flex max-w-xl items-center justify-center gap-2 text-sm text-muted-foreground">
@@ -180,7 +180,7 @@ export function LandingPage() {
             </p>
             <div className="relative mt-8">
               <Button variant="ai" size="lg" asChild className="glow-on-hover">
-                <Link href="/auth/register">
+                <Link href="/register">
                   {t("landing.ctaButton")}
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>

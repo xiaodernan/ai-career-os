@@ -9,6 +9,9 @@
 !.env.example
 !.env.prod.example
 
+# Local verification captures from dev sessions (Playwright screenshots).
+_shots/
+
 # node / next
 node_modules/
 .next/
