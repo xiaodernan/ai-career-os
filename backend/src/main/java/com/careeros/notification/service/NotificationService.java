@@ -17,11 +17,15 @@ import com.careeros.report.repository.DashboardRepository;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,6 +74,12 @@ public class NotificationService {
     /** What one screen can show before the inbox is a wall. */
     static final int INBOX_LIMIT = 40;
     static final int KEY_LIMIT = 160;
+    /**
+     * One latch call never turns into an unbounded IN wave: the caller's keys are deduped,
+     * trimmed and capped here, well past the screen's own {@code INBOX_LIMIT} -- the arrow
+     * between needing many rows and one round trip is a bounded number.
+     */
+    static final int STATE_BATCH_CAP = 500;
 
     public static final String KIND_REMINDER = "reminder";
     public static final String KIND_STALE = "stale";
@@ -102,9 +112,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public Inbox inbox(UUID userId) {
-        List<NotificationItem> items = shown(userId).stream().map(Shown::item).toList();
-        int unread = (int) items.stream().filter(item -> !item.read()).count();
-        return new Inbox(items, unread, OffsetDateTime.now());
+        return foldInbox(shown(userId));
     }
 
     /**
@@ -131,11 +139,7 @@ public class NotificationService {
      */
     @Transactional
     public void markNotified(UUID userId, List<String> keys, OffsetDateTime at) {
-        for (String key : keys) {
-            NotificationState state = stateFor(userId, key);
-            state.setNotifiedAt(at);
-            states.save(state);
-        }
+        latch(userId, keys, at, NotificationState::setNotifiedAt);
     }
 
     /**
@@ -161,38 +165,39 @@ public class NotificationService {
      */
     @Transactional
     public void markPushed(UUID userId, List<String> keys, OffsetDateTime at) {
-        for (String key : keys) {
-            NotificationState state = stateFor(userId, key);
-            state.setPushedAt(at);
-            states.save(state);
-        }
+        latch(userId, keys, at, NotificationState::setPushedAt);
     }
 
     /** Marks the named items read; keys the inbox is not showing are ignored. */
     @Transactional
     public Inbox markRead(UUID userId, List<String> keys) {
-        Map<String, NotificationItem> visible = visibleByKey(userId);
+        List<Shown> walked = shown(userId);
+        Map<String, NotificationItem> visible = visibleFrom(walked);
         OffsetDateTime now = OffsetDateTime.now();
+        List<String> targets = new ArrayList<>();
         for (String raw : keys) {
             NotificationItem item = visible.get(raw == null ? "" : raw.trim());
-            if (item == null || item.read()) {
+            if (item == null || item.read() || targets.contains(item.key())) {
                 continue;
             }
-            setRead(userId, item.key(), now);
+            targets.add(item.key());
         }
-        return inbox(userId);
+        applyRead(userId, targets, now);
+        return foldInbox(withReadApplied(walked, new HashSet<>(targets)));
     }
 
     /** Marks every item the inbox is showing read. */
     @Transactional
     public Inbox markAllRead(UUID userId) {
+        List<Shown> walked = shown(userId);
         OffsetDateTime now = OffsetDateTime.now();
-        for (NotificationItem item : visibleByKey(userId).values()) {
-            if (!item.read()) {
-                setRead(userId, item.key(), now);
-            }
-        }
-        return inbox(userId);
+        List<String> targets = walked.stream()
+                .filter(shown -> !shown.item().read())
+                .map(shown -> shown.item().key())
+                .distinct()
+                .toList();
+        applyRead(userId, targets, now);
+        return foldInbox(withReadApplied(walked, new HashSet<>(targets)));
     }
 
     /**
@@ -205,34 +210,131 @@ public class NotificationService {
      */
     @Transactional
     public Inbox dismissRead(UUID userId) {
+        List<Shown> walked = shown(userId);
         OffsetDateTime now = OffsetDateTime.now();
-        for (NotificationItem item : visibleByKey(userId).values()) {
-            if (!item.read()) {
-                continue;
-            }
-            NotificationState state = stateFor(userId, item.key());
-            state.setDismissedAt(now);
-            states.save(state);
-        }
-        return inbox(userId);
+        List<String> targets = walked.stream()
+                .filter(shown -> shown.item().read())
+                .map(shown -> shown.item().key())
+                .distinct()
+                .toList();
+        applyDismissed(userId, targets, now);
+        Set<String> filed = new HashSet<>(targets);
+        return foldInbox(walked.stream().filter(shown -> !filed.contains(shown.item().key())).toList());
     }
 
     /** Files one item away; it stays away until the signal becomes a new episode. */
     @Transactional
     public Inbox dismiss(UUID userId, String key) {
-        NotificationItem item = visibleByKey(userId).get(key == null ? "" : key.trim());
-        if (item != null) {
-            NotificationState state = stateFor(userId, item.key());
-            state.setDismissedAt(OffsetDateTime.now());
-            states.save(state);
+        List<Shown> walked = shown(userId);
+        Map<String, NotificationItem> visible = visibleFrom(walked);
+        NotificationItem item = visible.get(key == null ? "" : key.trim());
+        if (item == null) {
+            return foldInbox(walked);
         }
-        return inbox(userId);
+        OffsetDateTime now = OffsetDateTime.now();
+        applyDismissed(userId, List.of(item.key()), now);
+        return foldInbox(walked.stream()
+                .filter(shown -> !shown.item().key().equals(item.key()))
+                .toList());
     }
 
-    private Map<String, NotificationItem> visibleByKey(UUID userId) {
+    /** The one walk distilled to its lookup, so the write paths never re-fold it by hand. */
+    private static Map<String, NotificationItem> visibleFrom(List<Shown> walked) {
         Map<String, NotificationItem> out = new LinkedHashMap<>();
-        for (NotificationItem item : inbox(userId).items()) {
-            out.putIfAbsent(item.key(), item);
+        for (Shown shown : walked) {
+            out.putIfAbsent(shown.item().key(), shown.item());
+        }
+        return out;
+    }
+
+    /** The canonical fold every inbox-shaped answer goes through, so the two surfaces cannot drift. */
+    private static Inbox foldInbox(List<Shown> shown) {
+        List<NotificationItem> items = shown.stream().map(Shown::item).toList();
+        int unread = (int) items.stream().filter(item -> !item.read()).count();
+        return new Inbox(items, unread, OffsetDateTime.now());
+    }
+
+    /** Every state row the keys need in one round trip; a miss mints a fresh row for the stamp to land on. */
+    private List<NotificationState> statesForKeys(UUID userId, List<String> keys) {
+        Map<String, NotificationState> found = new HashMap<>();
+        for (NotificationState state : states.findByUserIdAndSignalKeyIn(userId, keys)) {
+            found.putIfAbsent(state.getSignalKey(), state);
+        }
+        List<NotificationState> rows = new ArrayList<>();
+        for (String key : keys) {
+            NotificationState state = found.get(key);
+            if (state == null) {
+                state = new NotificationState();
+                state.setUserId(userId);
+                state.setSignalKey(key);
+            }
+            rows.add(state);
+        }
+        return rows;
+    }
+
+    /** One round trip plus one save; never a per-key lookup. */
+    private void applyRead(UUID userId, List<String> keys, OffsetDateTime now) {
+        if (keys.isEmpty()) {
+            return;
+        }
+        List<NotificationState> rows = statesForKeys(userId, keys);
+        for (NotificationState row : rows) {
+            row.setReadAt(now);
+        }
+        states.saveAll(rows);
+    }
+
+    /** One round trip plus one save; never a per-key lookup. */
+    private void applyDismissed(UUID userId, List<String> keys, OffsetDateTime now) {
+        if (keys.isEmpty()) {
+            return;
+        }
+        List<NotificationState> rows = statesForKeys(userId, keys);
+        for (NotificationState row : rows) {
+            row.setDismissedAt(now);
+        }
+        states.saveAll(rows);
+    }
+
+    /** Shared latch step for the mail and the ring; clamped so a boundless caller cannot force an unbounded IN wave. */
+    private void latch(UUID userId, List<String> keys, OffsetDateTime at,
+                       BiConsumer<NotificationState, OffsetDateTime> stamp) {
+        if (keys == null || keys.isEmpty()) {
+            return;
+        }
+        List<String> capped = keys.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(key -> !key.isEmpty())
+                .distinct()
+                .limit(STATE_BATCH_CAP)
+                .toList();
+        if (capped.isEmpty()) {
+            return;
+        }
+        List<NotificationState> rows = statesForKeys(userId, capped);
+        for (NotificationState row : rows) {
+            stamp.accept(row, at);
+        }
+        states.saveAll(rows);
+    }
+
+    /** A read row is cast by name so the surface learns it without a second walk, byte-identical to a re-read after the flush. */
+    private static List<Shown> withReadApplied(List<Shown> walked, Set<String> keys) {
+        if (keys.isEmpty()) {
+            return walked;
+        }
+        List<Shown> out = new ArrayList<>(walked.size());
+        for (Shown shown : walked) {
+            if (keys.contains(shown.item().key()) && !shown.item().read()) {
+                NotificationItem item = shown.item();
+                out.add(new Shown(new NotificationItem(item.key(), item.kind(), item.title(),
+                        item.subject(), item.status(), item.count(), item.note(), item.link(),
+                        item.at(), true), shown.state()));
+                continue;
+            }
+            out.add(shown);
         }
         return out;
     }
@@ -259,21 +361,6 @@ public class NotificationService {
         return visible.size() <= INBOX_LIMIT
                 ? List.copyOf(visible)
                 : List.copyOf(visible.subList(0, INBOX_LIMIT));
-    }
-
-    private void setRead(UUID userId, String key, OffsetDateTime now) {
-        NotificationState state = stateFor(userId, key);
-        state.setReadAt(now);
-        states.save(state);
-    }
-
-    private NotificationState stateFor(UUID userId, String key) {
-        return states.findByUserIdAndSignalKey(userId, key).orElseGet(() -> {
-            NotificationState fresh = new NotificationState();
-            fresh.setUserId(userId);
-            fresh.setSignalKey(key);
-            return fresh;
-        });
     }
 
     /* ------------------------------------------------------------- synthesis */

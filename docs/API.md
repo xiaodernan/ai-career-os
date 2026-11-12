@@ -698,7 +698,7 @@ contract does not mistake a payload shape for a filter).
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/reports/dashboard` | pipeline health, counts, recommended jobs, skill gaps, resume score, recent insights. The response also carries `recentActivity[]` — the five newest `application_events` as `{id, applicationId, kind, payload, createdAt}` (`kind` is one of `status`/`note`/`reminder`/`outcome`/`reply`, and `payload` holds that kind's own keys). The dashboard's "Recent activity" card reads every row and links it to its application; a newer kind still renders as a neutral line rather than being dropped |
+| GET | `/reports/dashboard` | pipeline health, counts, recommended jobs, skill gaps, resume score, recent insights. The response also carries `recentActivity[]` — the five newest `application_events`, each an object with id, applicationId, kind, payload and createdAt (kind is one of status/note/reminder/outcome/reply, and payload holds that kind's own keys). The dashboard's "Recent activity" card reads every row and links it to its application; a newer kind still renders as a neutral line rather than being dropped |
 | GET | `/activity/runs` | agent runs (`?page=&size=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |

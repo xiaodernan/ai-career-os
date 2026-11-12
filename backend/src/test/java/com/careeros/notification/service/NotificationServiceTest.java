@@ -2,9 +2,12 @@ package com.careeros.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.inbound.entity.InboundMail;
@@ -24,7 +27,7 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,12 +73,17 @@ class NotificationServiceTest {
         store = new LinkedHashMap<>();
 
         when(states.findByUserId(ALICE)).thenAnswer(invocation -> List.copyOf(store.values()));
-        when(states.findByUserIdAndSignalKey(eq(ALICE), anyString())).thenAnswer(invocation ->
-                Optional.ofNullable(store.get(invocation.getArgument(1, String.class))));
-        when(states.save(any(NotificationState.class))).thenAnswer(invocation -> {
-            NotificationState state = invocation.getArgument(0);
-            store.put(state.getSignalKey(), state);
-            return state;
+        when(states.findByUserIdAndSignalKeyIn(eq(ALICE), anyList())).thenAnswer(invocation ->
+                invocation.getArgument(1, List.class).stream()
+                        .map(key -> store.get((String) key))
+                        .filter(Objects::nonNull)
+                        .toList());
+        when(states.saveAll(anyList())).thenAnswer(invocation -> {
+            List<NotificationState> incoming = invocation.getArgument(0);
+            for (NotificationState state : incoming) {
+                store.put(state.getSignalKey(), state);
+            }
+            return incoming;
         });
         when(feeds.findByUserIdOrderByCreatedAtDesc(ALICE)).thenReturn(List.of());
         when(runs.findByUserIdOrderByStartedAtDescIdDesc(eq(ALICE), any(Pageable.class)))
@@ -318,6 +326,34 @@ class NotificationServiceTest {
         assertThat(after.unread()).isZero();
         assertThat(after.items()).hasSize(2).allMatch(NotificationItem::read);
         assertThat(store).hasSize(2);
+    }
+
+    @Test
+    void marking_all_read_issues_one_batch_lookup_not_one_lookup_per_item() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("reminder_due", now.minusHours(1), now.minusDays(2)),
+                attention("stale", null, now.minusDays(20)));
+
+        service.markAllRead(ALICE);
+
+        // The write path is one IN-round trip plus one save, whatever the unread count is.
+        // The per-key findByUserIdAndSignalKey loop must never come back.
+        verify(states, times(1)).findByUserIdAndSignalKeyIn(eq(ALICE), anyList());
+        verify(states, times(1)).saveAll(anyList());
+        verify(states, never()).save(any(NotificationState.class));
+    }
+
+    @Test
+    void a_read_request_folds_repeated_keys_into_one_row_per_episode() {
+        OffsetDateTime now = OffsetDateTime.now();
+        withAttention(attention("reminder_due", now.minusHours(1), now.minusDays(2)));
+        String key = service.inbox(ALICE).items().get(0).key();
+
+        Inbox after = service.markRead(ALICE, List.of(key, "  " + key + " ", key));
+
+        assertThat(after.unread()).isZero();
+        assertThat(store).hasSize(1);
+        assertThat(store.get(key).getReadAt()).isNotNull();
     }
 
     @Test
