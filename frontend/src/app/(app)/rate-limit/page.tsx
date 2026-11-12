@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
+import { PageHeader } from "@/components/common/page-header";
 import { useRateLimitStatus } from "@/lib/hooks/ratelimit";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
@@ -22,15 +23,16 @@ export default function RateLimitPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("rateLimit.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("rateLimit.description")}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void status.refetch()}>
-          {t("common.refresh")}
-        </Button>
-      </div>
+      <PageHeader
+        frontDoor
+        title={t("rateLimit.title")}
+        description={t("rateLimit.description")}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => void status.refetch()}>
+            {t("common.refresh")}
+          </Button>
+        }
+      />
 
       {status.isPending && (
         <div className="space-y-4">

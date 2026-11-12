@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { PageHeader } from "@/components/common/page-header";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import {
@@ -47,15 +48,16 @@ export default function AnalysisPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("analysis.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("analysis.description")}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void digest.refetch()}>
-          {t("common.refresh")}
-        </Button>
-      </div>
+      <PageHeader
+        frontDoor
+        title={t("analysis.title")}
+        description={t("analysis.description")}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => void digest.refetch()}>
+            {t("common.refresh")}
+          </Button>
+        }
+      />
 
       {digest.isPending && (
         <div className="space-y-4">

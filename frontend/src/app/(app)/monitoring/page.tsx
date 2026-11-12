@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
+import { PageHeader } from "@/components/common/page-header";
 import { BarChart } from "@/components/common/bar-chart";
 import { NightlyHistory } from "@/components/monitoring/nightly-history";
 import { ServiceEngines } from "@/components/monitoring/service-engines";
@@ -34,15 +35,16 @@ export default function MonitoringPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("monitoring.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("monitoring.description")}</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => void report.refetch()}>
-          {t("common.refresh")}
-        </Button>
-      </div>
+      <PageHeader
+        frontDoor
+        title={t("monitoring.title")}
+        description={t("monitoring.description")}
+        actions={
+          <Button variant="outline" size="sm" onClick={() => void report.refetch()}>
+            {t("common.refresh")}
+          </Button>
+        }
+      />
 
       {report.isPending && (
         <div className="space-y-4">
