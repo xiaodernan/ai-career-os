@@ -42,6 +42,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 158 | The job board's front door joins the dashboard, inbox and resume manager, and the real gateway proves the JD analyzer keeps its honesty-bearing evidence shape — both as pinned, reproducible contracts | `resumes/page.tsx` front-door band (CSS-only, zero new client JS/copy/i18n/component; its source contract pins no CTA because the header has no actions — the dropzone below does the work) + `test_the_real_jd_analyzer_keeps_its_evidence.py` (opt-in, env-only key, zero socket offline; real `gpt-6-sol` yields a dict whose every required skill quotes the JD verbatim); measured 1 passed / 52.8s live, 1 skipped offline; DEPLOYMENT.md records both; `.env` back to the offline `mock` default; zero production code, dependency, provider or knob |
 | 159 | The interview board — a headline action for every candidate — wears the same front door, its real controls left intact | `interviews/page.tsx` front-door band (CSS-only, zero new JS/copy/i18n/component); unlike the resume manager this header has actions, so the primary `variant="ai"` start-interview CTA carries `glow-halo` + `glow-on-hover` while the server search / application filter / mode dropdown are untouched; `page.front-door.test.ts` 7 source assertions; 63 gates pass; clean build + 310 kB budget (interviews 279.9→280.3 kB, the pure-CSS band's measured weight) |
 | 160 | The reranker's silent-degradation path is shown to stay untaken on a real model, and a measured backend N+1 is left as an honest next step rather than a speculative rewrite | `test_the_real_rerank_keeps_its_scores_contract.py` (opt-in, env-only key, zero socket offline): spies the raw `ask_json` answer, pins `scores` as a full dict of 0..1 numbers, that every returned chunk carries a parsed `rerank` (the anti-degradation invariant), and that relevant snippets outscore unrelated ones — no exact score/wording; measured `gpt-6-sol` 1 passed live / 1 skipped offline, shape drift did not reproduce so no defensive code added; `NotificationService` write-path N+1 (≈90+ DB round trips per markAllRead) recorded as a zero-drift next step (pure `stateForLoaded` + `shownByKey`, behaviour-test-backed) pending a low-concurrency window; zero production code/dependency/knob |
+| 161 | A full restore of a long-used workspace stops rebuilding every target row's content key for each incoming row: the additive import plan's content matching is linear, and the old quadratic answer is pinned byte-for-byte | `_plan_additive` indexes content once into a `defaultdict(deque)` (one-to-one, order-preserving); `test_the_additive_plan_uses_one_content_index.py` keeps the old matcher as a differential oracle across 11 cases + a spy bounding `_content_key` to ≤ n+m; 500×500 reverse restore 455.0 → 73.3 ms (6.2×), `identical ops: True`; 54 passed; zero production drift/dependency/knob |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1931,3 +1932,42 @@ respect `SelfInvokedTransactionContractTest` (the design adds no transactional s
 production code changed in this epic for that finding; it is written down so the next session
 picks up a measured, designed task rather than rediscovering it. Zero production code, dependency,
 provider, knob, route or meter roster across Epic 160.
+
+## Epic 161 — the additive import plan stops rebuilding content keys per incoming row **DONE (measured 2026-11-12)**
+
+`_plan_additive` (`app/features/import_plan.py`) pairs a bundle's re-ingested rows
+(resumes / knowledge / memories) against the workspace's accumulated rows **by content**,
+one-to-one: a bundle carrying two copies of a resume restores both, and a restored row is
+found again even though ingestion mints it a fresh id. The old matcher held unmatched
+targets in a `remaining` list and, for every incoming row, walked that list calling
+`_content_key(section, ex)` — a tuple embedding the row's **whole plaintext** — and
+`pop(index)`-ed on a hit. That is O(n·m) key constructions plus list shifting over a
+reader's entire history; resumes and knowledge carry no row cap, so a full restore of a
+long-used workspace recomputed the same expensive keys again and again.
+
+The replacement indexes target rows **once** into a `defaultdict(deque)` keyed by
+`_content_key`, then pops the matching queue per incoming row. A deque, not a set, is
+load-bearing: rows sharing content are consumed in original order, exactly what
+`remaining.pop(index)` did, so a bundle with two copies still matches two distinct target
+rows and a third incoming row falls through to `create`. Key construction drops from
+O(n·m) to O(n+m); the `memories` update branch and every op payload are byte-for-byte
+untouched.
+
+**Zero behavioural drift, pinned differentially rather than by inspection.**
+`test_the_additive_plan_uses_one_content_index.py` keeps the pre-indexing matcher verbatim
+as a behavioural oracle and asserts the shipped one emits *exactly* its ops, in order, over
+eleven cases: empty target, exact re-import, duplicate bundles, misses, reversed order, a
+knowledge row, and memories that flip to `update` plus duplicates that must restore twice.
+A second assertion spies `_content_key` call counts and requires ≤ n+m for 40 incoming /
+40 existing rows fed in reverse (the input that made the old scan reach the tail every
+time): the old shape built ~820 keys here, the indexed one builds 80. The bound sits on the
+seam that actually costs, not on a wall-clock guess, so an accidental return to a
+per-incoming rescan reds the suite even on a fast machine.
+
+**Measured at a scale the offline suite never reaches.** A 500×500 reverse-ordered resume
+restore with ~2 KB plaintext per row (median of repeated runs, `time.perf_counter`):
+455.0 ms → 73.3 ms, a **6.2×** speed-up, with `identical ops: True` across all 500 ops —
+the differential oracle run against production-shaped data, not just the eleven unit cases.
+`54 passed` over the new contract plus the full `test_import_plan.py`. No production
+behaviour widened, no new dependency, provider, knob, route or meter; the matcher stays a
+pure function over injected lists, so the contract needs no fixture, socket or key.

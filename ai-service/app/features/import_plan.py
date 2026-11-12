@@ -32,6 +32,7 @@ bundle's own serialization.
 from __future__ import annotations
 
 import json
+from collections import defaultdict, deque
 from decimal import Decimal
 from typing import Any
 
@@ -334,15 +335,21 @@ def _plan_additive(section: str, items: list[dict],
     names them, so a bundle carrying two copies of the same resume restores
     the second one instead of skipping both against a single existing row.
     """
-    remaining = list(existing_items)
+    # Index the target rows by content ONCE. The key embeds the whole plaintext,
+    # so rebuilding it for every incoming row was the expensive part of the old
+    # linear rescan (O(n·m) keys over the reader's uncapped resumes/knowledge).
+    # A deque per key preserves the one-to-one promise: rows with the same content
+    # are consumed in their original order, exactly as `remaining.pop(index)` did,
+    # so a bundle carrying two copies still matches two distinct target rows.
+    by_content: dict[tuple, deque] = defaultdict(deque)
+    for ex in existing_items:
+        by_content[_content_key(section, ex)].append(ex)
+
     ops: list[dict] = []
     for it in items:
         key = _content_key(section, it)
-        known = None
-        for index, ex in enumerate(remaining):
-            if _content_key(section, ex) == key:
-                known = remaining.pop(index)
-                break
+        queue = by_content.get(key)
+        known = queue.popleft() if queue else None
         if known is None:
             kind = "create"
         elif section == "memories" and \
