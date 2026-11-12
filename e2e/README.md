@@ -76,6 +76,14 @@ apart before you go looking for a bug:
   time out when the backend is still warming up. The registration is retried
   once for exactly this reason (`tests/fixtures.ts`); a second timeout means
   the backend was genuinely busy, not slow.
+- **A single `toBeVisible()` spec fails while the rest of the suite passes**
+  — visibility assertions are the suite's one load-sensitive seam. Measured
+  at `4c80f02` (2026-11-13): two consecutive full runs each failed exactly one
+  such spec (`forward-surfaces` bundle apply, then `command-palette` palette
+  search); both files passed 16/16 in isolation at the same HEAD, and this
+  box was carrying the Docker stack plus builds. The honest check is to re-run
+  the failing spec alone -- if it passes, the run was the machine's; earlier
+  full runs measured 70/70 (2026-11-12).
 
 ### Preflight
 
