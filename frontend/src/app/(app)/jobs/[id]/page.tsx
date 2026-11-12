@@ -169,10 +169,21 @@ export default function JobDetailPage() {
       <BackLink />
 
       {/* Hero */}
-      <Card className="gap-4">
-        <CardHeader>
+      <Card className="gap-4 relative overflow-hidden border-hairline shadow-card">
+        {/* Decorative radial wash, masked to the top edge -- an app-surface accent, not a landing */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-70"
+          style={{
+            background:
+              "radial-gradient(120% 100% at 50% 0%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 70%)",
+          }}
+        />
+        {/* Quiet shimmer hairline on the rim (app-surface voice) */}
+        <span aria-hidden className="shimmer-rule absolute inset-x-0 top-0 block h-px" />
+        <CardHeader className="relative">
           <div className="flex items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted text-muted-foreground">
+            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/15 bg-primary/5 text-primary shadow-soft">
               {job.company?.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={job.company.logoUrl} alt="" className="size-full object-contain p-1.5" />
@@ -181,8 +192,16 @@ export default function JobDetailPage() {
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="font-serif text-display-sm font-medium text-balance">{job.title}</h1>
-              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <h1
+                className="animate-fade-up font-serif text-display-sm font-medium text-balance"
+                style={{ animationDelay: "80ms" }}
+              >
+                {job.title}
+              </h1>
+              <p
+                className="animate-fade-up mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground"
+                style={{ animationDelay: "150ms" }}
+              >
                 {job.company?.name || job.companyName ? (
                   job.companyId ? (
                     <Link href={`/companies/${job.companyId}`} className="flex items-center gap-1 hover:text-foreground">
@@ -220,7 +239,13 @@ export default function JobDetailPage() {
               </p>
             </div>
             {match && (
-              <div className="hidden shrink-0 flex-col items-center gap-1 sm:flex">
+              <div
+                className={
+                  "hidden shrink-0 flex-col items-center gap-1 sm:flex" +
+                  (match.overall >= 80 ? " rounded-2xl p-1 glow-halo" : "")
+                }
+                title={t("jobs.match.scoreAria", { score: Math.round(match.overall) })}
+              >
                 <MatchMini value={match.overall} />
                 <span className="text-2xs text-muted-foreground">AI match</span>
               </div>

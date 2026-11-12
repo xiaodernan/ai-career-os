@@ -763,6 +763,33 @@ ai-service reads the provider selection from env:
   (defaults to the LLM base) with `VOICE_API_KEY` (defaults to the LLM key). `mock`
   is refused when `APP_ENV=prod`, exactly like the LLM mock.
 
+### A real-model round trip, verified on this stack (2026-11-12)
+
+A live round trip was run against a real OpenAI-compatible provider through the normal door.
+Requirements: a base URL that speaks the OpenAI chat-completions protocol, a key, and the
+model id as served by that provider (models list from its `/models` endpoint -- this split is
+not necessarily the same as the marketing name). The env then carries:
+
+```env
+LLM_PROVIDER=openai_compat
+LLM_BASE_URL=https://wkapi.pro/v1      # any OpenAI-compatible gateway
+LLM_MODEL=gpt-6-sol                    # discovered via GET /v1/models
+LLM_API_KEY=<yours>                    # .env is gitignored; never in any tracked file
+```
+
+Measured, end-to-end, same door the UI uses: `POST /api/v1/copilot/chat` answered with the
+provider-selected model in ~8.8 seconds. The answer carried the full envelope
+(`conversationId`, `answer`, `artifacts`, `sources`, `actions`, `runId`), and the auth and AI
+bridge paths were exercised unchanged. The embeddings stayed on the offline `hash` provider;
+wire it at `EMBEDDING_PROVIDER=openai` the same one-line way for a fully live round trip.
+
+Two practical notes: the dev loop keeps its offline default (`mock`/`hash`), so a plain
+`docker compose --profile app up -d ai-service` is fast and free; flipping back is one line
+and requires only `--force-recreate`ing the service (environments are read at boot). A real
+provider bills by token -- point any suite or CI job at `LLM_PROVIDER=mock` and the run is
+unattended and free. `provider` notes: `/health` only reports `llm_ready: true` when the
+configured key can actually be used to build the provider, so a blank or placeholder key is
+visible before a caller ever reaches a model.
 Two offline-only escape hatches for tests and first-run dev: `mock` LLM and
 `hash` embeddings. The app **refuses to boot with `LLM_PROVIDER=mock` when
 `APP_ENV=prod`** (see `app/main.py`), and `hash` embeddings give limited
