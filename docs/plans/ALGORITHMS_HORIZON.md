@@ -44,6 +44,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 160 | The reranker's silent-degradation path is shown to stay untaken on a real model, and a measured backend N+1 is left as an honest next step rather than a speculative rewrite | `test_the_real_rerank_keeps_its_scores_contract.py` (opt-in, env-only key, zero socket offline): spies the raw `ask_json` answer, pins `scores` as a full dict of 0..1 numbers, that every returned chunk carries a parsed `rerank` (the anti-degradation invariant), and that relevant snippets outscore unrelated ones — no exact score/wording; measured `gpt-6-sol` 1 passed live / 1 skipped offline, shape drift did not reproduce so no defensive code added; `NotificationService` write-path N+1 (≈90+ DB round trips per markAllRead) recorded as a zero-drift next step (pure `stateForLoaded` + `shownByKey`, behaviour-test-backed) pending a low-concurrency window; zero production code/dependency/knob |
 | 161 | A full restore of a long-used workspace stops rebuilding every target row's content key for each incoming row: the additive import plan's content matching is linear, and the old quadratic answer is pinned byte-for-byte | `_plan_additive` indexes content once into a `defaultdict(deque)` (one-to-one, order-preserving); `test_the_additive_plan_uses_one_content_index.py` keeps the old matcher as a differential oracle across 11 cases + a spy bounding `_content_key` to ≤ n+m; 500×500 reverse restore 455.0 → 73.3 ms (6.2×), `identical ops: True`; 54 passed; zero production drift/dependency/knob |
 | 164 | The ten plain resource headers carry the designed band the five bespoke shells established — one opt-in `PageHeader` front door, zero client JS, byte-for-byte the default shape | `PageHeader` gains `frontDoor` (static light washes, dark-only aurora, `shimmer-rule`, CSS-only `animate-fade-up` stagger on description/actions, decorative layers `aria-hidden` + `pointer-events-none`); wired into `ModuleView` and activity/data/growth/ingestion/offers/replies/settings/timeline headers; new `page-header.front-door.test.tsx` source contract (7) |
+| 166 | The ops three — analysis, rate-limit and monitoring — carry the designed band too; the raw sans h1 is gone from the signed-in doors | all three map the `PageHeader` contract (`frontDoor`); zero new JS/client code, zero copy; container rebuilt and serving; `routes.spec.ts` 6/6 (heading gate holds) |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -2015,3 +2016,19 @@ component's own file, mirroring the per-page pins the five shells keep.
 production build exit 0; bundle budget OK across 35 routes (`/page` 196.7 kB, unchanged);
 live container rebuilt from this tree serving the composed band. Zero JS moves: the band is
 CSS + markup only.
+
+## Epic 166 — the ops three finally wear the band (2026-11-13)
+
+Three operator-facing surfaces still rendered a raw `<h1 className="text-2xl
+font-semibold tracking-tight">` beside a Refresh button — the only state in the signed-in
+doors inconsistent with the designed language, and the kind of drift that goes unnoticed
+precisely because those readers open them in emergencies. `/analysis` (the weekly digest
+door), `/rate-limit` (the ceiling's own dashboard) and `/monitoring` (the agent
+observability door) now map the same `PageHeader` contract as the other twelve pages:
+`frontDoor`, description as the t() key, Refresh in the actions slot, band above the fold.
+
+Zero new client JS, copy, i18n keys, component files or globals rules; the three raw h1s
+are deleted in favour of the shared block. Measured: tsc clean; vitest 138 files / 1293
+passed; production build exit 0; budget OK (35 routes, unchanged); frontend container
+rebuilt and serving; `routes.spec.ts` 6/6 with the seeded signed-in routes rendering
+their headings unchanged (the contract those assertions depend on held).

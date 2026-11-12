@@ -6126,6 +6126,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `eureka` now goes red without anyone needing to remember the story. Wired into
   both verify_gates scripts — 569 passed. Zero product code.)
 
+- [x] **166** The ops three — analysis, rate-limit and monitoring — wear the
+  designed band (2026-11-13).
+
+  (The last three raw `<h1 className="text-2xl">` blocks in the signed-in doors
+  moved onto the shared `PageHeader` contract landed at Epic 164: `frontDoor`,
+  description read from the real t() key, Refresh in the actions slot. Zero new
+  client JS, copy, i18n keys or components; measured tsc clean, 138 files / 1293
+  passed, production build exit 0, budget OK (/page 196.7 kB unchanged), container
+  rebuilt and serving, routes.spec.ts 6/6.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
