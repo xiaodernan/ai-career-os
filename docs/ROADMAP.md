@@ -6097,6 +6097,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   or ranking change. The backend suite is green on this host apart from the box-flaky
   `RateLimitIT` (environment; re-ran green).)
 
+- [x] **164** The ten plain resource headers carry the designed band: one opt-in
+  `PageHeader` front door, byte-for-byte the default shape (2026-11-13).
+
+  (`PageHeader` gains `frontDoor` — static light washes, dark-only aurora at
+  `opacity-30`, `shimmer-rule` crown, CSS-only `animate-fade-up` stagger on
+  description (90ms) and actions (160ms); decorative layers `aria-hidden` +
+  `pointer-events-none`; default `false` keeps every unaware call site at the old
+  shape, and the five bespoke shells keep their own band. Wired into `ModuleView`
+  (all six resource boards) and the eight direct headers — timeline, settings,
+  replies, offers, ingestion, growth, data, activity/[id] — so the designed
+  language is the app's default voice rather than a destination. New
+  `page-header.front-door.test.tsx` source contract (7) pins the opt-in boundary,
+  the dark-only aurora discipline, inert decoration, the stagger, and the
+  no-`Reveal`/`AuroraBackground`/invented-copy lines. Full frontend vitest 138/1293;
+  tsc clean; build exit 0; budget OK (`/page` 196.7 kB, unchanged); container
+  rebuilt and serving. Zero client JS, copy, i18n key or globals rule.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

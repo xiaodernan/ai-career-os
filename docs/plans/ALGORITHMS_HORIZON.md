@@ -43,6 +43,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 159 | The interview board — a headline action for every candidate — wears the same front door, its real controls left intact | `interviews/page.tsx` front-door band (CSS-only, zero new JS/copy/i18n/component); unlike the resume manager this header has actions, so the primary `variant="ai"` start-interview CTA carries `glow-halo` + `glow-on-hover` while the server search / application filter / mode dropdown are untouched; `page.front-door.test.ts` 7 source assertions; 63 gates pass; clean build + 310 kB budget (interviews 279.9→280.3 kB, the pure-CSS band's measured weight) |
 | 160 | The reranker's silent-degradation path is shown to stay untaken on a real model, and a measured backend N+1 is left as an honest next step rather than a speculative rewrite | `test_the_real_rerank_keeps_its_scores_contract.py` (opt-in, env-only key, zero socket offline): spies the raw `ask_json` answer, pins `scores` as a full dict of 0..1 numbers, that every returned chunk carries a parsed `rerank` (the anti-degradation invariant), and that relevant snippets outscore unrelated ones — no exact score/wording; measured `gpt-6-sol` 1 passed live / 1 skipped offline, shape drift did not reproduce so no defensive code added; `NotificationService` write-path N+1 (≈90+ DB round trips per markAllRead) recorded as a zero-drift next step (pure `stateForLoaded` + `shownByKey`, behaviour-test-backed) pending a low-concurrency window; zero production code/dependency/knob |
 | 161 | A full restore of a long-used workspace stops rebuilding every target row's content key for each incoming row: the additive import plan's content matching is linear, and the old quadratic answer is pinned byte-for-byte | `_plan_additive` indexes content once into a `defaultdict(deque)` (one-to-one, order-preserving); `test_the_additive_plan_uses_one_content_index.py` keeps the old matcher as a differential oracle across 11 cases + a spy bounding `_content_key` to ≤ n+m; 500×500 reverse restore 455.0 → 73.3 ms (6.2×), `identical ops: True`; 54 passed; zero production drift/dependency/knob |
+| 164 | The ten plain resource headers carry the designed band the five bespoke shells established — one opt-in `PageHeader` front door, zero client JS, byte-for-byte the default shape | `PageHeader` gains `frontDoor` (static light washes, dark-only aurora, `shimmer-rule`, CSS-only `animate-fade-up` stagger on description/actions, decorative layers `aria-hidden` + `pointer-events-none`); wired into `ModuleView` and activity/data/growth/ingestion/offers/replies/settings/timeline headers; new `page-header.front-door.test.tsx` source contract (7) |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1933,6 +1934,10 @@ production code changed in this epic for that finding; it is written down so the
 picks up a measured, designed task rather than rediscovering it. Zero production code, dependency,
 provider, knob, route or meter roster across Epic 160.
 
+(Update 2026-11-13: Epic 163 is the designed path landed — one IN-round trip plus one save,
+`foldInbox` doing the re-fold in memory; see PERFORMANCE_HORIZON.md. The zero-drift caveats
+held as written.)
+
 ## Epic 161 — the additive import plan stops rebuilding content keys per incoming row **DONE (measured 2026-11-12)**
 
 `_plan_additive` (`app/features/import_plan.py`) pairs a bundle's re-ingested rows
@@ -1971,3 +1976,42 @@ the differential oracle run against production-shaped data, not just the eleven 
 `54 passed` over the new contract plus the full `test_import_plan.py`. No production
 behaviour widened, no new dependency, provider, knob, route or meter; the matcher stays a
 pure function over injected lists, so the contract needs no fixture, socket or key.
+
+## Epic 163 — land note pointer (closed in the performance horizon)
+
+Epic 163 is where the `markAllRead` write path carried the N+1 out: one IN-round trip plus
+one `saveAll`, and the fresh inbox folded in memory. It lives in PERFORMANCE_HORIZON.md;
+this entry is only the cross-reference from the finding's first home.
+
+## Epic 164 — the ten plain resource headers carry the designed band (2026-11-13)
+
+The five signed-in shells that wear the front door (dashboard, jobs, resumes, interviews,
+notifications) all wrap the shared `PageHeader` inside their own aurora/shimmer band — but
+the other ten headers (`ModuleView`'s six resource boards plus the settings, timeline,
+replies, offers, ingestion, growth, data and activity-detail headers) rendered the plain
+block, so the designed language was a destination rather than the app's default voice.
+
+**Design.** The band moves into `PageHeader` itself behind one opt-in prop, `frontDoor`,
+default `false` — a call site asks for it out loud, never inherits it silently:
+- static light-theme radial washes (`var(--primary)`, two corners, zero per-frame cost);
+- a dark-only aurora (screen-blend light over a light card washes to white — the jobs/Epic
+  137 rule; `hidden` + `dark:block`, blobs at `opacity-30`, `aurora-grid`);
+- a `shimmer-rule` hairline crowning the band, and a CSS-only `animate-fade-up` stagger on
+  the description (90ms) and the actions row (160ms);
+- every decorative layer `aria-hidden` + `pointer-events-none`; the inner block renders
+  byte-for-byte as before, so copy, props and ordering are untouched.
+Wired into `ModuleView` (every module board inherits it) and the eight direct headers
+(timeline, settings, replies, offers, ingestion, growth, data, activity/`[id]`). The five
+bespoke shells keep their own band — their contracts pin their own markup. Zero new client
+JS, copy, i18n keys, component files or globals rules; the shared aurora primitives are
+reused verbatim, so `/jobs` stays trivial versus its own band-by-copy siblings.
+
+**Pins, not hope.** `page-header.front-door.test.tsx` source-contracts the opt-in rule
+(default unchanged), the dark-only aurora discipline, inert decorative layers, the stagger,
+and the no-invented-copy/no-reveal/no-`AuroraBackground` boundary — 7 assertions on the
+component's own file, mirroring the per-page pins the five shells keep.
+
+**Measured.** Full frontend vitest 138 files / 1293 passed; `tsc --noEmit` clean;
+production build exit 0; bundle budget OK across 35 routes (`/page` 196.7 kB, unchanged);
+live container rebuilt from this tree serving the composed band. Zero JS moves: the band is
+CSS + markup only.
