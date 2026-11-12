@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { GradientText } from "@/components/ui/gradient-text";
 import { reminderPatch, snoozeReminder } from "@/lib/application-edit";
 import { relativeTime } from "@/lib/format";
 import { asInboxKind, kindsPresent, rowsUnder } from "@/lib/inbox-filter";
@@ -155,42 +156,83 @@ export default function NotificationsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader
-        title={t("notifications.title")}
-        description={t("notifications.description")}
-        actions={
-          inbox.data ? (
-            <div className="flex items-center gap-2">
-              <Badge variant={unread > 0 ? "warning" : "outline"}>
-                {unread > 0
-                  ? t("notifications.unreadBadge", { count: unread })
-                  : t("notifications.allRead")}
-              </Badge>
-              <Button
-                size="sm"
-                variant="outline"
-                loading={markAll.isPending}
-                disabled={unread === 0}
-                onClick={() => markAll.mutate()}
-              >
-                <CheckCheck aria-hidden />
-                {t("notifications.markAllRead")}
-              </Button>
-              {read > 0 ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  loading={clearRead.isPending}
-                  onClick={() => clearRead.mutate()}
-                >
-                  {t("notifications.clearRead")}
-                  <span className="text-xs text-muted-foreground">{read}</span>
-                </Button>
-              ) : null}
-            </div>
-          ) : undefined
-        }
-      />
+      {/* The inbox is the second screen a signed-in reader opens after the dashboard -- it is the
+          one the unread badge pulls them back to. It carries the same front-door band the
+          dashboard and the auth door established: a static light-theme wash, a dark-only aurora
+          (screen-blend over a light Card would wash it white), a shimmer hairline and CSS-only
+          staggered entrance. The blobs are plain spans and the accent is a plain span, so the
+          band adds zero client JS and leaves the route budget untouched. Every motion layer is
+          decorative; `prefers-reduced-motion` stays authoritative via globals.css. */}
+      <section className="animate-fade-up relative overflow-hidden rounded-2xl border hairline bg-card/60 shadow-card">
+        {/* Light-theme ambient washes: static gradients, zero per-frame cost. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 16%, transparent), transparent)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-28 -left-24 h-64 w-64 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 9%, transparent), transparent)",
+          }}
+        />
+        {/* Dark-theme aurora: screen-blend light only ever composited over a dark surface. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden overflow-hidden dark:block">
+          <span className="aurora-blob aurora-blob-1 opacity-30" />
+          <span className="aurora-blob aurora-blob-2 opacity-30" />
+          <div className="aurora-grid opacity-30" />
+        </div>
+        {/* Shimmer hairline crowns the band -- the same premium separator the dashboard uses. */}
+        <span aria-hidden className="shimmer-rule absolute inset-x-0 top-0 block h-px" />
+        <div className="relative px-6 py-6">
+          <PageHeader
+            title={<GradientText className="italic">{t("notifications.title")}</GradientText>}
+            description={
+              <span className="animate-fade-up block" style={{ animationDelay: "90ms" }}>
+                {t("notifications.description")}
+              </span>
+            }
+            actions={
+              inbox.data ? (
+                <div className="animate-fade-up flex flex-wrap items-center gap-2" style={{ animationDelay: "160ms" }}>
+                  <Badge variant={unread > 0 ? "warning" : "outline"}>
+                    {unread > 0
+                      ? t("notifications.unreadBadge", { count: unread })
+                      : t("notifications.allRead")}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="glow-on-hover"
+                    loading={markAll.isPending}
+                    disabled={unread === 0}
+                    onClick={() => markAll.mutate()}
+                  >
+                    <CheckCheck aria-hidden />
+                    {t("notifications.markAllRead")}
+                  </Button>
+                  {read > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      loading={clearRead.isPending}
+                      onClick={() => clearRead.mutate()}
+                    >
+                      {t("notifications.clearRead")}
+                      <span className="text-xs text-muted-foreground">{read}</span>
+                    </Button>
+                  ) : null}
+                </div>
+              ) : undefined
+            }
+          />
+        </div>
+      </section>
 
       <Card>
         <CardContent className="p-6">

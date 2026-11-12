@@ -796,6 +796,89 @@ Two offline-only escape hatches for tests and first-run dev: `mock` LLM and
 retrieval quality — use a real embedding provider for anything beyond a smoke
 test.
 
+#### A reproducible real-model test, inert by default (Epic 155)
+
+The round trip above was once a manual story in this document. It is now a test
+anyone can re-run, and — just as importantly — one that a plain `pytest` never
+bills for. `ai-service/tests/test_a_real_model_round_trip.py` drives the exact
+factory the app uses (`registry.get_llm(Settings)` → `OpenAICompatProvider.complete`)
+over two live calls on one event loop:
+
+1. a deterministic `PONG`, asserting the reply carries the **provider-selected
+   model id**, real token usage and a measured latency (a mock or a cached
+   fixture cannot satisfy it);
+2. the real `cover_letter._build_prompt` fed a resume/JD, asserting the model
+   returns a grounded, header-free letter that names the role or evidence — the
+   model-as-product path, not just the transport seam.
+
+It stays inert unless the operator opts in, and it never reads a key from a
+tracked file (the token is resolved from the process environment / gitignored
+`.env`, the way production does):
+
+```bash
+cd ai-service
+CAREEROS_REAL_LLM=1 LLM_PROVIDER=openai_compat \
+  pytest tests/test_a_real_model_round_trip.py -q
+```
+
+With the switch off — the default, every CI job and the dev loop — pytest skips
+the whole module **before any socket opens** (measured: `1 skipped` in ~2s), so
+the offline suite stays fast, free and unchanged. `LLM_BASE_URL` must carry the
+`/v1` protocol prefix and `LLM_MODEL` the id served by that gateway's
+`/v1/models` (the marketing name is not always the wire id).
+
+Verified on this stack on 2026-11-12 against `gpt-6-sol` at `https://wkapi.pro/v1`
+(embeddings left on offline `hash`): `1 passed in 84.5s`; the `PONG` call returned
+`model=gpt-6-sol`, `prompt_tokens=4455`, `completion_tokens=6`, `~2s`, and the
+cover-letter call returned a grounded multi-sentence letter. One implementation
+note the test encodes: the registry caches a single module-level
+`httpx.AsyncClient`, which binds to the loop that first used it, so both calls
+share one `async` test / one loop — splitting them into two function-scoped-loop
+tests closes cached connections on an already-closed loop (`RuntimeError: Event
+loop is closed`), exactly as the module docstring records.
+
+#### Three protocols the offline provider cannot express (Epic 156)
+
+Epic 155 proved the transport seam with plain text. `ai-service/tests/test_the_live_gateway_speaks_three_protocols.py`
+proves the three shapes the product actually depends on, which a mock cannot contradict: `json_mode`
+structured output (ten `ask_json` call sites), `stream()` server-sent frames (the SSE relay), and
+`tools=` tool calling (the agent loop). It drives the **production** `OpenAICompatProvider` against
+the same real gateway, and is inert by default:
+
+```bash
+cd ai-service
+CAREEROS_REAL_LLM=1 LLM_PROVIDER=openai_compat \
+  pytest tests/test_the_live_gateway_speaks_three_protocols.py -q
+```
+
+With the switch off — every CI job and the dev loop — the module skips before any socket opens
+(measured `1 skipped in 0.62s`); the key comes only from the process environment / gitignored
+`.env`, no token literal in the file. It asserts **protocol invariants, not model wording**:
+
+1. `json_mode` returns an object the app's own `_coerce_json` accepts, with `finish_reason=stop`
+   and real usage (the exact system shape `rag/rerank.py` sends);
+2. `stream()` reassembles a real frame sequence — including an opening frame with no content and a
+   *different* id (`chatcmpl-prelude-*`) from the following `resp-*` frames — into the whole reply,
+   with a closing frame carrying aggregated usage;
+3. a `tools=` reply carries a stable `call_*` id and `arguments` that resolve to a dict, the two
+   fields `orchestrator._run_loop` echoes back and hands to a handler.
+
+It deliberately does not pin a score, a tool count or any prose — those are model behaviour, not a
+protocol guarantee, and pinning them would claim more than a measurement supports. The test injects
+its own `httpx.AsyncClient` into the provider's real constructor rather than using `registry`'s
+module-level `@lru_cache` client (which binds to its first event loop and is never closed): that
+lets this file and Epic 155's round trip run together in one opt-in invocation, measured
+`2 passed in 39.11s`, with no loop cross-talk. Zero production code changed, zero new dependency,
+provider, Settings field, route or meter roster.
+
+Verified on this stack on 2026-11-12 against `gpt-6-sol` @ `https://wkapi.pro/v1`: `json_mode`
+returned `{"scores":{"0":1.0,"1":0.0,"2":0.0}}` (`finish_reason=stop`, 4550 in / 51 out tokens);
+`stream` reassembled `1,2,3,4,5` from 10 frames (closing usage 4464 in / 13 out, opening frame id
+distinct from the rest); `tools` returned `finish_reason=tool_calls` with `id=call_*` and
+`arguments={"city":"Beijing"}` as a dict. One honest boundary: the gateway also reports
+`completion_tokens_details.reasoning_tokens`, but that is a subset of `completion_tokens` already
+counted by `estimate_cost`, so it is not double-billed — recorded, not "fixed".
+
 ### Several engine nodes, and the rest state (Epics 85.1-85.2)
 
 The backend reaches ai-service as a service, not an address. By default `AI_SERVICE_BASE_URL`

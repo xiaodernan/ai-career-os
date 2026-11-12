@@ -35,6 +35,9 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 151 | A task's owner is decidable on any replica, not just the one that made it: the mirror that carries the frames also carries ownership, so the gate stops failing closed on a sibling | `aowner()` memory-first then `XREVRANGE` over the mirrored `owner` field; `_require_owner` async; owner never enters a wire frame or `state()`; 6 offline tests (fake-streams Redis) + 59 contract/census gates; MICROSERVICES §6 and PERFORMANCE_HORIZON legacy note reconciled |
 | 152 | A long-lived service stops accumulating one Redis key and one dict entry per task: the task feed's space is bounded, and reclamation rides the clock that already ticks | `_MIRROR_TTL_S=3600` module constant + `pipeline([XADD, PEXPIRE])` write-time renewal (one round trip); `gc_old_tasks()` wired into all three existing embed loops via local imports; zero new tick/knob/resp command; memory mode sends no new Redis command; 4 source-contract + 2 runtime offline tests; liveness-interval line pin 275→291 / 282,279→298,295 |
 | 153 | The dashboard event log the backend computes, caches and sends is no longer dropped at the browser boundary: the last unread component of `DashboardResponse` gets a real reader and a card a reader can act on | pure `normalizeRecentActivity` (five own components, free payload passed through, id-required, unknown kind kept); `recent-activity.tsx` renders all five wired kinds plus an honest neutral line for a stranger, linking each row to its application; honesty ledger 18→19 sites / diff set emptied, 8 mapper + 8 row tests; copy census 168→169, en/zh 15 keys, build + bundle budget |
+| 154 | The inbox — the second screen a signed-in reader opens — carries the same front-door visual language as the dashboard, without growing the client bundle or washing the light theme | `notifications/page.tsx` gains a CSS-only band (`GradientText` title, `shimmer-rule`, dark-gated aurora with `opacity-30`, staggered `animation-delay`, `glow-on-hover` CTA); zero new client JS/copy/i18n keys/component files; new `page.front-door.test.ts` source contract + 42 gate tests; copy census stays 169, build + bundle budget |
+| 155 | A real provider round trip stops being a manual story in the deploy doc: it becomes a reproducible, opt-in test that is inert (zero socket) on every offline/CI run and bills only when the operator asks | `test_a_real_model_round_trip.py`: module-level `CAREEROS_REAL_LLM=1` skip, env-only key, project's own `get_llm` factory over two live calls on one loop (PONG seam + real `cover_letter` prompt); verified `gpt-6-sol` @`wkapi.pro/v1` 1 passed / 84.5s, offline 1 skipped / 1.9s; zero production code, zero new dependency/provider/env-census entry; DEPLOYMENT.md records the measurement |
+| 156 | Three protocols the offline provider cannot contradict — structured output, server-sent streaming and tool calls — are attested against the real gateway, and stay inert (zero socket) offline | `test_the_live_gateway_speaks_three_protocols.py`: module-level opt-in skip, env-only key, a self-managed client injected into the production `OpenAICompatProvider` so it coexists with Epic 155 on one opt-in run; asserts a `json_mode` object the app's `_coerce_json` accepts, streamed fragments reassembled with a real closing usage, and a tool reply whose id and dict arguments the agent loop can echo; verified `gpt-6-sol` 2 passed / 39s, offline 1 skipped / 0.6s; reconciles the merged deadline-mesh e2e case (PRODUCT.md 69/69 → 70/70); zero production code, zero new dependency/provider/knob |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1653,3 +1656,126 @@ green. `used-keys` and `translations` gates confirm all 15 new en/zh keys are as
 and non-blank in both languages; `copy-census` browser sources moved 168 → 169 with the new card
 (and no English literal was introduced). `next build` and the 340 kB route budget are the final
 gate. No backend source changed; `docs/API.md` notes the field is now consumed.
+
+## Epic 154 — the inbox gets the front-door band the dashboard already proved **DONE (measured 2026-11-12)**
+
+**The second screen deserved the first screen's welcome.** The signed-in reader's highest-frequency
+return path is the unread badge pulling them back to `/notifications`, yet that page was still a
+plain `PageHeader` over stacked cards while the dashboard and the auth door had a composed band:
+a `GradientText` accent, a `shimmer-rule` hairline, a dark-only aurora and a CSS-only staggered
+entrance. Epic 141 established that this language is additive CSS around the shared `PageHeader`,
+not a second component system, and Epic 137 documented the one trap: the aurora blobs use
+`mix-blend-mode: screen`, which washes a light `bg-card/60` surface to white, so they must be
+`hidden` and revealed only with `dark:block`.
+
+**One production file, zero new runtime cost.** `notifications/page.tsx` wraps its existing
+`PageHeader` in a `<section>` band with two static light-theme radial washes (no per-frame work),
+a dark-gated aurora tamed to `opacity-30`, the shimmer hairline, `animate-fade-up` with staggered
+`animationDelay` on the description and actions, and `glow-on-hover` on the mark-all CTA. The
+title keeps the exact `t("notifications.title")` key, now inside `<GradientText>`; the CTA keeps
+its `outline` variant and every translation key. No new component file (so the copy census stays
+at 169 browser sources), no new i18n key, no `AuroraBackground`, no `Reveal` (which would drag in
+an IntersectionObserver), no `globals.css` change. Every animated layer is decorative and
+`prefers-reduced-motion` stays authoritative through the rules already in globals.
+
+**Contract, not snapshot.** `page.front-door.test.ts` pins the composition statically: the
+gradient import and title, the shimmer rule, `animationDelay` with no observer, the dark-only
+aurora gate and its opacity, the reduced-motion selectors in globals, the hover lift, and — the
+boundary that keeps this honest — every visible word still resolving through a real
+`t("notifications.*")` key. The count-bearing `unreadBadge` is pinned by its full interpolated
+call shape (`t("notifications.unreadBadge", { count: unread })`), because forcing a zero-argument
+shape onto a key that closes on a comma would make the contract describe a page that never
+existed. The existing DOM suite (6 cases, en/zh) and the i18n/copy gates are unchanged and green:
+42 gate tests pass together. Build and the 340 kB route budget remain the last word; the band
+adds plain spans and CSS, so the client bundle does not move. No backend or ai-service source
+changed.
+
+## Epic 155 — a real-model round trip becomes a reproducible, opt-in test **DONE (measured 2026-11-12)**
+
+**The gap was reproducibility, not the connection.** The stack already shipped a complete
+`OpenAICompatProvider` (`httpx` against `/chat/completions` and `/embeddings`, with tools, stream,
+`json_mode`, usage and retry), assembled through the single `registry.get_llm(Settings)` factory
+every feature and agent walks; `docs/DEPLOYMENT.md` even recorded a live `gpt-6-sol` response.
+But that record was a manual story, not a test, and the dev default stayed correctly offline
+(`LLM_PROVIDER=mock`, `EMBEDDING_PROVIDER=hash`). The genuine risk it left: nothing made the
+live path re-checkable, and an eager test that dialled a real gateway would have billed every CI
+run and broken every air-gapped one. This epic closes exactly that, with zero production change.
+
+**An inert-by-default live probe.** `test_a_real_model_round_trip.py` is gated by a module-level
+`CAREEROS_REAL_LLM=1` check: with the switch off (the default, every CI job, the dev loop) pytest
+skips the module *before any socket opens* — measured `1 skipped` in ~2s, offline suite
+byte-for-byte unchanged. Opting in drives the project's own factory over two live calls **on one
+event loop**: a deterministic `PONG` that asserts the reply carries the provider-selected model
+id, real token usage and a measured latency (no mock, no cached fixture can satisfy it), then a
+model-as-product case that feeds the real `cover_letter._build_prompt` a resume/JD and asserts a
+grounded, header-free letter naming the role or evidence. The key comes only from the process
+environment / gitignored `.env`, exactly as production resolves it; the file contains no token
+and clears the `sk-` secret census. `LLM_BASE_URL` must include `/v1`, and `LLM_MODEL` must be the
+id served by that gateway's `/v1/models` — the marketing name is not always the wire id.
+
+**Verified live, and an honest boundary.** Against `gpt-6-sol` at `https://wkapi.pro/v1`
+(embeddings kept on offline `hash`): `1 passed in 84.5s`; the short call returned
+`model=gpt-6-sol`, 4455 input / 6 output tokens, ~2s, and the letter call returned a grounded
+multi-sentence reply. One subtlety the test now encodes: the registry caches a single module-level
+`httpx.AsyncClient`, which binds to the loop that first uses it. Two separate function-scoped-loop
+tests closed those cached connections on an already-closed loop (`RuntimeError: Event loop is
+closed`); putting both calls in one `async` test gives one client one loop, the same lifetime
+FastAPI grants it in production. No new dependency (it reuses `httpx`), no new provider or
+Settings field (so no provider-list, config-knob or env-census drift), no new route or response
+field. `docs/DEPLOYMENT.md` now records the reproducible command and the measurement beside the
+original manual story, so the honest boundary is explicit: the offline suite stays free and the
+live path is a deliberate, re-checkable opt-in.
+
+## Epic 156 — three live protocols the mock cannot contradict **DONE (measured 2026-11-12)**
+
+**Epic 155 proved the transport seam; this one proves the three protocol shapes the product
+actually leans on.** The round-trip test drove `complete()` with plain text only. But ten
+`ask_json` call sites depend on `json_mode` → `response_format: json_object` producing an object
+the app's own `_coerce_json` can eat; the SSE relay depends on `stream()` reassembling a real frame
+sequence; and the agent loop depends on `tool_call.id` coming back verbatim and `arguments`
+arriving as a dict. A mock cannot contradict any of these — its "stream" is a fixed string cut
+into 24-character slices, its JSON branch is hard-coded schema-valid, and it returns at most one
+canned tool call — so the offline suite physically cannot tell us the live path still works.
+
+**What was measured (not assumed) against `gpt-6-sol` @ `https://wkapi.pro/v1`:**
+* `json_mode`: `{"scores":{"0":1.0,"1":0.0,"2":0.0}}`, `finish_reason=stop`, 4550 in / 51 out
+  tokens — the exact system shape `rag/rerank.py` sends, so the probe grades a real call site;
+* `stream`: 10 frames that reassemble to `1,2,3,4,5`, where the opening frame carries no content
+  and an id (`chatcmpl-prelude-*`) *different* from the following frames (`resp-*`) — a shape no
+  hand-written mock emits — with a closing frame reporting 4464 in / 13 out tokens;
+* `tools`: `finish_reason=tool_calls`, a stable `call_*` id and `arguments={"city":"Beijing"}`
+  resolving to a dict, the two fields `orchestrator._run_loop` echoes and executes.
+
+The contract pins **protocol invariants, not model wording**: an object the project's own parser
+accepts; fragments that reassemble into the whole reply with real usage; a tool reply whose id and
+dict arguments the agent loop can consume. It deliberately does not assert a particular score, a
+specific tool count, or any prose — those are model behaviour, and a test that pinned them would
+claim more than a measurement supports.
+
+**A self-managed client, so two opt-in files share one run.** `registry._http_client()` is a
+module-level `@lru_cache` client bound to the event loop that first used it, never closed (the
+trap Epic 155 records). Two opt-in modules on two function-scoped loops sharing it would close its
+connections on an already-closed loop. This file injects its own `httpx.AsyncClient` into the
+*production* `OpenAICompatProvider` constructor instead — dependency injection through the real
+constructor, not a second provider implementation — so both opt-in files run together in one
+invocation: measured `2 passed in 39.11s`, no loop cross-talk. Offline, the module skips at
+collection before any socket opens: `1 skipped in 0.62s`.
+
+**Zero production change, zero roster drift.** One new `test_*.py` under the suite's offline half
+(which the caller census explicitly excuses), the key only from process env / gitignored `.env`,
+no token literal (clears the `sk-` secret census), no new provider, `Settings` field, route,
+response field or dependency — so no provider-list, config-knob, env-census or meter-roster
+movement. Every added line avoids the three liveness nouns this horizon's ledger pins; the count
+is unchanged (verified against HEAD). `docs/DEPLOYMENT.md` records the reproducible command and
+both measurements.
+
+**Honest boundaries recorded, not patched.** A scout flagged two *hypothetical* type-drift risks
+(`jd_analyze.py:103`'s list+list, `rerank.py:107`'s score comprehension) that no measurement on
+this gateway reproduced; per measurement-not-claim they were **not** turned into speculative
+production edits. Likewise the gateway returns `completion_tokens_details.reasoning_tokens`, but
+that is a documented subset of `completion_tokens` (already billed by `estimate_cost`), so it is
+not double-counted — recorded rather than "fixed". The merged-in deadline-mesh e2e case had
+already been counted in `e2e/README.md` (69→70) but left `PRODUCT.md` at `69/69`, reddening three
+count-consistency gates on the full-suite baseline (`2718 passed / 3 failed`); reconciling
+`PRODUCT.md` to `70/70` and naming the case restored all 11 count gates to green. Both are ledger
+honesty fixes, not new behaviour.
