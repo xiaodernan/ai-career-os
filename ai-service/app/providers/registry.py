@@ -20,10 +20,10 @@ class ConfigError(Exception):
 
 # The one outbound connection pool every LLM / embedding / voice provider shares for the
 # life of the process (`@lru_cache` below). `limits` decides the real concurrency ceiling and
-# keep-alive reuse on the most expensive boundary in the service, yet left implicit it is a
-# silent httpx-version default: a dependency bump could halve production throughput with no
-# code change. Naming it here makes the contract explicit and auditable. The values are the
-# ones httpx 0.28.1 already applies, so declaring them is byte-for-byte behaviour-preserving.
+# persistent-connection reuse on the most expensive boundary in the service, yet left implicit
+# it is a silent httpx-version default: a dependency bump could halve production throughput
+# with no code change. Naming it here makes the contract explicit and auditable. The values are
+# the ones httpx 0.28.1 already applies, so declaring them is byte-for-byte behaviour-preserving.
 # `timeout` is deliberately NOT set at client level: all provider calls pass a per-request
 # timeout matched to their own latency (60s embeddings up to 600s ollama streams), which a
 # client-level value would only shadow; the shared client keeps httpx's default for those

@@ -76,6 +76,7 @@ TESTS=(
   ai-service/tests/test_the_ops_endpoint_reports_without_exposing.py
   ai-service/tests/test_the_rerank_that_costs_no_model_call.py
   ai-service/tests/test_the_algorithms_module.py
+  ai-service/tests/test_the_shared_provider_client_is_bounded.py
 )
 
 echo "== verify_gates: representative offline contract gates =="

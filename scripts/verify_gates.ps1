@@ -74,7 +74,8 @@ $tests = @(
   "ai-service/tests/test_the_queue_status_reads_without_breaking.py",
   "ai-service/tests/test_the_ops_endpoint_reports_without_exposing.py",
   "ai-service/tests/test_the_rerank_that_costs_no_model_call.py",
-  "ai-service/tests/test_the_algorithms_module.py"
+  "ai-service/tests/test_the_algorithms_module.py",
+  "ai-service/tests/test_the_shared_provider_client_is_bounded.py"
 )
 
 Write-Host "== verify_gates: representative offline contract gates =="

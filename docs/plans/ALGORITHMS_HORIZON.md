@@ -38,6 +38,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 154 | The inbox — the second screen a signed-in reader opens — carries the same front-door visual language as the dashboard, without growing the client bundle or washing the light theme | `notifications/page.tsx` gains a CSS-only band (`GradientText` title, `shimmer-rule`, dark-gated aurora with `opacity-30`, staggered `animation-delay`, `glow-on-hover` CTA); zero new client JS/copy/i18n keys/component files; new `page.front-door.test.ts` source contract + 42 gate tests; copy census stays 169, build + bundle budget |
 | 155 | A real provider round trip stops being a manual story in the deploy doc: it becomes a reproducible, opt-in test that is inert (zero socket) on every offline/CI run and bills only when the operator asks | `test_a_real_model_round_trip.py`: module-level `CAREEROS_REAL_LLM=1` skip, env-only key, project's own `get_llm` factory over two live calls on one loop (PONG seam + real `cover_letter` prompt); verified `gpt-6-sol` @`wkapi.pro/v1` 1 passed / 84.5s, offline 1 skipped / 1.9s; zero production code, zero new dependency/provider/env-census entry; DEPLOYMENT.md records the measurement |
 | 156 | Three protocols the offline provider cannot contradict — structured output, server-sent streaming and tool calls — are attested against the real gateway, and stay inert (zero socket) offline | `test_the_live_gateway_speaks_three_protocols.py`: module-level opt-in skip, env-only key, a self-managed client injected into the production `OpenAICompatProvider` so it coexists with Epic 155 on one opt-in run; asserts a `json_mode` object the app's `_coerce_json` accepts, streamed fragments reassembled with a real closing usage, and a tool reply whose id and dict arguments the agent loop can echo; verified `gpt-6-sol` 2 passed / 39s, offline 1 skipped / 0.6s; reconciles the merged deadline-mesh e2e case (PRODUCT.md 69/69 → 70/70); zero production code, zero new dependency/provider/knob |
+| 157 | The process-wide outbound HTTP pool stops hiding its concurrency ceiling in an httpx-version default: the limit that decides production throughput is explicit, and the zero-drift premise that keeps the client timeout alone is a gate | `registry._SHARED_LIMITS` (max 100 / idle-connection 20, measured httpx 0.28.1 defaults, byte-for-byte preserving); client-level `timeout` deliberately untouched (all 10 provider calls pass their own, 60–600s); `test_the_shared_provider_client_is_bounded.py` pins the limit values, that the factory applies them, and that every provider outbound call still carries a per-request timeout; added to both `verify_gates` scripts; no new meter/knob/env/route |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1779,3 +1780,46 @@ already been counted in `e2e/README.md` (69→70) but left `PRODUCT.md` at `69/6
 count-consistency gates on the full-suite baseline (`2718 passed / 3 failed`); reconciling
 `PRODUCT.md` to `70/70` and naming the case restored all 11 count gates to green. Both are ledger
 honesty fixes, not new behaviour.
+
+## Epic 157 — the shared outbound pool's concurrency ceiling is an explicit contract **DONE (measured 2026-11-12)**
+
+**The most reused network boundary in the service had no stated limit.** `registry._http_client()`
+is a module-level `@lru_cache` `httpx.AsyncClient` shared for the whole process by every LLM,
+embedding and voice provider (six factory call sites). Its `limits` — the real concurrency ceiling
+and idle-connection reuse policy on the most expensive boundary in the system — were an invisible
+httpx-version default. A dependency bump could silently change production throughput with no diff
+in our code. This epic names that contract, at the values httpx 0.28.1 already applies, so it is
+**byte-for-byte behaviour-preserving** while turning a silent default into an auditable one.
+
+**Measured, not assumed.** Before declaring anything, the running httpx 0.28.1 defaults were read
+off a live client: a connection ceiling of 100, an idle-pool cap of 20, a 5-second idle expiry and
+a client-level `timeout` of 5 seconds. `_SHARED_LIMITS` declares the two pool caps exactly; expiry
+is left implicit so it stays at its measured default. Declared values that differ from the runtime
+would not be zero-drift, so `test_the_shared_provider_client_is_bounded.py` pins them to the
+measured numbers — a dependency upgrade that moves either default reddens the gate instead of
+quietly changing throughput.
+
+**Why client-level `timeout` is deliberately left alone.** All ten provider outbound calls pass a
+per-request `timeout` matched to their own latency (60s embeddings up to 600s ollama streams),
+which a client-level value would only shadow — setting one here would be a dead config that
+misleads a maintainer into thinking it bounds a long generation. The real risk is the opposite:
+a *future* provider that forgets to pass a timeout would silently inherit httpx's 5s default and
+abort a long model call (and a bare `httpx.Timeout()` doesn't even construct — it needs a default
+or all four parameters). So the second half of the contract is a source scan requiring every
+`self.client.<verb>(` call in `providers/llm` and `providers/voice` to carry its own `timeout=`;
+the fragile premise that makes "leave the client default alone" safe becomes an executable gate.
+The scan deliberately keys on the injected `self.client.` seam so it cannot mistake a `dict.get`
+for a network call — a distinction its first run caught and corrected.
+
+**Zero drift, zero roster movement.** `@lru_cache`, the six factory call sites and every provider
+constructor are untouched; the shared client is never closed in `main.py`'s lifespan (closing a
+cached singleton would hand out a dead client and break the live-provider tests — Epic 155/156's
+loop-binding trap). No new meter, config knob, env var, route, response field or dependency, so no
+meter roster, DEPLOYMENT roster, alerts, env-census or config-knob drift. The one new `test_*.py`
+sits in the suite's offline half; its docstring and comments avoid the three liveness nouns this
+horizon's ledger pins, and the shipped `registry.py` comment was reworded for the same reason
+after the exact-interval ledger gate (which counts shipped comments that state a run-stream
+interval) caught the first draft — its count is back to the HEAD value. The new offline gate was
+added to both `verify_gates.sh` and `verify_gates.ps1`. Verified: 4 contract tests pass in 1.82s;
+the full census set (response_shape, response_field, env/config censuses, voice seam) is green;
+the previously-red exact-interval ledger gate passes again.
