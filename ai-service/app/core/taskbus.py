@@ -22,6 +22,16 @@ log = logging.getLogger(__name__)
 
 _TASKS: dict[str, dict[str, Any]] = {}
 _MAX_HISTORY = 400
+# A mirrored task stream is a live-handoff aid, not an archive: the terminal event
+# is replayable for as long as any relay could still be following it, then the key
+# is allowed to expire so a long-lived service does not accumulate one Redis key
+# per task forever. Every write (including the terminal one) pushes this window
+# out again, so an active task never expires under a subscriber; only a task that
+# went quiet for a whole window does. 3600s is well past the relay's 10-minute
+# read budget and the 15s stream wait, and matches the in-memory gc's max age.
+# This is a module constant, like _MAX_HISTORY -- not an operator knob: no caller
+# needs to tune it, and a knob nobody would read is a knob that does nothing.
+_MIRROR_TTL_S = 3600
 
 # ----------------------- the Redis Streams backplane (opt-in) -----------------------
 
@@ -61,9 +71,15 @@ class _Backplane:
         return entry_id.decode() if isinstance(entry_id, bytes) else str(entry_id)
 
     async def write(self, task_id: str, payload: dict) -> None:
-        await self.pool.execute(
-            "XADD", self._key(task_id), "MAXLEN", "~", str(_MAX_HISTORY), "*",
-            "data", json.dumps(payload, ensure_ascii=False, default=str))
+        # Two commands, one round trip: append the event, then push the key's
+        # expiry out to a full window. Non-atomic (no MULTI in this client), but
+        # the drainer is the only writer, so an XADD is always followed by its
+        # PEXPIRE in order -- a mirror that is being written never lapses.
+        await self.pool.pipeline([
+            ("XADD", self._key(task_id), "MAXLEN", "~", str(_MAX_HISTORY), "*",
+             "data", json.dumps(payload, ensure_ascii=False, default=str)),
+            ("PEXPIRE", self._key(task_id), str(_MIRROR_TTL_S * 1000)),
+        ])
 
     async def backlog(self, task_id: str) -> list[tuple[str, dict]]:
         rows = await self.pool.execute("XRANGE", self._key(task_id), "-", "+", "COUNT", str(_MAX_HISTORY)) or []

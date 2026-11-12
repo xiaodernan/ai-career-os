@@ -44,6 +44,7 @@ class FakeStreamsRedis:
 
     def __init__(self) -> None:
         self.streams: dict[bytes, list[tuple[bytes, bytes]]] = {}
+        self.expiries: dict[bytes, int] = {}
         self.seq = 0
         self.commands: list[list[bytes]] = []
         self.block_calls = 0
@@ -91,6 +92,11 @@ class FakeStreamsRedis:
         name = args[0].upper()
         if name == b"PING":
             return b"+PONG\r\n"
+        if name == b"PEXPIRE":
+            # The mirror writes XADD + PEXPIRE in one pipeline round; record the
+            # window so a test can prove every write renews it.
+            self.expiries[args[1]] = int(args[2])
+            return b":1\r\n"
         if name == b"XADD":
             key = args[1]
             index = 2
@@ -300,4 +306,62 @@ async def test_a_foreign_task_reads_state_and_done_from_the_stream(redis_env):
     assert state is not None
     assert state["done"] is True
     assert state["events"] == 2
+
+
+# ------------------------------------------------------- bounded key lifetime (Epic 152)
+
+async def test_every_mirror_write_renews_the_key_window(redis_env):
+    """Each event appends AND pushes the expiry out; a quiet task's key can lapse.
+
+    The stream must not accumulate one key per task forever. Every write carries a
+    PEXPIRE in the same pipeline round as its XADD, so a task that is still being
+    published never lapses mid-follow, while a task that stops writing is left to
+    expire after one full window.
+    """
+    streams = redis_env
+    task_id = _task()
+    key = f"careeros:tasks:{task_id}".encode()
+
+    taskbus.publish(task_id, "status", {"step": "s0", "state": "active"})
+    await _drained(streams, task_id, 1)
+    assert key in streams.expiries, "the write did not renew the key's window"
+    first_ttl = streams.expiries[key]
+    assert first_ttl == taskbus._MIRROR_TTL_S * 1000, (
+        f"{first_ttl}ms vs the declared {taskbus._MIRROR_TTL_S * 1000}ms: the window the "
+        "test measures must be the window production sets"
+    )
+    # The window must outlast the relay's 10-minute read budget (600s) and the
+    # stream's own wait, or a follower could lose its key mid-follow.
+    assert first_ttl > 600_000
+
+    # A later write on the same task renews the window again (write-time renewal).
+    streams.expiries[key] = 1  # simulate a nearly-expired key
+    taskbus.publish(task_id, "status", {"step": "s1", "state": "active"})
+    await _drained(streams, task_id, 2)
+    assert streams.expiries[key] == taskbus._MIRROR_TTL_S * 1000, (
+        "a new event did not push the expiry back out: an active task could lapse"
+    )
+
+    # XADD still lands alongside the expiry -- the two commands share one pipeline.
+    xadds = [c for c in streams.commands if c[0].upper() == b"XADD"]
+    pexpires = [c for c in streams.commands if c[0].upper() == b"PEXPIRE"]
+    assert len(xadds) == 2 and len(pexpires) == 2, (len(xadds), len(pexpires))
+
+
+async def test_memory_mode_never_sends_a_key_expiry(monkeypatch):
+    """The default, in-process path adds no Redis traffic at all."""
+    monkeypatch.setenv("TASK_BUS_BACKEND", "memory")
+    get_settings.cache_clear()
+    taskbus._reset_backplane_for_tests()
+    try:
+        task_id = taskbus.new_task("ingest", USER)
+        taskbus.publish(task_id, "status", {"step": "s0", "state": "active"})
+        taskbus.finish(task_id, True, result={"ok": True})
+        # The memory feed is intact and no backplane was ever built.
+        assert taskbus.state(task_id)["events"] == 2
+        assert taskbus.is_done(task_id)
+        assert taskbus._BACKPLANE is None
+    finally:
+        get_settings.cache_clear()
+        taskbus._reset_backplane_for_tests()
 

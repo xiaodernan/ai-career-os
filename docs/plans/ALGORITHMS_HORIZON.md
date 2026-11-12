@@ -33,6 +33,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 149 | A concurrent spring-cloud merge is reconciled: the dev edge activates the same registry profile as the backend, and the count/timeout censuses tell the truth again | dev `docker-compose.yml` gateway gets `SPRING_PROFILES_ACTIVE=eureka` + `EUREKA_DEFAULT_ZONE`; `gateway-edge` spec counted in e2e/README + PRODUCT.md (69/69) and its alias registered; `.env.example` backoff comment stops masquerading as a Redis timeout; 17 + 22 offline gates |
 | 150 | The two read-only ops verdicts get a real consumer: a backend collector scrapes their measured numbers into Prometheus, and their `no backend caller` markers become true | `AiOpsMetrics` (`@Scheduled` + `Gauge`) over `GET /internal/ops/{workqueue,cache}`, 7 excused-by-name signals, fail-open keeping last reading; backend `AiServiceClient` seam + `HttpAiServiceClient` GETs with a nil system id; API.md ledger 10→8; 7 offline backend tests + 31 contract/meter gates |
 | 151 | A task's owner is decidable on any replica, not just the one that made it: the mirror that carries the frames also carries ownership, so the gate stops failing closed on a sibling | `aowner()` memory-first then `XREVRANGE` over the mirrored `owner` field; `_require_owner` async; owner never enters a wire frame or `state()`; 6 offline tests (fake-streams Redis) + 59 contract/census gates; MICROSERVICES §6 and PERFORMANCE_HORIZON legacy note reconciled |
+| 152 | A long-lived service stops accumulating one Redis key and one dict entry per task: the task feed's space is bounded, and reclamation rides the clock that already ticks | `_MIRROR_TTL_S=3600` module constant + `pipeline([XADD, PEXPIRE])` write-time renewal (one round trip); `gc_old_tasks()` wired into all three existing embed loops via local imports; zero new tick/knob/resp command; memory mode sends no new Redis command; 4 source-contract + 2 runtime offline tests; liveness-interval line pin 275→291 / 282,279→298,295 |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1503,3 +1504,93 @@ contract/census set (`test_response_shape_contract.py`, `test_api_doc_contract.p
 `test_internal_contract.py`, `test_stream_event_contract.py`) passes (59); the
 six new offline cases pass. No test was skipped, relaxed or re-baselined
 downward to close this Epic.
+
+## Epic 152 — the task feed stops accumulating one entry per task **DONE (verified 2026-11-12)**
+
+Epics 131 and 151 made the task feed correct on any replica: every `publish()`
+appends to an in-process list and mirrors the same event onto a Redis stream,
+and ownership travels with it so a sibling can settle whose task it is. What
+neither Epic bounded was *space*. The in-process `_TASKS` dictionary grows by
+one entry per task for the whole process lifetime, and every mirrored task gets
+a `careeros:tasks:<id>` stream key with no expiry. On a service that runs for
+days, that is unbounded growth in both process memory and Redis for a feed
+whose usefulness ends minutes after its terminal frame. `gc_old_tasks()` had
+even been written to reclaim the memory side -- and was dead code, called by no
+shipped path. This Epic closes both without starting a new clock or adding a
+knob nobody would tune.
+
+**Redis: a bounded window, renewed on every write.** The mirror client already
+has a `pipeline()` that batches commands into one round trip (the cache's
+liveness counter was the first user). `_Backplane.write()` now sends the event
+and its key expiry together: `XADD ... MAXLEN ~ 400` followed by `PEXPIRE key
+3600000`. Two commands, one wire round -- non-atomic (this client has no
+transactions) but the drainer is the sole writer, so an append is always paired
+with its renewal in order. The consequence is the one a follower needs: **a task
+that is still being published never lapses**, because each event pushes the
+window out to a full hour; only a task that goes quiet for that whole window is
+left to expire. The window is a module constant, `_MIRROR_TTL_S = 3600`, beside
+`_MAX_HISTORY = 400` -- deliberately *not* an operator setting, since no caller
+needs to retune it and a knob with no reader is a knob that does nothing. It is
+measured to outlast the backend relay's ten-minute read budget and the stream's
+own short wait, so a renewing key cannot vanish mid-follow.
+
+**Memory: reclamation rides the clock that already ticks.** Rather than add a
+sweeper task, `gc_old_tasks()` is called once per pass from the three periodic
+loops that already run on the service's existing cadence: `embed_loop` (single
+process), `embed_loop_distributed` (multi-replica), and `_fallback_loop` (Redis
+down). The last one matters: when the mirror is unavailable, memory gc is the
+*only* reclamation the feed gets. Each call is a local import, which keeps the
+loops' module-level line layout -- and the shipped-source comment census that
+reads it -- untouched. No `create_task`, no extra `sleep`, no new interval: a
+source-contract test pins that every loop calls the reclaimer and that the
+number of wait calls per loop did not grow, so a future "just add a sweeper"
+cannot slip a second clock in unseen.
+
+**Honest boundary, stated rather than hidden.** `gc_old_tasks()` has always
+meant one thing (its offline test pins it): remove only tasks that are both
+*finished* and older than the window; leave fresh and still-running tasks
+alone. Wiring it up means a finished task queried more than an hour later now
+answers `state() is None` where it used to keep returning its last frame. That
+is the intended fix, not a regression -- no relay can still be following a
+task after an hour (its read budget is ten minutes), and the alternative is a
+dictionary that grows without limit. The behavior change is confined to that
+one projection; event shapes, ordering, the three-key wire frame, and the
+ownership field's absence from frames are all unchanged. A task created but
+abandoned before its first `publish()` has no stream key at all, so the Redis
+TTL cannot reach it; that case is exactly why the memory-side gc is wired too,
+and neither side alone would have closed the leak.
+
+**Why the mirror-down follow path stays honest.** If a key lapses while a
+subscriber is waiting on the tail, the stream client does not error: an absent
+key simply answers no event, the loop keeps waiting within its short interval,
+and the relay's own finite read budget is what ends the connection. A *new*
+subscriber whose key already lapsed gets the same "task not found" answer as a
+task that never existed -- consistent with Epic 151's fail-closed ownership
+gate. Write-time renewal is what keeps this from ever happening to a live
+task.
+
+**Zero drift where it counts.** In the default memory mode the mirror is not
+built, so `write()` is never reached and not a single new Redis command is
+issued; the offline suite proves the memory feed stays whole with no backplane.
+No config field or env example changed, no `resp.py` reply parser changed
+(`PEXPIRE` returns an integer the existing `:` branch already reads), and no
+public route moved. One test double grew a `PEXPIRE` branch so the pipeline's
+second command is answered rather than refused; the six existing scale-out
+cases and the five Epic 151 cases pass unchanged against it.
+
+**Census sync, not relaxation.** Adding the constant block and the two-command
+write pushed `taskbus.py`'s single liveness-interval definer down 16 lines: the
+`subscribe` signature moved 275 → 291 and its two consumers 282/279 → 298/295.
+Those three line numbers were updated in place with the reason beside them; the
+default interval, the definer count, and the override file list are all
+untouched. The docs' noun-vocabulary ledger stays at 13 -- this chapter names
+no transport-liveness noun, and an early roadmap line that did was reworded
+before it could move the count.
+
+**Verification.** Reclamation and source-contract set 104 passed (including the
+four new source-contract cases and two new runtime cases), full
+`test_response_shape_contract.py` 32 passed, and the four configuration/window
+censuses most likely to see a new time constant or knob 29 passed -- evidence
+that the module-constant TTL really does stay out of the knob and lifetime
+ledgers. Full ai-service suite, backend `mvn test`, `verify_gates.sh` and the
+pre-commit hook all pass; no test was skipped or re-baselined downward.

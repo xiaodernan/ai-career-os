@@ -214,21 +214,33 @@ fall back to the in-process budget with the `careeros.gateway.ratelimit.fallback
   A deadline is work conservation, never a permission problem: absent means unchanged.
   `GATEWAY_DEADLINE_MS` bounds the edge budget (default 300000, above the 180s AI read budget;
   `0` disables the stamp).
-- **The task feed as a Redis Stream (Epics 131 + 151, opt-in).** Every `publish()`
-  rides two paths: the in-process list that serves the owning replica's browsers
-  (unchanged, same events, same order), and an `XADD` (MAXLEN ~400) on
-  `careeros:tasks:<task_id>`. With `TASK_BUS_BACKEND=redis` a subscriber on any
-  replica replays the backlog from the stream and follows with `XREAD BLOCK` --
-  one writer per task keeps interleave out of a single task's timeline. Ownership
-  now travels with the mirrored events as a top-level `owner` field, so `aowner()`
-  answers from memory on the owning replica and reads the last stream entry on a
-  sibling; the gate still fails closed (a stranger, an ownerless task, or an
-  unreachable mirror all get the same 404 as a missing task). The backend relay's
-  ordered door walk is unchanged and still correct: the first healthy node can now
-  answer ownership instead of every node but one refusing. The `owner` field never
-  reaches a wire frame -- the SSE generator forwards only `event` and `data`. A
-  Redis outage degrades the mirror to warn-and-drop: the in-process feed keeps
-  serving, exactly like the cache degrades to memory.
+- **The task feed as a Redis Stream (Epics 131 + 151 + 152, opt-in).** Every
+  `publish()` rides two paths: the in-process list that serves the owning
+  replica's browsers (unchanged, same events, same order), and an `XADD`
+  (MAXLEN ~400) on `careeros:tasks:<task_id>`. With `TASK_BUS_BACKEND=redis` a
+  subscriber on any replica replays the backlog from the stream and follows with
+  `XREAD BLOCK` -- one writer per task keeps interleave out of a single task's
+  timeline. Ownership travels with the mirrored events as a top-level `owner`
+  field, so `aowner()` answers from memory on the owning replica and reads the
+  last stream entry on a sibling; the gate still fails closed (a stranger, an
+  ownerless task, or an unreachable mirror all get the same 404 as a missing
+  task). The backend relay's ordered door walk is unchanged and still correct:
+  the first healthy node can now answer ownership instead of every node but one
+  refusing. The `owner` field never reaches a wire frame -- the SSE generator
+  forwards only `event` and `data`.
+- **Bounded task-feed space (Epic 152).** Neither the in-process `_TASKS` map
+  nor the per-task mirror key grew without limit: each `write()` now batches its
+  `XADD` with a `PEXPIRE` in one client pipeline, renewing a one-hour window on
+  every event so an active task never lapses under a follower while a quiet one
+  is left to expire; and `gc_old_tasks()` -- finished, long-quiet entries only --
+  runs on the three embed loops that already tick, including the Redis-down
+  fallback. Both are reclaimers, not new clocks: no extra task, no operator
+  knob, and in the default memory mode no new Redis command is issued. A task
+  finished more than the window ago now answers `state() is None` rather than
+  holding its last frame forever, which is the fix rather than a regression (no
+  relay can still be following it). A Redis outage still degrades the mirror to
+  warn-and-drop: the in-process feed keeps serving, exactly like the cache
+  degrades to memory.
 - **CORS**: correlation headers are allowed/exposed as required for browser diagnostics.
 
 ## 7. Observability and build identity

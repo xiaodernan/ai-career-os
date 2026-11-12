@@ -164,6 +164,13 @@ async def embed_loop(interval: float = EMBED_LOOP_INTERVAL,
             await embed_jobs()
         except Exception:
             log.warning("job embedding pass failed; retrying in %ss", interval, exc_info=True)
+        # The task feed's in-memory dictionary and its Redis mirror both grow by
+        # one entry per task. Reclaim finished, long-quiet tasks on this existing
+        # tick rather than adding a second clock: the feed's own gc only removes
+        # entries old enough that no relay could still be following them. A local
+        # import keeps this module's top-level (and its census-pinned lines) still.
+        from app.core import taskbus
+        taskbus.gc_old_tasks()
         if stop is None:
             await asyncio.sleep(interval)
             continue

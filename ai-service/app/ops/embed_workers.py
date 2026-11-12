@@ -323,6 +323,12 @@ async def embed_loop_distributed(interval: float = 60.0,
                     log.info("embed work queue: delivered=%d reclaimed=%d ack_failed=%d "
                              "dead_lettered=%d", stats.delivered, stats.reclaimed,
                              stats.ack_failed, stats.dead_lettered)
+                # Reclaim the task feed's in-memory entries on this existing pass
+                # rather than starting another clock. Only finished tasks older
+                # than the follow window go; active ones are untouched. Local
+                # import keeps the liveness-noun line above at its pinned spot.
+                from app.core import taskbus
+                taskbus.gc_old_tasks()
             except (resp.RespUnavailable, resp.RespError, OSError) as e:
                 log.warning("embed work queue unavailable (%s); running the DB-scan fallback", e)
                 try:
@@ -350,6 +356,10 @@ async def _fallback_loop(interval, stop, embed_jobs) -> None:
             await embed_jobs()
         except Exception:
             log.warning("job embedding pass failed; retrying in %ss", interval, exc_info=True)
+        # The mirror is down in this mode, so in-memory gc is the only reclamation
+        # the task feed gets; keep it on the same cadence as the healthy path.
+        from app.core import taskbus
+        taskbus.gc_old_tasks()
         if stop is None:
             await asyncio.sleep(interval)
             continue

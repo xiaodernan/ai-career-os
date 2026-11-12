@@ -3207,12 +3207,15 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # Epic 131 moved both pins: the Redis backplane added ~200 lines above `subscribe`.
     # Epic 151 adds 17 more above it -- the mirror's `holder()` reader and the comment
     # explaining that ownership rides on the mirrored payload only, never a wire frame.
-    # The signature itself, its 15s default, and the two consumers below are untouched.
-    assert args["declared"] == [{"file": "app/core/taskbus.py", "line": 275, "function": "subscribe"}], \
+    # Epic 152 adds 16 more: the bounded-TTL module constant and the two-command
+    # pipeline in `write()` (XADD + PEXPIRE in one round trip). Neither the signature
+    # nor its 15s default nor the two consumers below changed -- only their line numbers
+    # moved, so the ledger follows them rather than being relaxed.
+    assert args["declared"] == [{"file": "app/core/taskbus.py", "line": 291, "function": "subscribe"}], \
         (f"{args['declared']}: exactly one Python signature declares the parameter, which is what makes "
          "it a definer rather than one caller among many")
-    assert args["read"] == [{"file": "app/core/taskbus.py", "line": 282},
-                             {"file": "app/core/taskbus.py", "line": 279}], \
+    assert args["read"] == [{"file": "app/core/taskbus.py", "line": 298},
+                             {"file": "app/core/taskbus.py", "line": 295}], \
         (f"{args['read']}: the interval is passed to each path that consumes it -- once when the "
          "Redis backplane serves the stream, once when the memory feed does. Both carry the same "
          "wait with a `ping` -- the sentence the comments above repeat")
