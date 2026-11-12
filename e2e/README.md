@@ -78,12 +78,15 @@ apart before you go looking for a bug:
   the backend was genuinely busy, not slow.
 - **A single `toBeVisible()` spec fails while the rest of the suite passes**
   — visibility assertions are the suite's one load-sensitive seam. Measured
-  at `4c80f02` (2026-11-13): two consecutive full runs each failed exactly one
-  such spec (`forward-surfaces` bundle apply, then `command-palette` palette
-  search); both files passed 16/16 in isolation at the same HEAD, and this
-  box was carrying the Docker stack plus builds. The honest check is to re-run
-  the failing spec alone -- if it passes, the run was the machine's; earlier
-  full runs measured 70/70 (2026-11-12).
+  repeatedly on this box: two consecutive full runs at `4c80f02` (2026-11-13)
+  each failed exactly one such spec (`forward-surfaces` bundle apply, then
+  `command-palette` palette search), and a later full run at `9814cf0` (same
+  session, stack rebuilt from HEAD) failed `locale` spec line 107; every
+  failing spec re-ran green in isolation at its own HEAD. This box was
+  carrying the Docker stack plus builds in all three cases; earlier full
+  runs on calmer loads measured 70/70 (2026-11-12). The honest check is to
+  re-run the failing spec alone -- if it passes, the run was the machine's,
+  not the product's; do not investigate the product on this evidence alone.
 
 ### Preflight
 
