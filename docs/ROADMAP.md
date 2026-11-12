@@ -6136,6 +6136,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   passed, production build exit 0, budget OK (/page 196.7 kB unchanged), container
   rebuilt and serving, routes.spec.ts 6/6.)
 
+- [x] **167** The fleet does not celebrate one expiry together — the Redis
+  dashboard cache writes under a ±10% TTL (2026-11-13).
+
+  (`jitterSeconds`(base, ±10% uniform, floor 1s) spreads the Redis branch's TTL
+  so replicas never refill the same key at the same instant; Caffeine stays on
+  the fixed value — a process-local expiry cannot dogpile a fleet. Call-site
+  does no I/O, no wire shape, no knob. DashboardCacheTest 11/11: every seeded
+  draw at 45s lands in [40,50] across 300 draws, the band spreads non-constantly,
+  the floor holds, and the captured Redis write carries a TTL inside the same
+  band. Also stabilizes this sandbox's IT harness, which explains the two
+  recurring flakes seen across this week: Flyway bootstrap died on
+  `FATAL: too many clients already` while the app stack's backend held 21
+  pool seats (Java's league of ITs on a shared PG server's 100 seats, a jump
+  after a container restart); the full backend suite now passes with the
+  backend stopped. `AbstractIntegrationTest` pins
+  `spring.data.redis.timeout=2s` for every IT class (production's 500ms default
+  untouched). RateLimitIT back to 6/6, JobQueueIT 5/5, full backend suite green
+  at this tree with the backend stopped.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

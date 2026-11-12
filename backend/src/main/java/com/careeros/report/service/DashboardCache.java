@@ -28,6 +28,9 @@ import org.springframework.stereotype.Component;
  * short TTL and nothing else. No write-path invalidation, no versioned keys, no
  * coherence protocol. A reader who just moved a card waits one TTL at most for the
  * strip to agree; the trade the service already makes for the rest of the loop.
+ * The Redis branch writes under a ±10% uniform TTL (floor 1s, see {@link #jitterSeconds})
+ * so N replicas never refill the same key at the same instant; Caffeine stays on the
+ * fixed value because a process-local expiry cannot dogpile a fleet.
  *
  * <p>Three backends, selected by {@code careeros.dashboard.cache} (default {@code off}):
  * <ul>
@@ -56,6 +59,21 @@ public class DashboardCache {
 
     /** Cache key prefix; bump the version when the payload shape changes incompatibly. */
     static final String KEY_PREFIX = "careeros:v1:dashboard:";
+
+    /**
+     * A ±10% uniform spread around the base TTL (floor 1s). Every backend replica sets a
+     * fresh entry at its own miss — without jitter the fleet refilled the same key at the
+     * same expiry every TTL and the store absorbed one synchronized dogpile per window.
+     * Bounded so the weakest and the strongest TTL in the field are both useful: 45s
+     * mid-band ships 40–50s, and the write path costs one more multiply.
+     * Package-private so the suite can pin the band with a seeded source.
+     */
+    static long jitterSeconds(long baseSeconds, java.util.Random random) {
+        long base = Math.max(1, baseSeconds);
+        long spread = Math.max(1, Math.round(base * 0.1));
+        long jittered = base - spread + (long) (random.nextDouble() * (2L * spread + 1));
+        return Math.max(1, jittered);
+    }
 
     /** The Prometheus counters; dots render as underscores and counters as `_total`. */
     static final String DECISIONS = "careeros.dashboard.cache";
@@ -160,7 +178,8 @@ public class DashboardCache {
                 local.put(key, json);
                 return;
             }
-            redis.opsForValue().set(key, json, ttl);
+            redis.opsForValue().set(key, json, Duration.ofSeconds(
+                    jitterSeconds(ttl.getSeconds(), java.util.concurrent.ThreadLocalRandom.current())));
         } catch (RuntimeException e) {
             log.warn("dashboard cache write failed for {}: {}", key, e.toString());
         }

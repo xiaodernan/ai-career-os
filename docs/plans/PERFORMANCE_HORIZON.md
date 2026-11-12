@@ -30,6 +30,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 131 | The task feed is a Redis Stream when scale-out asks for it | fake-streams suite |
 | 162 | The backend's job queue runs on Redis Streams, one group across the fleet: a crashed replica's job is reclaimed, a poison job is dead-lettered, and nothing grows without bound | JobQueueIT 5/5 (real it-redis), JobQueueTest 6/6, JobWorkerTest 15/15 |
 | 163 | The inbox mail/ring/read/write paths stop riding a per-key N+1: one IN-round trip plus one save per unread set | NotificationServiceTest 26/26 incl. 2 new pins, full backend suite |
+| 167 | The fleet does not celebrate one expiry together: the Redis dashboard cache writes under a ±10% TTL | DashboardCacheTest 11/11 (band [40,50] over 300 seeded draws, spread non-constant, floor holds, captured Redis write inside the band) |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -441,3 +442,24 @@ not a wall-clock number on a rested DB; no ranking changed, no wire shape moved.
 `markAllRead`, zero per-key `save`), plus dedup of repeated read keys into one row per
 episode. The whole backend suite runs green on this host apart from the box-flaky
 `RateLimitIT` (re-ran green; environment, not this code).
+
+## Epic 167 — the fleet does not celebrate one expiry together (verified 2026-11-13)
+
+The Redis branch of the dashboard cache stamped the *same* 45 s `EX` onto every entry
+it minted. Every replica fills its own keys at its own miss, but their TTLs lapsed
+together, so a minute after an expiry the store absorbed one refilling burst for the
+same key space — the tail latency of exactly the run that rushed.
+
+**The change, bounded on the honest side.** The Redis branch now writes under a
+±10 % uniform TTL (`jitterSeconds`, spread `max(1, round(base*0.1))`, floor 1 s, Caffeine
+stays on the fixed value — a process-local expiry cannot dogpile a fleet, so jitter
+would only add variance without removing a wave). No eviction, no invalidation, no
+lock — the same TTL contract with more useful shapes; a reader who moved a card still
+waits at most one TTL.
+
+**Measured.** `DashboardCacheTest` 11/11: the band pins every seeded draw at 45 s into
+`[40,50]` across 300 draws (a distribution outside the band reds), the band actually
+spreads (TreeSet over 300 draws is non-constant), floor holds for non-positive bases,
+and the Redis `set` the class issued at write carries a TTL inside the same band. Call
+site does no I/O; no behaviour contract moved; no wire shape; no new knob. Backend
+suite to be re-run at this tree — expect the machine-flaky selection, not this class.

@@ -174,6 +174,36 @@ class DashboardCacheTest {
     }
 
     @Test
+    void theJitterStaysInsideItsBandAndSpreads() {
+        // A seeded source makes the check deterministic: every draw at 45 lands in
+        // [40,50] — outside is a distribution bug, not an unlucky iteration.
+        java.util.Random seeded = new java.util.Random(20261113L);
+        java.util.Set<Long> seen = new java.util.TreeSet<>();
+        for (int i = 0; i < 300; i++) {
+            long s = DashboardCache.jitterSeconds(45, seeded);
+            assertThat(s).isBetween(40L, 50L);
+            seen.add(s);
+        }
+        assertThat(seen.size()).as("the band is a spread, not a hidden constant").isGreaterThan(4);
+        // A tiny base floors at 1s and never under-floors
+        for (int i = 0; i < 50; i++) {
+            assertThat(DashboardCache.jitterSeconds(0, seeded)).isGreaterThanOrEqualTo(1L);
+        }
+    }
+
+    @Test
+    void theRedisWriteCarriesATtlInsideTheBand() {
+        UUID user = UUID.randomUUID();
+        DashboardCache cache = cache("redis", 45);
+
+        cache.put(user, sample());
+
+        org.mockito.ArgumentCaptor<Duration> captor = org.mockito.ArgumentCaptor.forClass(Duration.class);
+        org.mockito.Mockito.verify(ops).set(eq("careeros:v1:dashboard:" + user), anyString(), captor.capture());
+        assertThat(captor.getValue().getSeconds()).isBetween(40L, 50L);
+    }
+
+    @Test
     void hitsAndMissesAreCountedSeparately() {
         DashboardCache cache = cache("caffeine", 45);
         UUID user = UUID.randomUUID();

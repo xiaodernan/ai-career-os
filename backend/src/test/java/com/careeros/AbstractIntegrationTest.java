@@ -35,7 +35,13 @@ import org.springframework.test.web.servlet.MockMvc;
         // The harness stands where the deployment's proxy stands: every IT that sets
         // X-Forwarded-For to give a test its own limiter bucket is speaking through that
         // proxy. ForwardedAddressIT turns the declaration off to speak as a direct client.
-        "app.http.trust-forwarded-for=true"
+        "app.http.trust-forwarded-for=true",
+        // This box shares Docker Desktop with builds and other sessions, and the 500ms
+        // command window exists to fail fast in production, not to gate bulk calls on a
+        // shared proxy (observed: RateLimitIT failing open on AI-bucket calls at 500ms
+        // while JobQueueIT needed 5s). Two seconds for every IT class on this harness;
+        // production's REDIS_TIMEOUT stays 500ms, untouched.
+        "spring.data.redis.timeout=2s"
 })
 public abstract class AbstractIntegrationTest {
 
