@@ -272,16 +272,21 @@ services:
     container_name: careeros-gateway
     restart: unless-stopped
     environment:
-      # 98.1: the registry is the only answer for `backend`; the `eureka` profile
-      # empties the simple instance list so a stale address cannot take half the
-      # traffic. This matches the backend's own `eureka` profile and the discovery
-      # service below, and is the same shape docker-compose.prod.yml uses -- a
-      # half-configured edge (gateway on the simple list, backend on Eureka) would
-      # send half its traffic to an address the registry does not know about.
-      # GATEWAY_BACKEND_URI stays as the base document's simple-client default;
-      # under `eureka` that list is emptied, so it is inert here.
-      SPRING_PROFILES_ACTIVE: eureka
-      EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
+      # The dev stack uses the default single-node mode: the gateway's simple discovery
+      # client is the answer for `backend` (the same mode the backend's ai-service bridge
+      # and the ai-service's own cache eviction use; every service in this stack is one
+      # node, and a registry for one node is a broadcast with no subscribers).
+      # The eureka profile is the opt-in demo/prod shape: docker-compose.prod.yml and the
+      # two-node discovery overlay run it, and there the eureka server is long-lived with
+      # self-preservation ON, so the edge's Eureka client renews reliably and survives
+      # restarts. Here, a backend rebuild every few days would silently take the edge's
+      # routing down for hours until an operator recreated the gateway (observed
+      # 2026-11-12 after the backend rebuild at 12:31 -- the edge said "no servers
+      # available for service: backend" for the next 30+ minutes until the gateway was
+      # recreated); the eureka client is not configured with a refresh interval in the
+      # dev stack, so it never picks up a re-registered instance.
+      # GATEWAY_BACKEND_URI is the address the simple client hands the load balancer;
+      # inside the compose network that is the backend service, not this container.
       GATEWAY_BACKEND_URI: http://backend:8080
       GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
