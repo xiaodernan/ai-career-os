@@ -24,7 +24,8 @@ HTTP client.
 
 It is inert unless the operator opts in:
 
-    CAREEROS_REAL_LLM=1 pytest tests/test_the_live_gateway_speaks_three_protocols.py -q
+    CAREEROS_REAL_LLM=1 LLM_PROVIDER=openai_compat \
+        pytest tests/test_the_live_gateway_speaks_three_protocols.py -q
 
 With the switch off (the default, every CI job, the dev loop) pytest skips the
 module *before any socket opens*. The key is resolved only from the process

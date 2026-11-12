@@ -879,6 +879,38 @@ distinct from the rest); `tools` returned `finish_reason=tool_calls` with `id=ca
 `completion_tokens_details.reasoning_tokens`, but that is a subset of `completion_tokens` already
 counted by `estimate_cost`, so it is not double-billed — recorded, not "fixed".
 
+#### The JD analyzer keeps its evidence contract on a real model (Epic 158)
+
+Epic 155 covered the cover-letter prompt and Epic 156 the three wire protocols. Neither proved a
+real model keeps the **honesty-bearing shape** of the JD analyzer — the path a reader depends on
+when they paste a posting. `ai-service/tests/test_the_real_jd_analyzer_keeps_its_evidence.py`
+drives the production `jd_analyze.analyze_jd` seam against the real gateway and pins the one
+property that would silently break the screen while every transport test stayed green: **every
+required skill must carry an `evidence_phrase` copied verbatim from the posting** (the UI shows
+that quote so a candidate can see no requirement was invented). Inert by default:
+
+```bash
+cd ai-service
+CAREEROS_REAL_LLM=1 LLM_PROVIDER=openai_compat \
+  pytest tests/test_the_real_jd_analyzer_keeps_its_evidence.py -q
+```
+
+With the switch off — the default, every CI job and the dev loop — the module skips before any
+socket opens (measured `1 skipped in 16.89s` under load), the key comes only from the process
+environment / gitignored `.env`, and the file contains no token literal. It asserts **structure,
+not prose**: the dict the deterministic post-processing produces (`rawTextLength`, a named title),
+`requiredSkills` as non-empty objects each with a `name` and a `quote in JD` evidence phrase, and
+every list section the screen maps over (`preferredSkills`, `hiddenRequirements`, `interviewTopics`,
+etc.) still a list. It pins no score, skill count or wording — those are model behaviour, not a
+guarantee a measurement supports.
+
+Verified on this stack on 2026-11-12 against `gpt-6-sol` @ `https://wkapi.pro/v1`:
+`1 passed in 52.80s`; the model returned 4 required skills, **all 4 with verbatim JD quotes**, a
+correct title, 3 plausible hidden requirements and 3 interview topics. Zero production code
+changed, zero new dependency/provider/Settings field/route/meter, no key in any tracked file.
+The local `.env` stays at `LLM_PROVIDER=mock` (the offline, zero-bill default); real-provider runs
+override it explicitly in the command, as above.
+
 ### Several engine nodes, and the rest state (Epics 85.1-85.2)
 
 The backend reaches ai-service as a service, not an address. By default `AI_SERVICE_BASE_URL`

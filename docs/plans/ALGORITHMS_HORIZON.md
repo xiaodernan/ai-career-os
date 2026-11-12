@@ -39,6 +39,7 @@ is pinned by a test that fails if the old complexity sneaks back.**
 | 155 | A real provider round trip stops being a manual story in the deploy doc: it becomes a reproducible, opt-in test that is inert (zero socket) on every offline/CI run and bills only when the operator asks | `test_a_real_model_round_trip.py`: module-level `CAREEROS_REAL_LLM=1` skip, env-only key, project's own `get_llm` factory over two live calls on one loop (PONG seam + real `cover_letter` prompt); verified `gpt-6-sol` @`wkapi.pro/v1` 1 passed / 84.5s, offline 1 skipped / 1.9s; zero production code, zero new dependency/provider/env-census entry; DEPLOYMENT.md records the measurement |
 | 156 | Three protocols the offline provider cannot contradict — structured output, server-sent streaming and tool calls — are attested against the real gateway, and stay inert (zero socket) offline | `test_the_live_gateway_speaks_three_protocols.py`: module-level opt-in skip, env-only key, a self-managed client injected into the production `OpenAICompatProvider` so it coexists with Epic 155 on one opt-in run; asserts a `json_mode` object the app's `_coerce_json` accepts, streamed fragments reassembled with a real closing usage, and a tool reply whose id and dict arguments the agent loop can echo; verified `gpt-6-sol` 2 passed / 39s, offline 1 skipped / 0.6s; reconciles the merged deadline-mesh e2e case (PRODUCT.md 69/69 → 70/70); zero production code, zero new dependency/provider/knob |
 | 157 | The process-wide outbound HTTP pool stops hiding its concurrency ceiling in an httpx-version default: the limit that decides production throughput is explicit, and the zero-drift premise that keeps the client timeout alone is a gate | `registry._SHARED_LIMITS` (max 100 / idle-connection 20, measured httpx 0.28.1 defaults, byte-for-byte preserving); client-level `timeout` deliberately untouched (all 10 provider calls pass their own, 60–600s); `test_the_shared_provider_client_is_bounded.py` pins the limit values, that the factory applies them, and that every provider outbound call still carries a per-request timeout; added to both `verify_gates` scripts; no new meter/knob/env/route |
+| 158 | The job board's front door joins the dashboard, inbox and resume manager, and the real gateway proves the JD analyzer keeps its honesty-bearing evidence shape — both as pinned, reproducible contracts | `resumes/page.tsx` front-door band (CSS-only, zero new client JS/copy/i18n/component; its source contract pins no CTA because the header has no actions — the dropzone below does the work) + `test_the_real_jd_analyzer_keeps_its_evidence.py` (opt-in, env-only key, zero socket offline; real `gpt-6-sol` yields a dict whose every required skill quotes the JD verbatim); measured 1 passed / 52.8s live, 1 skipped offline; DEPLOYMENT.md records both; `.env` back to the offline `mock` default; zero production code, dependency, provider or knob |
 
 ## Rules
 - No placeholder endpoints. Every mode/config knob is read by real code and pinned by
@@ -1823,3 +1824,43 @@ interval) caught the first draft — its count is back to the HEAD value. The ne
 added to both `verify_gates.sh` and `verify_gates.ps1`. Verified: 4 contract tests pass in 1.82s;
 the full census set (response_shape, response_field, env/config censuses, voice seam) is green;
 the previously-red exact-interval ledger gate passes again.
+
+## Epic 158 — the resume manager joins the front door, and a real model keeps the analyzer honest **DONE (measured 2026-11-12)**
+
+Two independent surfaces closed this epic, and neither touched production behaviour.
+
+**The resume manager's front door.** `/resumes` is the first screen a new reader works through —
+upload, parse, then versions — so its header now carries the same band the dashboard, jobs board and
+inbox established: a `GradientText` title, a shimmer hairline, a dark-only aurora, and a CSS-only
+staggered entrance, all plain decorated spans over the shared `PageHeader`. The honest difference
+from its siblings is that this header has **no actions**: the real work is the `UploadDropzone` and
+the version list below it, so no CTA was invented just to have a hover lift to pin. The band's every
+layer is `aria-hidden` + `pointer-events-none`, so it cannot swallow a click meant for the dropzone
+or a version card; the interactive markers (`UploadDropzone`, `useDeleteResume`, `ConfirmDialog`,
+`Pagination`, `onUploaded`) are pinned verbatim by the source contract. Zero new client JS, copy,
+i18n key, component file or globals rule; copy census stays at its 169. Measured: the seven-assertion
+`resumes/page.front-door.test.ts` plus jobs/inbox front doors and the copy/used-keys/globals/
+translations gates pass together (56 tests); a clean `next build` and the 310 kB per-route budget
+pass across 35 routes, with `/resumes` moving by only a fraction of a kibibyte — the pure-CSS band's
+zero-JS premise, measured rather than assumed.
+
+**The JD analyzer keeps its evidence contract on a real model.** Epics 155 and 156 attested the
+transport seam and the three wire protocols against `gpt-6-sol`, but neither proved that a real
+model keeps the *honesty-bearing shape* of a model-as-product path. `analyze_jd` is that path: a
+reader pastes a posting, and every required skill must carry an `evidence_phrase` copied verbatim
+from it, because the screen shows that quote so the candidate can see no requirement was invented.
+A provider that returned `requiredSkills` as strings, dropped `evidence_phrase`, or paraphrased the
+quote would break the screen while every transport test stayed green. The new
+`test_the_real_jd_analyzer_keeps_its_evidence.py` drives the production `jd_analyze.analyze_jd` seam
+against the real gateway and pins structure, not prose: a dict the deterministic post-processing
+produced (`rawTextLength`, a named title), `requiredSkills` as non-empty objects each with a name and
+a `quote in JD` phrase, and every list section the screen maps over still a list. It pins no score,
+skill count or wording — those are model behaviour, not a guarantee a measurement supports. One
+async test on one loop on purpose, so it coexists with the registry's cached client (Epic 155's
+trap). Inert offline (one skip, zero socket, env-only key, no token literal); measured live
+`1 passed in 52.80s` with four required skills, all four quoting the posting verbatim. The local
+`.env` was returned to its offline `mock` default so an unattended suite never bills — real-provider
+runs override `LLM_PROVIDER` explicitly in the command, as DEPLOYMENT.md now records for all three
+opt-in tests. Epic 156's opt-in command there was also corrected to name `LLM_PROVIDER`, which the
+restored default made load-bearing. Zero production code, dependency, provider, Settings field,
+route or meter roster.
