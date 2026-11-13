@@ -86,6 +86,21 @@ Measured live: `spend_check_*` showed `calls: 1 → 2, costUsd: 0.002655 (unchan
 on the replay), cachedTokens: 4997, cacheHitRatio: 0.0 → 0.5` after an identical
 jd_analyze returned from the exact-match cache in 94 ms.
 
+## The streaming probe, re-run on this install (2026-11-13, live)
+
+After all the accounting fixes, one remaining question was whether the *copilot
+answer path* streams on this box or falls back to the blocking route for every
+turn — which would read as "it never shows a stream" no matter how honest the
+cache ledger is. A raw read of `POST /copilot/chat/stream`: 217 SSE frames
+crossed the wire in ~38 s for one copilot turn, all `event:token` fragments
+arriving in small increments, with one terminal `done` event carrying the
+answer payload (`runId`, artifacts, five job rows). The stream path is live on
+this install. What the dashboard shows as "non-streaming" usage is the accounting
+for *every* engine call — streaming and blocking — not a wedge in the stream
+relay itself; the earlier fix had always-on zero-reporting on streams and a
+pricing row missing the actual model; both are shipped (Epic 173). The remaining
+low-cache reading is the workload shape documented above, not a code defect.
+
 ## What you can see yourself
 
 ```text
