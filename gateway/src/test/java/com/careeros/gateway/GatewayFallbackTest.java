@@ -31,7 +31,7 @@ class GatewayFallbackTest {
                 .exchange()
                 .expectStatus().isEqualTo(503)
                 .expectBody()
-                .jsonPath("$.error").isEqualTo("backend-unavailable");
+                .jsonPath("$.error").isEqualTo("BACKEND_UNAVAILABLE");
     }
 
     @Test

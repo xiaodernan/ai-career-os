@@ -605,7 +605,7 @@ the frontend with `NEXT_PUBLIC_API_BASE_URL=http://localhost:8081/api/v1` (or th
 production host's `/api/v1` behind the reverse proxy) and set `GATEWAY_CORS_ORIGINS`
 to the browser's origin. The gateway answers `GET /actuator/health` with the backend's
 own status in `components.backend`, and a backend that is down is a 503 with
-`{"error":"backend-unavailable"}` rather than a connection error.
+`{"error":"BACKEND_UNAVAILABLE"}` rather than a connection error.
 
 The route addresses `lb://backend` through Spring Cloud's discovery abstraction. In the
 development default (and any laptop without the registry) the simple client holds the

@@ -58,7 +58,7 @@ three intertwined defects, in dependency order:
    the backend under `CAREER-OS-BACKEND` with `vipAddress=career-os-backend` -- spring-cloud's
    eureka resolver matches on VIP, so `initial instances count` was 1 (the gateway itself),
    and the load balancer found nothing for `backend`. Every call fell into the
-   `backend-unavailable` fallback, the breaker opened, and the probe (below) read DOWN.
+   `BACKEND_UNAVAILABLE` fallback, the breaker opened, and the probe (below) read DOWN.
    Fix: the dev edge now uses the default single-node mode (`GATEWAY_BACKEND_URI=http://backend:8080`),
    and the backend registers under the service id the edge asks for (`appname` +
    `virtual-host-name` = `backend`) so the opt-in registry path resolves too.
@@ -95,7 +95,7 @@ which is why the acceptance had not noticed.
     `backend` service inside the compose net) -- inert discovery was the documented dev
     posture all along; the forced `eureka` profile resolved nothing (the route asked for
     service id `backend`, the registry held `CAREER-OS-BACKEND`, and its VIP was
-    `career-os-backend`), so the edge answered `backend-unavailable` for every call, its
+    `career-os-backend`), so the edge answered `BACKEND_UNAVAILABLE` for every call, its
     catch-all probe pinned unhealthy, and docker kept the edge unhealthy through weeks
    of rebuilds — now gated by `test_the_dev_edge_is_honest_about_its_registry.py` (Epic 165);
    a future flip of this posture reds the suite rather than recreating the outage.

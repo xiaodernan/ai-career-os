@@ -5247,7 +5247,7 @@ cannot fail a request: the same 8-64 character rule the backend uses mints or fo
 - [x] **88.2** A missing backend answers as a product sentence, and the health line names it (measured 2026-11-09).
 
   (`CircuitBreaker` on the route forwards to `/_fallback/backend`, a controller served by the
-  gateway itself: 503 `{error: "backend-unavailable", message: ...}`, no stack trace and no
+  gateway itself: 503 `{error: "BACKEND_UNAVAILABLE", message: ...}`, no stack trace and no
   upstream hop. The breaker is the reactive Resilience4j factory with the backend's own shape
   (10-call window, 5-call floor, 50%, 30-second rest, 3 half-open probes), so both processes
   use one vocabulary for "quiet neighbour". `BackendHealthIndicator` asks `/api/v1/health`
@@ -6338,6 +6338,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean, bundle budget OK (35 routes), frontend container rebuilt; the e2e
   rebuilt stack here measured **70 passed (9.1m)** with the monitoring rebuild
   included; the env-example gate remains green with the new knob declared.)
+
+- [x] **179** The edge speaks the reader's language when the backend is gone — the fallback shares the browser i18n table (2026-11-13).
+
+  (The Spring Cloud gateway's `CircuitBreaker` filter on `lb://backend` answers
+  `503 {"error":"BACKEND_UNAVAILABLE","message":"The domain backend is not answering."}`
+  when nothing is behind the door — it has always served its own copy instead of a stack
+  trace, but the wire code was a lowercase `backend-unavailable`, invisible to the
+  browser i18n table, so a zh reader got the edge's English sentence. The code is now a
+  franchise of the table — `errorCodes.BACKEND_UNAVAILABLE` — and both languages name
+  it (EN: "The domain backend is not answering." / ZH). The gate that says no table entry
+  may answer a code nothing mints read only the backend enum and the client's own
+  raisings; the gateway's fallback was a third minter it had never been taught. The
+  census now reads `GatewayFallbackController.java` the same way it reads the enum
+  (`gatewayCodes`), and the doc comment names the third minter as a decision.
+  GatewayFallbackTest 2/2 green with the renamed code; full gateway suite 50/50;
+  1307 vitest passed; tsc clean.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +

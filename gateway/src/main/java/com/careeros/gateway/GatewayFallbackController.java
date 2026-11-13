@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
  * backend -- or its whole host -- is gone. The shape mirrors the backend's error
  * envelope's two most useful fields without pretending to be a domain error: the
  * browser needs a code it can branch on and a sentence it can show, and neither should
- * be a stack trace.
+ * be a stack trace. The code is a franchise of the browser's i18n table, which
+ * renders it in the reader's language.
  */
 @RestController
 public class GatewayFallbackController {
@@ -24,7 +25,7 @@ public class GatewayFallbackController {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of(
-                        "error", "backend-unavailable",
+                        "error", "BACKEND_UNAVAILABLE",
                         "message", "The domain backend is not answering."));
     }
 }

@@ -1834,6 +1834,8 @@ export const translations = {
 
       CALENDAR_LINK_INVALID: "That calendar link is not valid or has been retired.",
 
+      BACKEND_UNAVAILABLE: "The domain backend is not answering.",
+
       COMPANY_NOT_FOUND: "That company is no longer here.",
 
       CONFIRMATION_MISMATCH: "The email you typed is not this account's.",
@@ -4859,6 +4861,8 @@ export const translations = {
       CALENDAR_LINK_INVALID: "这个日历订阅链接无效，或已经停用。",
 
       COMPANY_NOT_FOUND: "这家公司已经不在了。",
+
+      BACKEND_UNAVAILABLE: "领域后端没有响应。",
 
       CONFIRMATION_MISMATCH: "你输入的邮箱不是这个账号的。",
 

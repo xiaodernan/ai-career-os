@@ -39,11 +39,19 @@ import { translations } from "@/lib/i18n/translations";
  * English message, which is what a zh reader then reads. So the enum is read
  * too, and the table is held to it in both directions: every declared code
  * has a sentence, and no sentence answers a code nothing mints.
+ *
+ * The gateway's fallback is a third minter, living on the edge's own service, and
+ * the table is held to it the same way: `GatewayFallbackController` answers with
+ * one code and a sentence the reader sees when the backend is gone.
  */
 
 const CLIENT = new URL("../api/client.ts", import.meta.url);
 const ENUM = new URL(
   "../../../../backend/src/main/java/com/careeros/common/ApiErrorCode.java",
+  import.meta.url,
+);
+const GATEWAY_FALLBACK = new URL(
+  "../../../../gateway/src/main/java/com/careeros/gateway/GatewayFallbackController.java",
   import.meta.url,
 );
 const SRC = fileURLToPath(new URL("../../", import.meta.url));
@@ -61,6 +69,14 @@ function backendCodes(): string[] {
   const source = readFileSync(ENUM, "utf-8");
   const found = new Set<string>();
   for (const match of source.matchAll(/^\s{4}([A-Z][A-Z0-9_]*)\(/gm)) found.add(match[1]);
+  return [...found].sort();
+}
+
+/** The codes the edge's own fallback mints, read out of the edge's source. */
+function gatewayCodes(): string[] {
+  const source = readFileSync(GATEWAY_FALLBACK, "utf-8");
+  const found = new Set<string>();
+  for (const match of source.matchAll(/"error",\s*"([A-Z][A-Z0-9_]*)"/g)) found.add(match[1]);
   return [...found].sort();
 }
 
@@ -194,7 +210,7 @@ describe("the sentences for the errors the backend raises", () => {
     // vocabulary is what the two sides can actually say. A key neither side
     // mints is a sentence no reader can be shown -- the table's own dead
     // weight, and the shape that leaves a real code looking covered.
-    const minted = new Set([...backendCodes(), ...browserMintedCodes()]);
+    const minted = new Set([...backendCodes(), ...browserMintedCodes(), ...gatewayCodes()]);
     const strays = Object.keys(table("en")).filter((code) => !minted.has(code));
     expect(strays, `the table answers a code nothing mints: ${strays.join(", ")}`).toEqual([]);
   });
