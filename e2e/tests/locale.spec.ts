@@ -109,6 +109,11 @@ test("every navigation item is named in the reader's language", async ({ authedP
 
   const nav = authedPage.locator("nav[aria-label]").first();
 
+  // The nav is client-rendered, so measuring before the first link is visible
+  // reads zero items and reports a failure that isn't there. Wait for it like every
+  // other read on this suite waits for the screen.
+  await expect(nav.locator("a").first()).toBeVisible({ timeout: 20_000 });
+
   // The English names, measured.
   const english = (await nav.locator("a").allInnerTexts())
     .map((text) => text.trim())
