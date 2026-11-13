@@ -6368,6 +6368,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   table entries answering codes nothing mints reads the gateway as a third minter
   instead of ignoring it; its own owner-tested fallback rows ride the shared sentence.)
 
+- [x] **181** The `ai_usage_events` join column finally has a btree — V38 (2026-11-13).
+
+  (`ai_usage_events.run_id` is the only index V1 never got — every per-run read of
+  the ledger walks the whole table, even with `user_id` access ordered by `created_at`.
+  V38 adds `idx_usage_run` so a run lookup is a range scan, not a sequential table scan.
+  FleetWiringIT re-ran against a Flyway-rebuilt IT database including V38: 2/2 green;
+  the EXPLAIN evidence sits in `docs/plans/CACHE_AUDIT.md`'s companion file
+  `docs/plans/INDEX_HORIZON.md`.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

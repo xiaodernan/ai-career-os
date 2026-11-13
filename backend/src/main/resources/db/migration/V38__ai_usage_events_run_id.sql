@@ -1,0 +1,13 @@
+-- ai_usage_events lookup by run (post-114/121).
+--
+-- The FK from ai_usage_events.run_id into agent_runs was declared, but no btree
+-- was ever built on the child side — migration V1 created the table with
+-- `generated always as identity` and never mentioned indexes. Every per-run
+-- read (the activity detail trace, the per-run rollup) scans the table.
+--
+-- The child column is how every per-run aggregation reaches this table, and a
+-- full scan on an ever-growing table is invisible only until it isn't — a run
+-- lookup is the fastest-growing access path in the fleet (every model call
+-- writes into it). One btree is cheap; if the fleet ever shards this table by
+-- the hash of user_id, the same index survives.
+CREATE INDEX IF NOT EXISTS idx_usage_run ON ai_usage_events (run_id);
