@@ -30,6 +30,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
+import { MetricCard } from "@/components/common/metric-card";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
 import { ShareChart } from "@/components/common/bar-chart";
@@ -923,19 +924,16 @@ function StatCard({
   value?: number;
   hint: string;
 }) {
+  // The dashboard's strip is the shared MetricCard now (Epic 183): one glyph chip,
+  // one count-up, one hover accent -- the same tiles the monitoring and analysis
+  // pages draw, so all three decks age together.
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription className="flex items-center gap-1.5">
-          <span className="text-muted-foreground [&_svg]:size-3.5">{icon}</span>
-          {label}
-        </CardDescription>
-        <CardTitle className="text-2xl font-semibold tabular-nums">
-          {value ?? value === 0 ? formatNumber(value) : "—"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="text-xs text-muted-foreground">{hint}</CardContent>
-    </Card>
+    <MetricCard
+      icon={icon}
+      label={label}
+      value={value ?? value === 0 ? formatNumber(value) : "—"}
+      hint={hint}
+    />
   );
 }
 

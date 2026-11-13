@@ -15,6 +15,11 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // Stale build snapshots some session left behind ("pre-interviews",
+      // ".next.<marker>"): minified server bundles lint as require() errors, and
+      // the directory is a gitignored artifact, not source. A glob so any future
+      // snapshot lands here too instead of in a lint report.
+      ".next.*/**",
       "out/**",
       "build/**",
       "next-env.d.ts",
