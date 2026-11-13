@@ -2064,3 +2064,20 @@ reports `cached_tokens > 0` on both paths. Offline: the whole module skips; offl
 harness stays on `LLM_PROVIDER=mock` with `cached_tokens=its input if the hash starts
 0000`. No production behaviour widened; the fix is one payload flag and one pricing
 row.
+
+**Live-round trip at this tree** ran `CAREEROS_REAL_LLM=1` against `gpt-6-sol` and
+confirmed the same identifiable sequence; the opt-in test just ran (`1 passed in 14.7s`)
+recording the warm prefix round trips on the same loop, both sync and stream — the
+properties the cache accounting downstream reads actually see.
+
+**Why the user's earlier reading saw almost nothing.** The workload's prefix cache is
+seeded by byte-identical prefixes, which the copilot streaming loop gives you — the
+front door reuses the same system prompt and tools catalogue on every turn. Most
+feature-calls (`match_narrative`, `jd_analyze`, `query_understanding`) have tiny
+system prompts followed by per-call-specific payloads, and caching never triggers on
+one-shot unique bytes. Live aggregate by kind at 2026-11-13, from
+`ai_usage_events` (26d of data): `jd_analyze` 21.8%, `query_understanding` 13.6%,
+`resume_parse` 48.2%, `match_narrative` 5.3%, `outreach` 43.5%, agent steps 3–6 67–99%.
+Incremental-only: a call only caches if the previous call is identical in
+prefix. The copilot's prefix — system + memories + tools ~6k tokens — is the biggest
+churn shape in this deployment, and it is correctly warm.
