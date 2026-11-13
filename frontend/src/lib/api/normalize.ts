@@ -52,6 +52,7 @@ import type {
   TailoredResult,
   VoiceState,
   WeeklyDigest,
+  HealthReport,
 } from "./types";
 import { field } from "./body";
 import { seniorityYears } from "../format";
@@ -578,6 +579,51 @@ export function normalizeNightlyReport(raw: unknown): NightlyReport {
  * than a guessed alarm: an unread stale flag stays false and an unread streak stays zero,
  * because the card complains only about facts the backend actually sent.
  */
+/**
+ * The agent health report (16.1). The backend passes the engine's answer through
+ * unwrapped (it reads `success/data/...` at the envelope layer), and the engine puts
+ * every comparable number under `summary` (with the percentile pair under
+ * `summary.latencyMs`) — the old hook cast the raw payload straight onto the view
+ * model, so the page read `errorRate` off the top level and silently showed
+ * 0/—/$0.00 for every card but the verdict. This normalizer is the real shape the
+ * endpoint returns, captured from the response observed on the running install:
+ *
+ * ```json
+ * {"summary":{"totalRuns":12,"latencyMs":{"p50":8200,"p95":61000},
+ *   "totalCachedTokens":152064,"cacheHitRatio":0.8257},
+ *   "regressions":[...],"alerts":[...],"verdict":"warn"}
+ * ```
+ *
+ * Missing stays undefined rather than becoming a number: a card that cannot read a
+ * value shows an em dash, not a zero that lies.
+ */
+export function normalizeHealthReport(raw: unknown): HealthReport {
+  const body = rec(raw);
+  const summary = rec(pick(body, "summary"));
+  const latency = rec(pick(summary, "latencyMs"));
+  const alerts = list<unknown>(body, "alerts")
+    .map((a) => (typeof a === "string" ? a : ""))
+    .filter(Boolean);
+  const regressions = list<unknown>(body, "regressions").map((r) => ({
+    metric: str(r, "metric") ?? "",
+    direction: str(r, "direction") ?? "",
+    severity: str(r, "severity") ?? "",
+  })).filter((r) => r.metric !== "");
+  return {
+    verdict: str(body, "verdict") ?? "",
+    totalRuns: num(summary, "totalRuns"),
+    errorRate: num(summary, "errorRate"),
+    totalCostUsd: num(summary, "totalCostUsd"),
+    totalTokens: num(summary, "totalTokens"),
+    totalCachedTokens: num(summary, "totalCachedTokens"),
+    cacheHitRatio: num(summary, "cacheHitRatio"),
+    p50LatencyMs: num(latency, "p50"),
+    p95LatencyMs: num(latency, "p95"),
+    alerts,
+    regressions,
+  };
+}
+
 export function normalizeNightlyVerdict(raw: unknown): NightlyVerdict {
   return {
     status: str(raw, "status") ?? "",

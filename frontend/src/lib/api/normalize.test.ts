@@ -7,6 +7,7 @@ import {
   idOf,
   list,
   normalizeArtifacts,
+  normalizeHealthReport,
   normalizeApplication,
   normalizeApplicationEvent,
   normalizeApplicationPacket,
@@ -523,6 +524,58 @@ describe("normalizeNightlyReport (20.1)", () => {
 
     // A record the backend answers without steps is a night with no rows, not a crash.
     expect(normalizeNightlyReport({ id: "night-2", status: "failed" }).steps).toEqual([]);
+  });
+});
+
+describe("normalizeHealthReport (16.1)", () => {
+  const wire = {
+    summary: {
+      totalRuns: 12,
+      errorRate: 0.0833,
+      successRate: 0.9167,
+      latencyMs: { p50: 8200, p95: 61000, max: 91600 },
+      totalCostUsd: 0.0312,
+      totalTokens: 184203,
+      totalCachedTokens: 152064,
+      cacheHitRatio: 0.8257,
+    },
+    regressions: [{ metric: "cacheHitRatio", direction: "down", severity: "medium" }],
+    alerts: ["Error rate is 8% (1/12 finished runs)."],
+    verdict: "warn",
+  };
+
+  it("unwraps the engine summary onto the flat shape the page reads", () => {
+    const report = normalizeHealthReport(wire);
+    expect(report.verdict).toBe("warn");
+    expect(report.totalRuns).toBe(12);
+    expect(report.errorRate).toBeCloseTo(0.0833);
+    expect(report.totalCostUsd).toBeCloseTo(0.0312);
+    expect(report.totalTokens).toBe(184203);
+    expect(report.totalCachedTokens).toBe(152064);
+    expect(report.cacheHitRatio).toBeCloseTo(0.8257);
+    expect(report.p50LatencyMs).toBe(8200);
+    expect(report.p95LatencyMs).toBe(61000);
+    expect(report.alerts).toEqual(["Error rate is 8% (1/12 finished runs)."]);
+    expect(report.regressions).toEqual([
+      { metric: "cacheHitRatio", direction: "down", severity: "medium" },
+    ]);
+  });
+
+  it("reads the flat shape the api client hands over (envelope already unwrapped)", () => {
+    const report = normalizeHealthReport(wire);
+    expect(report.totalTokens).toBe(184203);
+    expect(report.cacheHitRatio).toBeCloseTo(0.8257);
+    expect(report.errorRate).toBeCloseTo(0.0833);
+  });
+
+  it("keeps the holes as undefined rather than inventing numbers for the cards", () => {
+    const report = normalizeHealthReport({});
+    expect(report.totalRuns).toBeUndefined();
+    expect(report.cacheHitRatio).toBeUndefined();
+    expect(report.p95LatencyMs).toBeUndefined();
+    expect(report.alerts).toEqual([]);
+    expect(report.regressions).toEqual([]);
+    expect(report.verdict).toBe("");
   });
 });
 

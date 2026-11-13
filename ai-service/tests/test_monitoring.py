@@ -46,6 +46,49 @@ def test_summarize_ignores_non_dict_and_bad_numbers():
     assert s["totalRuns"] == 1 and s["finished"] == 1
 
 
+def test_summarize_reports_the_prompt_cache_ratio():
+    runs = [_run("completed", input_tokens=6000, output_tokens=100, cached_tokens=5000,
+                 cost_usd=0.0),
+            _run("completed", input_tokens=4000, output_tokens=100, cached_tokens=3000,
+                 cost_usd=0.0)]
+    s = M.summarize_runs(runs)
+    assert s["totalCachedTokens"] == 8000
+    assert s["cacheHitRatio"] == round(8000 / 10000, 4)
+
+
+def test_summarize_without_cached_tokens_reports_zero_ratio():
+    s = M.summarize_runs([_run("completed", input_tokens=100), _run("completed")])
+    assert s["totalCachedTokens"] == 0
+    assert s["cacheHitRatio"] == 0.0
+
+
+def test_summarize_all_cache_and_no_prompt_is_zero_not_a_division_error():
+    s = M.summarize_runs([_run("completed", input_tokens=0, cached_tokens=0)])
+    assert s["cacheHitRatio"] == 0.0
+
+
+def test_the_flattened_metrics_carry_the_cache_ratio():
+    summary = M.summarize_runs([_run("completed", input_tokens=1000, cached_tokens=600)])
+    flat = M._flatten(summary)
+    assert flat["cacheHitRatio"] == 0.6
+
+
+def test_a_cache_ratio_that_drops_past_the_tolerance_is_a_regression():
+    baseline = M.summarize_runs([_run("completed", input_tokens=1000, cached_tokens=800)])
+    current = M.summarize_runs([_run("completed", input_tokens=1000, cached_tokens=500)])
+    regressions = M.detect_regressions(M._flatten(current), M._flatten(baseline))
+    hit = [r for r in regressions if r["metric"] == "cacheHitRatio"]
+    assert hit, "a 37.5% drop in cache hits went unflagged"
+    assert hit[0]["direction"] == "down"
+
+
+def test_an_absent_cache_baseline_is_skipped_not_guessed():
+    baseline = M.summarize_runs([_run("completed", input_tokens=0, cached_tokens=0)])
+    current = M.summarize_runs([_run("completed", input_tokens=1000, cached_tokens=900)])
+    regressions = M.detect_regressions(M._flatten(current), M._flatten(baseline))
+    assert not [r for r in regressions if r["metric"] == "cacheHitRatio"]
+
+
 # ---------------- cost_by ----------------
 
 

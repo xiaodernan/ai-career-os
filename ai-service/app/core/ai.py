@@ -7,6 +7,7 @@ import json
 import time
 from typing import Any
 
+from app.core import llm_cache
 from app.core.config import get_settings
 from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
 from app.core.request_id import deadline_remaining_ms
@@ -67,14 +68,25 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
         raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     s = get_settings()
     provider = get_llm(s)
-    try:
-        resp = await provider.complete(req)
-    except Exception as e:
-        if run_id:
-            await observability.trace(run_id, "error", agent, {"stage": kind, "error": str(e)[:800]})
-        raise
-    cost = estimate_cost(resp.model, resp.usage.input_tokens, resp.usage.output_tokens,
-                         resp.usage.cached_tokens)
+    # A byte-identical deterministic call is byte-identical work. Serving it
+    # from the exact-match cache costs a Redis lookup instead of a model;
+    # with caching off this is None and the path is exactly as before.
+    replay = await llm_cache.get(req, provider.model or s.llm_model)
+    if replay is not None:
+        resp = replay
+        cost = 0.0  # no provider call was made; nothing was billed
+        trace_extra = {"served_from": "exact_cache"}
+    else:
+        try:
+            resp = await provider.complete(req)
+        except Exception as e:
+            if run_id:
+                await observability.trace(run_id, "error", agent, {"stage": kind, "error": str(e)[:800]})
+            raise
+        await llm_cache.put(req, resp)
+        cost = estimate_cost(resp.model, resp.usage.input_tokens, resp.usage.output_tokens,
+                             resp.usage.cached_tokens)
+        trace_extra = {}
     await observability.record_usage(
         user_id, run_id, resp.model, provider.name, kind,
         resp.usage.input_tokens, resp.usage.output_tokens, resp.usage.cached_tokens,
@@ -86,6 +98,7 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
             "cost_usd": round(cost, 6), "latency_ms": resp.latency_ms,
             "tools": [tc.name for tc in resp.tool_calls],
             "text_preview": resp.text[:400],
+            **trace_extra,
         })
     return resp
 

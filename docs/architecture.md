@@ -92,6 +92,7 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 │       ├── network/              # contacts registry (11.1); outreach/follow-up live here
 │       ├── notification/         # the inbox: read/dismiss state over synthesized signals (19.3)
 │       ├── push/                 # Web Push registrations and the signed wake (33.x)
+│       ├── queue/                # Redis-Streams job queue + UTC-day leader-elected fleet jobs (162-171)
 │       ├── ratelimit/            # Redis sliding-window filter
 │       ├── report/               # dashboard read model (aggregates over the other domains)
 │       ├── resume/               # resumes, versions, parsed entities (exp/proj/skill)

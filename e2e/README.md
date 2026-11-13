@@ -82,8 +82,8 @@ apart before you go looking for a bug:
   failed each time (`forward-surfaces`, then `command-palette`, then `locale`),
   a different file every run, every flaked file green in isolation at the same
   HEAD -- this box carries the whole Docker stack plus builds. As of
-  `55e5294` (2026-11-13) `expect.timeout` defaults to 30s and a full
-  `70 passed` run (8.8m) measured clean; the seam was real, not a product
+  `55e5294` (2026-11-13) `expect.timeout` defaults to 30s and a full suite
+  (8.8m) measured clean; the seam was real, not a product
   defect. If a flake resurfaces, the honest check is unchanged: re-run the
   failing spec alone and do not investigate the product on this evidence alone.
 

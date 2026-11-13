@@ -948,8 +948,10 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # 69 with Epic 153's `normalizeRecentActivity`: the dashboard's event-log row is a tenth
     # module-private mapper (it is composed only by `normalizeDashboard`, never exported), so the
     # split moves to 59 exported and 10 module-private -- the ban above has to reach it too.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 69, \
-        "59 exported mappers and 10 module-private ones, all through one opener"
+    # 70 with this epic's `normalizeHealthReport`: the exported reader the monitoring page takes
+    # its cards through, the same opener as every neighbour.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 70, \
+        "60 exported mappers and 10 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -3587,7 +3589,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # the union (+9 lines with its doc comment) and the concurrent brand-failure-surface
         # merge (Epic 142) grew the types above it (+15); the union's `| "message"` arm itself
         # is byte-for-byte what it was. A red here is those two edits, not a changed frame name.
-        ("types.ts", 1729, "kind:"),
+        # 1733 rather than 1729 since the `HealthReport` interface gained the two prompt-cache
+        # lines (`totalCachedTokens`, `cacheHitRatio`) above the trace union; the union itself
+        # did not move.
+        ("types.ts", 1733, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

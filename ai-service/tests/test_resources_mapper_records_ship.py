@@ -533,7 +533,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # `normalizeCoverLetter`, the kept-letter reader the field gate now binds to `LetterItem`.
     # 53 with Epic 153's `normalizeRecentActivity`, the dashboard event-log reader; this file only
     # echoes that pin, so the two move together or one of them is stale.
-    assert population and population.group(1) == "53", \
+    # 54 with this epic's `normalizeHealthReport`, the monitoring page's summary/latency/regression
+    # reads; this file only echoes the field gate's pin, so that one moved with it.
+    assert population and population.group(1) == "54", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 

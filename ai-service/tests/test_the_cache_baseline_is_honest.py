@@ -163,9 +163,14 @@ def test_the_second_ask_costs_zero_work_only_when_caching_is_on(work, backend,
 
 
 def test_off_is_the_shipped_default_not_an_accident():
-    """Pin the deployment truth the health report's `off` verdict narrates."""
+    """Pin the deployment truth the health report's `off` verdict narrates.
+
+    The code default is what ships; the operator's `.env` is the operator's call, so
+    this pin reads the model with the environment file detached rather than the one
+    this laptop happens to carry.
+    """
     from app.core.config import Settings
-    assert Settings().cache_backend == "off"
+    assert Settings(_env_file=None).cache_backend == "off"
 
 
 def test_layered_counts_the_shared_hit_as_l2_not_a_local_hit():

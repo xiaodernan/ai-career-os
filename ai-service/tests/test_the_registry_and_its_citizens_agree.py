@@ -96,22 +96,45 @@ def test_the_registry_is_off_outside_its_profile() -> None:
         )
 
 
-def test_compose_puts_every_citizen_on_the_same_registry() -> None:
+def test_compose_puts_every_citizen_on_the_matching_registry_topology() -> None:
+    """Dev and prod route the edges differently, and both are deliberate.
+
+    Dev runs the `discovery` service for the *backend's* registration (the replica
+    count can grow later without editing every caller), but the dev gateway routes
+    through the simple client against `GATEWAY_BACKEND_URI`: dev's eureka runs with
+    self-preservation off, so a backend rebuild is evicted before its fresh
+    registration replaces it -- on 2026-11-12 the edge answered 502 for half an
+    hour from a stale instance cache, which is why the dev gateway was reverted
+    (commit 37b1628). Prod keeps registry routing end to end: its eureka carries
+    self-preservation on, so the same eviction cannot strand dependants.
+    """
+    services = yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
+    assert "discovery" in services, f"{COMPOSE.name} lost the registry service"
+    assert services["backend"]["environment"]["SPRING_PROFILES_ACTIVE"] == "eureka"
+    assert services["backend"]["environment"]["EUREKA_DEFAULT_ZONE"] == \
+        "http://discovery:8761/eureka/"
+    gateway_env = services["gateway"]["environment"]
+    assert "SPRING_PROFILES_ACTIVE" not in gateway_env, (
+        "the dev gateway re-activated the registry profile: dev eureka has "
+        "self-preservation off, so the edge can be stranded on a stale instance")
+    assert gateway_env["GATEWAY_BACKEND_URI"] == "http://backend:8080", (
+        "the dev gateway's simple client lost the address it routes by")
+
+    prod = yaml.safe_load(COMPOSE_PROD.read_text(encoding="utf-8"))["services"]
+    assert "discovery" in prod, f"{COMPOSE_PROD.name} lost the registry service"
+    for citizen in ("gateway", "backend"):
+        environment = prod[citizen]["environment"]
+        assert environment["SPRING_PROFILES_ACTIVE"] == "eureka", (
+            f"{COMPOSE_PROD.name}: {citizen} does not activate the profile that enables "
+            "registration"
+        )
+        assert environment["EUREKA_DEFAULT_ZONE"] == "http://discovery:8761/eureka/", (
+            f"{COMPOSE_PROD.name}: {citizen} polls a registry address the compose network "
+            "does not serve"
+        )
+
     for compose in (COMPOSE, COMPOSE_PROD):
         services = yaml.safe_load(compose.read_text(encoding="utf-8"))["services"]
-        assert "discovery" in services, f"{compose.name} lost the registry service"
-
-        for citizen in ("gateway", "backend"):
-            environment = services[citizen]["environment"]
-            assert environment["SPRING_PROFILES_ACTIVE"] == "eureka", (
-                f"{compose.name}: {citizen} does not activate the profile that enables "
-                "registration"
-            )
-            assert environment["EUREKA_DEFAULT_ZONE"] == "http://discovery:8761/eureka/", (
-                f"{compose.name}: {citizen} polls a registry address the compose network "
-                "does not serve"
-            )
-
         assert services["discovery"]["healthcheck"]["test"], (
             "a registry without a healthcheck lets dependants start against a socket "
             "that is open but not answering"

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Activity, AlertTriangle, DollarSign, Gauge, Zap } from "lucide-react";
+import { Activity, AlertTriangle, Database, DollarSign, Gauge, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,7 +86,7 @@ export default function MonitoringPage() {
           </Card>
 
           {/* Metrics */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <MetricCard
               icon={<Activity className="size-4" aria-hidden />}
               label={t("monitoring.errorRate")}
@@ -108,7 +108,29 @@ export default function MonitoringPage() {
               label={t("monitoring.p95Latency")}
               value={`${formatNumber(data.p95LatencyMs ?? 0)}ms`}
             />
+            <MetricCard
+              icon={<Database className="size-4" aria-hidden />}
+              label={t("monitoring.cacheHitRate")}
+              value={percent(data.cacheHitRatio)}
+              tone={data.cacheHitRatio != null && data.cacheHitRatio < 0.2 ? "warning" : undefined}
+            />
+            <MetricCard
+              icon={<Database className="size-4" aria-hidden />}
+              label={t("monitoring.cacheTokens")}
+              value={formatNumber(data.totalCachedTokens ?? 0)}
+            />
           </div>
+
+          {/* Why the number looks the way it does, in the engine's own words: which
+              calls the provider's prefix cache can fire on and which calls the
+              exact-match cache replays. An operator who reads this cannot be
+              confused by a low ratio on one-shot feature calls again. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("monitoring.promptCache")}</CardTitle>
+              <CardDescription>{t("monitoring.promptCacheDescription")}</CardDescription>
+            </CardHeader>
+          </Card>
 
           {/* The latency pair, as a chart: the p50 is the experience and the
               p95 is the tail, and one number for each says less than the two

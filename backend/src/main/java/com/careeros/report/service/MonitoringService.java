@@ -63,6 +63,7 @@ public class MonitoringService {
         }
         row.put("input_tokens", r.getInputTokens());
         row.put("output_tokens", r.getOutputTokens());
+        row.put("cached_tokens", r.getCachedTokens());
         row.put("latency_ms", r.getLatencyMs());
         if (r.getCostUsd() != null) {
             row.put("cost_usd", r.getCostUsd());

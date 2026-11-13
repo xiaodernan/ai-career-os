@@ -6245,6 +6245,48 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 
   (`openai_compat._payload` now sets `stream_options.include_usage: True` when streaming; OpenAI's streaming contract omits `usage` in the final chunk unless the caller declares it, so the production reader was blind to the cache tokens the gateway does report. `PRICING` gains `gpt-6-sol` at gpt-4.1-mini rates — the gateway publishes no price list for this route — fixing the silent $0.00 the ledger printed for every live call. Measured: `test_a_real_model_reports_the_cache.py` (opt-in) passes against `gpt-6-sol` — three identical sync calls and two identical stream calls on one loop all report warm-cache ≥ 5.9k tokens on the warm round; offline, the module skips.)
 
+- [x] **174** The deterministic model calls stop paying for identical work twice —
+  a Redis-backed exact-match replay in the engine (2026-11-13).
+
+  (Epics 172/173 shipped the usage accounting the streaming path was missing and the
+  price the ledger needed, and then measured the honest remainder: the one-shot JSON
+  features (`jd_analyze`, `resume_parse`, `reply_classify`, `gap_analysis`,
+  `rerank`) fire at temperature 0 on prompts whose prefix is far below the
+  gateway's minimum cacheable block — proven live at this tree (a ~150-token system
+  prefix returned `cached_tokens = 0` on every call, and a 12-round identical-prompt
+  probe showed the gateway's prefix cache firing only from round 3, always
+  6656/6656). Those calls are byte-identical when the input is identical, so
+  `core/llm_cache.py` serves them from the cache backend the operator already chose
+  (`CACHE_BACKEND`; `off` is still the default everywhere, and prod ships it
+  unchanged). Temperature 0.0 + no tool call + at most one stored answer per
+  content hash; oversized and tool-calling replies are never stored; telemetry
+  reports the full prompt as cached with $0 cost and the trace carries
+  `served_from: "exact_cache"`, so the number stays a number a reader can trust.
+  Measured: `test_the_second_identical_deterministic_call_is_free.py` 13/13
+  (provider-call counting, never timing); full ai-service suite 2763 passed; live
+  dev stack with `CACHE_BACKEND=redis` replays an identical `jd_analyze`
+  without a provider round, while a different JD still bills (see CACHE_AUDIT).)
+
+- [x] **175** The monitoring dashboard stops lying flat — the cache report is visible, and the cards are wired to the answer the backend actually sends (2026-11-13).
+
+  (The page rendered every metric card at its fallback — $0.00, 0 tokens, —
+  latency — because `useHealthReport` cast the backend's payload (`{summary,
+  regressions, alerts, verdict}`, the engine's own shape) onto the flat
+  `HealthReport` view model as if `errorRate` etc. lived at the top level. Two
+  live probes proved it: `GET /monitoring/health-report` returns every comparable
+  scalar under `summary` (with `latencyMs.p50/p95` nested), and the browser wire
+  path unwraps the envelope but not the summary. `normalizeHealthReport` now
+  unwraps exactly the shape the endpoint returns (pinned by `normalize.test.ts`
+  169/169 and the response-field census 54 with 16 named reads), the engine's
+  `summarize_runs` additionally reports `totalCachedTokens` and `cacheHitRatio`
+  (cached / input tokens; the regression checker judges a drop against the
+  baseline), the backend sends `cached_tokens` for each run, and the page gains a
+  prompt-cache card plus cache-hit-rate and tokens-saved tiles. A cold-start ratio
+  reads 0; with no baseline the regression check skips it rather than guessing.
+  Measured end to end: the health-report payload on the rebuilt stack carries both
+  fields; `verify_gates` re-run at this tree; frontend `tsc --noEmit` clean; the
+  monitoring page renders off the normalized answer.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

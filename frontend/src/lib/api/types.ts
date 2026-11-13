@@ -1038,6 +1038,10 @@ export interface HealthReport {
   totalRuns?: number;
   totalCostUsd?: number;
   totalTokens?: number;
+  /** Prompt tokens served from a cache in the window. */
+  totalCachedTokens?: number;
+  /** cached / input tokens; 0 when the window carried no input. */
+  cacheHitRatio?: number;
   p50LatencyMs?: number;
   p95LatencyMs?: number;
   alerts?: string[];

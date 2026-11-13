@@ -482,7 +482,8 @@ def test_health_report_response_keys():
     assert set(out) == {"summary", "regressions", "alerts", "verdict"}
     assert set(out["summary"]) == {
         "totalRuns", "byStatus", "finished", "completed", "failed", "errorRate",
-        "successRate", "latencyMs", "totalCostUsd", "avgCostUsd", "totalTokens"}
+        "successRate", "latencyMs", "totalCostUsd", "avgCostUsd", "totalTokens",
+        "totalCachedTokens", "cacheHitRatio"}
 
 
 def test_parse_board_response_keys():

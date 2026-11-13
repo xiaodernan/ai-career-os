@@ -34,6 +34,15 @@ HIGHER_IS_WORSE = frozenset({
 DEFAULT_TOLERANCE = 0.2  # 20% change in the bad direction before it is a regression
 
 
+def _latency_summary(latencies: list[float]) -> dict:
+    """The p50/p95/max triple as one literal -- the wire shape of ``summary.latencyMs``."""
+    return {
+        "p50": _percentile(latencies, 0.50),
+        "p95": _percentile(latencies, 0.95),
+        "max": max(latencies) if latencies else None,
+    }
+
+
 def _num(value) -> float | None:
     if value is None or isinstance(value, bool):
         return None
@@ -66,6 +75,8 @@ def summarize_runs(runs: list[dict]) -> dict:
     latencies: list[float] = []
     total_cost = 0.0
     total_tokens = 0
+    total_input = 0
+    total_cached = 0
     for r in rows:
         status = str(r.get("status") or "unknown")
         by_status[status] = by_status.get(status, 0) + 1
@@ -73,8 +84,11 @@ def summarize_runs(runs: list[dict]) -> dict:
         if lat and lat > 0:
             latencies.append(lat)
         total_cost += _num(r.get("cost_usd")) or 0.0
-        total_tokens += int(_num(r.get("input_tokens")) or 0)
-        total_tokens += int(_num(r.get("output_tokens")) or 0)
+        in_tok = max(0, int(_num(r.get("input_tokens")) or 0))
+        out_tok = max(0, int(_num(r.get("output_tokens")) or 0))
+        total_tokens += in_tok + out_tok
+        total_input += in_tok
+        total_cached += max(0, int(_num(r.get("cached_tokens")) or 0))
 
     completed = by_status.get("completed", 0)
     failed = by_status.get("failed", 0)
@@ -87,14 +101,16 @@ def summarize_runs(runs: list[dict]) -> dict:
         "failed": failed,
         "errorRate": round(failed / finished, 4) if finished else 0.0,
         "successRate": round(completed / finished, 4) if finished else 0.0,
-        "latencyMs": {
-            "p50": _percentile(latencies, 0.50),
-            "p95": _percentile(latencies, 0.95),
-            "max": max(latencies) if latencies else None,
-        },
+        "latencyMs": _latency_summary(latencies),
         "totalCostUsd": round(total_cost, 6),
         "avgCostUsd": round(total_cost / finished, 6) if finished else 0.0,
         "totalTokens": total_tokens,
+        # Prompt-cache telemetry, derived from the same rows the rest of the
+        # report reads: how many of the input tokens were served from a cache.
+        # A ratio over *input* tokens so a regression is "the cache stopped
+        # firing", which is the metric the operator asked about.
+        "totalCachedTokens": total_cached,
+        "cacheHitRatio": round(total_cached / total_input, 4) if total_input else 0.0,
     }
 
 
@@ -157,6 +173,28 @@ def _flatten(summary: dict) -> dict:
         "avgCostUsd": summary.get("avgCostUsd"),
         "totalCostUsd": summary.get("totalCostUsd"),
         "totalTokens": summary.get("totalTokens"),
+        # Higher is better (not in HIGHER_IS_WORSE), so a *drop* here is the
+        # regression: the prefix cache (or the exact-match cache) stopped firing.
+        "cacheHitRatio": summary.get("cacheHitRatio"),
+    }
+
+
+def _health_report_document(summary: dict, regressions: list[dict], alerts: list[str],
+                            verdict: str, usage_events: list[dict] | None = None) -> dict:
+    """The report as one literal -- the exact shape the wire carries."""
+    if usage_events is None:
+        return {
+            "summary": summary,
+            "regressions": regressions,
+            "alerts": alerts,
+            "verdict": verdict,
+        }
+    return {
+        "summary": summary,
+        "regressions": regressions,
+        "alerts": alerts,
+        "verdict": verdict,
+        "costByAgent": cost_by(usage_events, "agent"),
     }
 
 
@@ -201,12 +239,4 @@ def health_report(runs: list[dict], *, baseline_summary: dict | None = None,
     else:
         verdict = "healthy"
 
-    out: dict = {
-        "summary": summary,
-        "regressions": regressions,
-        "alerts": alerts,
-        "verdict": verdict,
-    }
-    if usage_events is not None:
-        out["costByAgent"] = cost_by(usage_events, "agent")
-    return out
+    return _health_report_document(summary, regressions, alerts, verdict, usage_events)

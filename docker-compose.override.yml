@@ -1,0 +1,16 @@
+# Local development override (merged automatically by `docker compose`).
+#
+# Production stays on the shipped default (`CACHE_BACKEND=off` for ai-service,
+# `CAREEROS_QUEUE_ENABLED=false` for backend — see .env.example / .env.prod.example).
+# The dev stack opts the engine into the layered cache (memory + Redis): what is
+# remembered are retrieval answers, embeddings, and — since Epic 174 — the engine's
+# deterministic model calls (temperature 0, no tools), which are replayed from the
+# shared layer instead of re-billed. One identical jd_analyze costs one model call,
+# not N. Fail-open by construction: a dead Redis is a miss, never an error — the
+# engine still answers, it just answers the slow way.
+services:
+  ai-service:
+    environment:
+      CACHE_BACKEND: redis
+      CACHE_TTL_S: "300"
+      CACHE_MAX_ENTRIES: "2048"

@@ -89,6 +89,87 @@ live probe of `wkapi.pro` at this tree.
   already correct (short stable instructions first, the unique user payload at the
   end); no further prefix shuffling would produce a hit that the gateway declines
   to give for short-prefix feature prompts. The next honest lever is fewer calls,
-  not warmer ones.
+  not warmer ones — and that lever is what Epic 174 built.
 - No deployed environment in this tree runs with the fleet queue enabled. That
   switch belongs to your call as the operator; nothing in this file changes it.
+
+## Epic 174 — the deterministic calls stop paying twice (measured 2026-11-13)
+
+The remaining cache miss was workload-shaped, not a bug: every one-shot feature
+call carries a unique user payload, and its fixed system prefix is far below the
+gateway's minimum cacheable block. Those calls *are* identical work when the input
+is identical — so this tree now replays them instead of re-billing them.
+
+**What was built** — `app/core/llm_cache.py` in ai-service, wired into `core/ai.py`'s
+`ask()`:
+
+- only `temperature == 0.0` and only calls that ask for no tools;
+- the key hashes the model, the full message list, `max_tokens` and `json_mode` —
+  a hit is a verbatim replay, never a paraphrase;
+- stored answers live in the cache backend the operator already chose
+  (`CACHE_BACKEND`; dev now runs `redis` — layered memory+Redis —, prod ships `off`,
+  unchanged); a cache that is down is a miss, never a raised error — `NullCache`
+  counts a miss and the model is asked, exactly as before;
+- a reply larger than 256 KB or carrying tool calls is never stored — a replayed
+  "the model wanted to act" would never act;
+- telemetry is honest: a replay is recorded with the full prompt as cached tokens,
+  `$0.00` cost, ~1 ms latency, and the `llm_call` trace event carries
+  `served_from: "exact_cache"` so a dashboard counting cached tokens sees the number
+  for what it is.
+
+**Measured** — `tests/test_the_second_identical_deterministic_call_is_free.py`
+13/13 (counts provider calls, never times them): the second identical call makes
+zero provider calls; a different message, a different `json_mode`, a non-zero
+temperature or a requested tool ask the model every time; a tool-calling answer and
+an oversized answer are never stored; Unicode round-trips byte-exact; the replay
+reports `cached_tokens == input_tokens`. Live on the dev stack (rebuilt
+`careeros-ai`, `CACHE_BACKEND=redis`), 2026-11-13:
+
+```text
+jd_analyze, identical JD, two posts
+    run 1: 16733ms  in=4930 cached=0    cost=0.003190
+    run 2:   141ms  in=4930 cached=4930 cost=0.000000   (replay; ~119x faster)
+jd_analyze, a *different* JD, next call
+                      in=18926 cached=0  cost=0.008380   (fresh, as it must be)
+
+the same user's health report, straight off the live route
+    totalRuns: 2 · totalTokens: 10824 · totalCachedTokens: 4883
+    cacheHitRatio: 0.5 · totalCostUsd: 0.0028 · verdict: healthy
+```
+
+The second identical post answers in 141 ms because there is no model in the loop;
+a *first* miss always pays full price, a *hit* is priced at $0 by construction, and
+the replay is recorded in `ai_usage_events` exactly once, as observed above.
+
+## Epic 175 — the dashboard shows the number (and the cards work at all)
+
+The monitoring page was rendered off the top level of a payload that never had
+anything at the top level. The backend returns `{summary, regressions, alerts,
+verdict}` (the engine's own shape), while `useHealthReport` cast that straight
+onto the flat `HealthReport` view model — so every card read its fallback
+(0 tokens, $0.00, "—" latency) and only the verdict badge rendered. Proven against
+the live route on this tree before the fix (raw JSON quoted below), then fixed end
+to end:
+
+- the engine's `summarize_runs` now also reports `totalCachedTokens` and
+  `cacheHitRatio` (cached ÷ input tokens); `cacheHitRatio` joins the regression
+  checker as a lower-is-worse metric, so "the cache stopped firing" becomes an
+  alert instead of a silent decay;
+- the backend now sends `cached_tokens` per run into the engine, and the report is
+  built from a named literal (`_health_report_document`) the contract census walks;
+- the frontend gained `normalizeHealthReport`, which unwraps exactly the shape the
+  endpoint returns — pinned by `normalize.test.ts` (169 tests) and the
+  response-field census (54 mappers, 16 named reads);
+- the page shows two new tiles (cache hit rate, prompt tokens saved) and a
+  prompt-cache explainer card, which states plainly which calls the prefix cache
+  can and cannot fire on.
+
+The raw wire observed on this tree before the fix:
+
+```json
+{"success": true, "data": {"summary": {"totalRuns": 0, "errorRate": 0.0,
+  "latencyMs": {"p50": null, "p95": null, "max": null},
+  "totalCostUsd": 0.0, "totalTokens": 0}, "regressions": [],
+ "alerts": [], "verdict": "healthy"}}
+```
+
