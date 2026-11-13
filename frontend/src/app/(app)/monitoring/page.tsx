@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { PageHeader } from "@/components/common/page-header";
+import { MetricCard } from "@/components/common/metric-card";
 import { BarChart } from "@/components/common/bar-chart";
 import { NightlyHistory } from "@/components/monitoring/nightly-history";
 import { SpendTodayCard } from "@/components/monitoring/spend-today-card";
@@ -233,30 +234,3 @@ export default function MonitoringPage() {
   );
 }
 
-function MetricCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone?: "warning";
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardDescription className="flex items-center gap-1.5">
-          <span className="text-muted-foreground [&_svg]:size-3.5">{icon}</span>
-          {label}
-        </CardDescription>
-        <CardTitle
-          className={`text-2xl font-semibold tabular-nums ${tone === "warning" ? "text-warning" : ""}`}
-        >
-          {value}
-        </CardTitle>
-      </CardHeader>
-    </Card>
-  );
-}

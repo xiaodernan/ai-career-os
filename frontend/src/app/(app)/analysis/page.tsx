@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { MetricCard } from "@/components/common/metric-card";
 import { PageHeader } from "@/components/common/page-header";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
@@ -264,41 +265,7 @@ export default function AnalysisPage() {
   );
 }
 
-function MetricCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone?: "warning";
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardDescription className="flex items-center gap-1.5">
-          <span className="text-muted-foreground [&_svg]:size-3.5">{icon}</span>
-          {label}
-        </CardDescription>
-        <CardTitle
-          className={`text-2xl font-semibold tabular-nums ${tone === "warning" ? "text-warning" : ""}`}
-        >
-          {value}
-        </CardTitle>
-      </CardHeader>
-    </Card>
-  );
-}
 
-/**
- * The weekly letter (19.4): the digest as it was composed that week, plus the weeks before.
- *
- * The numbers and the stalled rows are drawn here with the page's own translated words; the
- * payload's engine sentences stay in the record for the email half, because the letter is
- * composed when no reader is present and cannot know whose language to speak.
- */
 function WeeklyLetterCard({
   letters,
   pending,

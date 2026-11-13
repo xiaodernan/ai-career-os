@@ -120,7 +120,9 @@ describe("the browser's copy", () => {
     // 170 with 21.x's `components/monitoring/spend-today-card.tsx`, the card that renders
     // the day's AI spend straight from the ledger — the same split the nightly/engines
     // cards made: a component of its own, with its own copy and its own census line.
-    expect(browserSources().length).toBe(170);
+    // 171 with `components/common/metric-card.tsx`, the KPI tile the monitoring and
+    // analysis pages had each been carrying as their own copy; one implementation now.
+    expect(browserSources().length).toBe(171);
   });
 
   it("finds a sentence, however long it is", () => {
