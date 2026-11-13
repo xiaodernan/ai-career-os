@@ -45,6 +45,17 @@ transform/opacity transition (compositor-only, no layout thrash), respects
 Measured by: reduced-motion path renders all content; the stream spec still
 passes; no new layout animations.
 
+**Tranche one (2026-11-14, landed).** The activity timeline's rows mount with a
+45ms stagger, capped at eight rows (`[0..315]ms`), assert the mount itself is the
+animation — the `agent-timeline.test.tsx` case pins the four staggered delays;
+transform/opacity only, so the compositor owns the work; the `prefers-reduced-motion`
+rule in globals.css collapses the delay for readers who asked for less motion; the
+rows are in the server markup either way. The copilot's citation chips fade in on
+mount, behind the streamed answer's own entrance — reading order stays text first.
+vitest 1325/1325, tsc clean, bundle budget OK (36 routes); e2e not re-run this
+tranche (additive styling only; the last full mock run, 72/72, predates it). The
+remaining scope — StreamChoreography for the copilot bubble itself — is still open.
+
 ## Epic 3 — the empty states become product
 
 **The Shape.** Every module has an `EmptyState` with an illustration, a sentence,

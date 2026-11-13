@@ -6377,6 +6377,79 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the EXPLAIN evidence sits in `docs/plans/CACHE_AUDIT.md`'s companion file
   `docs/plans/INDEX_HORIZON.md`.)
 
+- [x] **182** The engine shares one byte-identical preamble — the prefix-cache fix the numbers were asking for (2026-11-13).
+
+  (Every one-shot feature call opened with a ~200-token agent contract — structurally
+  stable but far too short to cross the provider's prefix threshold — which is why
+  aggregate cache reads showed near-zero hits while the copilot (a shared ~6k prefix)
+  reported 98%+. `app/core/preamble.py` now carries one ~1.35k-token platform block;
+  every conversation the engine opens leads with it (`stable_messages()`, 13 construction
+  sites re-wired). The gate
+  `tests/test_the_engine_shares_one_byte_prefix.py` holds the line: no bare
+  `LLMMessage("system")` may survive anywhere outside the helper, every `LLMRequest`
+  builder must call `stable_messages`, the block is static, and its first message is the
+  preamble, byte-identical. Live evidence sits in `docs/plans/CACHE_AUDIT.md`'s companion
+  entries: the measured Saturday probe showed ~97% cached on the shared slice per agent,
+  `gpt-6-sol` itself reporting `cache_read_tokens`; the zero-vs-6656-token row is recorded
+  as relay routing, not as calling method. This epic made every later aggregate cache
+  reading meaningful. Commits 08c3f31, 6729162.)
+
+- [x] **183** The dashboard's spend card surfaces the cache ladder now — saved tokens and a hit ratio beside the ledger (2026-11-14).
+
+  (`useAIUsage` used to read three keys off `/ai-usage/summary`; the summary writes
+  eight and the card shows five. The hook now asks for `inputTokens` and `cachedTokens`,
+  and the card renders one quiet line when the window saw cached input:
+  `X tokens served from cache · Y% direct cache hit`, both languages. The named-mapper
+  gate re-points: asks 3 → 5, scanner shape (5,5), the closeout case re-armed at
+  21/35, `EMITTED_UNASKED` narrows to `{outputTokens, perModel, runsByStatus}` — the
+  perModel row stays documented as an object keyed by model name that no future
+  breakdown reader may ask `.list` for. `AIUsageSummary` mirrors the two fields;
+  vitest 1307 passed at the time, bundle budget OK. Commits c784450, 7750c60.)
+
+- [x] **184** The pace grid: one union behind a dense day grid (2026-11-13).
+
+  (The reader's job search is now a GitHub-shaped heatmap: the four clocks the platform
+  keeps — `applications.created_at`, `interview_sessions.started_at`,
+  `inbound_mails.received_at`, `ai_usage_events.created_at` — union into one sparse
+  (day, kind, count) read in a single round trip; the frontend buckets intensity into
+  five steps and draws the weeks as columns, Monday first. The interview arm originally
+  grouped by `created_at`, which the table does not carry; the fix reads `started_at`
+  and V39 indexes `(user_id, started_at)` alongside `(user_id, created_at)` for
+  applications. `ActivityHeatmapServiceTest` 5/5; the live route answers a dense grid
+  with the streaks the reader lives by; intensity, legend and empty state all live in
+  both languages.)
+
+- [x] **185** The offer shelf + Match Studio: the other session's in-flight work, finished to green and driven (2026-11-14).
+
+  (The offers page grew the controller, service, DTOs, entity, repository and V40 for
+  the reader's own shelf — the row the compare view reads instead of re-entered
+  numbers; owner-scoped, ordered by the deadline that forces a decision, totalComp
+  annualized. The other session's frontend shipped but left broken: `useDeleteOffer`
+  called a phantom `api.delete` instead of the client's `api.remove`, toast came from
+  the wrong module, the studio page rendered English copy outside the locale table,
+  the copy census and used-keys gates had not been taught the new surfaces, and the
+  shelf's field ids collided with the benchmark section's `offer-base`/`offer-bonus`
+  (duplicate DOM ids — the playwright spec could not resolve its locator). All of it
+  is finished and measured: both languages carry `offers.shelf*` and `studio.*`; the
+  copy census pins 175 browser sources; `dashboard.replies` exists in both tables; the
+  e2e spec (`offer-shelf.spec.ts`) drives add → crown → edit-moves-crown → remove →
+  trophy-suppressed-on-a-single-offer and is green against the mock stack; the full
+  e2e suite passes **72/72**. Requirement priority goes through `requirementPriorityWord`.
+  Backend `OfferShelfServiceTest` 3/3; live probe: create/PATCH/GET/DELETE
+  `/offers/shelf` all answer 200 with the right rows. Commits 4815bfe, 5222b30.)
+
+- [x] **186** Epic 2, tranche one: motion that means something — the timeline and citations move on mount (2026-11-14).
+
+  (The agent timeline's rows arrive in mount order with a 45ms stagger (cap eight
+  rows), pinned by `agent-timeline.test.tsx` — `[0, 45, 90, 135]`. The copilot's
+  citation chips fade in on mount behind the streamed answer, so reading order stays
+  text first, evidence second. Both animations are transform/opacity only; the
+  `prefers-reduced-motion` rule in globals.css collapses them to instant; the content
+  is in the markup either way. vitest **1325/1325**, tsc clean, bundle budget OK
+  (36 routes), frontend container rebuilt and serving. E2E not re-run this tranche —
+  additive styling on the two surfaces; the last full mock run (72/72) predates it.
+  `docs/plans/FRONTEND_HORIZON.md` records the remaining StreamChoreography scope.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
