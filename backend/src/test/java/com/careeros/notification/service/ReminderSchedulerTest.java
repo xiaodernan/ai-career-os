@@ -1,13 +1,19 @@
 package com.careeros.notification.service;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.careeros.push.service.PushDeliveryMetrics;
+import com.careeros.queue.JobQueue;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -15,6 +21,8 @@ import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 /**
  * The minute clock a reminder rings on (roadmap 35.1) and writes its letter on (41.1).
@@ -30,6 +38,10 @@ import org.junit.jupiter.api.Test;
  * at the end of every completed tick -- with or without a reminder to ring or letter to write --
  * and does not move for a tick that threw, because a pass that never read its audience is not
  * evidence that the clock is alive.
+ *
+ * <p>The fleet semantics are the third claim: one node rings any minute, granted by the short
+ * lease when the queue is enabled; a losing sibling rings nothing and moves nothing; a Redis
+ * failure closes the clock — better silent than duplicated pings to real phones.
  */
 class ReminderSchedulerTest {
 
@@ -38,6 +50,7 @@ class ReminderSchedulerTest {
 
     private final AtomicReference<Instant> instant = new AtomicReference<>(BOOT);
     private final Clock clock = new Clock() {
+
         @Override
         public ZoneId getZone() {
             return ZoneOffset.UTC;
@@ -57,6 +70,9 @@ class ReminderSchedulerTest {
     private NotificationPushService push;
     private ReminderMailService mail;
     private PushDeliveryMetrics metrics;
+    private JobQueue queue;
+    private StringRedisTemplate redis;
+    private ValueOperations<String, String> ops;
     private ReminderScheduler scheduler;
 
     @BeforeEach
@@ -64,7 +80,12 @@ class ReminderSchedulerTest {
         push = mock(NotificationPushService.class);
         mail = mock(ReminderMailService.class);
         metrics = mock(PushDeliveryMetrics.class);
-        scheduler = new ReminderScheduler(push, mail, metrics, clock);
+        queue = mock(JobQueue.class);
+        when(queue.enabled()).thenReturn(false);
+        redis = mock(StringRedisTemplate.class);
+        ops = mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(ops);
+        scheduler = new ReminderScheduler(push, mail, metrics, queue, redis, clock);
         when(push.pushDue(any(), any())).thenReturn(0);
         when(mail.mailDue(any(), any())).thenReturn(0);
     }
@@ -116,55 +137,60 @@ class ReminderSchedulerTest {
     }
 
     @Test
-    void aTickThatThrewLeavesTheHeartbeatWhereItWas() {
-        when(push.pushDue(any(), any())).thenThrow(new IllegalStateException("database down"));
-
-        scheduler.tick();
-
-        verify(metrics, never()).recordDueTick(any());
-    }
-
-    @Test
-    void theLetterHalfAsksForTheSameWindowTheRingDoes() {
+    void withTheQueueEnabledAndTheLeaseWonTheMinuteRunsAndTheHeartbeatMoves() {
+        when(queue.enabled()).thenReturn(true);
+        when(ops.setIfAbsent(eq("careeros:v1:lease:reminders-clock"), eq("1"),
+                eq(Duration.ofSeconds(90)))).thenReturn(true);
         advance(60);
 
-        scheduler.tick();
-
-        verify(mail).mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z"));
-    }
-
-    @Test
-    void aRefusedRingDoesNotCostTheTickItsLetter() {
-        when(push.pushDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z")))
-                .thenThrow(new IllegalStateException("database down"));
-
-        advance(60);
-        scheduler.tick();
-
-        verify(mail).mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z"));
-    }
-
-    @Test
-    void aRefusedLetterDoesNotCostTheTickItsRing() {
-        when(mail.mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z")))
-                .thenThrow(new IllegalStateException("smtp down"));
-
-        advance(60);
         scheduler.tick();
 
         verify(push).pushDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:01:00Z"));
+        verify(metrics).recordDueTick(OffsetDateTime.parse("2026-10-30T10:01:00Z"));
     }
 
     @Test
-    void aFailedLetterHoldsTheWindowSoTheSameMinuteIsAskedAgain() {
-        advance(60);
-        when(mail.mailDue(any(), any())).thenThrow(new IllegalStateException("smtp down"));
-        scheduler.tick();
+    void withTheQueueEnabledAndTheLeaseLostTheClockIsSilent() {
+        when(queue.enabled()).thenReturn(true);
+        when(ops.setIfAbsent(eq("careeros:v1:lease:reminders-clock"), eq("1"),
+                eq(Duration.ofSeconds(90)))).thenReturn(false);
         advance(60);
 
         scheduler.tick();
 
-        verify(mail).mailDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:02:00Z"));
+        verify(push, never()).pushDue(any(), any());
+        verify(mail, never()).mailDue(any(), any());
         verify(metrics, never()).recordDueTick(any());
+    }
+
+    @Test
+    void withTheQueueEnabledAndRedisDownTheClockIsClosedNotDuplicated() {
+        when(queue.enabled()).thenReturn(true);
+        doThrow(new IllegalStateException("redis down"))
+                .when(ops).setIfAbsent(anyString(), eq("1"), eq(Duration.ofSeconds(90)));
+        advance(60);
+
+        scheduler.tick();
+
+        verify(push, never()).pushDue(any(), any());
+        verify(mail, never()).mailDue(any(), any());
+        verify(metrics, never()).recordDueTick(any());
+    }
+
+    @Test
+    void withTheQueueEnabledAndTheLeaseLostThenWonTheNextWonTickCoversEverythingSinceTheLastRead() {
+        when(queue.enabled()).thenReturn(true);
+        when(ops.setIfAbsent(org.mockito.ArgumentMatchers.anyString(), eq("1"),
+                eq(Duration.ofSeconds(90)))).thenReturn(false, true);
+
+        advance(60);
+        scheduler.tick(); // lost: the fleet leader rings this minute; this node stands down
+        advance(60);
+        scheduler.tick(); // won: a takeover; the window reaches back to the last read
+
+        // The window carried nothing across the lost minute on purpose: the episodes
+        // the leader rang are latched inside the service, so asking again costs reads,
+        // not re-pings. Nothing is lost: an episode never rung by the leader is rung now.
+        verify(push).pushDue(FIRST_START, OffsetDateTime.parse("2026-10-30T10:02:00Z"));
     }
 }

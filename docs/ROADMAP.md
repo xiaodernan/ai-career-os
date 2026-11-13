@@ -6205,6 +6205,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   context-booting IT green). Not enabled anywhere; fetch topology, per-feed
   isolation and failure posture unchanged.)
 
+- [x] **171** The reminder clock stops pinging users N times per minute —
+  one fleet ringer per minute with a rotated 90-second lease (2026-11-13).
+
+  (`RedisShortLease` — a standing minute lease with a 90s TTL acquired with
+  an atomic Redis `SET NX` (`careeros:v1:lease:reminders-clock`), cadence native to a
+  clock that fires every minute. Queue disabled → every replica rings exactly as
+  shipped; queue enabled → exactly one node rings any minute, a losing sibling rings
+  nothing and moves no window; custody rotates through the fleet on TTL expiry; a
+  Redis failure closes the clock rather than duplicate a user-facing ping — better
+  one silent minute than one duplicated one, and the
+  `careeros_reminders_last_tick_timestamp` heartbeat already reads stale in that case.
+  Handovers cost reads (the push-half latch keeps an episode from being re-rung),
+  never re-pings. Measured: `ReminderSchedulerTest` 8/8 (seven window pins kept +
+  four fleet pins added), full backend suite green at this tree on this host.
+  Docker-compose and e2e byte-identical.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

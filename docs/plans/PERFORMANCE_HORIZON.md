@@ -34,6 +34,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 168 | The retention sweep rides the fleet queue when it is on — one replica runs it — and stays inline exactly where it was otherwise | RetentionSchedulerTest 6/6 + RetentionSweepHandlerTest 2/2 + full backend suite green (incl. every context-booting IT) |
 | 169 | The weekly letter's two clocks race no longer — one replica per day per concern; the letter is mailed once, the digest is computed once | WeeklyDigestSchedulerTest 6/6 + WeeklyDigestComposeHandlerTest 2/2 + WeeklyDigestRetryHandlerTest 2/2 + RedisDayLease shared + full backend suite green |
 | 170 | The ingestion freshness sweep stops re-fetching every feed N times per night; one replica runs it, the rest stand down | IngestionSchedulerTest 5/5 + IngestionSweepHandlerTest 3/3 + full backend suite green (incl. every context-booting IT) |
+| 171 | The fleet's user pings stop multiplying: one node rings every minute, custody rotates with a 90s lease | ReminderSchedulerTest 8/8 (window arithmetic intact + 4 new fleet-dispatch pins) + full backend suite green |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -581,4 +582,42 @@ a failed night logs and does not crash the worker). Full backend suite green at
 this tree on this host with the app stack's backend stopped; every context-booting
 IT green with the two new beans wired. Zero wire-shape change, zero client JS, zero
 new knob.
+
+
+## Epic 171 — the fleet stops pinging users twice (verified 2026-11-13)
+
+The reminder clock fires `careeros.reminders.tick-ms` (60s by default) on every replica.
+Before this epic, a fleet of N mailed and rang every minute-reminder N times — the
+duplicate the other schedulers were rebuilt to end, except this one rings 1440 times a
+day and the recipient is a real phone with its own battery. This is the single
+highest-duplication scheduled job in the backend.
+
+**Design.** A short-lifetime lease (`careeros:v1:lease:reminders-clock`, 90s TTL,
+SET-NX — one winner per acquire window; custody rotates through the fleet on each
+expiry, which is the right shape for a minute clock). With the queue disabled, every
+replica rings — byte-for-byte the pre-queue behaviour, opt-in as every other
+distributed element in this repo. With it enabled, a replica that does not win
+returns without touching push or mail. A Redis failure closes the clock rather than
+duplicate a user-facing ping: better one silent minute than one duplicated one, and
+the `careeros_reminders_last_tick_timestamp` heartbeat already says exactly that —
+a stopped clock reads stale, which is the designed 5-missed-ticks alarm's job.
+Custody flaps are harmless because the latch the push half already keeps (an
+episode mailed or pushed is never rung again) means a handover costs reads, never
+re-pings.
+
+**What this is not.** Not enabled anywhere (`CAREEROS_QUEUE_ENABLED=false`, e2e
+unchanged), not distributed state (the ring outcome is unchanged; only who mails is
+one per minute per deployment), not a new mechanism (the same acquire-or-fail-open
+shape as Epics 168–170 with a TTL sized for a standing minute role instead of a day
+lease), and not a fair-share scheduler (custody rotates through the fleet on TTL
+expiry; at most one winner at a time — that is the whole SLA).
+
+**Measured.** ReminderSchedulerTest 8/8: the pre-existing window pins (reach-back,
+elapsed-span, failure-retry, heartbeat) kept plus four fleet pins new in this epic
+(won lease → full window runs and the heartbeat moves; lost lease → zero push/mail
+calls and the heartbeat holds; Redis down → closed, neither half runs; lost then won
+→ the next won tick carries the window since the last read — ask costs reads, never
+re-pings, because the latch already lives in the service). Full backend suite green
+on this host with the app stack's backend stopped. Docker-compose and e2e stay
+byte-identical.
 

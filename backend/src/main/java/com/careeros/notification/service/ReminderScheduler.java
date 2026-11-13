@@ -1,6 +1,9 @@
 package com.careeros.notification.service;
 
 import com.careeros.push.service.PushDeliveryMetrics;
+import com.careeros.queue.JobQueue;
+import com.careeros.queue.RedisShortLease;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -32,6 +35,12 @@ import org.springframework.stereotype.Component;
  * reads as a stale {@code careeros.reminders.last.tick} gauge rather than as a board with
  * nothing due.
  *
+ * <p>With the fleet queue enabled (`careeros.queue.enabled`), the tick elects one node
+ * per minute through a short Redis lease — the takeover path is at most one interval on
+ * a crash, and every latch the two halves already keep means a handover produces one
+ * window, not a lost one. Without it, every replica does the whole job every minute,
+ * which is the shipped default and stays the default until a fleet opts in.
+ *
  * <p>The first window looks back one minute, so the minute a deploy booted in is not lost. A
  * reminder that came due while the process was down for longer than that is not mailed by this
  * clock -- its moment is in no window -- but the morning letter still carries it, the inbox has
@@ -45,23 +54,37 @@ public class ReminderScheduler {
     /** How far back the first tick after a boot reaches; one tick's worth by default. */
     static final Duration FIRST_WINDOW = Duration.ofMinutes(1);
 
+    /** A standing minute lease, refreshed by every tick this node wins; 90s outlives the tick. */
+    static final Duration LEASE_TTL = Duration.ofSeconds(90);
+    /** The lease this clock acquires to act as the fleet's single ringer. */
+    static final String LEASE_NAME = "reminders-clock";
+
     private final NotificationPushService push;
     private final ReminderMailService mail;
     private final PushDeliveryMetrics metrics;
+    private final JobQueue queue;
+    private final RedisShortLease lease;
     private final Clock clock;
     private OffsetDateTime lastTick;
 
     @Autowired
     public ReminderScheduler(NotificationPushService push, ReminderMailService mail,
-            PushDeliveryMetrics metrics) {
-        this(push, mail, metrics, Clock.systemUTC());
+            PushDeliveryMetrics metrics, JobQueue queue, StringRedisTemplate redis) {
+        this(push, mail, metrics, queue, redis, Clock.systemUTC());
     }
 
     ReminderScheduler(NotificationPushService push, ReminderMailService mail,
-            PushDeliveryMetrics metrics, Clock clock) {
+            PushDeliveryMetrics metrics, JobQueue queue, StringRedisTemplate redis, Clock clock) {
+        this(push, mail, metrics, clock, queue, new RedisShortLease(LEASE_NAME, redis));
+    }
+
+    private ReminderScheduler(NotificationPushService push, ReminderMailService mail,
+            PushDeliveryMetrics metrics, Clock clock, JobQueue queue, RedisShortLease lease) {
         this.push = push;
         this.mail = mail;
         this.metrics = metrics;
+        this.queue = queue;
+        this.lease = lease;
         this.clock = clock;
         this.lastTick = now().minus(FIRST_WINDOW);
     }
@@ -70,8 +93,26 @@ public class ReminderScheduler {
         return OffsetDateTime.now(clock).withOffsetSameInstant(ZoneOffset.UTC);
     }
 
+    /**
+     * Lease this node for the fleet's minute. Thrown errors close the clock rather than
+     * duplicate a user-facing ping — the heartbeat gauge (careeros_reminders_last_tick_timestamp)
+     * will read stale if nobody rings a reminder inside five ticks, which is the alarm's job.
+     */
+    private boolean acquireLease() {
+        try {
+            return lease.tryAcquire(LEASE_TTL);
+        } catch (RuntimeException e) {
+            log.warn("the reminder clock's lease is unavailable ({}); this node rings nothing this minute",
+                    e.toString());
+            return false;
+        }
+    }
+
     @Scheduled(fixedDelayString = "${careeros.reminders.tick-ms:60000}")
     public void tick() {
+        if (queue.enabled() && !acquireLease()) {
+            return; // a sibling owns the fleet's clock this minute; this one stays quiet
+        }
         OffsetDateTime until = now();
         OffsetDateTime since = lastTick;
         boolean completed = true;
