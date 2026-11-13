@@ -722,11 +722,14 @@ function MessageRow({ message }: { message: ChatMessage }) {
       )}
 
       {!isUser && sources.some((s) => s.quote) && (
+        // The citations follow the answer in, not before it: a 150ms fade-in after
+        // the bubble's entrance, so reading order is text first, evidence second.
+        // Opacity only; the reduced-motion media query collapses this to instant.
         <EvidenceList
           items={sources}
           limit={2}
           dense
-          className="w-full max-w-[85%]"
+          className="w-full max-w-[85%] animate-fade-in"
           hrefFor={(e) => (e.source?.docId ? `/knowledge?src=${e.source.docId}` : undefined)}
         />
       )}

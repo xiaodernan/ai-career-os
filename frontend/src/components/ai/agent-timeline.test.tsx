@@ -49,6 +49,16 @@ describe("AgentTimeline — the llm_call row says its transport", () => {
     expect((markup.match(/>complete</g) ?? []).length).toBe(1);
   });
 
+  it("staggers the rows' entrance in mount order, never from a timer", () => {
+    const markup = renderToStaticMarkup(
+      <AgentTimeline
+        events={Array.from({ length: 4 }, (_, i) => ({ id: `e${i}`, kind: "step_start" as const, label: `Row ${i}` }))}
+      />
+    );
+    const delays = [...markup.matchAll(/animation-delay:\s*(\d+)ms/g)].map((m) => Number(m[1]));
+    expect(delays).toEqual([0, 45, 90, 135]);
+  });
+
   it("stays quiet on a row whose llm_call carries no mode at all", () => {
     const markup = renderToStaticMarkup(
       <AgentTimeline

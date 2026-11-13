@@ -70,7 +70,7 @@ function AgentTimeline({ events, className, defaultExpanded = false, ...props }:
       {...props}
     >
       {events.map((evt, i) => (
-        <TimelineRow key={evt.id} event={evt} isLast={i === events.length - 1} defaultExpanded={defaultExpanded} />
+        <TimelineRow key={evt.id} event={evt} index={i} isLast={i === events.length - 1} defaultExpanded={defaultExpanded} />
       ))}
     </ul>
   );
@@ -78,10 +78,12 @@ function AgentTimeline({ events, className, defaultExpanded = false, ...props }:
 
 function TimelineRow({
   event,
+  index,
   isLast,
   defaultExpanded,
 }: {
   event: AgentTraceEvent;
+  index: number;
   isLast: boolean;
   defaultExpanded: boolean;
 }) {
@@ -99,7 +101,11 @@ function TimelineRow({
     : null;
 
   return (
-    <li className="relative flex gap-3">
+    // Rows arrive in mount order with a 45ms stagger, capped at 8 rows worth of delay
+    // so a long trace never holds content back. Transform/opacity only (compositor);
+    // the reduced-motion media query in globals.css collapses the delay for readers
+    // who asked for less motion. Never driven by a timer — this is the mount itself.
+    <li className="relative flex animate-fade-up gap-3" style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}>
       <span className="flex flex-col items-center" aria-hidden>
         <span className={cn("flex h-7 items-center", meta.text)}>
           <Icon className="size-3.5" />
