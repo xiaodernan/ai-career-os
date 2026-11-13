@@ -74,6 +74,12 @@ class OpenAICompatProvider:
         # observe as "streaming shows better caching than non-streaming".
         if stream:
             p["stream_options"] = {"include_usage": True}
+        if req.cache_key:
+            # The provider's own routing hint: identical prefixes asked with the same
+            # key land on the cache shard that already holds them, instead of
+            # whichever replica the load balancer picks (measured: a repeat answers
+            # cached=0 roughly every other call without it).
+            p["prompt_cache_key"] = req.cache_key
         tools = _tools_openai(req)
         if tools:
             p["tools"] = tools

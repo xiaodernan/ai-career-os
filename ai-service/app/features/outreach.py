@@ -11,7 +11,7 @@ Works without a resume too (a short intro does not strictly need one): the messa
 simply carries no evidence, and says so by citing nothing.
 """
 
-from app.core.ai import ask_json, wrap_untrusted
+from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import normalize
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -90,8 +90,8 @@ async def draft_message(contact: dict, purpose: str, resume_structured, *, conte
                         user_id=None, run_id=None) -> dict:
     evidence = pick_evidence(resume_structured)
     req = LLMRequest(
-        messages=[LLMMessage("system", SYSTEM),
-                  LLMMessage("user", _prompt(contact, purpose, evidence, context))],
+        messages=stable_messages(SYSTEM,
+                                 LLMMessage("user", _prompt(contact, purpose, evidence, context))),
         temperature=0.3, max_tokens=900)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="outreach",
                          kind="outreach")

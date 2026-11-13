@@ -10,6 +10,7 @@ from typing import Any
 from app.core import llm_cache
 from app.core.config import get_settings
 from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
+from app.core.preamble import PLATFORM_PREAMBLE
 from app.core.request_id import deadline_remaining_ms
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolCall, Usage
@@ -57,6 +58,20 @@ def evidence_block(items: list[dict[str, Any]]) -> str:
     return "\n".join(parts)
 
 
+def stable_messages(agent_system: str, *rest: LLMMessage) -> list[LLMMessage]:
+    """Open a conversation with the engine's byte-identical prefix (Epic 182).
+
+    [platform preamble, agent contract, *rest]: the preamble is the same bytes for
+    every capability the engine runs, the agent's own schema and rules follow, and
+    the volatile content comes last — so a provider-side prefix cache fires on the
+    ~1.3k-token preamble for every call after the engine's first, and on the agent
+    block for every repeat of the same capability. Every LLMMessage("system", ...)
+    outside this helper is a cache-splitting prefix; the gate refuses the pattern.
+    """
+    return [LLMMessage("system", PLATFORM_PREAMBLE),
+            LLMMessage("system", agent_system), *rest]
+
+
 async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None = None,
               agent: str = "system", kind: str = "chat") -> LLMResponse:
     # The budget backstop at the model door (Epic 128): every LLM call in the
@@ -68,6 +83,12 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
         raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     s = get_settings()
     provider = get_llm(s)
+    # The cache-routing key (Epic 182): stable per capability, so a gateway that
+    # load-balances repeats routes the same workload to the shard holding its prefix.
+    # Deliberately NOT per user: two users' calls of one capability share the preamble
+    # and agent block, and sharing a shard is exactly the point.
+    if req.cache_key is None:
+        req.cache_key = f"careeros:{agent}"
     # A byte-identical deterministic call is byte-identical work. Serving it
     # from the exact-match cache costs a Redis lookup instead of a model;
     # with caching off this is None and the path is exactly as before.
@@ -170,6 +191,9 @@ async def ask_stream(req: LLMRequest, *, user_id: str | None = None,
     if remaining is not None and remaining <= 0:
         raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     provider = get_llm(s)
+    # Cache-routing key, same rule as ask(): per capability, not per call.
+    if req.cache_key is None:
+        req.cache_key = f"careeros:{agent}"
     started = time.monotonic()
     pieces: list[str] = []
     tool_calls: list[ToolCall] = []

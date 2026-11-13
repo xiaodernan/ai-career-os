@@ -33,6 +33,13 @@ class LLMRequest:
     max_tokens: int = 2048
     tools: list[ToolSpec] | None = None
     json_mode: bool = False  # request a single JSON object back
+    # Epic 182: the cache-routing key. A gateway that load-balances identical
+    # requests across upstream replicas answers a repeat from a different machine
+    # and reports zero cached tokens; the key asks the provider to route the same
+    # logical workload to the shard that already holds its prefix. Stable per
+    # (agent, user) — never a request id, which would shard by call and help
+    # nothing.
+    cache_key: str | None = None
 
 
 @dataclass

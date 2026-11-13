@@ -8,7 +8,7 @@ only phrases them. It is told, in the prompt, to invent no number and no competi
 offer, so a draft can always be traced back to the benchmark it came from.
 """
 
-from app.core.ai import ask_json
+from app.core.ai import ask_json, stable_messages
 from app.features.negotiation import assess, talking_points
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -68,8 +68,8 @@ async def draft_counter_offer(offer: int, report: dict, *, match_score=None,
     ask = target_ask(offer, report)
     rationale = talking_points(offer, stats, match_score)
     req = LLMRequest(
-        messages=[LLMMessage("system", SYSTEM),
-                  LLMMessage("user", _prompt(offer, ask, rationale, currency))],
+        messages=stable_messages(SYSTEM,
+                                 LLMMessage("user", _prompt(offer, ask, rationale, currency))),
         temperature=0.3, max_tokens=800)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="job_research",
                          kind="counter_offer")

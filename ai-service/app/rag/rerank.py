@@ -20,7 +20,7 @@ key, an operator can tell from the run log which ranker decided the order.
 import re
 
 from app.algorithms import Bm25
-from app.core.ai import ask_json
+from app.core.ai import ask_json, stable_messages
 from app.core.config import get_settings
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -94,13 +94,12 @@ async def rerank(query: str, chunks: list[dict], top_n: int = 8, *,
         f"[{i}] ({c.get('source_kind') or c.get('kind')}/{c.get('section_path','')}) "
         f"{str(c.get('text') or '')[:600]}" for i, c in enumerate(candidates))
     req = LLMRequest(
-        messages=[
-            LLMMessage("system",
-                       "You score how relevant each numbered evidence snippet is to the "
-                       "user's need for answering their question. JSON only: "
-                       '{"scores": {"<index>": 0.0-1.0}}. Be strict: unrelated = 0.'),
+        messages=stable_messages(
+            "You score how relevant each numbered evidence snippet is to the "
+            "user's need for answering their question. JSON only: "
+            '{"scores": {"<index>": 0.0-1.0}}. Be strict: unrelated = 0.',
             LLMMessage("user", f"Query context: {query}\n\nSnippets:\n{numbered}"),
-        ],
+        ),
         temperature=0.0, max_tokens=900)
     try:
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent=agent, kind="rerank")

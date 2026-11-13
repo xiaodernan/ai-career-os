@@ -1,7 +1,7 @@
 """Resume parsing: raw text -> canonical ResumeParseResult (PRD §3)."""
 
 
-from app.core.ai import wrap_untrusted
+from app.core.ai import stable_messages, wrap_untrusted
 from app.core.skills import category, extract_skills, normalize
 from app.features.schemas import ResumeParseResult
 from app.providers.base import LLMMessage, LLMRequest
@@ -31,10 +31,10 @@ Rules:
 async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
     text = text if isinstance(text, str) else ""
     req = LLMRequest(
-        messages=[
-            LLMMessage("system", SYSTEM),
+        messages=stable_messages(
+            SYSTEM,
             LLMMessage("user", wrap_untrusted("RESUME", text[:24000])),
-        ],
+        ),
         temperature=0.0, max_tokens=4000)
     raw = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume",
                          kind="resume_parse")

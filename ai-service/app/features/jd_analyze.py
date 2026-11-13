@@ -2,7 +2,7 @@
 
 import re
 
-from app.core.ai import ask_json, wrap_untrusted
+from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -27,8 +27,8 @@ Rules:
 
 async def analyze_jd(raw_text: str, *, user_id=None, run_id=None) -> dict:
     req = LLMRequest(
-        messages=[LLMMessage("system", SYSTEM),
-                  LLMMessage("user", wrap_untrusted("JOB_DESCRIPTION", raw_text[:20000]))],
+        messages=stable_messages(SYSTEM,
+                                 LLMMessage("user", wrap_untrusted("JOB_DESCRIPTION", raw_text[:20000]))),
         temperature=0.0, max_tokens=3000)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="jd_analyst",
                          kind="jd_analyze")

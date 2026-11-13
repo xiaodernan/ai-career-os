@@ -15,6 +15,7 @@ from app.agents import memory
 from app.agents.tools import (SUBAGENT_TOOLS, TOOL_INDEX, Tool, drop_absent_optionals,
                               validate_tool_args)
 from app.core import ai, taskbus
+from app.core.ai import stable_messages
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolSpec
 
@@ -448,10 +449,10 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                           {"agent": agent, "step": f"Delegating to {sub_agent} agent"})
                     sub_tools = [TOOL_INDEX[n] for n in SUBAGENT_TOOLS[sub_agent]
                                  if n in TOOL_INDEX]
-                    sub_msgs = [
-                        LLMMessage("system", SUBAGENT_SYSTEM.format(agent=sub_agent)),
-                        LLMMessage("user", f"Delegated task:\n{task}")
-                    ]
+                    sub_msgs = stable_messages(
+                        SUBAGENT_SYSTEM.format(agent=sub_agent),
+                        LLMMessage("user", f"Delegated task:\n{task}"),
+                    )
                     # A subagent's report is input to this loop, not an answer to the
                     # user, so it never streams: tokens belong to the final reply.
                     report = await _run_loop(
@@ -518,12 +519,16 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
     if context:
         system += "\n\n## Pinned conversation context\n" + json.dumps(
             context, ensure_ascii=False, default=str)[:2000]
-    messages: list[LLMMessage] = [LLMMessage("system", system)]
+    tail: list[LLMMessage] = []
     for h in (history or [])[-HISTORY_TURNS:]:
         role = h.get("role")
         if role in ("user", "assistant") and h.get("content"):
-            messages.append(LLMMessage(role, str(h["content"])[:4000]))
-    messages.append(LLMMessage("user", message))
+            tail.append(LLMMessage(role, str(h["content"])[:4000]))
+    tail.append(LLMMessage("user", message))
+    # Epic 182: the platform preamble opens every conversation, byte-identical
+    # across agents, so the copilot's hot prefix starts with the same bytes the
+    # one-shot features warm.
+    messages: list[LLMMessage] = stable_messages(system, *tail)
 
     _emit(task_id, "status", {"agent": "career", "step": "Thinking"})
     await observability.trace(run_id, "step_start", "career", {"stage": "chat_turn"})

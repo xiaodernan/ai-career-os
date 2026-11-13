@@ -82,7 +82,7 @@ async def _relevant_ids(user_id: str, case: EvalCase) -> set[str]:
 
 
 async def run(args: argparse.Namespace) -> dict:
-    from app.core.ai import ask
+    from app.core.ai import ask, stable_messages
     from app.providers.base import LLMMessage, LLMRequest
 
     s = get_settings()
@@ -124,9 +124,9 @@ async def run(args: argparse.Namespace) -> dict:
         if args.answer and contexts:
             t1 = time.monotonic()
             resp = await ask(LLMRequest(
-                messages=[LLMMessage("system", answer_prompt),
-                          LLMMessage("user", f"Question: {case.query}\n\n"
-                                             + r.get("context_block", ""))],
+                messages=stable_messages(answer_prompt,
+                                         LLMMessage("user", f"Question: {case.query}\n\n"
+                                                            + r.get("context_block", ""))),
                 temperature=0.2, max_tokens=900),
                 user_id=args.user_id, agent="eval", kind="eval_answer")
             answer = resp.text

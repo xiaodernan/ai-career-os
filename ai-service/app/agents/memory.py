@@ -7,7 +7,7 @@ context and extracted after meaningful turns.
 
 import logging
 
-from app.core.ai import ask_json, wrap_untrusted
+from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.db import domain, observability
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -71,8 +71,7 @@ async def extract_and_store(user_id: str, user_text: str, answer: str,
               f"Assistant reply:\n{answer[:2000]}")
     try:
         data = await ask_json(
-            LLMRequest(messages=[LLMMessage("system", EXTRACT_SYSTEM),
-                                 LLMMessage("user", prompt)],
+            LLMRequest(messages=stable_messages(EXTRACT_SYSTEM, LLMMessage("user", prompt)),
                        temperature=0.0, max_tokens=800),
             user_id=user_id, run_id=run_id, agent="career", kind="memory_extract")
     except Exception:

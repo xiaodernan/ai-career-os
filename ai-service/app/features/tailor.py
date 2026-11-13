@@ -8,7 +8,7 @@ asking nicely.
 
 import re
 
-from app.core.ai import ask_json, wrap_untrusted
+from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
 from app.rag.pipeline import retrieve
@@ -64,7 +64,7 @@ async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id
         f"ORIGINAL RESUME JSON:\n{wrap_untrusted('RESUME', str(resume_structured)[:16000])}"
     )
     req = LLMRequest(
-        messages=[LLMMessage("system", SYSTEM), LLMMessage("user", context)],
+        messages=stable_messages(SYSTEM, LLMMessage("user", context)),
         temperature=0.2, max_tokens=4000)
     out = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume", kind="tailor")
     out = out if isinstance(out, dict) else {}

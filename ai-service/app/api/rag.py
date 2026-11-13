@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.core.ai import ask
+from app.core.ai import ask, stable_messages
 from app.core.deps import Ctx, require_internal
 from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
 from app.core.request_id import deadline_remaining_ms
@@ -132,7 +132,7 @@ async def rag_answer(req: AnswerReq, ctx: Ctx = Depends(require_internal)):
            "answer only from general knowledge if safe)")
     )
     llm = await ask(LLMRequest(
-        messages=[LLMMessage("system", ANSWER_SYSTEM), LLMMessage("user", user_prompt)],
+        messages=stable_messages(ANSWER_SYSTEM, LLMMessage("user", user_prompt)),
         temperature=0.3, max_tokens=1600),
         user_id=ctx.user_id, run_id=run_id, agent="rag", kind="rag_answer")
     # No usage figures passed: the run's own events (this call plus the embeddings behind the

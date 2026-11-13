@@ -6,7 +6,7 @@ up. Difficulty adapts to answer quality; the question/answer tree becomes the
 "interview depth trajectory".
 """
 
-from app.core.ai import ask, ask_json, wrap_untrusted
+from app.core.ai import ask, ask_json, stable_messages, wrap_untrusted
 from app.providers.base import LLMMessage, LLMRequest
 
 # These keys ARE the mode vocabulary: `opening_question` and `advance` fall back to the `mixed`
@@ -89,9 +89,9 @@ async def opening_question(*, mode: str, company: str, position: str, resume_ctx
         f"greeting{' using the name ' + candidate_name if candidate_name else ''}, " \
         "one sentence on format, then the FIRST question only."
     resp = await ask(LLMRequest(
-        messages=[LLMMessage("system", "You conduct realistic mock job interviews. "
-                                       "Ask exactly ONE question. Be concise."),
-                  LLMMessage("user", prompt)],
+        messages=stable_messages("You conduct realistic mock job interviews. "
+                                 "Ask exactly ONE question. Be concise.",
+                                 LLMMessage("user", prompt)),
         temperature=0.7, max_tokens=260),
         user_id=user_id, run_id=run_id, agent="interview", kind="interview_open")
     text = resp.text.strip()
@@ -109,7 +109,7 @@ async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: 
               f"{wrap_untrusted('ANSWER', ans[:4000])}")
     try:
         ev = await ask_json(LLMRequest(
-            messages=[LLMMessage("system", EVAL_SYSTEM), LLMMessage("user", prompt)],
+            messages=stable_messages(EVAL_SYSTEM, LLMMessage("user", prompt)),
             temperature=0.1, max_tokens=900),
             user_id=user_id, run_id=run_id, agent="interview", kind="answer_eval")
     except Exception:
@@ -152,7 +152,7 @@ async def advance(*, mode: str, turns: list[dict], difficulty: float, qnum: int,
                           jd_topics)
     try:
         out = await ask_json(LLMRequest(
-            messages=[LLMMessage("system", ADVANCE_SYSTEM), LLMMessage("user", prompt)],
+            messages=stable_messages(ADVANCE_SYSTEM, LLMMessage("user", prompt)),
             temperature=0.5, max_tokens=350),
             user_id=user_id, run_id=run_id, agent="interview", kind="interview_advance")
     except Exception:
@@ -216,7 +216,7 @@ async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
               f"{wrap_untrusted('CTX', ctx[:1500])}\n\nTRANSCRIPT:\n{convo}")
     try:
         out = await ask_json(LLMRequest(
-            messages=[LLMMessage("system", FINALIZE_SYSTEM), LLMMessage("user", prompt)],
+            messages=stable_messages(FINALIZE_SYSTEM, LLMMessage("user", prompt)),
             temperature=0.2, max_tokens=1600),
             user_id=user_id, run_id=run_id, agent="interview", kind="interview_finalize")
     except Exception:

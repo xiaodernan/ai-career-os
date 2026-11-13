@@ -92,7 +92,10 @@ async def test_an_unsettled_reading_raises_when_the_provider_is_dead(monkeypatch
 
 async def test_the_model_fills_what_the_rules_left_open(monkeypatch):
     async def fake(req, **kwargs):
-        assert "classify one recruiter reply" in req.messages[0].content.lower()
+        # Epic 182: message 0 is the platform preamble (shared by every capability),
+        # so the classifier's own contract is the system message that follows it.
+        assert "You are one capability of CareerOS" in req.messages[0].content
+        assert "classify one recruiter reply" in req.messages[1].content.lower()
         return {"intent": "interview", "company": "Acme", "role": "Backend Engineer"}
 
     monkeypatch.setattr(rc, "ask_json", fake)

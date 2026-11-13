@@ -91,6 +91,12 @@ function TimelineRow({
   const Icon = meta.icon;
   const duration = formatDuration(event.durationMs);
   const hasPayload = event.payload != null;
+  // The engine's own trace row records which transport answered (`mode: "stream" |
+  // "complete"`); surface it on the llm_call row itself so the timeline never makes a
+  // reader infer it. Omitted for any other kind or when the row predates the field.
+  const transport = event.kind === "llm_call" && event.payload && typeof event.payload["mode"] === "string"
+    ? String(event.payload["mode"])
+    : null;
 
   return (
     <li className="relative flex gap-3">
@@ -119,6 +125,11 @@ function TimelineRow({
             />
           )}
           <span className="truncate font-medium">{event.label}</span>
+          {transport ? (
+            <span className="shrink-0 rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+              {transport}
+            </span>
+          ) : null}
           <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
             {traceKindWord(t, event.kind)}
           </span>

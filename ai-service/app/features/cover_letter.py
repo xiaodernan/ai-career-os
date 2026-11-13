@@ -1,6 +1,6 @@
 """Cover letter generation + variants (PRD §12)."""
 
-from app.core.ai import ask, wrap_untrusted
+from app.core.ai import ask, stable_messages, wrap_untrusted
 from app.providers.base import LLMMessage, LLMRequest
 from app.rag.pipeline import retrieve
 
@@ -55,7 +55,7 @@ async def generate(resume_structured: dict, resume_text: str, jd: dict,
     prompt = _build_prompt(resume_structured, jd, company, goal,
                            r.get("context_block", ""), tone, length, mode, previous)
     resp = await ask(LLMRequest(
-        messages=[LLMMessage("system", BASE_SYSTEM), LLMMessage("user", prompt)],
+        messages=stable_messages(BASE_SYSTEM, LLMMessage("user", prompt)),
         temperature=0.6 if mode in ("regenerate",) else 0.4, max_tokens=900),
         user_id=user_id, run_id=run_id, agent="resume", kind="cover_letter")
     return {"letter": resp.text, "sources": r["evidence"], "mode": mode,

@@ -1,6 +1,6 @@
 """Query understanding: rewrite, multi-query expansion, intent detection."""
 
-from app.core.ai import ask_json
+from app.core.ai import ask_json, stable_messages
 from app.providers.base import LLMMessage, LLMRequest
 from app.rag.kinds import KINDS_INLINE
 
@@ -60,11 +60,11 @@ async def understand(query: str, context_summary: str = "", *, user_id=None, run
                      agent="rag") -> dict:
     context = context_summary if isinstance(context_summary, str) else ""
     req = LLMRequest(
-        messages=[
-            LLMMessage("system", _SYSTEM),
+        messages=stable_messages(
+            _SYSTEM,
             LLMMessage("user", f"Conversation context:\n{context[:1500] or '(none)'}\n\n"
                                f"User query: {query}"),
-        ],
+        ),
         temperature=0.0, max_tokens=500)
     try:
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent=agent,

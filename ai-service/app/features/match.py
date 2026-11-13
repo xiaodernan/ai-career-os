@@ -8,7 +8,7 @@ then every criterion is bound to retrieved evidence chunks so the UI can show
 import logging
 
 from app.core import db
-from app.core.ai import ask
+from app.core.ai import ask, stable_messages
 from app.core.skills import extract_skills, normalize
 from app.features.schemas import MatchResult
 from app.providers.base import LLMMessage, LLMRequest
@@ -377,14 +377,14 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
              f"Matched: {', '.join(matched[:12])}\nMissing: {', '.join(missing[:12])}")
     try:
         llm = await ask(LLMRequest(
-            messages=[
-                LLMMessage("system", "You are a hiring analyst. Using ONLY the computed facts, "
-                                     "write 2 short paragraphs: (1) overall assessment, (2) the "
-                                     "top 2-3 concrete actions to improve chances. Do not change "
-                                     "or restate numbers beyond those given; do not invent "
-                                     "experience. Plain text."),
+            messages=stable_messages(
+                "You are a hiring analyst. Using ONLY the computed facts, "
+                "write 2 short paragraphs: (1) overall assessment, (2) the "
+                "top 2-3 concrete actions to improve chances. Do not change "
+                "or restate numbers beyond those given; do not invent "
+                "experience. Plain text.",
                 LLMMessage("user", f"JD: {jd.get('title','')} at {jd.get('company','')}\n{facts}"),
-            ], temperature=0.4, max_tokens=500),
+            ), temperature=0.4, max_tokens=500),
             user_id=user_id, run_id=run_id, agent="jd_analyst", kind="match_narrative")
         narrative, model = llm.text, llm.model
     except Exception as e:

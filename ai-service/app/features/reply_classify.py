@@ -14,7 +14,7 @@ and the rules abstained -- that caller keeps the letter and files it unread, whi
 the backend bridge's half of the rule.
 """
 
-from app.core.ai import ask_json, wrap_untrusted
+from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.providers.base import LLMMessage, LLMRequest
 
 INTENTS = ("rejection", "interview", "offer", "info", "other")
@@ -124,8 +124,8 @@ async def classify_reply(text: str, *, user_id=None, run_id=None) -> dict:
     letter = (text or "").strip()[:TEXT_MAX]
     settled = rule_intent(letter)
     req = LLMRequest(
-        messages=[LLMMessage("system", SYSTEM),
-                  LLMMessage("user", wrap_untrusted("RECRUITER REPLY", letter))],
+        messages=stable_messages(SYSTEM,
+                                 LLMMessage("user", wrap_untrusted("RECRUITER REPLY", letter))),
         temperature=0.0, max_tokens=300)
     try:
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent="inbox",
