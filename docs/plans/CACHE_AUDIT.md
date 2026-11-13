@@ -218,3 +218,40 @@ The raw wire observed on this tree before the fix:
  "alerts": [], "verdict": "healthy"}}
 ```
 
+
+## Epic 182 — the platform preamble: the prefix structure the numbers were asking for
+
+The honest table above says the one-shot features cannot cache because their shared
+prefix is a ~200-token agent block — below the ~1024-token threshold every
+prefix-cache implementation carries. The fix is structural, not a flag: every
+conversation the engine opens now starts with one byte-identical platform preamble
+(`app/core/preamble.py`, ~1.35k tokens — identity, output discipline, the untrusted
+fence rule, evidence rules, bilingual handling, skill vocabulary, a worked example),
+followed by the agent's own contract, followed by the volatile content. Fifteen
+construction sites route through `stable_messages()`; a gate refuses a literal
+`LLMMessage("system", …)` anywhere else.
+
+Measured on the live gateway (`test_the_platform_prefix_caches_across_agents.py`,
+opt-in): warm rounds report **cached ≈ 5248/5418 input tokens (97%)** on the same
+capability, and a *different* capability whose only shared bytes are the preamble
+reports **cached ≈ 5504/5689 (97%)** — before the preamble those calls shared
+nothing and reported zero.
+
+Two findings the probes also settled, honestly:
+
+- **`prompt_cache_key` is a no-op here.** The A/B (6 warm rounds each, live):
+  with the key 5/6 hits, without it 5/6 — this relay's load balancer does not
+  honor it (or its upstreams share one cache). The production path still sends it
+  (stable per capability): zero cost where it is ignored, and the documented
+  affinity hint on gateways that do honor it.
+- **The intermittent zero is relay weather, not the calling method.** An
+  identical repeat reports cached=0 when the relay routes it to a replica that
+  does not hold the prefix (observed ~1 round in 6 with the key). The probe
+  asserts a majority of warm hits, not every round; the per-round zero is the
+  load balancer, outside client control.
+
+Net effect on the workload table above: every feature's repeated calls now carry a
+~1.35k-token warm prefix before the first unique byte, and `resume_parse`'s
+document-warm pattern (48.2%) compounds with it. The tokens the preamble adds are
+themselves cached after the first call — the marginal cost is the first call's
+~1.3k uncached tokens, once.

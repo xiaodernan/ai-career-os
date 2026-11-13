@@ -2081,3 +2081,30 @@ one-shot unique bytes. Live aggregate by kind at 2026-11-13, from
 Incremental-only: a call only caches if the previous call is identical in
 prefix. The copilot's prefix — system + memories + tools ~6k tokens — is the biggest
 churn shape in this deployment, and it is correctly warm.
+
+## Epic 182 — the platform preamble: one byte-stable prefix for every conversation the engine opens **DONE (measured 2026-11-13)**
+
+The cache audit's honest table ended at "the one-shot features cannot cache" — their
+shared prefix was a ~200-token agent block, structurally identical across calls but
+far below the ~1024-token prefix-cache threshold. The fix is a structure, not a
+setting: `app/core/preamble.py` carries one byte-identical platform preamble
+(~1.35k tokens: identity, output discipline, the untrusted-fence rule, evidence
+rules, bilingual handling, skill vocabulary, a worked example), and fifteen
+construction sites — every feature, the RAG answerer, the reranker, the memory
+extractor, the eval judge and the orchestrator's copilot + subagent paths — open
+conversations through `stable_messages()` (preamble, agent contract, volatile
+content). The gate `test_the_engine_shares_one_byte_prefix.py` holds the threshold,
+the constancy (no dates, no interpolation) and the single construction path.
+
+**Measured on the live gateway** (`test_the_platform_prefix_caches_across_agents.py`,
+opt-in): warm rounds report **cached ≈ 5248/5418 (97%)** on the same capability and
+**cached ≈ 5504/5689 (97%)** on a *different* capability whose only shared bytes are
+the preamble — before the epic those calls shared nothing and reported zero.
+
+Two probe findings recorded honestly: `prompt_cache_key` (now sent by the production
+path, stable per capability) measured **no difference** on this relay (5/6 vs 5/6
+warm hits live) — it is kept as the documented affinity hint for gateways that honor
+it, not claimed as the lever here. And the intermittent zero (≈1 warm round in 6
+answering cached=0) is the relay's load balancer routing a repeat to a replica
+without the prefix — relay weather outside client control, which is why the probe
+asserts a majority of warm hits rather than every round.
