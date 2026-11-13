@@ -52,6 +52,7 @@ ENUM_SOURCE = (
     / "ApiErrorCode.java"
 )
 BACKEND_MAIN = ROOT / "backend" / "src" / "main"
+GATEWAY_MAIN = ROOT / "gateway" / "src" / "main"
 TRANSLATIONS = ROOT / "frontend" / "src" / "lib" / "i18n" / "translations.ts"
 CLIENT = ROOT / "frontend" / "src" / "lib" / "api" / "client.ts"
 
@@ -237,6 +238,23 @@ def error_tables() -> tuple[set[str], set[str]]:
     return set(tables[0]), set(tables[1])
 
 
+def gateway_codes() -> set[str]:
+    """The codes the gateway's own fallback emits.
+
+    The edge speaks the browser's language on a dead backend; the sentences for
+    whatever it emits belong on
+    the browser's table — this reads the edge's literal for the one code it emits
+    today so the table can never answer it before the services know about it.
+    """
+    source = (GATEWAY_MAIN / "java" / "com" / "careeros" / "gateway"
+              / "GatewayFallbackController.java").read_text(encoding="utf-8")
+    found = re.search(r'"error",\s*"([A-Z][A-Z0-9_]*)"', source)
+    assert found, (
+        "GatewayFallbackController no longer spells its code in a regex the gate can "
+        "read — the BACKEND_UNAVAILABLE sentence on the table is keyed off this read")
+    return {found.group(1)}
+
+
 def browser_codes() -> set[str]:
     """The codes the browser raises itself, in both spellings it mints one.
 
@@ -304,7 +322,7 @@ def test_two_codes_may_share_a_sentence_only_if_a_person_said_they_are_one_thing
 def test_the_table_only_names_codes_that_exist() -> None:
     """A sentence for a code nobody sends is a sentence nobody reads."""
     english, _chinese = error_tables()
-    real = enum_codes() | browser_codes()
+    real = enum_codes() | browser_codes() | gateway_codes()
     invented = sorted(english - real)
     assert invented == [], (
         f"the browser's table answers codes nobody sends: {invented}. Either "

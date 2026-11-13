@@ -3597,7 +3597,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # union; the union itself did not move.
         # 1753 rather than 1745 since the 21.x interface's doc comment grew the file by
         # eight more lines above the union.
-        ("types.ts", 1753, "kind:"),
+        # 1758 rather than 1753 since the AIUsageSummary interface gained the cachedTokens
+        # doc comment above the trace union — the union itself stays put.
+        ("types.ts", 1758, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "
