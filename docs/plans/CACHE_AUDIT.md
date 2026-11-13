@@ -67,6 +67,25 @@ This gateway needs roughly ≥ ~1024 prefix tokens before the cache fires. Small
 prompts — every one-shot in this stack has one — never cross it alone; the user payload
 is the long part and it differs.
 
+## Epic 176 — the metrics stop counting their own polls (2026-11-13)
+
+`/monitoring/health-report` used to open an `agent_runs` row on every fetch — the
+dashboard measuring itself added a zero-token `monitoring`-agent row per poll,
+which inflated the next poll's `totalRuns` and filled that account's AI Activity
+feed with reads of empty runs. The route now answers from the engine directly,
+and a fresh user polling three times leaves **zero** `health_report` rows in
+agent_runs (measured before/after on the live stack). Read-only stays read-only.
+
+## Epic 177 — today's AI spend is on the page (2026-11-13)
+
+The bar the user asked for: the backend sums the caller's own `ai_usage_events`
+since UTC midnight (`GET /api/v1/monitoring/spend-today`) — cost, tokens, cache
+ratio, `calls` — and anchors the day's cap (`CAREEROS_DAILY_SPEND_CAP_USD`,
+default `10.00`, `0` removes the bar). A gauge, never a gate: nothing is refused.
+Measured live: `spend_check_*` showed `calls: 1 → 2, costUsd: 0.002655 (unchanged
+on the replay), cachedTokens: 4997, cacheHitRatio: 0.0 → 0.5` after an identical
+jd_analyze returned from the exact-match cache in 94 ms.
+
 ## What you can see yourself
 
 ```text
