@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component;
  * and as claimed jobs when it is on. One implementation of the clock's work.
  */
 @Component
-class WeeklyDigestScheduler {
+public class WeeklyDigestScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(WeeklyDigestScheduler.class);
 

@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
  * the designed messenger for a stopped clock, not this code's job to presume from.
  */
 @Component
-class RetentionScheduler {
+public class RetentionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(RetentionScheduler.class);
 

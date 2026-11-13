@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * is a logged night rather than a crashed scheduler thread.
  */
 @Component
-class IngestionScheduler {
+public class IngestionScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionScheduler.class);
 

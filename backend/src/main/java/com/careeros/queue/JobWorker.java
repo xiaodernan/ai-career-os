@@ -95,7 +95,15 @@ public class JobWorker {
             reclaim();
             drain();
         } catch (RuntimeException e) {
-            log.warn("queue tick failed ({}); the entries stay in the stream for the next tick", e.toString());
+            // A group that vanishes mid-life (Redis flush, an operator's XGROUP DESTROY, or
+            // a delete on the stream key) answers NOGROUP to every subsequent command. The
+            // process-local groupReady flag would otherwise pin this replica permanently
+            // broken for the process. The marker lives in the nested cause, not in the
+            // top-level wrapper's toString(), so walk the cause chain.
+            if (hasCause(e, "NOGROUP")) {
+                groupReady = false;
+            }
+            log.warn("queue tick failed", e);
         }
     }
 
@@ -169,6 +177,16 @@ public class JobWorker {
     }
 
     /** The tag is the registered handler's name, so a bad payload cannot mint a new series. */
+    private static boolean hasCause(Throwable e, String needle) {
+        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+            String message = cause.getMessage();
+            if (message != null && message.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private String metricKind(Entry entry) {
         String wire = entry.fields().get(JobQueue.KIND_FIELD);
         return handlers.containsKey(wire) ? wire : "unknown";
