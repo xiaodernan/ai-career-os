@@ -6192,6 +6192,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   @Component, full backend suite green). Not enabled anywhere; ingestion sweep
   and nightly verdict stay unwrapped by design.)
 
+- [x] **170** The ingestion freshness sweep stops re-fetching every feed N times
+  per night (2026-11-13).
+
+  (`IngestionSweepHandler` (`ingestion.sweep`) carries the night's work inline-able;
+  `IngestionScheduler` becomes the producer: queue disabled → every replica sweeps
+  inline exactly as shipped; enabled → one UTC-day lease
+  (`careeros:v1:lease:ingestion:<yyyy-MM-dd>`) elects the single enqueuing replica;
+  siblings stand down; refused enqueue → winner inline alone; lease error → this
+  replica inline. Cron knob unchanged. Measured: `IngestionSchedulerTest` 5/5,
+  `IngestionSweepHandlerTest` 3/3, full backend suite green on this host (every
+  context-booting IT green). Not enabled anywhere; fetch topology, per-feed
+  isolation and failure posture unchanged.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

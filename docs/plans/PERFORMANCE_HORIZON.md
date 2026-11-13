@@ -33,6 +33,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 167 | The fleet does not celebrate one expiry together: the Redis dashboard cache writes under a ±10% TTL | DashboardCacheTest 11/11 (band [40,50] over 300 seeded draws, spread non-constant, floor holds, captured Redis write inside the band) |
 | 168 | The retention sweep rides the fleet queue when it is on — one replica runs it — and stays inline exactly where it was otherwise | RetentionSchedulerTest 6/6 + RetentionSweepHandlerTest 2/2 + full backend suite green (incl. every context-booting IT) |
 | 169 | The weekly letter's two clocks race no longer — one replica per day per concern; the letter is mailed once, the digest is computed once | WeeklyDigestSchedulerTest 6/6 + WeeklyDigestComposeHandlerTest 2/2 + WeeklyDigestRetryHandlerTest 2/2 + RedisDayLease shared + full backend suite green |
+| 170 | The ingestion freshness sweep stops re-fetching every feed N times per night; one replica runs it, the rest stand down | IngestionSchedulerTest 5/5 + IngestionSweepHandlerTest 3/3 + full backend suite green (incl. every context-booting IT) |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -549,3 +550,35 @@ on this host. One honest miss caught inside this epic's own test window: a new
 CANDIDATE for the wiring mistake this class of work reliably produces (the lease
 was not a Spring bean — first IT bootstrap died of UnsatisfiedDependencyException),
 found by the full backend IT sweep and fixed by making it a @Component.
+## Epic 170 — the ingestion sweep stops re-fetching every feed nightly (verified 2026-11-13)
+
+The 03:20 ingestion sweep fired on every replica at once — every enabled feed was
+asked for its recent postings N times per night, which is N× the third-party HTTP
+requests for data the platform already pays to fetch. Politeness, relay rate
+limits, and the fleet's own egress discipline all argue for one asking voice; the
+install now has one.
+
+**Design, same honest pattern as Epics 168/169.** `IngestionSweepHandler`
+(`ingestion.sweep`) carries the night's work — the sweep call and its catch-warn
+tail — inline-capable so the same body runs inline-when-disabled and
+queue-claimed-when-enabled.
+`IngestionScheduler` becomes the producer with the UTC-day lease
+(`careeros:v1:lease:ingestion:<yyyy-MM-dd>`); queue disabled → every replica sweeps
+exactly as shipped; enabled → the lease winner enqueues, siblings stand down,
+a refused enqueue runs the winner inline alone, a lease error fails open toward the
+work. Cron knob unchanged (`careeros.ingestion.cron`).
+
+**What this is not.** Not a new fetch topology (the handler calls the same
+`sweepEnabled()`, so whatever the sweep's own behaviour and failure posture is
+unchanged — per-feed failures stay per-feed, a fatal error is still a warn), not
+enabled anywhere (e2e unchanged), not shared with the other two newly-ported clocks
+only conceptually (they ride the same lease helper, independently).
+
+**Measured.** IngestionSchedulerTest 5/5 (disabled→inline; lease-win→enqueue only;
+lease-win+refusal→inline; lease-lose→silent; lease error→inline),
+IngestionSweepHandlerTest 3/3 (wire name; one `sweepEnabled()` call per entry;
+a failed night logs and does not crash the worker). Full backend suite green at
+this tree on this host with the app stack's backend stopped; every context-booting
+IT green with the two new beans wired. Zero wire-shape change, zero client JS, zero
+new knob.
+
