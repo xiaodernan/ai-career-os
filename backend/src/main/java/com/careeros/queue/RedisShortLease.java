@@ -17,7 +17,7 @@ is this?" — with a takeover a minute after a crash, which is the smallest hone
  *
  * <p>Exactly one node wins per window: Redis setIfAbsent is atomic. The loser returns
  * false without touching the transport; the winner works; a crashed holder's lease
- * lapses and its successor acquires on its next ping. Nobody holds two keys: the node
+ * lapses and its successor acquires on its next timer wake. Nobody holds two keys: the node
  * that ran the last minute re-acquires for the next one — refresh-by-default is the
  * right semantics for a standing lease, unlike a claim the holder must remember to
  * renew.
@@ -48,7 +48,7 @@ public final class RedisShortLease {
      * and every acquisition is a clean handover with the latches doing the de-dupe.
      *
      * A Redis failure <em>throws</em>; the minute clock closes rather than duplicates —
-     * a risky chime twice can wake a phone, a silent minutes gap is what the heartbeat
+     * a risky chime twice can wake a phone, a silent minutes gap is what the missing-tick alarm
      * alarm is for (5 missed ticks trips the rule). Caller handles it.
      */
     public boolean tryAcquire(Duration ttl) {

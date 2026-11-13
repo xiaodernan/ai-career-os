@@ -3131,16 +3131,12 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # number and were caught by the assertion above, and the record of that collision names the word
     # twice more in ROADMAP.md while explaining why the rows now say `pass marker`. A census over the
     # word counts a paragraph about the word; what it must not do is let a number arrive beside one.
-    # 16 in ROADMAP.md and PERFORMANCE_HORIZON.md at 1 since Epic 123 (2026-11-11): the "Connection
-    # keep-alive needs no app code" note in the roadmap's ledger and the matching sentence in the
-    # performance horizon are the same honest decision written twice -- the keep-alive claim is
-    # load-bearing in both (it is why no code shipped), so the census grows rather than the docs
-    # being made vaguer to hide the word.
-    # 17 in ROADMAP.md and 4 in PERFORMANCE_HORIZON.md since Epics 168/169 (2026-11-13): the two
-    # fleet-scheduler entries name the heartbeat the sweep moves (Epic 168's retry and 166-history
-    # retained prose), and the weekly-letter entry adds one line naming the Monday compose clock
-    # alongside the noun — recorded here so the file does not quietly widen without a reason; the
-    # paragraph is the reason.
+    # 19 in ROADMAP.md and 9 in PERFORMANCE_HORIZON.md since the fleet-leasing pass landed
+    # (Epics 167–172, 2026-11-13): one line per clock that graduated from every-replica to
+    # some-replica -- the retention sweep's paragraph, the Monday compose and the morning retry
+    # paragraphs, the reminder ring's design and measured sections, and the ingestion row -- each
+    # naming the same noun on one line a piece. The ledger grew rather than the sentences grew
+    # vague, which is the trade this census exists to permit.
     # ALGORITHMS_HORIZON.md's 13 are the worker-liveness paragraphs of Epics 140/144/146 (the
     # consumer heartbeat behind the workqueue verdict, the delay-set black-hole warning, and the
     # reclaimed-count repair) plus Epic 147's sentence explaining that this census grew and Epic
@@ -3153,8 +3149,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # it counts (10 → 11 in Epic 147, 11 → 13 in Epic 148) — the ledger grows rather than the
     # sentences being made vaguer to hide the word. The census is self-referential by design: a
     # paragraph about the word is still the word, and none of them states a second interval.
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 17,
-                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 4,
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 19,
+                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 9,
                         "ALGORITHMS_HORIZON.md": 13}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
@@ -3187,7 +3183,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
         # 35.1's minute clock: a fifth reader of the word, with a gauge of its own because a
         # tick that stops is not the morning sweep's fault and its alert has to say so.
-        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 14),
+        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 17),
+        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 96),
         # 33.3's morning ring explains why it adds no second marker: same pass, same clock. 35.1
         # extended the class doc and the due-tick recorder, so the meter now states the word twice.
         ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 13),
@@ -3208,8 +3205,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("frontend/src/components/ai/task-stream.tsx", 21),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
-        "listed so a claim cannot escape the census above by losing its number -- the fourteen Java rows "
-        "are the other clocks that share the word, kept here so a fifteenth clock is a red, not a silent join")
+        "listed so a claim cannot escape the census above by losing its number -- the fifteen Java rows "
+        "are the other clocks that share the word, kept here so a sixteenth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         # 86.1's door walk grew `consume` by the retry loop, so the parser's trailing
         # comment moved 136 -> 155; the sentence itself did not change.
