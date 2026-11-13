@@ -843,6 +843,8 @@ export function useAIUsage() {
         requests: num(raw, "requests"),
         totalTokens: num(raw, "totalTokens"),
         costUsd: num(raw, "costUsd"),
+        inputTokens: num(raw, "inputTokens"),
+        cachedTokens: num(raw, "cachedTokens"),
       };
     },
   });

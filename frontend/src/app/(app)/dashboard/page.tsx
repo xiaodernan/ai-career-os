@@ -713,7 +713,8 @@ export default function DashboardPage() {
                       retrying={aiUsage.isFetching}
                     />
                   ) : (aiUsage.data?.requests ?? 0) > 0 ? (
-                    <dl className="grid grid-cols-3 gap-2 text-center">
+                    <>
+                      <dl className="grid grid-cols-3 gap-2 text-center">
                       <div>
                         <dt className="text-2xs font-medium tracking-wide text-muted-foreground uppercase">
                           {t("dashboard.requests")}
@@ -739,7 +740,19 @@ export default function DashboardPage() {
                         </dd>
                       </div>
                     </dl>
-                  ) : (
+                    {/* Cache readout: one line, rendered only when the window saw cached input. */}
+                    {aiUsage.data!.cachedTokens != null && aiUsage.data!.cachedTokens > 0 ? (
+                      <div className="mt-3 flex items-center justify-between rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs">
+                        <span className="text-muted-foreground">
+                          {t("dashboard.cachedTokens", { count: String(formatNumber(aiUsage.data!.cachedTokens!)) })}
+                        </span>
+                        <span className="tabular-nums font-medium text-primary">
+                          {`${Math.round((aiUsage.data!.cachedTokens! / (aiUsage.data!.inputTokens ?? 1)) * 100)}% ${t("dashboard.cacheHitRate")}`}
+                        </span>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
                     <EmptyState
                       icon={<Sparkles aria-hidden />}
                       title={t("dashboard.noSpend")}

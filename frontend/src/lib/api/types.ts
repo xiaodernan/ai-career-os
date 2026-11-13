@@ -774,6 +774,9 @@ export interface AIUsageSummary {
   requests?: number;
   totalTokens?: number;
   costUsd?: number;
+  inputTokens?: number;
+  /** Prompt tokens served from a cache in the window — the activity pages read the same field per run. */
+  cachedTokens?: number;
 }
 
 export interface DashboardMetrics {

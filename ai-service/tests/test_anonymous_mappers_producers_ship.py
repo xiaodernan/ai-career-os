@@ -21,11 +21,11 @@ The fourth was the finding, and #226 fixed it. `useAIUsage` targets `/ai-usage/s
 handler builds a `Map<String, Object>` by hand and emits exactly eight keys; the hook used to ask
 thirty names of that object -- a second-unwrap probe (`summary`/`data`) that could never fire,
 three breakdown rows (`byAgent`, `byModel`, `daily`) no producer authors, and twenty-four dead
-aliases spread across every reader call. The hook now asks the three of the eight the dashboard's
-"Agent spend" card actually shows -- `requests`, `totalTokens` and `costUsd` -- each in the
-handler's own spelling; no alias chain survives. The five columns nothing renders yet
-(`inputTokens`, `outputTokens`, `cachedTokens`, `perModel`, `runsByStatus`) are declared in
-EMITTED_UNASKED rather than asked for. `perModel` is worth knowing about: it is an object keyed
+aliases spread across every reader call. The hook now asks the five of the eight the dashboard's
+"Agent spend" card actually shows -- `requests`, `totalTokens`, `costUsd`, `inputTokens` and
+`cachedTokens` (21.x's cache ladder surfaced the two columns in the same card) -- each in the
+handler's own spelling; no alias chain survives. The three columns nothing renders yet
+(`outputTokens`, `perModel`, `runsByStatus`) are declared in EMITTED_UNASKED rather than asked for. `perModel` is worth knowing about: it is an object keyed
 by model name, and the deleted `byModel` row could never have carried those names -- `list`
 returns `Object.values` for a keyed map, so a future breakdown UI needs an entries-reader, not
 this hook. The hook has a caller now: the dashboard's "Agent spend" card mounts `useAIUsage` and
@@ -117,7 +117,8 @@ ASKS = {
                                 ["createdAt", "created_at"],
                                 ["lastMessagePreview", "preview", "lastMessage"],
                                 ["messageCount", "message_count"]],
-    ("useAIUsage", "raw"): [["requests"], ["totalTokens"], ["costUsd"]],
+    ("useAIUsage", "raw"): [["requests"], ["totalTokens"], ["costUsd"],
+                                   ["inputTokens"], ["cachedTokens"]],
 }
 
 # The other end of every row: pinned here and re-derived from the Java by the cases below.
@@ -156,7 +157,7 @@ UNAUTHORED = {
 # per-model breakdown (`perModel`, an object keyed by model name -- `list` would return its values
 # and lose the names, so a future breakdown UI needs an entries-reader, not this hook), and the
 # runs-by-status map.
-EMITTED_UNASKED = {"cachedTokens", "inputTokens", "outputTokens", "perModel", "runsByStatus"}
+EMITTED_UNASKED = {"outputTokens", "perModel", "runsByStatus"}
 
 # (hook, receiver) -> (call count, name count). Derived by the scanner below and pinned so a
 # narrowed scan, a lost import alias or a moved call has to be reconciled, not absorbed.
@@ -164,7 +165,7 @@ SCANNER_SHAPE = {
     ("useSavedJobs", "j"): (2, 2),
     ("useKnowledgeNotes", "n"): (8, 16),
     ("useConversations", "c"): (6, 12),
-    ("useAIUsage", "raw"): (3, 3),
+    ("useAIUsage", "raw"): (5, 5),
 }
 
 READER_VOCABULARY = {"list": "listOf", "pick": "pick", "str": "str", "num": "num",
@@ -555,12 +556,12 @@ def test_the_conversation_row_asks_twelve_and_six_screen_names_reach_the_copilot
         "the digest count has a reader now -- it was asked-and-never-shown when this was measured")
 
 
-def test_ai_usage_summary_emits_eight_keys_and_the_hook_asks_three_of_them():
+def test_ai_usage_summary_emits_eight_keys_and_the_hook_asks_five_of_them():
     """The headline: a hand-built map with eight keys against a reader that asked for thirty.
 
-    #226 deleted twenty-seven of the thirty asks -- the dead aliases and the three breakdown rows
-    -- along with the envelope probe's two. The three that remain are the ones the spend card
-    shows, each in the handler's own spelling; the five emitted columns nothing renders are
+    #226 deleted twenty-five of the thirty asks -- the dead aliases and the three breakdown rows
+    -- along with the envelope probe's two. The five that remain are the ones the spend card
+    shows, each in the handler's own spelling; the three emitted columns nothing renders are
     declared in EMITTED_UNASKED, not asked for.
     """
     emitted = emitted_usage_keys()
@@ -568,7 +569,7 @@ def test_ai_usage_summary_emits_eight_keys_and_the_hook_asks_three_of_them():
     grouped = calls_for("useAIUsage")
     assert [g for g in grouped["raw"]] == ASKS[("useAIUsage", "raw")]
     asked = {name for call in grouped["raw"] for name in call}
-    assert asked == {"costUsd", "requests", "totalTokens"}, (
+    assert asked == {"cachedTokens", "costUsd", "inputTokens", "requests", "totalTokens"}, (
         f"the usage hook now answers {sorted(asked)} off the summary")
     assert asked - set(emitted) == DEAD[("useAIUsage", "raw")] == set(), (
         f"dead asks are now {sorted(asked - set(emitted))}")
@@ -642,10 +643,11 @@ def test_every_hook_is_named_by_the_screen_that_mounts_it():
 
 
 def test_the_scanner_sees_every_call_and_name_in_this_population():
-    """The census itself, pinned: 19 calls and 33 names across four receivers, none absorbed.
+    """The census itself, pinned: 21 calls and 35 names across four receivers, none absorbed.
 
     19/33 rather than 17/31 since #230: `useSavedJobs`'s row went from a bare spread to two named
-    reads, the wrapper's own `note` and `savedAt`."""
+    reads, the wrapper's own `note` and `savedAt`. 21/35 since 21.x: the usage hook asks the two
+    columns the activity cache ladder introduced (`inputTokens`, `cachedTokens`)."""
     vocabulary = reader_vocabulary()
     assert vocabulary == READER_VOCABULARY, (
         f"the reader vocabulary resources.ts can reach is now {vocabulary}; this file's scan is "
@@ -661,7 +663,7 @@ def test_the_scanner_sees_every_call_and_name_in_this_population():
             f"{SCANNER_SHAPE[key][0]}/{SCANNER_SHAPE[key][1]}")
         totals["calls"] += shape[0]
         totals["names"] += shape[1]
-    assert (totals["calls"], totals["names"]) == (19, 33), (
+    assert (totals["calls"], totals["names"]) == (21, 35), (
         f"the census is {totals}; every dead-name claim above is measured over these calls, so "
         "re-derive the tables before changing this number")
 
