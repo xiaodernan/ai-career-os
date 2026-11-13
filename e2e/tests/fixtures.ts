@@ -84,6 +84,29 @@ export async function registerUser(
       `Or wait ~60s for the window to slide.`
     );
   }
+  // A register that times out but actually succeeded answers the retry with 409:
+  // the account is ours by construction (the email is this run's), so the right
+  // move is to log in and take the tokens, not to fail the spec. A fresh boot's
+  // first register is exactly the slow case that trips this.
+  if (res.status() === 409) {
+    const login = await postWithRetry(request, `${API_URL}/auth/login`, {
+      email,
+      password: TEST_PASSWORD,
+    });
+    expect(login.status(), `login ${email} -> ${await login.text()}`).toBe(200);
+    const body = (await login.json()) as {
+      data: { user: { id: string }; tokens: { accessToken: string; refreshToken: string } };
+    };
+    return {
+      id: body.data.user.id,
+      email,
+      password: TEST_PASSWORD,
+      displayName,
+      accessToken: body.data.tokens.accessToken,
+      refreshToken: body.data.tokens.refreshToken,
+    };
+  }
+
   expect(res.status(), `register ${email} -> ${await res.text()}`).toBe(201);
   const body = (await res.json()) as {
     data: { user: { id: string }; tokens: { accessToken: string; refreshToken: string } };

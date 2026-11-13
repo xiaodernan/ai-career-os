@@ -122,7 +122,11 @@ describe("the browser's copy", () => {
     // cards made: a component of its own, with its own copy and its own census line.
     // 171 with `components/common/metric-card.tsx`, the KPI tile the monitoring and
     // analysis pages had each been carrying as their own copy; one implementation now.
-    expect(browserSources().length).toBe(171);
+    // 175 with 21.x's three parallel browser sources: `components/ai/fit-breakdown.tsx`
+    // (the match screen's section renderer), `components/dashboard/activity-heatmap.tsx`
+    // (the reader's pace as one grid, the Epic 184 surface), and
+    // `app/(app)/studio/page.tsx` (the paste-to-tailor front door).
+    expect(browserSources().length).toBe(175);
   });
 
   it("finds a sentence, however long it is", () => {

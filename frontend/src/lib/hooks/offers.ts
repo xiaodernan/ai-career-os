@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
+import { toast } from "sonner";
 import { translate } from "@/lib/i18n/locale-context";
 import type {
   CounterOfferDraft,
@@ -275,7 +276,7 @@ export function useSaveOffer() {
 export function useDeleteOffer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.delete(endpoints.offerShelfRow(id)),
+    mutationFn: (id: string) => api.remove<void>(endpoints.offerShelfRow(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["offers", "shelf"] });
       toast.success(translate("offers.shelfDeleted"));

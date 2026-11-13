@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { BadgeDollarSign, Pencil, Plus, Trash2, Trophy } from "lucide-react";
@@ -23,8 +23,8 @@ import { remoteTypeWord } from "@/lib/status-words";
 /**
  * The offer shelf (Epic 185): the reader's own record of the offers they hold.
  *
- * The compare math is deliberately one line — total comp = base + bonus + annualized
- * equity — and the best row wears the trophy, so a reader with three offers sees the
+ * The compare math is deliberately one line 鈥?total comp = base + bonus + annualized
+ * equity 鈥?and the best row wears the trophy, so a reader with three offers sees the
  * winner without doing arithmetic. The deadline chip is the shelf's clock: the row
  * that lapses soonest is the decision the reader is actually making, and inside a
  * week it turns the shelf's warning color.
@@ -163,7 +163,7 @@ export function OfferShelf() {
                         {row.bonus > 0 && ` + ${money(row.bonus, row.currency, locale)}`}
                         {row.equity > 0 &&
                           ` + ${money(row.equity, row.currency, locale)} ${t("offers.shelfEquityYear")}`}
-                        {" · "}
+                        {" 路 "}
                         {remoteTypeWord(t, row.remoteType)}
                       </p>
                     </div>
@@ -208,56 +208,56 @@ export function OfferShelf() {
           </ul>
         )}
 
-        {/* The entry row: one line per number, no vest schedule — the shelf keeps
+        {/* The entry row: one line per number, no vest schedule 鈥?the shelf keeps
             the annualized result the compare action already computed. */}
         <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_7rem_7rem_9rem_auto]">
             <div className="space-y-1">
-              <Label htmlFor="offer-label" className="text-2xs text-muted-foreground">
+              <Label htmlFor="offer-shelf-label" className="text-2xs text-muted-foreground">
                 {t("offers.shelfLabel")}
               </Label>
               <Input
-                id="offer-label"
+                id="offer-shelf-label"
                 value={draft.label}
                 onChange={(e) => setDraft({ ...draft, label: e.target.value })}
                 placeholder={t("offers.shelfLabelPlaceholder")}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="offer-base" className="text-2xs text-muted-foreground">
+              <Label htmlFor="offer-shelf-base" className="text-2xs text-muted-foreground">
                 {t("offers.shelfBase")}
               </Label>
               <Input
-                id="offer-base"
+                id="offer-shelf-base"
                 inputMode="numeric"
                 value={draft.base}
                 onChange={(e) => setDraft({ ...draft, base: e.target.value })}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="offer-bonus" className="text-2xs text-muted-foreground">
+              <Label htmlFor="offer-shelf-bonus" className="text-2xs text-muted-foreground">
                 {t("offers.shelfBonus")}
               </Label>
               <Input
-                id="offer-bonus"
+                id="offer-shelf-bonus"
                 inputMode="numeric"
                 value={draft.bonus}
                 onChange={(e) => setDraft({ ...draft, bonus: e.target.value })}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="offer-equity" className="text-2xs text-muted-foreground">
+              <Label htmlFor="offer-shelf-equity" className="text-2xs text-muted-foreground">
                 {t("offers.shelfEquity")}
               </Label>
               <Input
-                id="offer-equity"
+                id="offer-shelf-equity"
                 inputMode="numeric"
                 value={draft.equity}
                 onChange={(e) => setDraft({ ...draft, equity: e.target.value })}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="offer-remote" className="text-2xs text-muted-foreground">
+              <Label htmlFor="offer-shelf-remote" className="text-2xs text-muted-foreground">
                 {t("offers.shelfRemote")}
               </Label>
               <Select
@@ -266,7 +266,7 @@ export function OfferShelf() {
                   setDraft({ ...draft, remoteType: v as Draft["remoteType"] })
                 }
               >
-                <SelectTrigger id="offer-remote">
+                <SelectTrigger id="offer-shelf-remote">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
