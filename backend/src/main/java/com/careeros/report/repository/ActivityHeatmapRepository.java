@@ -10,10 +10,11 @@ import org.springframework.stereotype.Repository;
 /**
  * The activity heatmap's four daily counts, read in one round trip (Epic 184).
  *
- * <p>Each arm filters by (user_id, its own clock) — the composite shape V10 indexes —
+ * <p>Each arm filters by (user_id, its own clock) — the composite shape V39 indexes —
  * and the union groups once, so the endpoint never fans out per day or per table. The
  * arms' clocks are deliberately their tables' own: a recruiter reply is dated by when
- * it was received, not when the row landed; an application by when the reader filed it.
+ * it was received, not when the row landed; an interview by when it started, not when
+ * it was finally scored; an application by when the reader filed it.
  */
 @Repository
 public class ActivityHeatmapRepository {
@@ -34,8 +35,8 @@ public class ActivityHeatmapRepository {
           SELECT CAST(created_at AT TIME ZONE 'UTC' AS date) AS day, 'application' AS kind
             FROM applications WHERE user_id = :userId AND created_at >= :since
           UNION ALL
-          SELECT CAST(created_at AT TIME ZONE 'UTC' AS date), 'interview'
-            FROM interview_sessions WHERE user_id = :userId AND created_at >= :since
+          SELECT CAST(started_at AT TIME ZONE 'UTC' AS date), 'interview'
+            FROM interview_sessions WHERE user_id = :userId AND started_at >= :since
           UNION ALL
           SELECT CAST(received_at AT TIME ZONE 'UTC' AS date), 'reply'
             FROM inbound_mails WHERE user_id = :userId AND received_at >= :since
