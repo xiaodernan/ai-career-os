@@ -117,7 +117,10 @@ describe("the browser's copy", () => {
     // it is a new browser source, so the population moved. 169 with Epic 153's
     // `components/dashboard/recent-activity.tsx`, the card that finally reads the event log
     // the backend has been sending on `DashboardResponse.recentActivity` all along.
-    expect(browserSources().length).toBe(169);
+    // 170 with 21.x's `components/monitoring/spend-today-card.tsx`, the card that renders
+    // the day's AI spend straight from the ledger — the same split the nightly/engines
+    // cards made: a component of its own, with its own copy and its own census line.
+    expect(browserSources().length).toBe(170);
   });
 
   it("finds a sentence, however long it is", () => {
