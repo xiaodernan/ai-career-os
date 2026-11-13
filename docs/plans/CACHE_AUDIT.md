@@ -101,6 +101,17 @@ relay itself; the earlier fix had always-on zero-reporting on streams and a
 pricing row missing the actual model; both are shipped (Epic 173). The remaining
 low-cache reading is the workload shape documented above, not a code defect.
 
+## Streaming is named, not guessed — and counted (measured 2026-11-13)
+
+Beyond the ledger fix, the engine's own `llm_call` trace row now carries
+`"mode": "stream" | "complete"`, so a trace reader can finally answer "is this
+call streaming?" without inferring it. Driven live: one copilot SSE turn
+finished in 10.3 s with 59 `event:token` frames, and every `llm_call` row it
+recorded in `agent_traces` reads `mode = 'stream'` (step_1 … step_3). The trace
+payloads already composed by the AI Activity timeline — `step_label` shows
+`step_2 · gpt-6-sol · stream` — the observation rides the same row the
+timeline draws.
+
 ## What you can see yourself
 
 ```text

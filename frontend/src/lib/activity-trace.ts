@@ -112,7 +112,11 @@ export function stepLabel(
     case "llm_call": {
       const model = str(payload, "model");
       const step = str(payload, "kind", "step");
-      return [step, model].filter(Boolean).join(" · ") || word;
+      // Models write `mode` since Epic 174's accounting pass (stream vs complete);
+      // the streaming turn this stack keeps behind SSE names itself here.
+      const mode = str(payload, "mode");
+      const base = [step, model].filter(Boolean).join(" · ") || word;
+      return mode ? `${base} · ${mode}` : base;
     }
     case "tool_call":
       return str(payload, "tool", "name") ?? word;

@@ -93,7 +93,7 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
         cost, resp.latency_ms)
     if run_id:
         await observability.trace(run_id, "llm_call", agent, {
-            "kind": kind, "model": resp.model,
+            "kind": kind, "model": resp.model, "mode": "complete",
             "in_tokens": resp.usage.input_tokens, "out_tokens": resp.usage.output_tokens,
             "cost_usd": round(cost, 6), "latency_ms": resp.latency_ms,
             "tools": [tc.name for tc in resp.tool_calls],
@@ -197,7 +197,7 @@ async def ask_stream(req: LLMRequest, *, user_id: str | None = None,
         usage.input_tokens, usage.output_tokens, usage.cached_tokens, cost, latency_ms)
     if run_id:
         await observability.trace(run_id, "llm_call", agent, {
-            "kind": kind, "model": model,
+            "kind": kind, "model": model, "mode": "stream",
             "in_tokens": usage.input_tokens, "out_tokens": usage.output_tokens,
             "cost_usd": round(cost, 6), "latency_ms": latency_ms,
             "tools": [tc.name for tc in tool_calls],

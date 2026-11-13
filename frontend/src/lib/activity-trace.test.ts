@@ -43,6 +43,7 @@ const careerRun = {
       payload: {
         kind: "step_1",
         model: "mock-model",
+        mode: "stream",
         tools: ["search_resume"],
         cost_usd: 0,
         in_tokens: 249,
@@ -92,11 +93,18 @@ describe("activity trace mapping", () => {
     const { steps } = normalizeRunTrace(en, careerRun);
     expect(steps.map((s) => s.label)).toEqual([
       "chat_turn",
-      "step_1 · mock-model",
+      "step_1 · mock-model · stream",
       "search_resume",
       "search_resume result",
       "Here is what I found.",
     ]);
+  });
+
+  it("a trace without mode still labels without the trailing answer-path word", () => {
+    expect(stepLabel(en, "llm_call", { kind: "step_1", model: "mock-model" }))
+      .toBe("step_1 · mock-model");
+    expect(stepLabel(zh, "llm_call", { kind: "step_1", model: "mock-model", mode: "stream" }))
+      .toBe("step_1 · mock-model · stream");
   });
 
   it("keeps latency and payload so the timeline can expand real data", () => {
