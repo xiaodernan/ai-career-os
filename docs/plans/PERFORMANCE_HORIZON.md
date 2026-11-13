@@ -35,6 +35,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 169 | The weekly letter's two clocks race no longer — one replica per day per concern; the letter is mailed once, the digest is computed once | WeeklyDigestSchedulerTest 6/6 + WeeklyDigestComposeHandlerTest 2/2 + WeeklyDigestRetryHandlerTest 2/2 + RedisDayLease shared + full backend suite green |
 | 170 | The ingestion freshness sweep stops re-fetching every feed N times per night; one replica runs it, the rest stand down | IngestionSchedulerTest 5/5 + IngestionSweepHandlerTest 3/3 + full backend suite green (incl. every context-booting IT) |
 | 171 | The fleet's user pings stop multiplying: one node rings every minute, custody rotates with a 90s lease | ReminderSchedulerTest 8/8 (window arithmetic intact + 4 new fleet-dispatch pins) + full backend suite green |
+| 172 | The enablement is proved end to end and the worker heals a vanished group | FleetWiringIT 2/2 (context citizenship of every Epic 168–171 bean + one real job flowing through producer→stream→consumer→handler exactly once); JobWorker resets its group horizon from the NOGROUP nested cause + logs the stack; schedulers made public like the rest of the component surface; verify_gates 569 passed; e2e 70/70 |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -620,4 +621,44 @@ calls and the heartbeat holds; Redis down → closed, neither half runs; lost th
 re-pings, because the latch already lives in the service). Full backend suite green
 on this host with the app stack's backend stopped. Docker-compose and e2e stay
 byte-identical.
+
+## Epic 172 — the enablement is proved end to end, and the worker heals a vanished group (verified 2026-11-13)
+
+The four fleet knobs shipped in Epics 168–171 were built to a unit-tested bar. The
+honest gap was the bar itself: a unit suite cannot prove that the beans composed
+across three packages all land inside one application context, or that a producer's
+entry reaches a consumer's handler through the real Redis-Stream path rather than a
+mock. This epic closes both holes in the same shape as the earlier work it backs:
+an IT on the dedicated IT database and the dedicated IT Redis that boots the whole
+context with the queue enabled, and a real entry carrying a probe through the
+entire path — producer, XADD to the IT Redis, consumer group, the probe handler,
+counted calls, an empty pending list at the end.
+
+**What the IT found that the unit suite could not.** The worker's `groupReady`
+flag was process-local; deleting the stream (or flushing Redis) made every
+subsequent tick answer NOGROUP to every command and left the replica permanently
+broken for the process. The fix walks the cause chain for NOGROUP and resets the
+flag, so the next tick's `ensureGroup` recreates the group and the fleet resumes on
+its feet. The IT also left the tick's catch-all with the stack at the log line —
+a quieter log would hide the frames needed when the fleet stops again. And three
+scheduler components shipped package-private while every sibling component is
+public; visibility mattered more than one concept of encapsulation — they are
+public now like the rest, and the IT proves the boot rather than just asserting
+it would work.
+
+**What this is not.** Not enabled anywhere (`CAREEROS_QUEUE_ENABLED=false`,
+e2e unchanged; `byte-identical` e2e stays byte-identical by design — the feature
+are all off in every environment), not a second attempt at installing the queue
+(that shipped in Epic 162), not distributed settlement (job-level at-least-once is
+Epic 168's promise and stands).
+
+**Measured.** FleetWiringIT 2/2 (every composed fleet bean boots in one context;
+one real entry flows producer→stream→consumer→handler exactly once with pending
+left empty). JobQueueIT 5/5 re-run at this tree after the worker fix. JobWorkerTest
+15/15 untouched. Every relevant suite green at this tree (reports show zero
+failing test class; the weekly IT runs suffer the box's fork-start OOM and the
+it-redis bootstrap crossing pg's slot window — both documented in the honesty
+ledger as environment, not code). verify_gates 569 passed. e2e rebuilt at this
+tree with the mock stack: 70 passed (6.0m target: `70 passed`, deadline mesh spec
+driven through the gateway at 823ms).
 

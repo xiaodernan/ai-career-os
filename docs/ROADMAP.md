@@ -6221,6 +6221,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   four fleet pins added), full backend suite green at this tree on this host.
   Docker-compose and e2e byte-identical.)
 
+- [x] **172** The enablement is proved end to end, and the worker heals a
+  vanished group (2026-11-13).
+
+  (`FleetWiringIT` boots the real IT context with the queue enabled and proves
+  every composed fleet bean is a context citizen (three handlers, three
+  schedulers, JobWorker), then runs one real entry probe→producer→stream→
+  consumer→handler exactly once with the PEL left empty. The IT revealed a
+  real resilience defect invisible to unit suites: a group that vanishes
+  mid-life (Redis flush / XGROUP DESTROY / stream delete) made every tick
+  answer NOGROUP forever after, pinning that replica permanently broken —
+  the worker's catch-all now walks the cause chain for NOGROUP and resets the
+  process-local `groupReady` so the next `ensureGroup` recreates the group.
+  The three schedulers are now public like the rest of the component surface
+  (the IT could not boot otherwise). Measured: FleetWiringIT 2/2; JobQueueIT
+  5/5 re-run at this tree; every relevant suite's reports show 0 failing
+  classes; verify_gates 569 passed; e2e at this tree with the mock stack —
+  70 passed (the previous two full suite runs collided with the other
+  concurrent session saturating Postgres' 100 slots; re-ran when the box
+  quieted).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
