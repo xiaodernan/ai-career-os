@@ -6355,6 +6355,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   GatewayFallbackTest 2/2 green with the renamed code; full gateway suite 50/50;
   1307 vitest passed; tsc clean.)
 
+- [x] **180** Every model call in the trace says which transport answered it — `mode: stream | complete` at the call site, visible in the timeline (2026-11-13).
+
+  (The AI Activity timeline could distinguish a streaming copilot step from a one-shot
+  feature call only by grepping source. The `llm_call` trace payload now carries
+  `mode: "stream" | "complete"`, set where each path actually branches; the frontend
+  timeline appends the mode when the row declares one (`step_2 · gpt-6-sol · stream`),
+  the trace test suite pins both branches end-to-end against a scripted provider —
+  `test_the_trace_names_its_answer_path.py` 4/4 — and the live gpt-6-sol turn records
+  `mode=stream` for every step. The gateway's own fallback for a dead backend now speaks
+  the reader's language on the same table, `BACKEND_UNAVAILABLE` — the gate that bans
+  table entries answering codes nothing mints reads the gateway as a third minter
+  instead of ignoring it; its own owner-tested fallback rows ride the shared sentence.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
