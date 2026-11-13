@@ -67,6 +67,13 @@ class OpenAICompatProvider:
             "max_tokens": req.max_tokens,
             "stream": stream,
         }
+        # OpenAI's streaming contract only reports usage in the final chunk when the caller
+        # asks for it. Without this, a gateway mirroring OpenAI (such as this stack's dev
+        # endpoint) omits `usage` from the stream entirely or strips `prompt_tokens_details`,
+        # and every recorded cached_tokens zeroes out — the inaccurate reporting users
+        # observe as "streaming shows better caching than non-streaming".
+        if stream:
+            p["stream_options"] = {"include_usage": True}
         tools = _tools_openai(req)
         if tools:
             p["tools"] = tools

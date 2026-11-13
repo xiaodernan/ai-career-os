@@ -1,6 +1,12 @@
 """Model pricing registry (USD per 1M tokens). Unknown models cost 0 but are tracked."""
 
 PRICING: dict[str, dict[str, float]] = {
+    # The real dev gateway serves `gpt-6-sol` through the OpenAI-compatible route at
+    # `https://wkapi.pro/v1`. The gateway does not publish a price sheet; these are the
+    # nearest announced OpenAI tier (gpt-4.1-mini) and are recorded here so the prompt
+    # ledger is measuring something rather than `$0.00` — a pattern the UI otherwise
+    # silently renders as "AI is free".
+    "gpt-6-sol": {"in": 0.40, "out": 1.60, "cached_in": 0.10},
     "gpt-4o-mini": {"in": 0.15, "out": 0.60, "cached_in": 0.075},
     "gpt-4o": {"in": 2.50, "out": 10.00, "cached_in": 1.25},
     "gpt-4.1-mini": {"in": 0.40, "out": 1.60, "cached_in": 0.10},

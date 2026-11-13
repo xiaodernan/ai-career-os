@@ -6241,6 +6241,10 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   concurrent session saturating Postgres' 100 slots; re-ran when the box
   quieted).)
 
+- [x] **173** The streaming path stops reporting an empty cache silently, and cost tracking stops reporting $0 for the exact model the dev workload serves (2026-11-13).
+
+  (`openai_compat._payload` now sets `stream_options.include_usage: True` when streaming; OpenAI's streaming contract omits `usage` in the final chunk unless the caller declares it, so the production reader was blind to the cache tokens the gateway does report. `PRICING` gains `gpt-6-sol` at gpt-4.1-mini rates — the gateway publishes no price list for this route — fixing the silent $0.00 the ledger printed for every live call. Measured: `test_a_real_model_reports_the_cache.py` (opt-in) passes against `gpt-6-sol` — three identical sync calls and two identical stream calls on one loop all report warm-cache ≥ 5.9k tokens on the warm round; offline, the module skips.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
