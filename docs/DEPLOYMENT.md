@@ -816,6 +816,16 @@ It stays inert unless the operator opts in, and it never reads a key from a
 tracked file (the token is resolved from the process environment / gitignored
 `.env`, the way production does):
 
+**Why the monitoring dashboard reads cache hits at zero — and what changed (2026-11-13, Epic 173).**
+The streaming path used to complete without ever asking the gateway for `usage`,
+so every streamed call was recorded with `cached_tokens = 0` and `cost_usd = 0.00`
+— even where the gateway was reporting cache hits, which it does. Asking the
+gateway for the field (`stream_options.include_usage`) is what fixed it; the
+direct measurement is in `docs/plans/CACHE_AUDIT.md`, including the table of
+bare delivery shapes that decide whether caching can fire at all (it cannot for
+feature calls with unique prefixes — the copilot's ~6k-token system prefix is what
+hits 98–99% in the aggregate).
+
 ```bash
 cd ai-service
 CAREEROS_REAL_LLM=1 LLM_PROVIDER=openai_compat \
