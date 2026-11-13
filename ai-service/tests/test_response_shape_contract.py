@@ -3136,6 +3136,11 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # performance horizon are the same honest decision written twice -- the keep-alive claim is
     # load-bearing in both (it is why no code shipped), so the census grows rather than the docs
     # being made vaguer to hide the word.
+    # 17 in ROADMAP.md and 4 in PERFORMANCE_HORIZON.md since Epics 168/169 (2026-11-13): the two
+    # fleet-scheduler entries name the heartbeat the sweep moves (Epic 168's retry and 166-history
+    # retained prose), and the weekly-letter entry adds one line naming the Monday compose clock
+    # alongside the noun — recorded here so the file does not quietly widen without a reason; the
+    # paragraph is the reason.
     # ALGORITHMS_HORIZON.md's 13 are the worker-liveness paragraphs of Epics 140/144/146 (the
     # consumer heartbeat behind the workqueue verdict, the delay-set black-hole warning, and the
     # reclaimed-count repair) plus Epic 147's sentence explaining that this census grew and Epic
@@ -3148,8 +3153,8 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
     # it counts (10 → 11 in Epic 147, 11 → 13 in Epic 148) — the ledger grows rather than the
     # sentences being made vaguer to hide the word. The census is self-referential by design: a
     # paragraph about the word is still the word, and none of them states a second interval.
-    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 16,
-                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 1,
+    assert per_file == {"AGENTS.md": 1, "DEPLOYMENT.md": 5, "ROADMAP.md": 17,
+                        "RUNBOOK.md": 14, "SECURITY.md": 1, "PERFORMANCE_HORIZON.md": 4,
                         "ALGORITHMS_HORIZON.md": 13}, (
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
@@ -3170,9 +3175,13 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # the word and state no interval. They are not run-stream claims, but the noun census is
         # over the word, and listing them keeps its population counted rather than pruned.
         ("backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java", 13),
-        # 44.3's purge added an import above this comment block, so the span now starts at 18
-        # rather than 17; the sentence itself did not change.
-        ("backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java", 18),
+        # Epic 168's producer scheduler: its class doc explains that a stopped Monday clock
+        # is the sweep's heartbeat alarm to catch, and the span's first line names it.
+        ("backend/src/main/java/com/careeros/auth/retention/RetentionScheduler.java", 14),
+        # 44.3's purge added an import above this comment block, so the span now starts at 20
+        # rather than 18; Epic 168's nightly() removal returned it to 17. The sentence itself
+        # did not change.
+        ("backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java", 17),
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
@@ -3183,17 +3192,24 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # extended the class doc and the due-tick recorder, so the meter now states the word twice.
         ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 13),
         ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 74),
+        # Epic 169 moved the Monday clock into the fleet queue: the span moved to the handler,
+        # whose class doc carries the Monday promise; the scheduler kept its own span with the
+        # same word inside. One clock, two files, two mentions. The lease helper (Epic 169) also
+        # carries the word in its class doc: it is the scheduler's sibling, and its span encloses
+        # "the heartbeat the verification section's alarm answers".
+        ("backend/src/main/java/com/careeros/queue/RedisDayLease.java", 8),
+        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestComposeHandler.java", 12),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
-        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 11),
+        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 14),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.
         ("frontend/src/components/ai/task-stream.tsx", 21),
         ("frontend/src/lib/sse/use-sse.ts", 9),
     ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
-        "listed so a claim cannot escape the census above by losing its number -- the eleven Java rows "
-        "are the other clocks that share the word, kept here so a twelfth clock is a red, not a silent join")
+        "listed so a claim cannot escape the census above by losing its number -- the fourteen Java rows "
+        "are the other clocks that share the word, kept here so a fifteenth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         # 86.1's door walk grew `consume` by the retry loop, so the parser's trailing
         # comment moved 136 -> 155; the sentence itself did not change.
