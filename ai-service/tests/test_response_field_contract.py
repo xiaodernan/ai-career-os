@@ -3309,15 +3309,17 @@ def test_the_reads_are_actually_found():
     # object, which `_search_hits` covers. Telling them apart is what keeps each rule honest about
     # the half it cannot see.
     runs = _sites("normalizeRun")
-    assert len(runs) == 12
-    assert {s["receiver"] for s in runs} == {"raw"}
     # 12, down from 16: `traces`, `summary`, `createdAt` and `relatedHref` named nothing either run
     # record has ever carried, and the snake aliases sat beside live names in the same lists.
+    # 13 with 21.x: `cachedTokens` joined the list read with the activity pages' cache
+    # surfacing; the other two (`rootRunId`, `conversationId`) stay unmapped.
+    assert len(runs) == 13
+    assert {s["receiver"] for s in runs} == {"raw"}
     read_off_run = {k for s in runs for k in s["keys"]}
     assert (_emitted("RecentRun") | _emitted("RunItem")) - read_off_run == \
-        {"cachedTokens", "conversationId", "rootRunId"}
-    # The three columns `RunItem` sends that the browser has no place for: the cache-hit count, and
-    # the two ids the copilot timeline resolves server-side. A producer surplus, named so it cannot
+        {"conversationId", "rootRunId"}
+    # The two columns `RunItem` sends that the browser has no place for: the two ids
+    # the copilot timeline resolves server-side. A producer surplus, named so it cannot
     # grow quietly -- and `RecentRun`, the smaller of the two, is read in full.
     assert _emitted("RecentRun") - read_off_run == set()
     assert len(_emitted("JobListItem")) == 18
@@ -3563,7 +3565,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # 431 with this epic: `normalizeHealthReport`'s sixteen named reads (four on the report body,
     # seven on its summary, two on the latency pair, three on the regression rows).
     # 441 with 21.x: `normalizeAiSpendToday`'s ten named puts.
-    assert len(whole) == 441, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    # 442 with the activity cache column: one `num` in `normalizeRun` for the row the
+    # AI Activity page renders.
+    assert len(whole) == 442, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     table_reads = _key_read_calls(_search_groups_table())
     # a7ea329 taught the table to read: the letters href asks a hit for its card id so the palette can
     # deep-link to that application. It is the only named read outside every mapper, and it is bound
@@ -3745,14 +3749,15 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # This epic adds sixteen with `normalizeHealthReport`: four reads on the report body
     # (`pick` summary, two `list`s, `str` verdict), seven on its `summary` (one `pick` for
     # `latencyMs` plus six `num` scalars), two `num`s on the latency pair, three `str`s on the
-    # regression rows. 21.x adds ten more with `normalizeAiSpendToday`.
-    assert len(calls) == 456, (f"{len(calls)} accessor calls hand something to a key position: "
+    # regression rows. 21.x adds ten more with `normalizeAiSpendToday`, and one with the
+    # activity page's cache column (`num(raw, "cachedTokens")` in `normalizeRun`).
+    assert len(calls) == 457, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"441 + 16 stopped being 456: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"442 + 16 stopped being 457: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -4338,7 +4343,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # Epic 153's six (the new reader's five plus the dashboard's `list(d, "recentActivity")`) move
     # this from 407. This epic adds its sixteen paired reads with `normalizeHealthReport`.
     # It stays the population both the bare-read census below and its oracle draw on.
-    assert len(paired) == 439, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 440, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4358,7 +4363,9 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # reply waves' fourteen quoted calls, the same ones again. 404 with Epic 153's six quoted
     # calls: four `str`, one `pick` in `normalizeRecentActivity`, and the dashboard's `recentActivity`.
     # 420 with this epic's sixteen quoted calls in `normalizeHealthReport`.
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 430, \
+    # 430 with 21.x's `normalizeAiSpendToday`'s ten puts, and 431 with the same epic's one
+    # in `normalizeRun` (`num(raw, "cachedTokens")` for the activity row).
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 431, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4414,10 +4421,10 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     # `normalizeNightlyVerdict`; 362 with the apply receipt's six, the same calls the census above
     # gained. 401 with the kept-letter and reply waves' fourteen, the same calls again.
     # Epic 153's six (the new reader's five plus the dashboard's `list(d, "recentActivity")`) move
-    # this from 407. This epic's `normalizeHealthReport` adds its sixteen, the same population the
-    # censuses above now draw on.
+    # this from 407. `normalizeHealthReport` adds its sixteen and `normalizeAiSpendToday` its
+    # ten; the activity cache column's one in `normalizeRun` brings it to 440.
     # The spread-receiver census and its oracle still draw the same population.
-    assert len(walked) == 439, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 440, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [

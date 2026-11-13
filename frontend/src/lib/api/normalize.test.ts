@@ -1168,11 +1168,12 @@ describe("normalizeRun", () => {
     });
     expect(run).toMatchObject({
       id: "run-2", kind: "scheduled", status: "failed", error: "provider timeout",
-      durationMs: 1830, tokensIn: 10, tokensOut: 0,
+      durationMs: 1830, tokensIn: 10, tokensOut: 0, cachedTokens: 4,
     });
-    // cachedTokens / rootRunId / conversationId arrive and are dropped -- the row has no place for
+    // rootRunId / conversationId arrive and are dropped -- the row has no place for
     // them, and the gate's surplus floor names that set so it cannot grow quietly.
-    expect("cachedTokens" in run).toBe(false);
+    // cachedTokens joined RecentRun's/RunItem's read since 21.x: the activity row and
+    // its trace detail finally have a place for it.
     expect("traces" in run).toBe(false);
   });
 });

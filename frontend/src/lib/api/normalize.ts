@@ -1461,6 +1461,7 @@ export function normalizeRun(raw: unknown): ActivityRun {
     durationMs: num(raw, "latencyMs"),
     tokensIn: num(raw, "inputTokens"),
     tokensOut: num(raw, "outputTokens"),
+    cachedTokens: num(raw, "cachedTokens"),
     costUsd: num(raw, "costUsd"),
   };
 }

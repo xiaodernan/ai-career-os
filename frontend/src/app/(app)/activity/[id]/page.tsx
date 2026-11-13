@@ -144,6 +144,14 @@ function TracePanel({ trace }: { trace: RunTrace }) {
               <dd className="tabular-nums">{totals.costUsd ? formatUsd(totals.costUsd) : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
+              <dt className="text-muted-foreground">{t("activity.detail.cachedTokens")}</dt>
+              <dd className="tabular-nums">
+                {run.cachedTokens
+                  ? `${formatNumber(run.cachedTokens)}${run.inputTokens ? ` · ${Math.round((run.cachedTokens / run.inputTokens) * 100)}% ${t("activity.detail.ofInput")}` : ""}`
+                  : "—"}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-muted-foreground">{t("activity.detail.started")}</dt>
               <dd>{run.startedAt ? `${formatDateTime(run.startedAt, locale)} · ${relativeTime(run.startedAt, locale)}` : "—"}</dd>
             </div>

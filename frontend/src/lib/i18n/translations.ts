@@ -2443,6 +2443,7 @@ export const translations = {
       paginationLabel: "runs",
       trace: "Trace",
       rowTokens: "{count} tok",
+      rowCached: "{count} cached",
       emptyDescription:
         "Once Copilot or a matching job runs, its full trace appears here.",
       noRuns: "No agent runs yet",
@@ -2467,6 +2468,8 @@ export const translations = {
         runGoneDescription:
           "Either it was never recorded or it belongs to another workspace. Runs are only ever listed to their owner.",
         cost: "Cost",
+        cachedTokens: "Cached tokens",
+        ofInput: "of input",
         started: "Started",
         finished: "Finished",
         model: "Model",
@@ -5426,6 +5429,7 @@ export const translations = {
       paginationLabel: "运行",
       trace: "链路",
       rowTokens: "{count} 个 token",
+      rowCached: "已缓存 {count}",
       emptyDescription: "副驾驶或某个职位跑过之后，它的完整链路就会出现在这里。",
       noRuns: "还没有代理运行记录",
       detail: {
@@ -5449,6 +5453,8 @@ export const translations = {
         runGoneDescription:
           "它可能从未被记录，或者属于另一个工作区。运行记录只对它们的主人可见。",
         cost: "成本",
+        cachedTokens: "已缓存令牌",
+        ofInput: "占输入",
         started: "开始于",
         finished: "结束于",
         model: "模型",

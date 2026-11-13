@@ -6323,6 +6323,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   row (the controllers' own census would red otherwise), env examples declare the
   knob, and the bundle budget stays OK across 35 routes.)
 
+- [x] **178** The activity pages finally say when the answer came from a cache — per run, in the UI the user's language speaks (2026-11-13).
+
+  (`RunItem` already carried `cachedTokens` on the wire and the engine had reported
+  it since Epic 174, but the frontend dropped it at the normalizer and the row had
+  "no place for it". Now `ActivityRun` maps it, the activity list's meta line shows
+  a small cache glyph + count when a run was (partially) served from cache, and the
+  run detail's attribution grid shows `cachedTokens` with its share of the input
+  (`{n} cached · {pct}% of input`). Both languages keyed (`activity.rowCached`,
+  `activity.detail.cachedTokens`, `activity.detail.ofInput`); the detail path
+  already mapped `cachedTokens` off the persisted `RunItem`, so trace detail,
+  list and payload agree on one number. Field census: population 55, oracle 442,
+  paired 440, key-position 457 — one added read. Measured: 1299 vitest passed,
+  tsc clean, bundle budget OK (35 routes), frontend container rebuilt; the e2e
+  rebuilt stack here measured **70 passed (9.1m)** with the monitoring rebuild
+  included; the env-example gate remains green with the new knob declared.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

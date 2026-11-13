@@ -747,6 +747,8 @@ export interface ActivityRun {
   durationMs?: number;
   tokensIn?: number;
   tokensOut?: number;
+  /** Prompt tokens served from a cache for this run, when the provider reported them. */
+  cachedTokens?: number;
   costUsd?: number;
 }
 

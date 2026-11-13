@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Waypoints } from "lucide-react";
+import { Waypoints, Database } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
@@ -58,6 +58,13 @@ function RunRow({ run }: { run: ActivityRun }) {
             {run.durationMs ? ` · ${formatDuration(run.durationMs)}` : ""}
             {run.model && ` · ${run.model}`}
             {tokens ? ` · ${t("activity.rowTokens", { count: formatNumber(tokens) })}` : ""}
+            {run.cachedTokens ? (
+              <span className="whitespace-nowrap">
+                {" · "}
+                <Database className="inline size-3 align-[-2px] text-primary" aria-hidden />{" "}
+                {t("activity.rowCached", { count: formatNumber(run.cachedTokens) })}
+              </span>
+            ) : null}
             {run.costUsd ? ` · ${formatUsd(run.costUsd)}` : ""}
           </p>
           {run.error && (
