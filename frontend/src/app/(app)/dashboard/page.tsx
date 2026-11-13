@@ -31,6 +31,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { MetricCard } from "@/components/common/metric-card";
+import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
 import { ShareChart } from "@/components/common/bar-chart";
@@ -286,6 +287,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {/* The reader's pace, first thing under the numbers (Epic 184): six months
+              of activity in one grid, with the streak the loop is running on. */}
+          <ActivityHeatmap />
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="min-w-0 space-y-4">

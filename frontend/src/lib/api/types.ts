@@ -1005,6 +1005,24 @@ export interface ServiceTopology {
   }>;
 }
 
+/** One calendar day of the reader's pace, present even when nothing happened (Epic 184). */
+export interface ActivityHeatmapDay {
+  /** ISO date (UTC day the server grouped by). */
+  date: string;
+  applications: number;
+  interviews: number;
+  replies: number;
+  aiCalls: number;
+}
+
+/** The activity heatmap's answer: a dense grid plus the streaks the reader lives by. */
+export interface ActivityHeatmap {
+  days: number;
+  grid: ActivityHeatmapDay[];
+  streak: { current: number; longest: number };
+  grandTotal: number;
+}
+
 /** One Spring Cloud Resilience4j circuit breaker as the backend reports it (Epic 105). */
 export interface CircuitBreakerStatus {
   name: string;

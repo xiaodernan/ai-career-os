@@ -124,6 +124,8 @@ export const endpoints = {
   activityRuns: "/activity/runs",
   activityRun: (id: string) => `/activity/runs/${seg(id)}`,
   reportsDashboard: "/reports/dashboard",
+  /** Epic 184: the reader's pace as one dense day-grid; `days` is a query param. */
+  activityHeatmap: "/reports/activity-heatmap",
   /** legacy alias kept so existing hooks don't fork */
   dashboard: "/reports/dashboard",
   analysisInsightDigest: "/analysis/insight-digest",

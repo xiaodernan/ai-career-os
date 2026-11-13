@@ -12,6 +12,7 @@ import {
   normalizePage,
 } from "@/lib/api/normalize";
 import type {
+  ActivityHeatmap,
   AiSpendToday,
   DeploymentHealth,
   NightlyReport,
@@ -84,6 +85,20 @@ export function useServiceTopology() {
     queryFn: async (): Promise<ServiceTopology> =>
       (await api.get<unknown>(endpoints.systemTopology)) as ServiceTopology,
     staleTime: 30_000,
+  });
+}
+
+/**
+ * The reader's pace as one dense day-grid (Epic 184): applications, interviews,
+ * replies and AI calls per day, plus the streaks. `days` clamps server-side
+ * (14..366); a minute of staleness is fine for a grid whose cells are whole days.
+ */
+export function useActivityHeatmap(days = 182) {
+  return useQuery({
+    queryKey: ["reports", "activity-heatmap", days],
+    queryFn: async (): Promise<ActivityHeatmap> =>
+      (await api.get<unknown>(endpoints.activityHeatmap, { days })) as ActivityHeatmap,
+    staleTime: 60_000,
   });
 }
 

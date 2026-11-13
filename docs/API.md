@@ -700,6 +700,7 @@ contract does not mistake a payload shape for a filter).
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/reports/dashboard` | pipeline health, counts, recommended jobs, skill gaps, resume score, recent insights. The response also carries `recentActivity[]` — the five newest `application_events`, each an object with id, applicationId, kind, payload and createdAt (kind is one of status/note/reminder/outcome/reply, and payload holds that kind's own keys). The dashboard's "Recent activity" card reads every row and links it to its application; a newer kind still renders as a neutral line rather than being dropped |
+| GET | `/reports/activity-heatmap` | the reader's pace as one dense day-grid (Epic 184), windowed by `?days=` (clamped 14..366, default 182); grid[] carries every calendar day in the window — quiet days included — each with date (the UTC day), applications, interviews, replies (the recruiter's inbound mail, dated by received_at) and aiCalls; plus streak{current,longest} — the current chain forgives an in-progress today — and grandTotal. The dashboard's pace card reads it |
 | GET | `/activity/runs` | agent runs (`?page=&size=&agent=`) |
 | GET | `/activity/runs/{id}` | run + ordered traces (AI Activity detail) |
 | GET | `/ai-usage/summary` | tokens, requests, cached tokens, estimated cost |

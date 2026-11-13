@@ -1164,8 +1164,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(69);
-    // 69 parameters in 26 distinct names, measured: the reader's whole answer rather than a spot
+    expect(bound.length).toBe(70);
+    // 70 parameters in 26 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
     // 19.2 brought the name back for `GET /ingestion/runs` as a newest-N history, and 19.5 retired
@@ -1198,13 +1198,16 @@ describe("endpoints ↔ backend route parity", () => {
     // copy of the board's WHERE clause to answer them after the fact. 74.2 gave the shelf the
     // same `page`/`size` pair every other list carries (66 -> 68); both names were already in
     // this set. 80 gave the registry a `relation` chip filter and bound it beside the word and
-    // the window, adding the 26th distinct name to this set (68 -> 69).
+    // the window, adding the 26th distinct name to this set (68 -> 69). 184's heatmap binds
+    // `days` on `/reports/activity-heatmap` (69 -> 70) -- a window in days rather than rows,
+    // and the name is new to this set because every other window counts rows, not time.
     // The latest names are in it now.)
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",
         "kinds", "locale", "location", "maxSalary", "minSalary", "page", "q", "relation", "remote",
-        "resumeId", "size", "skills", "sort", "status", "tag", "title", "token", "unfiled",
+        "days", "resumeId", "size", "skills", "sort", "status", "tag", "title", "token",
+        "unfiled",
       ])
     );
     // nine of them spell the name Spring matches on inside the annotation, so the reader's attribute
