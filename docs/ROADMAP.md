@@ -6267,6 +6267,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   dev stack with `CACHE_BACKEND=redis` replays an identical `jd_analyze`
   without a provider round, while a different JD still bills (see CACHE_AUDIT).)
 
+- [x] **176** The metrics stop counting their own polls — reading the health report writes no run row (2026-11-13).
+
+  (The `/monitoring/health-report` bridge opened an `agent_runs` row for every
+  fetch: a fresh user polling the dashboard three times accumulated three
+  zero-token `monitoring`-agent rows, inflating the very `totalRuns` the report
+  renders and filling that reader's AI Activity feed with reads of empty runs. The
+  route now answers straight from the engine — read-only stays read-only; job
+  routes still open their runs. Measured live before/after on the rebuilt stack:
+  three polls, then the same three polls return zero `health_report` rows.
+  `test_the_health_report_does_not_meter_itself.py` pins both directions, plus the
+  response shape and a positive control on a mutating route.)
+
 - [x] **175** The monitoring dashboard stops lying flat — the cache report is visible, and the cards are wired to the answer the backend actually sends (2026-11-13).
 
   (The page rendered every metric card at its fallback — $0.00, 0 tokens, —

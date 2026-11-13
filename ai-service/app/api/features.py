@@ -704,14 +704,18 @@ class HealthReportReq(BaseModel):
 
 @router.post("/health-report")
 async def health_report_ep(req: HealthReportReq, ctx: Ctx = Depends(require_internal)):
-    """16.1 -- agent health + cost + regression verdict over a window of runs."""
-    run_id = await _run(ctx, "monitoring", "health_report")
-    result = monitoring_mod.health_report(
+    """16.1 -- agent health + cost + regression verdict over a window of runs.
+
+    This route deliberately writes no run row: it *reads* the run history, so
+    minting one per poll makes the dashboard part of the data it displays -- every
+    view inflates the next view's ``totalRuns`` and leaves a zero-token
+    ``monitoring`` row for the report's own arithmetic to count. The verdict here
+    is the one a nightly gate reads; read-only must stay read-only.
+    """
+    return monitoring_mod.health_report(
         req.runs, baseline_summary=req.baseline_summary, usage_events=req.usage_events,
         current_metrics=req.current_metrics, baseline_metrics=req.baseline_metrics,
         tolerance=req.tolerance)
-    await observability.finish_run(run_id, "completed")
-    return result
 
 
 class ParseFeedReq(BaseModel):
