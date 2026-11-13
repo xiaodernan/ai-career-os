@@ -132,6 +132,7 @@ export const endpoints = {
   digests: "/digests",
   digestsRun: "/digests/run",
   monitoringHealthReport: "/monitoring/health-report",
+  monitoringSpendToday: "/monitoring/spend-today",
   monitoringNightlyReports: "/monitoring/nightly-reports",
   monitoringNightlyVerdict: "/monitoring/nightly-reports/verdict",
   /* The discovery answer: which registry mode the deployment runs and what the load

@@ -5,6 +5,7 @@ import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportItem;
 import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
+import com.careeros.report.service.AiSpendService;
 import com.careeros.report.service.MonitoringService;
 import com.careeros.report.service.NightlyReportService;
 import java.util.Map;
@@ -31,15 +32,28 @@ public class MonitoringController {
 
     private final MonitoringService monitoring;
     private final NightlyReportService nightlyReports;
+    private final AiSpendService spend;
 
-    public MonitoringController(MonitoringService monitoring, NightlyReportService nightlyReports) {
+    public MonitoringController(MonitoringService monitoring, NightlyReportService nightlyReports,
+                               AiSpendService spend) {
         this.monitoring = monitoring;
         this.nightlyReports = nightlyReports;
+        this.spend = spend;
     }
 
     @GetMapping("/health-report")
     public Map<String, Object> healthReport(@CurrentUser AuthUser user) {
         return monitoring.healthReport(user.id());
+    }
+
+    /**
+     * Today's AI spend, straight off the ledger the model calls already write —
+     * cost, tokens, cache hit ratio, and the day's cap as the dashboard renders it.
+     * Read-only, like the health report, and like it makes no rows of its own.
+     */
+    @GetMapping("/spend-today")
+    public Map<String, Object> spendToday(@CurrentUser AuthUser user) {
+        return spend.today(user.id());
     }
 
     @GetMapping("/nightly-reports")

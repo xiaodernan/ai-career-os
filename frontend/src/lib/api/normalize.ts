@@ -53,6 +53,7 @@ import type {
   VoiceState,
   WeeklyDigest,
   HealthReport,
+  AiSpendToday,
 } from "./types";
 import { field } from "./body";
 import { seniorityYears } from "../format";
@@ -597,6 +598,26 @@ export function normalizeNightlyReport(raw: unknown): NightlyReport {
  * Missing stays undefined rather than becoming a number: a card that cannot read a
  * value shows an em dash, not a zero that lies.
  */
+export function normalizeAiSpendToday(raw: unknown): AiSpendToday {
+  // The backend route answers with the exact puts of `AiSpendService.today` (a Map
+  // the contract census reads); missing values stay zero rather than NaN so the
+  // bar renders flat instead of breaking, and the ratio stays undefined when the
+  // day carried no input.
+  const body = rec(raw);
+  return {
+    dayStart: str(body, "dayStart") ?? "",
+    costUsd: num(body, "costUsd") ?? 0,
+    inputTokens: num(body, "inputTokens") ?? 0,
+    outputTokens: num(body, "outputTokens") ?? 0,
+    cachedTokens: num(body, "cachedTokens") ?? 0,
+    calls: num(body, "calls") ?? 0,
+    cacheHitRatio: num(body, "cacheHitRatio"),
+    capUsd: num(body, "capUsd") ?? 0,
+    capEnabled: bool(body, "capEnabled") ?? false,
+    capExceeded: bool(body, "capExceeded") ?? false,
+  };
+}
+
 export function normalizeHealthReport(raw: unknown): HealthReport {
   const body = rec(raw);
   const summary = rec(pick(body, "summary"));

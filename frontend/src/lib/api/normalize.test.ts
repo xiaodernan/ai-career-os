@@ -8,6 +8,7 @@ import {
   list,
   normalizeArtifacts,
   normalizeHealthReport,
+  normalizeAiSpendToday,
   normalizeApplication,
   normalizeApplicationEvent,
   normalizeApplicationPacket,
@@ -576,6 +577,50 @@ describe("normalizeHealthReport (16.1)", () => {
     expect(report.alerts).toEqual([]);
     expect(report.regressions).toEqual([]);
     expect(report.verdict).toBe("");
+  });
+});
+
+describe("normalizeAiSpendToday (21.x)", () => {
+  it("reads the exact shape the backend route answers with", () => {
+    const today = normalizeAiSpendToday({
+      dayStart: "2026-11-13T00:00Z",
+      costUsd: 0.012345,
+      inputTokens: 10000,
+      outputTokens: 1200,
+      cachedTokens: 4500,
+      calls: 3,
+      cacheHitRatio: 0.45,
+      capUsd: 10.0,
+      capEnabled: true,
+      capExceeded: false,
+    });
+    expect(today).toEqual({
+      dayStart: "2026-11-13T00:00Z",
+      costUsd: 0.012345,
+      inputTokens: 10000,
+      outputTokens: 1200,
+      cachedTokens: 4500,
+      calls: 3,
+      cacheHitRatio: 0.45,
+      capUsd: 10.0,
+      capEnabled: true,
+      capExceeded: false,
+    });
+  });
+
+  it("keeps holes honest: zeros render flat, an undefined ratio is not a fake zero", () => {
+    const today = normalizeAiSpendToday({});
+    expect(today.costUsd).toBe(0);
+    expect(today.calls).toBe(0);
+    expect(today.cacheHitRatio).toBeUndefined();
+    expect(today.capEnabled).toBe(false);
+    expect(today.capExceeded).toBe(false);
+    expect(today.dayStart).toBe("");
+  });
+
+  it("a capped day reads the refusal flag the backend set, not a local guess", () => {
+    const today = normalizeAiSpendToday({ costUsd: 10.0, capEnabled: true, capExceeded: true });
+    expect(today.capExceeded).toBe(true);
   });
 });
 

@@ -949,9 +949,10 @@ def test_the_declaration_probes_reach_the_shapes_a_copy_would_miss():
     # module-private mapper (it is composed only by `normalizeDashboard`, never exported), so the
     # split moves to 59 exported and 10 module-private -- the ban above has to reach it too.
     # 70 with this epic's `normalizeHealthReport`: the exported reader the monitoring page takes
-    # its cards through, the same opener as every neighbour.
-    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 70, \
-        "60 exported mappers and 10 module-private ones, all through one opener"
+    # its cards through, the same opener as every neighbour. 71 with 21.x's
+    # `normalizeAiSpendToday`, the spend-today card's reader.
+    assert len(re.findall(TS_OPENER.format(name=r"(\w+)"), source)) == 71, \
+        "61 exported mappers and 10 module-private ones, all through one opener"
     assert "export function normalizePage(" not in source, \
         "the generic really does sit between the name and the paren, so a literal opener finds nothing"
     assert _ts_function_body("normalizePage").startswith("export function normalizePage<T>(")
@@ -3592,7 +3593,11 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1733 rather than 1729 since the `HealthReport` interface gained the two prompt-cache
         # lines (`totalCachedTokens`, `cacheHitRatio`) above the trace union; the union itself
         # did not move.
-        ("types.ts", 1733, "kind:"),
+        # 1745 rather than 1733 since 21.x's `AiSpendToday` interface joined above the trace
+        # union; the union itself did not move.
+        # 1753 rather than 1745 since the 21.x interface's doc comment grew the file by
+        # eight more lines above the union.
+        ("types.ts", 1753, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

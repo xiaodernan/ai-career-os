@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ErrorState } from "@/components/common/error-state";
 import { PageHeader } from "@/components/common/page-header";
 import { BarChart } from "@/components/common/bar-chart";
@@ -13,7 +14,8 @@ import { NightlyHistory } from "@/components/monitoring/nightly-history";
 import { ServiceEngines } from "@/components/monitoring/service-engines";
 import { ServiceResilience } from "@/components/monitoring/service-resilience";
 import { ServiceTopology } from "@/components/monitoring/service-topology";
-import { useHealthReport } from "@/lib/hooks/monitoring";
+import { useHealthReport, useAiSpendToday } from "@/lib/hooks/monitoring";
+import type { AiSpendToday } from "@/lib/api/types";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
 import { healthVerdictWord } from "@/lib/status-words";
@@ -31,7 +33,9 @@ function percent(value?: number): string {
 export default function MonitoringPage() {
   const { t } = useLocale();
   const report = useHealthReport();
+  const spend = useAiSpendToday();
   const data = report.data;
+  const spendData = spend.data;
 
   return (
     <div className="space-y-6">
@@ -40,7 +44,7 @@ export default function MonitoringPage() {
         title={t("monitoring.title")}
         description={t("monitoring.description")}
         actions={
-          <Button variant="outline" size="sm" onClick={() => void report.refetch()}>
+          <Button variant="outline" size="sm" onClick={() => { void report.refetch(); void spend.refetch(); }}>
             {t("common.refresh")}
           </Button>
         }
@@ -132,6 +136,16 @@ export default function MonitoringPage() {
             </CardHeader>
           </Card>
 
+          {/* Today's spend (21.x): the one number the user can act on, straight off
+              the ledger the engine books every model call to. The bar is the reading,
+              not a gate — nothing here refuses or throttles; `0` in the cap removes it. */}
+          <SpendTodayCard
+            spend={spendData}
+            pending={spend.isPending}
+            error={spend.isError ? spend.error : null}
+            onRetry={() => void spend.refetch()}
+          />
+
           {/* The latency pair, as a chart: the p50 is the experience and the
               p95 is the tail, and one number for each says less than the two
               side by side. */}
@@ -217,6 +231,88 @@ export default function MonitoringPage() {
       {/* The engine fleet the backend can call right now (Epic 108.23). */}
       <ServiceEngines />
     </div>
+  );
+}
+
+function SpendTodayCard({
+  spend,
+  pending,
+  error,
+  onRetry,
+}: {
+  spend?: AiSpendToday;
+  pending: boolean;
+  error: unknown;
+  onRetry: () => void;
+}) {
+  const { t } = useLocale();
+
+  if (pending) {
+    return <Skeleton className="h-40 rounded-xl" aria-label={t("monitoring.spendToday")} />;
+  }
+  if (error) {
+    return (
+      <ErrorState
+        title={t("monitoring.spendTodayFailed")}
+        error={error}
+        onRetry={onRetry}
+      />
+    );
+  }
+  if (!spend) {
+    return null;
+  }
+  const cap = spend.capUsd ?? 0;
+  const ratio = cap > 0 ? Math.min(1, (spend.costUsd ?? 0) / cap) : 0;
+  const barPct = Math.round(ratio * 100);
+  const tone = spend.capExceeded ? "destructive" : ratio >= 0.8 ? "warning" : "primary";
+  const indicator =
+    tone === "destructive"
+      ? "bg-destructive [&_[data-slot=progress-indicator]]:bg-destructive"
+      : tone === "warning"
+        ? "bg-warning [&_[data-slot=progress-indicator]]:bg-warning"
+        : "";
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="size-4 text-muted-foreground" aria-hidden />
+              {t("monitoring.spendToday")}
+            </CardTitle>
+            <CardDescription>{t("monitoring.spendTodayDescription")}</CardDescription>
+          </div>
+          <Badge variant={spend.capExceeded ? "destructive" : "outline"} className="shrink-0">
+            {t("monitoring.spendTodayCalls", { count: formatNumber(spend.calls ?? 0) })}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <span className="text-3xl font-semibold tabular-nums">
+            ${(spend.costUsd ?? 0).toFixed(4)}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {spend.capEnabled && cap > 0
+              ? t("monitoring.spendTodayOfCap", { cap: cap.toFixed(2) })
+              : t("monitoring.spendTodayNoCap")}
+          </span>
+        </div>
+        {spend.capEnabled && cap > 0 ? (
+          <Progress
+            value={barPct}
+            aria-label={t("monitoring.spendTodayProgress")}
+            className={indicator}
+          />
+        ) : null}
+        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+          <span>{formatNumber(spend.inputTokens ?? 0)} {t("monitoring.spendTodayInput")}</span>
+          <span>{formatNumber(spend.cachedTokens ?? 0)} {t("monitoring.spendTodayCached")}</span>
+          <span>{percent(spend.cacheHitRatio)} {t("monitoring.cacheHitRate")}</span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

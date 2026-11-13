@@ -42,6 +42,14 @@ public class AiUsageEvent {
     @Column(name = "cached_tokens", nullable = false)
     private int cachedTokens;
 
+    /**
+     * Read-only. The ai-service owns the writes to this table (its observability module
+     * inserts rows), so the backend never persists one — but the row's own clock decides
+     * "today" for the day's-spend gauge. `insertable = false` makes that load-bearing.
+     */
+    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    private java.time.OffsetDateTime createdAt;
+
     @Column(name = "cost_usd", nullable = false, precision = 12, scale = 6)
     private BigDecimal costUsd;
 
@@ -74,5 +82,9 @@ public class AiUsageEvent {
 
     public BigDecimal getCostUsd() {
         return costUsd;
+    }
+
+    public java.time.OffsetDateTime getCreatedAt() {
+        return createdAt;
     }
 }

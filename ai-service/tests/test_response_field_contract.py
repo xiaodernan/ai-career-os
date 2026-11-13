@@ -322,6 +322,10 @@ PRODUCERS = {
     "RunSummaryMap": ("pyfunc", "summarize_runs"),
     "LatencyPair": ("pyfunc", "_latency_summary"),
     "RegressionRow": ("pyappend", ("detect_regressions", "out")),
+    # Today's spend (21.x). The backend route answers with exactly the puts of
+    # `AiSpendService.today` — a Map, not a record — so the method's own put calls are
+    # the source, read the same way the interview follow-up map's are.
+    "AiSpendMap": ("japut", ("report/service/AiSpendService.java", "today")),
 }
 
 # Readers whose producers are known per map. A reader with more producers than one is bound to their
@@ -1107,6 +1111,17 @@ READERS: dict[str, dict] = {
                       "latency": "LatencyPair", "r": "RegressionRow"},
         "drilled": {"summary": ("body", "summary"), "latency": ("summary", "latencyMs")},
         "elements": {"r": "body"},
+        "blind": {},
+        "dynamic": {},
+    },
+    "normalizeAiSpendToday": {
+        # Today's spend (21.x). The route answers with the puts of `AiSpendService.today`,
+        # and this reader takes all ten: missing stays zero (except `cacheHitRatio`, which
+        # stays undefined rather than pretending the day carried input), so a renamed key
+        # here surfaces as the bar rendering flat instead of as a confident $0 money card.
+        "record_of": {"body": "AiSpendMap"},
+        "drilled": {},
+        "elements": {},
         "blind": {},
         "dynamic": {},
     },
@@ -2033,12 +2048,12 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
     # 93 with this epic's four health-report rows: three `pyfunc` walks into the engine's own literals
     # (`_health_report_document`, `summarize_runs`, `_latency_summary`) and one `pyappend` row,
     # `RegressionRow`, the dict `detect_regressions` appends per flagged metric.
-    assert len(PRODUCERS) == 93, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
+    assert len(PRODUCERS) == 94, f"{len(PRODUCERS)} rows: the population the counts below are drawn from"
     assert set(counts) == dispatched, \
         (f"the table uses {sorted(set(counts) - dispatched)} with no branch and the chain compares "
          f"{sorted(dispatched - set(counts))} with no rows: a kind that lost its branch has to gain "
          "one, and a kind that lost its rows has to lose the branch or gain the rows back")
-    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 1), ("java", 54), ("pyadd", 1),
+    assert sorted(counts.items()) == [("jamapof", 2), ("japut", 2), ("java", 54), ("pyadd", 1),
                                       ("pyappend", 7), ("pycons", 1), ("pyconst", 4),
                                       ("pydantic", 3), ("pyfunc", 9), ("pyitem", 1), ("pyretsub", 1),
                                       ("pyskel", 9)], \
@@ -2063,7 +2078,7 @@ def test_a_producer_kind_is_dispatched_by_name_and_never_by_the_fallback():
          "misattribution this branch exists to remove")
     # The planted row is gone again; 93 is the shipped table's own count (Epic 173's health-report
     # producers added four), the same number the census at the top of this test measured.
-    assert len(PRODUCERS) == 93, "the planted row is still in the table the census above measured"
+    assert len(PRODUCERS) == 94, "the planted row is still in the table the census above measured"
 
 
 def _emitted_for(receiver: str | list[str]) -> set[str]:
@@ -2677,7 +2692,9 @@ def test_no_mapper_is_left_unbound():
     # the `RecentActivity` row the backend computes, caches and sends on `DashboardResponse`.
     # 54 with this epic's `normalizeHealthReport`, the sixteen named reads the monitoring page's
     # cards take off the engine's own report literal (summary / latencyMs / regression rows).
-    assert len(population) == 54, sorted(population)
+    # 55 with 21.x's `normalizeAiSpendToday`, the spend-today card's ten puts (nine scalars and the
+    # ratio).
+    assert len(population) == 55, sorted(population)
     private = sorted(name for name, exported in _mapper_declarations() if not exported)
     assert private == ["changeFrom", "groupSkillBuckets", "normalizeAttention", "normalizeFollowUp",
                        "normalizePacketJd", "normalizePacketMatch", "normalizePacketResume",
@@ -3511,8 +3528,9 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # reader, which had been added to the table's bindings without joining this count. 52 with
     # 1076949's `normalizeCoverLetter`, the kept-letter reader the drawer's shelf mounts. 53 with
     # Epic 153's `normalizeRecentActivity`, the activity card's row reader. 54 with this epic's
-    # `normalizeHealthReport`, the monitoring page's summary/latency/regression reads.
-    assert len(population) == 54, f"the census population moved: {population}"
+    # `normalizeHealthReport`, the monitoring page's summary/latency/regression reads. 55 with
+    # 21.x's `normalizeAiSpendToday`, the spend-today card's ten puts.
+    assert len(population) == 55, f"the census population moved: {population}"
 
     diverged = []
     for name in population:
@@ -3544,7 +3562,8 @@ def test_the_census_sees_every_read_the_mappers_hold():
     # one `list(d, "recentActivity")` that finally hands the card its source -- six named reads.
     # 431 with this epic: `normalizeHealthReport`'s sixteen named reads (four on the report body,
     # seven on its summary, two on the latency pair, three on the regression rows).
-    assert len(whole) == 431, f"{len(whole)} reads by the oracle: recount both totals if this moved"
+    # 441 with 21.x: `normalizeAiSpendToday`'s ten named puts.
+    assert len(whole) == 441, f"{len(whole)} reads by the oracle: recount both totals if this moved"
     table_reads = _key_read_calls(_search_groups_table())
     # a7ea329 taught the table to read: the letters href asks a hit for its card id so the palette can
     # deep-link to that application. It is the only named read outside every mapper, and it is bound
@@ -3703,7 +3722,7 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     member, not a count: an accessor's own signature decides whether the argument it receives names
     a field. The strata are the argument: 7 of the 16 are the accessor definitions' own parameter
     lists, 5 are the accessors handing their caller's names to `pick`, 4 sit in a mapper, and none
-    sits anywhere else -- in the 50 functions this walk finds.
+    sits anywhere else -- in the 51 functions this walk finds.
     """
     source = NORMALIZE.read_text(encoding="utf-8")
     calls = _key_position_calls(source)
@@ -3726,14 +3745,14 @@ def test_a_call_whose_key_is_a_variable_is_a_population_every_member_has_to_expl
     # This epic adds sixteen with `normalizeHealthReport`: four reads on the report body
     # (`pick` summary, two `list`s, `str` verdict), seven on its `summary` (one `pick` for
     # `latencyMs` plus six `num` scalars), two `num`s on the latency pair, three `str`s on the
-    # regression rows.
-    assert len(calls) == 446, (f"{len(calls)} accessor calls hand something to a key position: "
+    # regression rows. 21.x adds ten more with `normalizeAiSpendToday`.
+    assert len(calls) == 456, (f"{len(calls)} accessor calls hand something to a key position: "
                                "recount the two halves below")
     assert len(nameless) == 16, f"{len(nameless)} calls put a variable where a name is expected"
     counted = {(row["line"], row["accessor"], row["receiver"]) for row in nameless} & \
               {(site["line"], site["name"], site["receiver"]) for site in named}
     assert len(calls) == len(named) + len(nameless) - len(counted), \
-        (f"431 + 16 stopped being 446: the oracle now counts {len(named)} and the census {len(nameless)} "
+        (f"441 + 16 stopped being 456: the oracle now counts {len(named)} and the census {len(nameless)} "
          f"with {sorted(counted)} in common -- one of the three totals moved alone")
     assert [(row[1], row[2]) for row in sorted(counted)] == [("idOf", "h")], \
         (f"the calls that are both nameless and counted are {sorted(counted)}, not one folded `idOf` "
@@ -4319,7 +4338,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # Epic 153's six (the new reader's five plus the dashboard's `list(d, "recentActivity")`) move
     # this from 407. This epic adds its sixteen paired reads with `normalizeHealthReport`.
     # It stays the population both the bare-read census below and its oracle draw on.
-    assert len(paired) == 429, (f"{len(paired)} accessor calls: the population the bare-read census is "
+    assert len(paired) == 439, (f"{len(paired)} accessor calls: the population the bare-read census is "
                                 "drawn from -- if this drops, the census below is comparing less")
     assert sum(1 for row in paired if row["argc"] == 1) == 1, \
         f"{[(row['owner'], row['receiver']) for row in paired if row['argc'] == 1]} are the bare reads"
@@ -4339,7 +4358,7 @@ def test_the_bare_read_scanner_agrees_with_a_paired_call_census():
     # reply waves' fourteen quoted calls, the same ones again. 404 with Epic 153's six quoted
     # calls: four `str`, one `pick` in `normalizeRecentActivity`, and the dashboard's `recentActivity`.
     # 420 with this epic's sixteen quoted calls in `normalizeHealthReport`.
-    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 420, \
+    assert sum(1 for row in paired if row["argc"] > 1 and row["named"]) == 430, \
         f"{sum(1 for row in paired if row['argc'] > 1 and row['named'])}: every-name-quoted is what " \
         "`_sites` reads, so this number is the size of the census every other rule here trusts"
     loose = [row for row in paired if row["argc"] > 1 and not row["named"]]
@@ -4398,7 +4417,7 @@ def test_the_spread_receiver_scanner_agrees_with_the_paired_walk(monkeypatch):
     # this from 407. This epic's `normalizeHealthReport` adds its sixteen, the same population the
     # censuses above now draw on.
     # The spread-receiver census and its oracle still draw the same population.
-    assert len(walked) == 429, (f"{len(walked)} accessor calls: the population both censuses are drawn "
+    assert len(walked) == 439, (f"{len(walked)} accessor calls: the population both censuses are drawn "
                                  "from")
     spread = [row for row in walked if row["spread"]]
     assert [(row["name"], row["owner"], row["receiver"]) for row in spread] == [
@@ -4489,7 +4508,9 @@ def test_the_derived_holder_scanner_answers_for_every_local_a_call_builds(monkey
     # `.filter` result in `normalizeDashboard`. They move this from 99. This epic adds five with
     # `normalizeHealthReport`: `body`, `summary`, `latency`, `alerts`, `regressions` -- the two
     # `rec(pick(...))` narrowings join the refused-by-name list below.
-    assert len(walked) == 108, (f"{len(walked)} locals are built by an accessor call: the population this "
+    # 21.x adds one with `normalizeAiSpendToday`: `const body = rec(raw)` -- a whole-day object
+    # built straight from the route's row, and no narrower drill drives it.
+    assert len(walked) == 109, (f"{len(walked)} locals are built by an accessor call: the population this "
                                "rule's answers are drawn from")
     assert [row["holder"] for row in walked if row["wrap"]] == [], \
         (f"{[(row['holder'], row['line']) for row in walked if row['wrap']]}: a wrapped call is the "

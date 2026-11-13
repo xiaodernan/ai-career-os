@@ -1048,6 +1048,26 @@ export interface HealthReport {
   regressions?: Array<{ metric: string; direction: string; severity: string }>;
 }
 
+/**
+ * Today's AI spend (21.x): cost, tokens, cache ratio and the day's cap — straight
+ * off `ai_usage_events`. The cap is the dashboard's bar, not a gate; `capEnabled`
+ * false means the card renders without a bar and the copy says so.
+ */
+export interface AiSpendToday {
+  dayStart?: string;
+  costUsd?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  /** Model calls today; every one is a row on the user's own ledger. */
+  calls?: number;
+  /** cached / input tokens; undefined when the day carried no input. */
+  cacheHitRatio?: number;
+  capUsd?: number;
+  capEnabled?: boolean;
+  capExceeded?: boolean;
+}
+
 /** One step the night reported: a suite's name, how it ended, and whatever it measured. */
 export interface NightlyReportStep {
   name: string;

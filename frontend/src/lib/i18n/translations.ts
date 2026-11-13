@@ -907,6 +907,16 @@ export const translations = {
       cacheHitRate: "Cache hit rate",
       cacheTokens: "Prompt tokens saved",
       p95Latency: "P95 latency",
+      spendToday: "Today's AI spend",
+      spendTodayDescription:
+        "Every model call the engine booked to you today, against the day's cap. The cap is the dashboard's bar, not a gate — nothing here is refused.",
+      spendTodayCalls: "{count} calls",
+      spendTodayOfCap: "of a ${cap} day cap",
+      spendTodayNoCap: "No cap configured (CAREEROS_DAILY_SPEND_CAP_USD=0)",
+      spendTodayInput: "input tokens",
+      spendTodayCached: "served from cache",
+      spendTodayProgress: "Progress toward today's AI spend cap",
+      spendTodayFailed: "Today's spend couldn't be loaded",
       promptCache: "Prompt cache",
       promptCacheDescription:
         "How much of the input the model had to read fresh versus served from a cache. Streaming reports usage when the provider asks for it; deterministic calls replay from the exact-match cache.",
@@ -4018,6 +4028,16 @@ export const translations = {
       cacheHitRate: "缓存命中率",
       cacheTokens: "已缓存提示词令牌",
       p95Latency: "P95 延迟",
+      spendToday: "今日AI花费",
+      spendTodayDescription:
+        "今天引擎向你记账的每一次模型调用，以及当日上限的进度。上限只是仪表盘上的进度条，不是门——这里不会拒绝任何调用。",
+      spendTodayCalls: "{count} 次调用",
+      spendTodayOfCap: "当日 ${cap} 上限",
+      spendTodayNoCap: "未设置上限（CAREEROS_DAILY_SPEND_CAP_USD=0）",
+      spendTodayInput: "输入令牌",
+      spendTodayCached: "来自缓存",
+      spendTodayProgress: "今日花费上限的进度",
+      spendTodayFailed: "无法加载今日花费",
       promptCache: "提示词缓存",
       promptCacheDescription:
         "输入里有多少是模型重新读取的、有多少来自缓存。流式路径在提供方要求时上报用量；确定性调用由精确匹配缓存直接回放。",

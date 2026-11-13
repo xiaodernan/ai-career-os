@@ -20,6 +20,7 @@ import com.careeros.report.dto.NightlyReportDtos.NightlyReportItem;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportRequest;
 import com.careeros.report.dto.NightlyReportDtos.NightlyReportStep;
 import com.careeros.report.dto.NightlyReportDtos.NightlyVerdict;
+import com.careeros.report.service.AiSpendService;
 import com.careeros.report.service.MonitoringService;
 import com.careeros.report.service.NightlyReportService;
 import java.time.OffsetDateTime;
@@ -51,14 +52,16 @@ class MonitoringControllerTest {
 
     private MonitoringService monitoring;
     private NightlyReportService reports;
+    private AiSpendService spend;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
         monitoring = mock(MonitoringService.class);
         reports = mock(NightlyReportService.class);
+        spend = mock(AiSpendService.class);
         mvc = MockMvcBuilders.standaloneSetup(
-                        new MonitoringController(monitoring, reports),
+                        new MonitoringController(monitoring, reports, spend),
                         new InternalNightlyReportController(reports))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
@@ -90,6 +93,19 @@ class MonitoringControllerTest {
                 .andExpect(jsonPath("$.data.verdict").value("healthy"));
 
         verify(monitoring).healthReport(ALICE);
+    }
+
+    @Test
+    void the_todays_spend_is_the_callers_own() throws Exception {
+        when(spend.today(ALICE)).thenReturn(Map.of("costUsd", new java.math.BigDecimal("0.012300"),
+                "calls", 2L, "cacheHitRatio", 0.45, "capEnabled", true, "capExceeded", false));
+
+        mvc.perform(get("/api/v1/monitoring/spend-today"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.calls").value(2))
+                .andExpect(jsonPath("$.data.cacheHitRatio").value(0.45));
+
+        verify(spend).today(ALICE);
     }
 
     @Test

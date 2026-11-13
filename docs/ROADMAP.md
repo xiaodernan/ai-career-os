@@ -6299,6 +6299,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   fields; `verify_gates` re-run at this tree; frontend `tsc --noEmit` clean; the
   monitoring page renders off the normalized answer.)
 
+- [x] **177** Today's AI spend is on the page — the one number the user can act on, straight off the ledger the engine already books every model call to (2026-11-13).
+
+  (`AiSpendService` in the report package sums the caller's own `ai_usage_events`
+  since UTC midnight — `costUsd`, input/output/cached tokens, `calls`,
+  `cacheHitRatio` — plus the configured daily cap
+  `careeros.ai.daily-spend-cap-usd` (`CAREEROS_DAILY_SPEND_CAP_USD`, default
+  `10.00`; `0` removes the bar). Served at `GET /api/v1/monitoring/spend-today`;
+  read-only like the health report, so it mints no rows either. The monitoring page
+  gains a card with the day's total, a progress bar against the cap (green →
+  warning → destructive at 80%/100%), and the three sub-readings. Deliberately a
+  gauge, not a gate: nothing is refused or throttled by hitting the cap — the
+  engine's deadline backstop is the only refusal that exists. Measured live: a
+  fresh account saw `0`, then one `jd_analyze` moved it to `calls: 1,
+  costUsd: 0.002655, cacheHitRatio: 0.0`, and the *identical repeat* (94 ms,
+  exact-cache replay) moved it to `calls: 2, inputTokens: 9994, cacheHitRatio: 0.5,
+  costUsd: 0.002655` — the replay's zero cost and its cached tokens both land on
+  the ledger and in the gauge. Backend `AiSpendServiceTest` 7/7 + the route
+  pinned in `MonitoringControllerTest` (wiring updated); frontend
+  `normalizeAiSpendToday` pinned by `normalize.test.ts` (1299 passed total), the
+  field census bumped honestly (55 population, 441 oracle reads, 439 paired, 456
+  key-position, 109 derived locals, 61 exported openers); API.md §2 carries the
+  row (the controllers' own census would red otherwise), env examples declare the
+  knob, and the bundle budget stays OK across 35 routes.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

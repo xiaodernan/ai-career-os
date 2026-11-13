@@ -535,7 +535,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # echoes that pin, so the two move together or one of them is stale.
     # 54 with this epic's `normalizeHealthReport`, the monitoring page's summary/latency/regression
     # reads; this file only echoes the field gate's pin, so that one moved with it.
-    assert population and population.group(1) == "54", \
+    # 55 with 21.x's `normalizeAiSpendToday`, the spend-today card's ten puts; this file only
+    # echoes the field gate's pin, so that one moved with it too.
+    assert population and population.group(1) == "55", \
         f"the ban's pinned normalize.ts population moved: {population and population.group(1)}"
 
 

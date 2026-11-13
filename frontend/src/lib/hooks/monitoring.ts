@@ -5,12 +5,14 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import {
   type NormalizedPage,
+  normalizeAiSpendToday,
   normalizeHealthReport,
   normalizeNightlyReport,
   normalizeNightlyVerdict,
   normalizePage,
 } from "@/lib/api/normalize";
 import type {
+  AiSpendToday,
   DeploymentHealth,
   NightlyReport,
   NightlyVerdict,
@@ -25,6 +27,19 @@ export function useHealthReport() {
   return useQuery({
     queryKey: ["monitoring", "health-report"],
     queryFn: async () => normalizeHealthReport(await api.get<unknown>(endpoints.monitoringHealthReport)),
+  });
+}
+
+/**
+ * Today's AI spend (21.x): the one number the user can act on. The route reads
+ * the same `ai_usage_events` ledger the engine books every call to, plus the
+ * configured day cap; nothing here asks a model or writes a row.
+ */
+export function useAiSpendToday() {
+  return useQuery({
+    queryKey: ["monitoring", "spend-today"],
+    queryFn: async (): Promise<AiSpendToday> =>
+      normalizeAiSpendToday(await api.get<unknown>(endpoints.monitoringSpendToday)),
   });
 }
 

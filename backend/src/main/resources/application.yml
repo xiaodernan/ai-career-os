@@ -207,6 +207,12 @@ careeros:
     # off, but the yml is the source of the trap.
     cache: "off"
     cache-ttl-seconds: 45
+  ai:
+    # Epic 177 — today's AI spend on the monitoring page, straight off ai_usage_events.
+    # The caller pays for every model call, so the day's total is the one number that
+    # decides whether a cap matters to them. This is a gauge, not a gate: nothing is
+    # refused; `0` removes the bar and the card renders "no cap configured".
+    daily-spend-cap-usd: ${CAREEROS_DAILY_SPEND_CAP_USD:10.00}
   # Epic 162 -- the backend's job queue over Redis Streams. false (the default) sends no
   # Redis command and runs no scheduled work: every producer keeps the inline path it had
   # before the queue existed. true hands background jobs to ONE consumer group shared by
