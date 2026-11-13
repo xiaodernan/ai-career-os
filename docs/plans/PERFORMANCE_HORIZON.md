@@ -32,6 +32,7 @@ Docker-dependent suite that could not run is recorded as not run.
 | 163 | The inbox mail/ring/read/write paths stop riding a per-key N+1: one IN-round trip plus one save per unread set | NotificationServiceTest 26/26 incl. 2 new pins, full backend suite |
 | 167 | The fleet does not celebrate one expiry together: the Redis dashboard cache writes under a ±10% TTL | DashboardCacheTest 11/11 (band [40,50] over 300 seeded draws, spread non-constant, floor holds, captured Redis write inside the band) |
 | 168 | The retention sweep rides the fleet queue when it is on — one replica runs it — and stays inline exactly where it was otherwise | RetentionSchedulerTest 6/6 + RetentionSweepHandlerTest 2/2 + full backend suite green (incl. every context-booting IT) |
+| 169 | The weekly letter's two clocks race no longer — one replica per day per concern; the letter is mailed once, the digest is computed once | WeeklyDigestSchedulerTest 6/6 + WeeklyDigestComposeHandlerTest 2/2 + WeeklyDigestRetryHandlerTest 2/2 + RedisDayLease shared + full backend suite green |
 
 ## Epic 118 — the second identical question is free **DONE (verified 2026-11-11)**
 
@@ -503,3 +504,48 @@ green with the two components wired (RetiredEvidencePurgeIT, RetentionSweepIT,
 UnnamedObjectSweepIT). Full backend suite green on this host with the app stack's
 backend stopped. Zero knobs, zero wire-shape change, zero client JS; the sweeper's
 measured behaviour (heartbeat, counters, failed-table reporting) is byte-identical.
+
+## Epic 169 — the weekly letter stops racing its own fleet (verified 2026-11-13)
+
+The weekly digest's two clocks — the Monday compose sweep and the daily 09:05 UTC
+retry — fired on every replica at the same instant. The compose race multiplied the
+full digest computation across N replicas (the letter upsert is idempotent, so it
+was waste, not corruption), but the retry race re-mailed the same refused letter to
+the same mailbox twice whenever two replicas found the same candidates in the same
+mutex window — the exact duplicate-mail failure the Monday letter's design went out
+of its way to never create (delivered_at is a latch; two readers both seeing it null
+before either commit is what the latch does not prevent by itself).
+
+**Design, one lease, two concerns.** A shared `RedisDayLease` in `com.careeros.queue`
+acquires a single Redis SET NX EX 1d per concern per UTC day. The weekly scheduler
+and the retention scheduler both use it; the retention scheduler's private election is
+retired in favour of the one implementation. `digest.compose` and `digest.retry` hold
+separate leases so the two clocks fire independently.
+
+**Queue semantics, unchanged by the move.** Queue disabled every replica runs the
+handler's clock exactly as shipped (inline, today's behaviour). Queue enabled: one
+lease holder enqueues, siblings stand down, a refused enqueue runs inline on the
+leader alone, lease errors fail open toward the work. Handlers carry the clock's own
+promises: the compose sweep keeps its 08:00 heartbeat, the failed-compose log, "a
+bad night costs no other account"; the retry sweep keeps "refused only, oldest
+first, under the cap". One implementation per clock; the two paths execute identical
+code via `handle(Map.of())`.
+
+**What this is not.** Not enabled anywhere (`CAREEROS_QUEUE_ENABLED=false`,
+e2e unchanged), not the last scheduled job (ingestion sweep, nightly verdict stay
+unwrapped), not distributed settlement (`delivered_at` still decides races; the
+lease only makes the fleet tidy). Consolidation note: two Redis `SET NX` variants
+existed for one night (`careeros:v1:lease:<concern>:<yyyy-MM-dd>` unified the
+inaward key shapes); nothing else touched the wire.
+
+**Measured.** WeeklyDigestSchedulerTest 6/6 (disabled→inline; lease-win→enqueue
+only; lease-win+refusal→inline; lease-lose→silent; lease error→inline; the two
+leases fire independently), WeeklyDigestComposeHandlerTest 2/2 (the moved compose
+clock: last week, heartbeat, failure log-not-throw), WeeklyDigestRetryHandlerTest
+2/2 (the moved retry: refused-only, failure log-not-throw), RetentionSchedulerTest
+6/6 (same suite, now through the shared lease — key shape
+`careeros:v1:lease:retention:<yyyy-MM-dd>`). Full backend suite green at this tree
+on this host. One honest miss caught inside this epic's own test window: a new
+CANDIDATE for the wiring mistake this class of work reliably produces (the lease
+was not a Spring bean — first IT bootstrap died of UnsatisfiedDependencyException),
+found by the full backend IT sweep and fixed by making it a @Component.

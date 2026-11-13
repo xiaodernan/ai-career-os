@@ -6172,6 +6172,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   IT green with the two components wired. Zero client JS, zero knobs, zero wire
   shape.)
 
+- [x] **169** The weekly letter's two clocks stop racing their own fleet (2026-11-13).
+
+  (`RedisDayLease` — shared `com.careeros.queue` helper, a single Redis `SET NX`
+  per lease per UTC day — now backs both fleet-wide schedulers. The weekly
+  scheduler splits into `WeeklyDigestComposeHandler` (`digest.compose`) and
+  `WeeklyDigestRetryHandler` (`digest.retry`); the 08:00 Monday compose and the
+  09:05 UTC retry race no longer, one Redis enqueue per concern per day; queue
+  disabled → both clocks inline on every replica, byte-for-byte today's behaviour;
+  queue enabled → lease-winner enqueues, siblings stand down, refused enqueue →
+  winner runs inline alone, lease error → this replica runs inline (fail-open).
+  The clocks' own promises are unchanged: Monday writes the week just ended and
+  heartbeats, retries refused letters under the cap without touching the
+  heartbeat. Retention scheduler's private election is retired in favour of the
+  same helper (`leaderKey` shape now `careeros:v1:lease:retention:<yyyy-MM-dd>`).
+  Measured: WeeklyDigestSchedulerTest 6/6, Compose handler 2/2, Retry handler
+  2/2, RetentionSchedulerTest 6/6; one wiring defect found and fixed inside this
+  epic's suite (the lease was not a Spring bean — caught by the IT sweep, made a
+  @Component, full backend suite green). Not enabled anywhere; ingestion sweep
+  and nightly verdict stay unwrapped by design.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

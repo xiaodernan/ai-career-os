@@ -40,15 +40,15 @@ class RetentionSchedulerTest {
         redis = mock(StringRedisTemplate.class);
         ops = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(ops);
-        tick = new RetentionScheduler(queue, sweeper, redis);
+        tick = new RetentionScheduler(queue, sweeper, new com.careeros.queue.RedisDayLease(redis));
     }
 
     @Test
     void theLeaderKeyIsTheUtcCalendarDay() {
         String key = RetentionScheduler.leaderKey(LocalDate.parse("2026-11-13"));
-        assertThat(key).isEqualTo("careeros:v1:retention:owner:2026-11-13");
+        assertThat(key).isEqualTo("careeros:v1:lease:retention:2026-11-13");
         assertThat(RetentionScheduler.leaderKey(LocalDate.now(ZoneOffset.UTC)))
-                .isEqualTo("careeros:v1:retention:owner:" + LocalDate.now(ZoneOffset.UTC));
+                .isEqualTo("careeros:v1:lease:retention:" + LocalDate.now(ZoneOffset.UTC));
     }
 
     @Test
