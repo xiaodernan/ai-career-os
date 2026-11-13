@@ -1,9 +1,10 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
+import { translate } from "@/lib/i18n/locale-context";
 import type {
   CounterOfferDraft,
   NegotiationPlan,
@@ -213,5 +214,72 @@ export function useCounterOffer() {
       matchScore?: number;
     }) => (await api.create<unknown>(endpoints.offerCounterOffer, counterBody(input))) as CounterOfferDraft,
     onError: fail("failures.counterOffer"),
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* The offer shelf (Epic 185)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Save an offer the reader actually holds: the row the compare view reads instead
+ * of re-entered numbers. The write refreshes the shelf the card reads.
+ */
+export function useSaveOffer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      label: string;
+      base: number;
+      bonus: number;
+      equity: number;
+      currency?: string;
+      remoteType?: string;
+      deadline?: string;
+      notes?: string;
+      id?: string;
+    }) =>
+      // The fields are spelled inline at each call, not forwarded as a variable: the
+      // body census reads the call site name by name against the record the
+      // controller binds (Epic 185), and a variable body is a site it must excuse.
+      body.id
+        ? ((await api.update<unknown>(endpoints.offerShelfRow(body.id), {
+            label: body.label,
+            base: body.base,
+            bonus: body.bonus,
+            equity: body.equity,
+            currency: body.currency,
+            remoteType: body.remoteType,
+            deadline: body.deadline,
+            notes: body.notes,
+          })) as unknown)
+        : ((await api.create<unknown>(endpoints.offerShelf, {
+            label: body.label,
+            base: body.base,
+            bonus: body.bonus,
+            equity: body.equity,
+            currency: body.currency,
+            remoteType: body.remoteType,
+            deadline: body.deadline,
+            notes: body.notes,
+          })) as unknown),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["offers", "shelf"] });
+      toast.success(translate("offers.shelfSaved"));
+    },
+    onError: fail("offers.shelfSaveFailed"),
+  });
+}
+
+/** Take a row off the shelf. The removal refreshes the shelf it left. */
+export function useDeleteOffer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(endpoints.offerShelfRow(id)),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["offers", "shelf"] });
+      toast.success(translate("offers.shelfDeleted"));
+    },
+    onError: fail("offers.shelfDeleteFailed"),
   });
 }

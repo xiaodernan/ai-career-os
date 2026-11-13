@@ -162,6 +162,9 @@ export const endpoints = {
   dataRender: "/data-portability/render",
 
   /* ---------------- Salary & offers (12.1-12.5) ------------------------ */
+  /** Epic 185: the reader's own shelf of the offers they hold, compared by total comp. */
+  offerShelf: "/offers/shelf",
+  offerShelfRow: (id: string) => `/offers/shelf/${seg(id)}`,
   offerSalaryBenchmark: "/offers/salary-benchmark",
   offerNegotiate: "/offers/negotiate",
   offerCompare: "/offers/compare",

@@ -1929,3 +1929,24 @@ export interface LearningItem {
   resource_hint?: string;
   note?: string;
 }
+
+/** One offer the reader holds on the shelf (Epic 185); totalComp is the compare number. */
+export interface OfferShelfItem {
+  id: string;
+  label: string;
+  base: number;
+  bonus: number;
+  equity: number;
+  currency: string;
+  remoteType: "onsite" | "hybrid" | "remote";
+  deadline: string | null;
+  notes: string | null;
+  totalComp: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OfferShelf {
+  items: OfferShelfItem[];
+  total: number;
+}

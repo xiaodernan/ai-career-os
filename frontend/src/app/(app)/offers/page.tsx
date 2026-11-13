@@ -20,6 +20,7 @@ import {
 } from "@/lib/hooks/offers";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { BarChart } from "@/components/common/bar-chart";
+import { OfferShelf } from "@/components/offers/offer-shelf";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -124,6 +125,11 @@ export default function OffersPage() {
         title={t("offers.title")}
         description={t("offers.description")}
       />
+
+      {/* The shelf (Epic 185): the offers the reader holds, compared by one number.
+          It sits above the actions because the actions are about ONE offer -- the
+          shelf is about all of them, and the decision the page exists for. */}
+      <OfferShelf />
 
       {/* The question */}
       <Card>

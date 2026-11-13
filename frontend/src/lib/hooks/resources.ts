@@ -37,22 +37,23 @@ import type {
   Application,
   ApplicationEvent,
   ApplicationPacket,
-  CoverLetter,
   Company,
-  Contact,
-  ContactRelation,
   CompanyDetail,
   CompanySource,
+  Contact,
+  ContactRelation,
   Conversation,
-  InterviewSession,
+  CoverLetter,
   IngestionFeed,
   IngestionRun,
   IngestionRunDetail,
+  InterviewSession,
   Job,
   KnowledgeNote,
   KnowledgeSource,
   MemoryItem,
   NotificationInbox,
+  OfferShelf,
   Page,
   Resume,
   ResumeScore,
@@ -892,5 +893,19 @@ export function useMemories(kinds?: string[]) {
   return useQuery({
     queryKey: ["memories", kinds ?? []],
     queryFn: () => fetchMemories(kinds),
+  });
+}
+
+/**
+ * The offer shelf (Epic 185): the reader's own record of the offers they hold, the
+ * rows the compare view reads instead of re-entered numbers. One list, no window —
+ * a reader holds a handful of offers, not a feed.
+ */
+export function useOfferShelf() {
+  return useQuery({
+    queryKey: ["offers", "shelf"],
+    queryFn: async (): Promise<OfferShelf> =>
+      (await api.get<unknown>(endpoints.offerShelf)) as OfferShelf,
+    staleTime: 30_000,
   });
 }
