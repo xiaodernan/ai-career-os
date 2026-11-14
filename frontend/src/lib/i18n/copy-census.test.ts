@@ -128,7 +128,11 @@ describe("the browser's copy", () => {
     // `app/(app)/studio/page.tsx` (the paste-to-tailor front door).
     // 176 with `components/common/empty-composition.tsx`, the composed empty the Epic 3
     // surfaces render — one browser source, one census line, honestly counted.
-    expect(browserSources().length).toBe(176);
+    // 179 with Epic 1's three layout sources: `components/layout/page-grid.tsx`
+    // (the 12-column contract), `components/common/page-shell.tsx` and
+    // `components/common/page-section.tsx` — three more .tsx files under the scan,
+    // counted, not waved through.
+    expect(browserSources().length).toBe(179);
   });
 
   it("finds a sentence, however long it is", () => {

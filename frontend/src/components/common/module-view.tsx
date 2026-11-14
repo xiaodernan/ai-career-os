@@ -5,6 +5,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import Link from "next/link";
 import { PlugZap, RefreshCw, RotateCcw, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { PAGE_WIDTHS, type PageWidth } from "@/components/layout/page-grid";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
@@ -39,6 +41,7 @@ export function ModuleView<T>({
   actions,
   footer,
   children,
+  width = "content",
 }: {
   title: string;
   description: string;
@@ -65,12 +68,15 @@ export function ModuleView<T>({
   /** Replaces the list layout once the query has data. Empty still shows `emptyHint`,
    * so a board keeps the same "nothing here yet + call to action" contract. */
   children?: React.ReactNode;
+  /** Full-page width scale shared by every ModuleView list page. `content` (1152px) is
+   * the default — the reading measure; pass `board` for wide boards or `form` for forms. */
+  width?: PageWidth;
 }) {
   const { t } = useLocale();
   const routeMissing = query.error instanceof ApiError && query.error.code === "NOT_FOUND";
 
   return (
-    <div className="space-y-6">
+    <div className={cn("mx-auto w-full space-y-6", PAGE_WIDTHS[width])}>
       <PageHeader
         frontDoor
         title={title}
