@@ -25,6 +25,7 @@ import { OfferDayOnePacket } from "@/components/offers/offer-day-one-packet";
 import { OfferFirstQuarter } from "@/components/offers/offer-first-quarter";
 import { OfferReplies } from "@/components/offers/offer-replies";
 import { OfferDecisionLedger } from "@/components/offers/offer-decision-ledger";
+import { OfferRehearsalCard } from "@/components/offers/offer-rehearsal-card";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -148,6 +149,9 @@ export default function OffersPage() {
 
       {/* The decision ledger (Epic 215): the weights only the reader can set. */}
       <OfferDecisionLedger />
+
+      {/* The rehearsal room (Epic 227): the ask, before the offer. */}
+      <OfferRehearsalCard />
 
       {/* The AI kitchen: benchmark, negotiation, counter-offer, comparison.
           Everything here is input to the decision, not the decision — the packet on

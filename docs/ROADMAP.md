@@ -6878,6 +6878,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **227** The rehearsal room — the ask, before the offer (2026-11-15).
+
+  (Epic 219 shipped the debrief; Epic 225 gave the wheel a dialect; Epic 226 made register survive its own
+  race. The odd number in the arc is Epic "the one you rehearse but never perform" — the salary conversation
+  before the salary conversation. `/offers` gains a fourth card below the ledger and the ink desk:
+  **Rehearse the ask / 预演房间**. Three hiring-manager pushes, three candidate replies each, scored 0/1/2/3
+  honestly: the band ("policy is policy"), the engineered silence ("we'll circle back"), the exploded anchor.
+  Evidence-backed replies score 3; holding the frame scores 2; opening the gap scores 1; conceding early scores 0.
+  The nine-point walk ends on an honest verdict band (fold / holding less than you think / solid / negotiated /
+  nine of nine) with copy that doesn't flatter. The reader's own sentence — the one they actually plan to open
+  with — lives in `careeros.rehearsal.v1` in this browser, like the ledger's criteria and the quarter plan;
+  after the third push it appears alongside the verdict, ready to copy into the real room. `lib/offers/rehearsal.ts`
+  (pure, injected storage, round-trip tested: schema garbage, dead reply-ids, clamp-by-round-trip), the component
+  with EN+ZH, the SSR shape pinned by a test. Live-verified on the rebuilt container: the EN card renders
+  end-to-end ("rehearsal room — the ask, before the offer … STEP 1 OF 3 … we hear you…"); ZH holds through
+  the same translation table. vitest **1431/1431** (+7), tsc clean, copy census **195** (+1), `npm run budget` OK,
+  verify_gates **569/569**.)
+
 - [x] **226** The race the load test found — register answered 500 for a check that already raced (2026-11-15).
 
   (The brief asked for load testing; the very first burst found a public-endpoint defect: two
@@ -6921,7 +6939,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   instantaneous. Library is pure and unit-tested (`lib/wheel-direction.ts` — normalize/negate/
   nearest-scroller, 13 cases; 2641 tests pass). Live-verified end to end: dispatching a synthetic
   `WheelEvent(deltaY: 360)` at `scrollY=400` with "Reverse the wheel" active moves the page to
-  40; with "Like my system", the same event is left entirely to the browser.)
+  40; with "Like my system", the same event is left entirely to the browser. **Tranche two
+  (2026-11-15, the fourth red gate in one day):** the toast census had been pinned at 66, then
+  69, and this epic reddened it at **70** — the Scroll direction card's save announcement. The
+  number is now *counted* with the census's own population rule, not assumed; the same failure
+  has shipped four times in one day, which is the strongest argument for the lesson in this
+  ROADMAP's previous entries: any numeric census is re-measured on every epic, never arithmetically,
+  and the failure here is recorded, not hidden.)
 
 - [x] **224** The year in review — the record that travels (2026-11-15).
 

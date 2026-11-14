@@ -1115,6 +1115,54 @@ export const translations = {
       ledgerRemoveCriterion: "Remove this criterion",
       ledgerReset: "Clear the ledger",
       ledgerResetDone: "The ledger is cleared. Your offers are untouched.",
+      rehearsalTitle: "The rehearsal room — the ask, before the offer",
+      rehearsalDescription:
+        "Three hiring-manager pushes, three replies each. Fumble it here, hold your nerve in the real one.",
+      rehearsalStep: "Step {n} of 3",
+      rehearsalPush_band: "…we hear you. Honestly, we can't stretch the band — policy is policy.",
+      rehearsalPush_silence: "Hmm… well, we'll have to go back and circle on that.",
+      rehearsalPush_anchor: "The number, as stated, is a lot to ask for.",
+      rehearsalReply_band_hold:
+        "I hear the policy. I'd like to hear how the stretch actually looks, threshold included.",
+      rehearsalReply_band_open:
+        "Alright — then let's lay the numbers on the table. What does the stretch look like, landing on me?",
+      rehearsalReply_band_concede: "Alright, I understand — I'll take it as written.",
+      rehearsalReply_silence_clock:
+        "Of course. Let's say Friday at four — I'll hold my decision until then.",
+      rehearsalReply_silence_when: "Of course — about when should I expect an answer?",
+      rehearsalReply_silence_sure: "Sure.",
+      rehearsalReply_anchor_evidence:
+        "I hear you. The number isn't a wish — it's three things: what I'll bring, what I've brought, and what the market pays for it.",
+      rehearsalReply_anchor_gap: "Then let's look at the gap and see if we shrink it.",
+      rehearsalReply_anchor_maybe: "Maybe… it's high, then. Let me think about it.",
+      rehearsalFeedbackEvidence: "Holds with evidence.",
+      rehearsalFeedbackHold: "Holds the frame.",
+      rehearsalFeedbackGap: "Opens the gap — nothing is held yet.",
+      rehearsalFeedbackConcede: "Concedes early.",
+      rehearsalNext: "Next push",
+      rehearsalSeeVerdict: "See the verdict",
+      rehearsalScoreLine: "{total} of {max} in the room",
+      rehearsalVerdictNone: "Fold before sitting",
+      rehearsalVerdictNoneDetail:
+        "The room exhaled before you sat. The number is not high — it is the one you have not asked for yet.",
+      rehearsalVerdictWeak: "Holding less than you think",
+      rehearsalVerdictWeakDetail:
+        "There's room to hold. The gap is evidence, and evidence is the part you're avoiding.",
+      rehearsalVerdictSolid: "You held — and there is room to hold harder",
+      rehearsalVerdictSolidDetail:
+        "You negotiated. Not perfectly — and nobody does it perfectly the first time.",
+      rehearsalVerdictStrong: "You negotiated",
+      rehearsalVerdictStrongDetail:
+        "You held your ground with evidence. The real room will surprise you; this one taught you how to sit in it.",
+      rehearsalVerdictMasterful: "Nine of nine",
+      rehearsalVerdictMasterfulDetail:
+        "You ran the hard conversation before it happened. The first offer is never the best of the three you can name — and now you can name them.",
+      rehearsalKeepTitle: "The sentence you will open with",
+      rehearsalKeepDescription:
+        "Your own words, kept in this browser — the sentence you would actually walk in with.",
+      rehearsalKeepPlaceholder: "e.g. “Before the number — tell me what exceptional looks like here.”",
+      rehearsalReset: "Start over",
+      rehearsalKept: "Kept in this browser.",
       packetPrint: "Print the packet",
       packetPrintHint:
         "Everything a salary conversation is actually about, kept on paper: the shelf, your day-one packet, the letters you kept, the ledger's call. The AI kitchen stays off the page.",
@@ -4665,6 +4713,50 @@ export const translations = {
       ledgerRemoveCriterion: "删除这条标准",
       ledgerReset: "清空账簿",
       ledgerResetDone: "账簿已清空。你的 offer 记录不受影响。",
+      rehearsalTitle: "预演房间——聊薪资之前，先过一遍",
+      rehearsalDescription:
+        "三次经理压价思路，三种回复各选一个。在这儿翻过车，真上场才稳得住。",
+      rehearsalStep: "第 {n} 步 · 共 3 步",
+      rehearsalPush_band: "……我懂你。说句实话：这个岗位到这里就是顶了，我们没法再往上挪了。",
+      rehearsalPush_silence: "这个……嗯，我们回头还得再碰一次。",
+      rehearsalPush_anchor: "你说的这个数，有点往高了问。",
+      rehearsalReply_band_hold:
+        "我理解有上限这件事。但我想听听，这个上限是怎么算出来的，需要到什么条件才会往上挪一步。",
+      rehearsalReply_band_open:
+        "那咱们把数摊开——你桌子上摆着的这个上限，落到我身上可以怎么理解？",
+      rehearsalReply_band_concede: "行，我明白，那就按这个数来。",
+      rehearsalReply_silence_clock:
+        "好。我们把话说死：周五下午四点，我会等到那个时候——这个 offer 我只留到那个时候。",
+      rehearsalReply_silence_when: "当然。那大概是哪天我能听到答复？",
+      rehearsalReply_silence_sure: "行。",
+      rehearsalReply_anchor_evidence:
+        "我理解。我要这个数，是因为三件事：我带来过的三个结果、我在这个位置上要做的事、和市场上同类角色的回报。",
+      rehearsalReply_anchor_gap: "那就看一眼我们之间差多少，看能不能缩一缩？",
+      rehearsalReply_anchor_maybe: "那……可能是有点高。我再想想。",
+      rehearsalFeedbackEvidence: "带着证据稳住。",
+      rehearsalFeedbackHold: "站住了——没写支票，但把门开了。",
+      rehearsalFeedbackGap: "门聊开了——但数还没往下压一寸。",
+      rehearsalFeedbackConcede: "让得太早。",
+      rehearsalNext: "下一轮",
+      rehearsalSeeVerdict: "看最后的裁决",
+      rehearsalScoreLine: "房间里得了 {total} / {max}",
+      rehearsalVerdictNone: "还没坐稳就先出声了",
+      rehearsalVerdictNoneDetail: "人家一喘气你就塌了。这个数不是高，是你还没问到的那个。",
+      rehearsalVerdictWeak: "自我感觉站得稳，实际差得远",
+      rehearsalVerdictWeakDetail: "还有空间能往上提。卡住你的不是运气，是证据——你还没把话说出来。",
+      rehearsalVerdictSolid: "稳住了，还能稳得更狠一点",
+      rehearsalVerdictSolidDetail: "这场谈判你打过了——虽然不算漂亮，但总得有第一次。",
+      rehearsalVerdictStrong: "你是认真的",
+      rehearsalVerdictStrongDetail:
+        "你带着证据稳住了场子。真正的那场一定会和预演不一样，但你已经学会怎么坐在谈判桌前了。",
+      rehearsalVerdictMasterful: "九分 · 满分",
+      rehearsalVerdictMasterfulDetail:
+        "你预演过这场最难的对话了。给你的第一个数从来不是最好的一个——但你已经知道怎么去问了。",
+      rehearsalKeepTitle: "你真正开口的那一句",
+      rehearsalKeepDescription: "用你自己的话写下你会说出口的那一句话——不是模板，是你自己的。",
+      rehearsalKeepPlaceholder: "例如：“别急着谈数——先说这个职位上什么叫赢。”",
+      rehearsalReset: "重来",
+      rehearsalKept: "已留在这个浏览器里。",
       packetPrint: "打印这份纸质稿",
       packetPrintHint:
         "薪资谈判真正用得上的所有东西，都留在纸上：offer 货架、入职首周的清单、你留下的信、账簿的裁决。AI 顾问不上纸。",
