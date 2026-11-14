@@ -33,10 +33,11 @@ const ELLIPSIS_PLACEHOLDER = "Type a command or search\u2026";
  * no listener attached, the event goes nowhere, and the test fails 15 seconds later with
  * "element not found" while looking like a broken component. The topbar's own "Open
  * command palette" button is inside the provider, so it appearing is proof the listener
- * is live; it is the same hook, rendered by the same tree.
+ * is live; it is the same hook, rendered by the same tree. (Since Epic 205's Label in Name
+ * fix the desktop button's accessible name is its visible copy; the query targets that copy.)
  */
 async function openPalette(page: import("@playwright/test").Page) {
-  await expect(page.getByLabel("Open command palette").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Type a command or search…" })).toBeVisible();
   await page.keyboard.press("ControlOrMeta+k");
   await expect(page.getByPlaceholder(ELLIPSIS_PLACEHOLDER)).toBeVisible();
 }

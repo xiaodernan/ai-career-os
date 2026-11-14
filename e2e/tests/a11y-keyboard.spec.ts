@@ -64,7 +64,7 @@ test("the skip link is the first thing the keyboard reaches, and it takes the fo
   // The shell has to be mounted before the keyboard means anything: the
   // auth guard renders a splash until the session resolves, and a Tab
   // pressed into the splash reaches nothing.
-  await expect(authedPage.getByLabel("Open command palette").first()).toBeVisible();
+  await expect(authedPage.getByRole("button", { name: "Type a command or search…" })).toBeVisible();
 
   // One Tab from the top of the document: the skip link, and nothing
   // before it. It rests above the viewport and slides in on focus, so it
@@ -208,7 +208,7 @@ test("the command palette takes the keyboard and gives the focus back", async ({
   // page with no listener attached, so the wait comes first: the topbar's
   // own button is inside the same provider, so its appearing is proof
   // the listener is live.
-  await expect(authedPage.getByLabel("Open command palette").first()).toBeVisible();
+  await expect(authedPage.getByRole("button", { name: "Type a command or search…" })).toBeVisible();
   await authedPage.keyboard.press("ControlOrMeta+k");
 
   const input = authedPage.getByPlaceholder("Type a command or search…");
