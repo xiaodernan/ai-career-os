@@ -29,6 +29,20 @@ Measured by: routes' heading census stays green; bundle budget unchanged
 (+~1 kB max); the `RouteGlance` component (new) renders each route a summary
 of what it measured this visit — a *measured* chip, not a decorative one.
 
+**Tranche one (2026-11-14, landed).** The framework has its core: `PAGE_WIDTHS`
+(form 832 / content 1152 / board 1408) + `PageGrid`/`GridSpan` in
+`components/layout/page-grid.tsx`; `PageSection` (one semantic band, aria-label
+from the title) in `components/common/page-section.tsx`; `PageShell` (width +
+shared PageHeader + the grid) in `components/common/page-shell.tsx`. `ModuleView`
+now renders at the content measure with an opt-out `width` prop — the list pages
+inherit the reading column with zero call-site churn; dashboard/jobs/studio keep
+their bespoke bands by design. vitest **1337/1337** (7 framework prop tests), tsc
+clean, bundle budget OK (36 routes), e2e routes.spec **6/6** in mock mode, live
+container rebuilt and serving (openai_compat). Copy census 179 sources. Still open:
+the seven route migrations proper (the bespoke dashboard/jobs/studio/copilot shells
+are not being forced into the shell), and `RouteGlance` — which will not land before
+per-route visit measurements exist to feed it.
+
 ## Epic 2 — motion that means something
 
 **The Shape.** The app has fade/reveal/pulse primitives (`components/ui/reveal`,

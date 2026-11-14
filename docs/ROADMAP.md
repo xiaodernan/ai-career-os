@@ -6477,6 +6477,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (36 routes), frontend container rebuilt and serving; PRODUCT.md was not given a
   fake "theme column" — the measured results live here and in FRONTEND_HORIZON.md.)
 
+- [x] **189** Epic 1, tranche one: the page framework exists now — grid, shell, sections, and the app reads at the content measure (2026-11-14).
+
+  (`components/layout/page-grid.tsx` — one width scale for signed-in routes:
+  `form` 832px, `content` 1152px, `board` 1408px; `grid-cols-12`; bare children span
+  all twelve columns; `GridSpan` clamps. `components/common/page-shell.tsx` — width +
+  the shared PageHeader (frontDoor still opt-in) + PageGrid; re-exports the grid.
+  `components/common/page-section.tsx` — one semantic band with an aria-labelled
+  landmark. **ModuleView now renders at the content measure** with an opt-out width,
+  so every generic list page inherits the Linear/Notion reading column with zero
+  call-site churn; bespoke shells keep their bands. RouteGlance deliberately does not
+  ship in this shell — it lands when its source per-route measurements exist, not as
+  decoration. vitest **1337/1337** (7 framework prop tests), tsc clean, bundle budget
+  OK (36 routes), e2e routes.spec **6/6** in mock mode, live container rebuilt and
+  serving (openai_compat restored). Copy census pinned 179 sources. Commit 4742b1e.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
