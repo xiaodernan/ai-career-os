@@ -2140,6 +2140,8 @@ export const translations = {
         "One system for your entire job search — every AI conclusion is traceable to your own material.",
       switchToChinese: "Switch to Chinese",
       switchToEnglish: "Switch to English",
+      switchToChineseAria: "Switch to Chinese (中文)",
+      switchToEnglishAria: "Switch to English (EN)",
       features: {
         resume: "Resume Intelligence",
         resumeDescription:
@@ -5257,6 +5259,8 @@ export const translations = {
         "整个求职过程，一个系统完成——每一个 AI 结论都能追到你自己的材料。",
       switchToChinese: "切换到中文",
       switchToEnglish: "切换到英文",
+      switchToChineseAria: "切换到中文（中文）",
+      switchToEnglishAria: "切换到英文（EN）",
       features: {
         resume: "简历智能",
         resumeDescription: "上传 PDF/DOCX/TXT → 解析 → 结构化档案 + 带实时评分的版本化简历。",

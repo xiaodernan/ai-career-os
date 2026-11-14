@@ -60,8 +60,10 @@ export function LandingPage() {
               variant="ghost"
               size="sm"
               onClick={() => setLocale(locale === "en" ? "zh" : "en")}
+              // The accessible name must carry the visible glyph (WCAG 2.5.3),
+              // or it names a control the reader cannot find by what it shows.
               aria-label={
-                locale === "en" ? t("landing.switchToChinese") : t("landing.switchToEnglish")
+                locale === "en" ? t("landing.switchToChineseAria") : t("landing.switchToEnglishAria")
               }
             >
               <Globe aria-hidden />
@@ -80,6 +82,7 @@ export function LandingPage() {
         </div>
       </header>
 
+      <main>
       {/* Hero */}
       <section className="relative mx-auto max-w-6xl px-4 pt-16 text-center sm:pt-24">
         <Reveal className="mx-auto max-w-3xl">
@@ -197,6 +200,7 @@ export function LandingPage() {
           <span>{t("landing.footerNote")}</span>
         </div>
       </footer>
+      </main>
     </div>
   );
 }
