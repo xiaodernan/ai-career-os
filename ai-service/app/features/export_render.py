@@ -328,6 +328,20 @@ def to_html(bundle: dict, locale: str | None = None) -> str:
         )
         section(titles["cover_letters"], f"<ul>{items}</ul>")
 
+    offers = _dicts(data.get("offers"))
+    if offers:
+        items = "".join(
+            f"<li>{_esc(o.get('label'))}"
+            + (f" · base {_esc(o.get('base'))}" if o.get("base") is not None else "")
+            + (f" · bonus {_esc(o.get('bonus'))}" if o.get("bonus") is not None else "")
+            + (f" · equity/yr {_esc(o.get('equity'))}" if o.get("equity") is not None else "")
+            + (f" · total {_esc(o.get('total_comp'))}" if o.get("total_comp") is not None else "")
+            + (f" · {_esc(o.get('deadline'))}" if o.get("deadline") else "")
+            + "</li>"
+            for o in offers
+        )
+        section(titles["offers"], f"<ul>{items}</ul>")
+
     parts.append("<hr>")
     stat = " · ".join(f"{_esc(k)}={_esc(v)}" for k, v in counts.items())
     parts.append(f'<p class="meta">{_esc(words["stats"])}: {stat}</p>')

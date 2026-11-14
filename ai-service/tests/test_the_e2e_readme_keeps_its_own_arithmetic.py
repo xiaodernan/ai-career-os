@@ -52,6 +52,9 @@ ALIASES = {
     "timeline": "timeline",
     "fleet observability": "fleet-observability",
     "gateway edge": "gateway-edge",
+    "deadline mesh": "deadline-mesh",
+    "pace heatmap": "pace-heatmap",
+    "offer shelf": "offer-shelf",
 }
 
 UNNAMED_CLAUSE = "the pagination suite"

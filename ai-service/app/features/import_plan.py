@@ -99,7 +99,7 @@ _NOT_WRITTEN_BY_SECTION: dict[str, tuple[str, ...]] = {
 _REPLACEABLE = ("applications", "growth_plans", "notes", "contacts",
                 "job_descriptions", "interviews", "conversations",
                 "saved_searches", "ingestion_feeds", "saved_jobs",
-                "inbound_mails")
+                "inbound_mails", "offers")
 
 # The bookkeeping a conversation's messages do not carry: the restore mints a
 # message id and stamps it, and the transcript's owner and parent are the

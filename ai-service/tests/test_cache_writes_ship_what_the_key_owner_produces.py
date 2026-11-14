@@ -19,7 +19,7 @@ place (``["applications"]``). Case 12 rebuilds
 that sentence from the walk, because this header shipped
 "fifteen sites ... ten spell their key ... three merge" for a run of commits after the reorder board
 copied the update hook's optimistic shape wholesale -- the numbers a reader trusts most are the ones
-nobody grades. Eleven files make the app's react-query calls, across eight methods, and case 1's roster
+nobody grades. Twelve files make the app's react-query calls, across eight methods, and case 1's roster
 is where a new one has to be filed.
 
 The other thing this header shipped was a finding it said it would not fix: the row merge spread
@@ -100,6 +100,7 @@ NOTIFICATION_HOOKS = "frontend/src/lib/hooks/notifications.ts"
 MAIL_SETTINGS = "frontend/src/lib/hooks/mail-settings.ts"
 ACCOUNT_HOOKS = "frontend/src/lib/hooks/account.ts"
 REPLIES_HOOKS = "frontend/src/lib/hooks/replies.ts"
+OFFERS_HOOKS = "frontend/src/lib/hooks/offers.ts"
 
 WRITERS = ("setQueryData", "setQueriesData")
 READERS = ("getQueryData", "getQueriesData")
@@ -135,6 +136,9 @@ CLIENT_CALLS = {
     # 10 since 19.2's apply receipt: the write refreshes the feed and the run it
     # started, plus the one run every other applied receipt belongs to.
     INGESTION_HOOKS: {"invalidateQueries": 10},
+    # Epic 185: the shelf's save and delete both refresh the `["offers", "shelf"]` key,
+    # the only two react-query calls the offers hooks module makes.
+    OFFERS_HOOKS: {"invalidateQueries": 2},
     # 36.4: the four second-factor writes each refresh the one status the card reads.
     MFA_HOOKS: {"invalidateQueries": 4},
     # 4 rather than 3 since 45.4's "the read rows leave in one press": dismissing the read rows is a

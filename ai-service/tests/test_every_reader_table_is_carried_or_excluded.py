@@ -72,6 +72,10 @@ CARRIED: dict[str, str] = {
     "saved_jobs": "saved_jobs",
     "inbound_mails": "inbound_mails",
     "application_letters": "cover_letters",
+    # Since 1.7.0 the reader's own offers travel: the whole point of the shelf is
+    # that the compare reads the rows the reader actually holds, and a right-to-
+    # be-forgotten file that leaves them out loses the number the decision turned on.
+    "offers": "offers",
 }
 
 # A child table with no section of its own: its rows are embedded in the

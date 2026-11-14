@@ -143,7 +143,10 @@ READERS = {
               "components/common/module-view.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",
               # The nightly history card (20.1) reads the page's rows and nothing else.
-              "components/monitoring/nightly-history.tsx", "lib/hooks/resources.ts"],
+              "components/monitoring/nightly-history.tsx",
+              # 185's shelf renders each held offer from the page's rows; it reads
+              # `items` alone and pages nothing.
+              "components/offers/offer-shelf.tsx", "lib/hooks/resources.ts"],
     "total": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
               "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",

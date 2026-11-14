@@ -112,6 +112,7 @@ public class ImportService {
     private final IngestionFeedRepository feeds;
     private final SavedJobRepository savedJobs;
     private final InboundMailRepository inboundMails;
+    private final com.careeros.offer.repository.OfferShelfRepository offerShelf;
 
     public ImportService(AiServiceClient aiService, ExportService exports,
                           UserProfileRepository profiles,
@@ -129,7 +130,8 @@ public class ImportService {
                           SavedSearchRepository savedSearches,
                           IngestionFeedRepository feeds,
                           SavedJobRepository savedJobs,
-                          InboundMailRepository inboundMails) {
+                          InboundMailRepository inboundMails,
+                          com.careeros.offer.repository.OfferShelfRepository offerShelf) {
         this.aiService = aiService;
         this.exports = exports;
         this.profiles = profiles;
@@ -138,6 +140,7 @@ public class ImportService {
         this.applications = applications;
         this.letters = letters;
         this.growthPlans = growthPlans;
+        this.offerShelf = offerShelf;
         this.resumes = resumes;
         this.knowledge = knowledge;
         this.contactService = contactService;
@@ -214,6 +217,7 @@ public class ImportService {
         applySavedJobs(userId, data, sections, applied, skipped);
         applyInboundMails(userId, data, sections, applied, skipped);
         applyCoverLetters(userId, data, sections, applied, skipped, applicationIds);
+        applyOffers(userId, data, sections, applied, skipped);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("applied", applied.entrySet().stream()
@@ -919,6 +923,84 @@ public class ImportService {
             }
         }
         count(applied, "inbound_mails", created, updated, deleted, unchanged);
+    }
+
+    /**
+     * The offers the reader is holding (185).
+     *
+     * <p>Counter-intuitively, nothing here crosses sections: an offer stands alone.
+     * The label is the reader's own words about their own packet, the numbers are
+     * the deal, and the clock is the decision it forces. A restore that left them
+     * out would strand the reader with an empty shelf and no numbers to compare,
+     * so the whole record round-trips; the deadline keeps whatever precision it had.
+     */
+    private void applyOffers(UUID userId, Map<String, Object> data,
+                             Map<String, List<Map<String, Object>>> sections,
+                             Map<String, int[]> applied, List<Map<String, String>> skipped) {
+        List<Map<String, Object>> ops = sections.get("offers");
+        if (ops == null || ops.isEmpty()) {
+            return;
+        }
+        Object rows = data.get("offers");
+        if (!(rows instanceof List<?> list)) {
+            skipped.add(Map.of("section", "offers",
+                    "reason", "The bundle carries no offers."));
+            return;
+        }
+        int created = 0;
+        int updated = 0;
+        int deleted = 0;
+        int unchanged = 0;
+        for (Map<String, Object> op : ops) {
+            String id = str(op, "id");
+            String kind = str(op, "op");
+            UUID rowId = uuid(id);
+            if ("skip".equals(kind)) {
+                unchanged++;
+                continue;
+            }
+            if ("delete".equals(kind)) {
+                if (rowId == null) {
+                    continue;
+                }
+                offerShelf.findByIdAndUserId(rowId, userId).ifPresent(offerShelf::delete);
+                deleted++;
+                continue;
+            }
+            Map<?, ?> row = findRow(list, id);
+            if (row == null) {
+                continue;
+            }
+            String label = str(row, "label");
+            if (label == null || label.isBlank()) {
+                continue;
+            }
+            com.careeros.offer.entity.OfferRow target = rowId == null ? null
+                    : offerShelf.findByIdAndUserId(rowId, userId).orElse(null);
+            boolean fresh = target == null;
+            if (fresh) {
+                target = new com.careeros.offer.entity.OfferRow();
+                target.setUserId(userId);
+                setId(target, restorableId(rowId, offerShelf::existsById));
+            }
+            target.setLabel(label.trim());
+            target.setBase(dec(row, "base") == null ? 0 : dec(row, "base").intValueExact());
+            target.setBonus(dec(row, "bonus") == null ? 0 : dec(row, "bonus").intValueExact());
+            target.setEquity(dec(row, "equity") == null ? 0 : dec(row, "equity").intValueExact());
+            String currency = str(row, "currency");
+            target.setCurrency(currency == null ? "USD" : currency);
+            String remoteType = str(row, "remote_type");
+            target.setRemoteType(remoteType == null ? "onsite" : remoteType);
+            target.setDeadline(time(row, "deadline"));
+            target.setNotes(str(row, "notes"));
+            offerShelf.save(target);
+            if (fresh) {
+                created++;
+            } else {
+                updated++;
+            }
+        }
+        count(applied, "offers", created, updated, deleted, unchanged);
     }
 
     /**

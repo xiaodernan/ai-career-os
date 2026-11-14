@@ -28,6 +28,8 @@ import com.careeros.job.repository.SavedJobRepository;
 import com.careeros.job.repository.SavedSearchRepository;
 import com.careeros.network.entity.Contact;
 import com.careeros.network.repository.ContactRepository;
+import com.careeros.offer.entity.OfferRow;
+import com.careeros.offer.repository.OfferShelfRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,10 +46,10 @@ import org.springframework.transaction.annotation.Transactional;
  * The export bundle (13.1), with the backend's own sections in it.
  *
  * <p>The ai-service reads six sections for itself and hashes the bundle; this
- * service reads the nine the BACKEND owns — {@code applications},
+ * service reads the ten the BACKEND owns — {@code applications},
  * {@code growth_plans}, {@code notes}, {@code contacts},
  * {@code conversations}, {@code saved_searches}, {@code ingestion_feeds},
- * {@code saved_jobs} and {@code inbound_mails} —
+ * {@code saved_jobs}, {@code inbound_mails} and {@code offers} —
  * and hands them over.
  * The hash is still computed in one place (the ai-service), so a bundle has one
  * hashing rule rather than one per producer, and a bundle without the pipeline the
@@ -83,6 +85,7 @@ public class ExportService {
     private final SavedJobRepository savedJobs;
     private final InboundMailRepository inboundMails;
     private final ApplicationLetterRepository letters;
+    private final OfferShelfRepository offerShelf;
     private final JobRepository jobs;
     private final CompanyRepository companies;
 
@@ -92,7 +95,8 @@ public class ExportService {
                           MessageRepository messages, SavedSearchRepository savedSearches,
                           IngestionFeedRepository feeds, SavedJobRepository savedJobs,
                           InboundMailRepository inboundMails,
-                          ApplicationLetterRepository letters, JobRepository jobs,
+                          ApplicationLetterRepository letters, OfferShelfRepository offerShelf,
+                          JobRepository jobs,
                           CompanyRepository companies) {
         this.aiService = aiService;
         this.applications = applications;
@@ -106,6 +110,7 @@ public class ExportService {
         this.savedJobs = savedJobs;
         this.inboundMails = inboundMails;
         this.letters = letters;
+        this.offerShelf = offerShelf;
         this.jobs = jobs;
         this.companies = companies;
     }
@@ -119,7 +124,28 @@ public class ExportService {
         return aiService.exportBundle(userId, anonymized, backendSections(userId));
     }
 
-    /**
+    private static Map<String, Object> toOffer(com.careeros.offer.entity.OfferRow offer) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", offer.getId() == null ? null : offer.getId().toString());
+        row.put("label", offer.getLabel());
+        row.put("base", offer.getBase());
+        row.put("bonus", offer.getBonus());
+        row.put("equity", offer.getEquity());
+        row.put("currency", offer.getCurrency());
+        row.put("remote_type", offer.getRemoteType());
+        if (offer.getDeadline() != null) {
+            row.put("deadline", offer.getDeadline().toString());
+        }
+        row.put("notes", offer.getNotes());
+        row.put("total_comp", offer.totalComp());
+        if (offer.getCreatedAt() != null) {
+            row.put("created_at", offer.getCreatedAt().toString());
+        }
+        if (offer.getUpdatedAt() != null) {
+            row.put("updated_at", offer.getUpdatedAt().toString());
+        }
+        return row;
+    }    /**
      * The sections the backend owns, in the bundle's own shape.
      *
      * <p>Package-private because the restore reads through it too: the plan's
@@ -167,6 +193,13 @@ public class ExportService {
                 .findByUserIdOrderByCreatedAtDescIdDesc(userId).stream()
                 .limit(MAX_ROWS)
                 .map(ExportService::toLetter)
+                .toList());
+        // The offers the reader is holding (Epic 185). A kept letter is the reader's
+        // own words about a posting; an offer on the shelf is the number the whole
+        // negotiation turns on -- and a bundle that cannot compare offers after a
+        // restore leaves the reader none the wiser about what they were offered.
+        sections.put("offers", offerShelf.shelfOrder(userId).stream()
+                .map(ExportService::toOffer)
                 .toList());
         return sections;
     }

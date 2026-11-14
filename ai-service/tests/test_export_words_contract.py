@@ -166,6 +166,11 @@ def _bundle_with_every_section() -> dict:
                            "tone": "warm", "length": "short",
                            "body": "Dear Acme, I would like to join the platform team.",
                            "created_at": "2026-10-30T08:00:00+00:00"}],
+        "offers": [{"id": "o1", "label": "Acme — Senior Backend", "base": 210000,
+                    "bonus": 15000, "equity": 30000, "currency": "USD",
+                    "remote_type": "remote", "deadline": "2026-11-28T00:00:00Z",
+                    "notes": "Countered once; they met base but not equity.",
+                    "total_comp": 255000}],
     }
     return ex.build_bundle("11111111-1111-1111-1111-111111111111", raw)
 

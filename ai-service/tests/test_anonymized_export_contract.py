@@ -280,6 +280,9 @@ PEOPLE: dict[str, frozenset[str]] = {
     # address, the subject and the body are theirs, not the search's.
     "saved_jobs": frozenset({"note"}),
     "inbound_mails": frozenset({"from_address", "subject", "body_text"}),
+    # The offer: the label names an employer and the notes are the reader's
+    # words; the numbers and the clock are the deal and stay.
+    "offers": frozenset({"label", "notes"}),
 }
 
 # The interview turns are their own group: a list of rows inside the row.
@@ -371,6 +374,12 @@ SUBSTANCE: dict[str, frozenset[str]] = {
         "id", "message_key", "intent", "company", "role", "application_id",
         "filed_at", "received_at", "created_at",
     }),
+    # The offers on the shelf: the deal's shape is the substance. The label names
+    # the employer and the notes are the reader's, classified above.
+    "offers": frozenset({
+        "id", "base", "bonus", "equity", "currency", "remote_type",
+        "deadline", "total_comp", "created_at", "updated_at",
+    }),
 }
 
 TURN_SUBSTANCE = frozenset({
@@ -397,7 +406,7 @@ def _real_columns() -> dict[str, list[str]]:
     real["interviews"] = real["interviews"] + ["turns", "evaluation"]
     for section in ("notes", "contacts", "applications", "growth_plans",
                     "saved_searches", "ingestion_feeds", "saved_jobs",
-                    "inbound_mails"):
+                    "inbound_mails", "offers"):
         real[section] = _backend_rows(section)
     # The chats: the row the backend writes, and the transcript inside it.
     # The messages are their own group, like the interview turns -- the
@@ -505,7 +514,7 @@ def _realistic_bundle() -> dict:
 
     for section in ("notes", "contacts", "applications", "growth_plans",
                     "saved_searches", "ingestion_feeds", "saved_jobs",
-                    "inbound_mails"):
+                    "inbound_mails", "offers"):
         columns = _backend_rows(section)
         raw[section] = [_row(section, columns, {})]
     # A saved search's criteria is a jsonb map, and the feed's switch is a

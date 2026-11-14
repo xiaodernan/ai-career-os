@@ -154,6 +154,8 @@ public enum ApiErrorCode {
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND),
     /** The kept letter is unknown, already removed, or belongs to another application. */
     APPLICATION_LETTER_NOT_FOUND(HttpStatus.NOT_FOUND),
+    /** The shelf offer is unknown, already removed, or belongs to another reader. */
+    OFFER_NOT_FOUND(HttpStatus.NOT_FOUND),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND),
     CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND),
     INTERVIEW_ALREADY_STARTED(HttpStatus.BAD_REQUEST),

@@ -149,13 +149,15 @@ class DataPortabilityControllerTest {
                 .thenReturn(new PageImpl<>(List.of()));
         ExportService exports = new ExportService(ai, applications, growthPlans,
                 notes, contacts, conversations, messages, savedSearches, feeds,
-                savedJobs, inboundMails, mock(ApplicationLetterRepository.class), jobs, companies);
+                savedJobs, inboundMails, mock(ApplicationLetterRepository.class),
+                mock(com.careeros.offer.repository.OfferShelfRepository.class), jobs, companies);
         ImportService imports = new ImportService(ai, exports, profiles, notes,
                 contacts, applications, mock(ApplicationLetterRepository.class), growthPlans,
                 mock(ResumeService.class), knowledge, contactService,
                 jds, jobs,
                 sessions, turns, evaluations, conversations, messages,
-                savedSearches, feeds, savedJobs, inboundMails);
+                savedSearches, feeds, savedJobs, inboundMails,
+                mock(com.careeros.offer.repository.OfferShelfRepository.class));
         DataPortabilityController controller = new DataPortabilityController(ai, exports, imports);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())

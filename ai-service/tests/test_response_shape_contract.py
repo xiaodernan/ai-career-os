@@ -1098,8 +1098,13 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # fields), and `Pending`, one row of the PEL the worker claims from — both are the transport's
     # own port types, reaching no route, held to the opener like `Purge` and `Reading`. Landed in
     # the same series as the two receipt pins above; the 210 cannot silently absorb two more.
-    assert len(declared) == 212, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 212 measured"
+    # 221 with Epic 184 (the pace grid: `HeatmapDay`, `HeatmapStreak`, `ActivityHeatmapResponse`
+    # on `ActivityHeatmapDtos` and the union row `DayCount` in the repository) and Epic 185
+    # (the offer shelf: `OfferItem`, `OfferShelfResponse`, `UpsertOfferRequest`,
+    # `UpsertOfferResponse`, `DeleteOfferResponse` on `OfferShelfDtos`). The pin was red on the
+    # trees that landed those two epics; this pass counts the repository again.
+    assert len(declared) == 221, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 221 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1379,7 +1384,11 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # announce their write through the shared handler. The knowledge delete line moved
     # verbatim in the same window (a rewrite of its surrounding block), which is why the
     # total moved by three even though the raw diff adds four lines.
-    assert len(toasts) == 61, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 64 with Epic 185's three: `useSaveOffer` announces an offer on the shelf,
+    # `useDeleteOffer` a removed one, and the Match Studio's tailor success
+    # (`studio.tailoredReady`) — three more through the same shared handler, landed
+    # in the same completion pass.
+    assert len(toasts) == 64, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -3599,7 +3608,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # eight more lines above the union.
         # 1758 rather than 1753 since the AIUsageSummary interface gained the cachedTokens
         # doc comment above the trace union — the union itself stays put.
-        ("types.ts", 1758, "kind:"),
+        # 1776 rather than 1758 since Epic 185's `OfferShelfItem`, `OfferShelf` and
+        # `OfferShelfResponse` interfaces (plus their doc comments) landed above the trace
+        # union — the union itself stays put.
+        ("types.ts", 1776, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

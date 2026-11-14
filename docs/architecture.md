@@ -91,6 +91,7 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 │       ├── mail/                 # the letters' reader-facing half: preferences, unsubscribe links, the hosted page (23.1, 27.x)
 │       ├── network/              # contacts registry (11.1); outreach/follow-up live here
 │       ├── notification/         # the inbox: read/dismiss state over synthesized signals (19.3)
+│       ├── offer/                # the offer shelf: the reader's own record of the offers they hold (185)
 │       ├── push/                 # Web Push registrations and the signed wake (33.x)
 │       ├── queue/                # Redis-Streams job queue + UTC-day leader-elected fleet jobs (162-171)
 │       ├── ratelimit/            # Redis sliding-window filter
@@ -224,6 +225,12 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
   query rather than a diff of two states.
 - `application_letters(id, application_id, user_id, job_id nullable, resume_version_id
    nullable, mode, tone, length, body, created_at, updated_at)`
+- `offers(id, user_id, label, base, bonus, equity, currency, remote_type text,
+   deadline timestamptz nullable, notes nullable, created_at, updated_at)`
+   → the offer shelf: the offers the reader actually holds, so the compare view reads
+   rows instead of re-entered numbers and the deadline chip knows when one lapses.
+   `equity` is stored annualized; the compare action owns the vest arithmetic and the
+   shelf keeps its result.
   → the letter itself, kept rather than relayed (roadmap 47.4): the row records which
   application it was written for and, when the text came from the generator, which
   posting and which resume version it was written against and with which dials, so the

@@ -1109,6 +1109,7 @@ export const translations = {
         savedJobs: "Saved jobs",
         inboundMails: "Recruiter replies",
         coverLetters: "Cover letters",
+        offers: "Offers",
       },
       export: "Export",
       exportEverything: "Export everything",
@@ -1908,6 +1909,8 @@ export const translations = {
 
       APPLICATION_LETTER_NOT_FOUND: "That kept letter is no longer here.",
 
+      OFFER_NOT_FOUND: "That offer is no longer on your shelf.",
+
       BUNDLE_NOT_PLANNABLE: "That file could not be turned into a restore plan.",
 
       BUNDLE_NO_SECTION: "That file has no data section.",
@@ -2140,8 +2143,6 @@ export const translations = {
         "One system for your entire job search — every AI conclusion is traceable to your own material.",
       switchToChinese: "Switch to Chinese",
       switchToEnglish: "Switch to English",
-      switchToChineseAria: "Switch to Chinese (中文)",
-      switchToEnglishAria: "Switch to English (EN)",
       features: {
         resume: "Resume Intelligence",
         resumeDescription:
@@ -4320,6 +4321,7 @@ export const translations = {
         savedJobs: "已收藏职位",
         inboundMails: "招聘回信",
         coverLetters: "求职信",
+        offers: "Offer 存架",
       },
       export: "导出",
       exportEverything: "导出全部",
@@ -5032,6 +5034,8 @@ export const translations = {
 
       APPLICATION_LETTER_NOT_FOUND: "这封保存的求职信已经不在了。",
 
+      OFFER_NOT_FOUND: "这份 Offer 已经不在你的存架上了。",
+
       BUNDLE_NOT_PLANNABLE: "这个文件没法变成一份恢复计划。",
 
       BUNDLE_NO_SECTION: "这个文件里没有数据段。",
@@ -5259,8 +5263,6 @@ export const translations = {
         "整个求职过程，一个系统完成——每一个 AI 结论都能追到你自己的材料。",
       switchToChinese: "切换到中文",
       switchToEnglish: "切换到英文",
-      switchToChineseAria: "切换到中文（中文）",
-      switchToEnglishAria: "切换到英文（EN）",
       features: {
         resume: "简历智能",
         resumeDescription: "上传 PDF/DOCX/TXT → 解析 → 结构化档案 + 带实时评分的版本化简历。",

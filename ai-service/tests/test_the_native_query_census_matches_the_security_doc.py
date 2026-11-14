@@ -55,6 +55,10 @@ NATIVE_QUERIES = {
     # over `relation` is the only shape `relations` asks. Bound parameter, no literal, like the
     # other seven.
     "ContactRepository.java",
+    # 184's activity heatmap: the dashboard's day grid reads the four clock tables as one
+    # grouped union (applications-filed / interviews-started / replies-received / AI-calls),
+    # bound parameters for the window and the caller, no literal value interpolated.
+    "ActivityHeatmapRepository.java",
 }
 
 # Where a value may be spliced into SQL text, and why each is not user data.

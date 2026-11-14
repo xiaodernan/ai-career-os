@@ -52,6 +52,8 @@ _SECTIONS: dict[str, dict[str, str]] = {
         "saved_jobs": "Saved jobs",
         "inbound_mails": "Recruiter replies",
         "cover_letters": "Cover letters",
+        # The offers the reader holds (1.7.0): a number the decision turns on.
+        "offers": "Offers",
     },
     "zh": {
         "profile": "个人档案",
@@ -70,6 +72,8 @@ _SECTIONS: dict[str, dict[str, str]] = {
         "saved_jobs": "已收藏职位",
         "inbound_mails": "招聘回信",
         "cover_letters": "求职信",
+        # 持有的 Offer（1.7.0）：一个决策靠它判断的数字。
+        "offers": "Offer",
     },
 }
 

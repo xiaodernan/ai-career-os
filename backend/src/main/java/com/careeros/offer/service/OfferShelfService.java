@@ -51,7 +51,7 @@ public class OfferShelfService {
     OfferRow row =
         repository
             .findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "No such offer on this shelf"));
+            .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
     apply(row, request);
     return toItem(repository.save(row));
   }
@@ -61,7 +61,7 @@ public class OfferShelfService {
     OfferRow row =
         repository
             .findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "No such offer on this shelf"));
+            .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
     return toItem(row);
   }
 
@@ -70,7 +70,7 @@ public class OfferShelfService {
     OfferRow row =
         repository
             .findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "No such offer on this shelf"));
+            .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
     repository.delete(row);
     return id;
   }

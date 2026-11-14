@@ -74,7 +74,7 @@ def test_bundle_shape_and_manifest():
         "job_descriptions": 1, "interviews": 1, "memories": 1,
         "applications": 0, "growth_plans": 0, "notes": 0, "contacts": 0,
         "conversations": 0, "saved_searches": 0, "ingestion_feeds": 0,
-        "saved_jobs": 0, "inbound_mails": 0, "cover_letters": 0}
+        "saved_jobs": 0, "inbound_mails": 0, "cover_letters": 0, "offers": 0}
     assert m["anonymized"] is False
     assert isinstance(m["content_hash"], str) and len(m["content_hash"]) == 64
 

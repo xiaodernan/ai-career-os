@@ -513,7 +513,9 @@ def test_the_unbound_mappers_ban_would_find_these_mappers_if_it_read_this_file()
     # that mounts it (`useKnowledgeNoteTagCounts`). 49 with the 74.2 window body
     # leaving the module — no new declarations. 50 with 80's `useContactRelations`
     # and its `mapRelationCounts` joining the named mappers together.
-    assert len(seen) == 50, f"resources.ts now declares {len(seen)} functions for the ban's rule"
+    # 51 with Epic 185's `useOfferShelf`, the shelf's own query hook; the rule
+    # counts every declaration, not only mappers -- this file-walk sees it too.
+    assert len(seen) == 51, f"resources.ts now declares {len(seen)} functions for the ban's rule"
     assert [n for n in seen if n.startswith("map")] == NAMED_MAPPERS, \
         "the ban's own rule no longer recognizes these declarations in file order: " \
         f"{[n for n in seen if n.startswith('map')]}"

@@ -35,7 +35,7 @@ from uuid import UUID
 # The words of the readable half, in every language it ships in.
 from app.features import export_words as words_mod
 
-SCHEMA_VERSION = "1.6.0"
+SCHEMA_VERSION = "1.7.0"
 GENERATOR = "ai-career-os"
 
 # Top-level profile keys stripped by ``anonymize`` unless the caller overrides.
@@ -95,6 +95,11 @@ ANONYMIZED_FIELDS: dict[str, tuple[str, ...]] = {
     # goes in an anonymized file. The dials it was written with stay -- they describe the letter,
     # not the person.
     "cover_letters": ("body",),
+    # The offers the reader is holding (1.7.0): the label names the employer, and the
+    # notes are the reader's own words. The numbers are the substance of the offer --
+    # the cash, the equity, the timing, the remote type -- and an anonymized file that
+    # carries no numbers is not about a job.
+    "offers": ("label", "notes"),
 }
 
 # The standing choices -- ``saved_searches`` and ``ingestion_feeds`` -- are
@@ -185,9 +190,20 @@ BACKEND_SECTIONS: tuple[str, ...] = (
     # to be a relay -- a response the browser could lose when the tab closed -- and the letter
     # the reader chose to keep is their own words about their own search, not bookkeeping.
     "cover_letters",
+    # Since 1.7.0 the offers the reader is holding travel too. A kept letter is
+    # the reader's own words to a named employer; an offer on the shelf is the
+    # number the whole negotiation turns on, and a bundle without it leaves the
+    # reader unable to compare what they were offered after a restore.
+    "offers",
 )
 
-# Every section the current schema carries.
+# The sections a 1.6.0 bundle carried: everything before the offer shelf.
+SECTIONS_1_6: tuple[str, ...] = AI_SECTIONS + (
+    "applications", "growth_plans", "notes", "contacts", "conversations",
+    "saved_searches", "ingestion_feeds", "saved_jobs", "inbound_mails",
+    "cover_letters")
+
+# The sections the current schema carries.
 SECTIONS: tuple[str, ...] = AI_SECTIONS + BACKEND_SECTIONS
 
 # The sections a 1.5.0 bundle carried: everything before the kept cover letters.
@@ -231,7 +247,8 @@ SECTIONS_BY_VERSION: dict[str, tuple[str, ...]] = {
     "1.3.0": SECTIONS_1_3,
     "1.4.0": SECTIONS_1_4,
     "1.5.0": SECTIONS_1_5,
-    "1.6.0": SECTIONS,
+    "1.6.0": SECTIONS_1_6,
+    "1.7.0": SECTIONS,
 }
 
 
@@ -986,6 +1003,22 @@ def to_markdown(bundle: dict, locale: str | None = None) -> str:
                          + (f" · {l.get('mode')}" if l.get("mode") else "")
                          + (f" · {l.get('tone')}" if l.get("tone") else "")
                          + (f" · {clip(l.get('created_at'), 40)}" if l.get("created_at") else ""))
+        lines.append("")
+
+    # The offers the reader holds (1.7.0): label, the shape of the deal and the clock
+    # on the decision. The numbers stay intact — an integer a reader compares by is
+    # not a sentence, and an anonymized document prints them just the same (the label and the notes were blanked where the anonymizer read them).
+    kept = _dicts(data.get("offers"))
+    if kept:
+        lines.append(f"## {titles['offers']} ({len(kept)})")
+        for o in kept:
+            lines.append(f"- {clip(o.get('label'), 80)}"
+                         + (f" · base {o.get('base')}" if o.get('base') is not None else "")
+                         + (f" · bonus {o.get('bonus')}" if o.get('bonus') is not None else "")
+                         + (f" · equity/yr {o.get('equity')}" if o.get('equity') is not None else "")
+                         + (f" · total {o.get('total_comp')}" if o.get('total_comp') is not None else "")
+                         + (f" · deadline {clip(o.get('deadline'), 40)}" if o.get("deadline") else "")
+                         + (f" · {o.get('notes')}" if o.get("notes") else ""))
         lines.append("")
 
     lines.append("---")
