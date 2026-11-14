@@ -38,7 +38,7 @@ class MockProvider:
         self.model = default_model
 
     def _system(self, req: LLMRequest) -> str:
-        return " ".join(m.content for m in req.messages if m.role == "system")[:4000]
+        return " ".join(m.content for m in req.messages if m.role == "system")
 
     def _last_user(self, req: LLMRequest) -> str:
         for m in reversed(req.messages):
