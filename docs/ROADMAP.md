@@ -6725,6 +6725,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   engine); `com.careeros.ai.**` + `com.careeros.system.**` **50/50**. The frontend container was
   not rebuilt this tranche (host); the change is backend-side only.)
 
+- [x] **204** The week catches up — the rebuilt container serves the last five epics, and the host-crashes are named for what they are (2026-11-14).
+
+  (The frontend image was rebuilt and recreated — 197 (the day rail), 199 (the composed empty),
+  200 (the decision number), 201 (the commit moment) and 202 (the honest front door) now ride in
+  the same build, `HTTP 200` on the live stack. The full backend suite was attempted once on a
+  recovered host and produced a cascade of failures, every one of them traced to one root cause:
+  Postgres `FATAL: sorry, too many clients already` mid-suite (the suite opens hundreds of Spring
+  contexts against the live DB) followed by Docker Desktop dying under memory pressure — HealthIT
+  (`$.data.db` false), GlobalSearchHybridIT, RateLimitIT (429 expected, 401 received), JobQueueIT,
+  ForwardedAddressIT, InterviewAnswerAtomicityIT. Targeted re-runs on a healthy stack are all
+  green: HealthIT 2/2, InterviewAnswerAtomicityIT 4/4, GlobalSearchHybridIT 4/4, RateLimitIT 6/6,
+  JobQueueIT 5/5, ForwardedAddressIT 1/1. The e2e offer arc passes live in a real browser
+  (`offer-shelf` and `offer-celebration`, 2/2, against the rebuilt build with openai_compat).
+  Still not claimed here: the single complete backend run (needs a dedicated machine with more
+  connections than this host can hold — Postgres is pinned at 100 and the live stack plus the
+  suite overflow it), and the AI-dependent e2e specs (they require the backend on
+  `LLM_PROVIDER=mock`; this stack runs the real relay by design — mock-mode full suite remains the
+  pre-merge gate, unchanged).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
