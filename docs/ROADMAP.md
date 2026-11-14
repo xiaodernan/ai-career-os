@@ -6568,6 +6568,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   walk — the row's `aria-pressed` flips and the banner appears and clears — and passes
   on the rebuilt stack against live. English and Chinese both carry the seven keys.)
 
+- [x] **195** The packet to day one -- the seven quiet chores after
+  the signing, surfaced where the reader is holding the row that matters (2026-11-14).
+
+  (The offers shelf already knew the decision, now it names the next thing the reader is doing:
+  counter-sign and file, name the start date, give notice, vest schedule, benefits, gear, one
+  person to thank and one to call. The card renders only while an accepted row exists on the
+  shelf, persists ticks in localStorage keyed to that row's id, renders a 0/7 → 7/7 meter that
+  CSS fills, and carries EN+ZH both. Maker: `OfferDayOnePacket` (one component, one source); input is
+  the shelf's `useOfferShelf` (decision: "accepted" is its trigger) — no new endpoint, no new toast,
+  no form. Verified in a real browser against the live stack: registered probe user, two offers
+  added, one marked accepted, screenshot captured with the banner, meter, steps and the
+  accepted toggle on row #1 green, "Taking it" selected.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
