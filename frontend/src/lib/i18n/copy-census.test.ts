@@ -132,9 +132,10 @@ describe("the browser's copy", () => {
     // (the 12-column contract), `components/common/page-shell.tsx` and
     // `components/common/page-section.tsx` — three more .tsx files under the scan,
     // counted, not waved through.
-    // 180 with `components/offers/offer-celebration.tsx`, the moment an offer
-    // lands — one browser source again, honestly counted.
-    expect(browserSources().length).toBe(180);
+    // 180 with `components/offers/offer-celebration.tsx`, the moment an offer lands —
+    // one browser source again, honestly counted. 181 with
+    // `components/offers/offer-day-one-packet.tsx`, the week after.
+    expect(browserSources().length).toBe(181);
   });
 
   it("finds a sentence, however long it is", () => {

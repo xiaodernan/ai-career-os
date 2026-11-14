@@ -21,6 +21,7 @@ import {
 import { useLocale } from "@/lib/i18n/locale-context";
 import { BarChart } from "@/components/common/bar-chart";
 import { OfferShelf } from "@/components/offers/offer-shelf";
+import { OfferDayOnePacket } from "@/components/offers/offer-day-one-packet";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -130,6 +131,9 @@ export default function OffersPage() {
           It sits above the actions because the actions are about ONE offer -- the
           shelf is about all of them, and the decision the page exists for. */}
       <OfferShelf />
+
+      {/* The packet to day one: the checklist the celebration did not finish. */}
+      <OfferDayOnePacket />
 
       {/* The question */}
       <Card>
