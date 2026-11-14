@@ -6626,6 +6626,34 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean. Not container-rebuilt/budget-re-run/e2e-re-run this tranche — the host is at
   ~1.4 GB and the stack is healthy but tight; last full mock e2e 73/73 stands.)
 
+- [x] **198** The relay strips `prompt_tokens_details` from stream frames — measured on the wire, with the frame in hand (2026-11-14).
+
+  (Fresh live turns through the real stack on `openai_compat` (`gpt-6-sol` at `https://wkapi.pro/v1`)
+  settle what the 0 cached_tokens on chat streams means. Turn A and turn B were the identical
+  probe message ("Reply with exactly one word: pong.", fresh conversation, through the browser
+  SSE route `/api/v1/copilot/chat/stream`): two streamed turns, both recorded `cached_tokens: 0`;
+  one non-stream follow-up call of the same account recorded a **full-prefix hit** (the
+  `memory_extract` call after each turn, identical prompt both times, 7179/7179 cached on the
+  second). The wire itself was then queried once from inside the ai-service container with the
+  same headers and `stream_options.include_usage=true`: the stream's terminal usage chunk is
+
+  `{"prompt_tokens":18477,"completion_tokens":5,"total_tokens":18482}`
+
+  — real totals, **no `prompt_tokens_details` at all**. The relay honors `include_usage` for the
+  token totals but strips the cache-read detail on streams, so `cached_tokens` has nothing to read
+  and the parser records 0 honestly — this is relay behavior, not a caller bug and not something
+  a client can recover. The streaming path was verified end-to-end (status → token → message → done
+  frames; the `done` frame carries `runId` and `conversationId`), and the streaming accounting path
+  is correct: totals are recorded, cache detail is reported as absent rather than invented.
+  The 7179/29364 account-level cached share is the non-stream lane's.
+
+  Consequences held: (1) `stream_options.include_usage` stays — totals are real and billed from
+  them; (2) the recorded 0 is the honest answer for this relay, not a hidden cache miss — the
+  preceding Epic 183 exact-match replay still serves byte-identical deterministic calls for free;
+  (3) feature one-shots under ~1024 tokens remain uncached on any compliant provider. Recorded
+  without code change; the `openai_compat.py` comment on `include_usage` already said the relay
+  may "strip `prompt_tokens_details`" — it does, on this relay, exactly that.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

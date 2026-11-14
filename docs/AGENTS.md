@@ -156,6 +156,14 @@ them as a timeline (`components/ai/agent-timeline.tsx`, `/activity` and
 `/activity/[id]`). This is PRD §47 Demo 6 — you can open any run and see agent → tools
 → retrieval → sources → LLM → final answer.
 
+**Measured relay behavior (2026-11-14).** On this stack's dev gateway (`openai_compat`,
+`gpt-6-sol`), the stream's terminal usage chunk carries the totals (`prompt_tokens`,
+`completion_tokens`, `total_tokens`) and **no `prompt_tokens_details`** — `include_usage` is
+honored for totals and the cache-read detail is stripped. The recorded `cached_tokens` for
+stream turns is therefore honestly 0 on this relay, while identical non-stream calls (e.g.
+`memory_extract`) report full-prefix hits. This is a property of the relay, not something the
+client can recover; do not "fix" it by inventing a number.
+
 **Streaming**: the copilot page posts to `POST /copilot/chat/stream` and reads the turn as an SSE
 stream — `status` frames carrying the agent's own `{agent, step}` ("Thinking", "Calling
 search_jobs"), `token` deltas (the chat task runs with `stream=True`, so `core/ai.py`'s per-call
