@@ -84,6 +84,12 @@ export default function KnowledgePage() {
           : {
               title: t("knowledge.baseIsEmpty"),
               description: t("knowledge.baseIsEmptyDescription"),
+              promise: t("knowledge.baseIsEmptyPromise"),
+              proofs: [
+                t("knowledge.baseIsEmptyProof1"),
+                t("knowledge.baseIsEmptyProof2"),
+                t("knowledge.baseIsEmptyProof3"),
+              ],
             }
       }
       ctaHref="/copilot"

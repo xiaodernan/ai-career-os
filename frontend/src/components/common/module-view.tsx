@@ -43,7 +43,15 @@ export function ModuleView<T>({
   title: string;
   description: string;
   query: UseQueryResult<Page<T>, unknown>;
-  emptyHint: { title: string; description: string; action?: React.ReactNode };
+  emptyHint: {
+    title: string;
+    description: string;
+    action?: React.ReactNode;
+    /** The payoff sentence rendered as an eyebrow above the title (Epic 3). */
+    promise?: string;
+    /** Up to three proof points, in the reader's language (Epic 3). */
+    proofs?: string[];
+  };
   ctaHref?: string;
   ctaLabel?: string;
   /** Rendered under the list once the query has data and rows survive the empty check --
@@ -117,6 +125,8 @@ export function ModuleView<T>({
               icon={<Sparkles aria-hidden />}
               title={emptyHint.title}
               description={emptyHint.description}
+              promise={emptyHint.promise}
+              proofs={emptyHint.proofs}
               action={
                 emptyHint.action ??
                 (ctaHref ? (

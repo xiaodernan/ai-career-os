@@ -129,6 +129,12 @@ export default function ApplicationsPage() {
           : {
               title: t("applications.pipelineIsEmpty"),
               description: t("applications.pipelineIsEmptyDescription"),
+              promise: t("applications.pipelineIsEmptyPromise"),
+              proofs: [
+                t("applications.pipelineIsEmptyProof1"),
+                t("applications.pipelineIsEmptyProof2"),
+                t("applications.pipelineIsEmptyProof3"),
+              ],
               action: (
                 <Button variant="ai" size="sm" onClick={openCreate}>
                   {t("applications.addApplication")}

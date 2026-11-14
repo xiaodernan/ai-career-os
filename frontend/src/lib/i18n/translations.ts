@@ -969,6 +969,10 @@ export const translations = {
       weeklyEmpty: "No letters yet",
       weeklyEmptyDescription:
         "The first letter is written on Monday morning — or compose this week's now.",
+      weeklyEmptyPromise: "WHAT THE LETTER CARRIES",
+      weeklyEmptyProof1: "What moved — replies, interviews, offers, by name",
+      weeklyEmptyProof2: "Where the quiet weeks compounded into drift",
+      weeklyEmptyProof3: "One lever for next week, chosen by the numbers",
       weeklyUnavailable: "The letters couldn't be loaded.",
       weeklyActionFailed: "Couldn't compose the letter.",
     },
@@ -2362,6 +2366,10 @@ export const translations = {
       baseIsEmpty: "The knowledge base is empty",
       baseIsEmptyDescription:
         "Add sources and they'll be parsed, chunked and embedded for retrieval with citations.",
+      baseIsEmptyPromise: "WHAT CITED ANSWERS FEEL LIKE",
+      baseIsEmptyProof1: "Every claim links back to the source it came from",
+      baseIsEmptyProof2: "Chunked and embedded the moment you add a source",
+      baseIsEmptyProof3: "Your notes join the corpus without leaving your account",
       askCopilotToIngest: "Ask Copilot to ingest",
       paginationLabel: "sources",
       notes: {
@@ -2524,6 +2532,10 @@ export const translations = {
       rowCached: "{count} cached",
       emptyDescription:
         "Once Copilot or a matching job runs, its full trace appears here.",
+      emptyPromise: "WHAT THE TRACE TELLS YOU",
+      emptyProof1: "Every model call, tool call and retrieval, in order",
+      emptyProof2: "Which calls came from cache — and what they cost",
+      emptyProof3: "The cited evidence behind each claim, one hop away",
       noRuns: "No agent runs yet",
       detail: {
         noTraceSteps: "This run recorded no trace steps. Tools that run without the orchestrator (single-call parses) log only the run row.",
@@ -2577,6 +2589,10 @@ export const translations = {
       savingMove: "Saving move…",
       pipelineIsEmptyDescription:
         "Track a job from its detail page and it appears here, starting in Saved.",
+      pipelineIsEmptyPromise: "WHAT ONE CARD BECOMES",
+      pipelineIsEmptyProof1: "Saved, applied, interview, offer — one chain, the whole loop",
+      pipelineIsEmptyProof2: "Reminders that surface when they're due, not before",
+      pipelineIsEmptyProof3: "Replies matched back to the application they answer",
       addApplication: "Add application",
       add: "Add",
       paginationLabel: "applications",
@@ -3042,6 +3058,10 @@ export const translations = {
       boardEmpty: "The job board is empty",
       boardEmptyDescription:
         "No roles have landed here yet. Paste a posting for the analyst, or let Copilot research roles for your target.",
+      boardEmptyPromise: "WHAT COPILOT PUTS ON YOUR BOARD",
+      boardEmptyProof1: "A ranked queue, with the why beside every score",
+      boardEmptyProof2: "One tap to save, and the tracking loop starts",
+      boardEmptyProof3: "Gaps and interview topics grounded in your resume",
       askCopilot: "Ask Copilot",
       paginationLabel: "jobs",
       notLiveDescription:
@@ -4171,6 +4191,10 @@ export const translations = {
       weeklyHistory: "更早的来信",
       weeklyEmpty: "还没有来信",
       weeklyEmptyDescription: "第一封信会在周一早晨写好——也可以现在就生成本周这一封。",
+      weeklyEmptyPromise: "这封信里有什么",
+      weeklyEmptyProof1: "什么发生了变化——回信、面试、offer，按名字列出",
+      weeklyEmptyProof2: "安静的几周是怎么累积出漂移的",
+      weeklyEmptyProof3: "下周的一个发力点，由数据替你选好",
       weeklyUnavailable: "来信暂时无法加载。",
       weeklyActionFailed: "无法生成来信。",
     },
@@ -5441,6 +5465,10 @@ export const translations = {
       noSourceMatchesDescription: "这份文档可能已被删除，或者它的摄取从未完成。",
       baseIsEmpty: "知识库是空的",
       baseIsEmptyDescription: "添加来源，它们会被解析、切块并嵌入，供带引用的检索使用。",
+      baseIsEmptyPromise: "引用式回答是什么感觉",
+      baseIsEmptyProof1: "每个结论都能回到它的来源",
+      baseIsEmptyProof2: "添加后立即切块并嵌入",
+      baseIsEmptyProof3: "你的笔记免出本账号，就进入知识库",
       askCopilotToIngest: "让副驾驶摄取",
       paginationLabel: "来源",
       notes: {
@@ -5587,6 +5615,10 @@ export const translations = {
       rowTokens: "{count} 个 token",
       rowCached: "已缓存 {count}",
       emptyDescription: "副驾驶或某个职位跑过之后，它的完整链路就会出现在这里。",
+      emptyPromise: "链路能告诉你什么",
+      emptyProof1: "每一次模型、工具、检索调用，按序呈现",
+      emptyProof2: "哪些调用命中缓存，各花了多少",
+      emptyProof3: "每个结论的出处，只隔一次点击",
       noRuns: "还没有代理运行记录",
       detail: {
         noTraceSteps: "这次运行没有记录轨迹步骤。不经过编排器的工具（单次调用的解析）只记录运行本身。",
@@ -5639,6 +5671,10 @@ export const translations = {
       dropCardHere: "把卡片拖到这里",
       savingMove: "正在保存移动…",
       pipelineIsEmptyDescription: "在职位详情页记录一个职位，它就会出现在这里，从「已收藏」开始。",
+      pipelineIsEmptyPromise: "一张卡片会变成什么",
+      pipelineIsEmptyProof1: "收藏、已投递、面试中、offer，一条链走完全程",
+      pipelineIsEmptyProof2: "该提醒时才提醒你，不在之前",
+      pipelineIsEmptyProof3: "回信自动配回它对应的申请",
       addApplication: "添加申请",
       add: "添加",
       paginationLabel: "申请",
@@ -6076,6 +6112,10 @@ export const translations = {
       boardEmpty: "职位板还空着",
       boardEmptyDescription:
         "还没有职位进来。把一份 JD 交给分析器，或者让副驾驶为你的目标职位做调研。",
+      boardEmptyPromise: "副驾驶会放上什么",
+      boardEmptyProof1: "按理由排好序的队列，分数旁边写清楚为什么",
+      boardEmptyProof2: "一键收藏，追踪闭环就此开始",
+      boardEmptyProof3: "依据你的简历，标出差距和面试题",
       askCopilot: "问问副驾驶",
       paginationLabel: "职位",
       notLiveDescription:

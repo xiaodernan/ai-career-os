@@ -285,6 +285,12 @@ export default function JobsPage() {
                       }
                     : {
                         icon: <Briefcase aria-hidden />,
+                        promise: t("jobs.boardEmptyPromise"),
+                        proofs: [
+                          t("jobs.boardEmptyProof1"),
+                          t("jobs.boardEmptyProof2"),
+                          t("jobs.boardEmptyProof3"),
+                        ],
                         title: t("jobs.boardEmpty"),
                         description: t("jobs.boardEmptyDescription"),
                         action: (

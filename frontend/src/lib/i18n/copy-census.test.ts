@@ -126,7 +126,9 @@ describe("the browser's copy", () => {
     // (the match screen's section renderer), `components/dashboard/activity-heatmap.tsx`
     // (the reader's pace as one grid, the Epic 184 surface), and
     // `app/(app)/studio/page.tsx` (the paste-to-tailor front door).
-    expect(browserSources().length).toBe(175);
+    // 176 with `components/common/empty-composition.tsx`, the composed empty the Epic 3
+    // surfaces render — one browser source, one census line, honestly counted.
+    expect(browserSources().length).toBe(176);
   });
 
   it("finds a sentence, however long it is", () => {

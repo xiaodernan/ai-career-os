@@ -377,8 +377,19 @@ function WeeklyLetterCard({
         ) : (
           <EmptyState
             icon={<CalendarDays aria-hidden />}
+            promise={t("analysis.weeklyEmptyPromise")}
+            proofs={[
+              t("analysis.weeklyEmptyProof1"),
+              t("analysis.weeklyEmptyProof2"),
+              t("analysis.weeklyEmptyProof3"),
+            ]}
             title={t("analysis.weeklyEmpty")}
             description={t("analysis.weeklyEmptyDescription")}
+            action={
+              <Button variant="outline" size="sm" onClick={onCompose}>
+                {t("analysis.weeklyCompose")}
+              </Button>
+            }
           />
         )}
       </CardContent>

@@ -114,6 +114,12 @@ export default function ActivityPage() {
       emptyHint={{
         title: t("activity.noRuns"),
         description: t("activity.emptyDescription"),
+        promise: t("activity.emptyPromise"),
+        proofs: [
+          t("activity.emptyProof1"),
+          t("activity.emptyProof2"),
+          t("activity.emptyProof3"),
+        ],
       }}
       ctaHref="/copilot"
       ctaLabel={t("activity.ctaLabel")}
