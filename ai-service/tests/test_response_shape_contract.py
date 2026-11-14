@@ -1391,12 +1391,11 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # `useDeleteOffer` a removed one, and the Match Studio's tailor success
     # (`studio.tailoredReady`) — three more through the same shared handler, landed
     # in the same completion pass.
-    # 66 with Epic 219 (the debrief's resetDone).
-    # 69 with Epic 223 and Epic 224: the pocket card (223) calls the toast
-    # twice (`data.pocketSaved` and the two restore outcomes, which share one
-    # call site), and the year-in-review card (224) calls it once
-    # (`ceremony.reviewSaved`).
-    assert len(toasts) == 69, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 70 with Epic 225: the Scroll direction card's save announcement
+    # (`settings.wheelSaved`) — the fourth raise in this numbered census's life,
+    # each time because a UI change added one call site without re-walking it.
+    # The number is now exactly what the walk finds, counted, not assumed.
+    assert len(toasts) == 70, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
