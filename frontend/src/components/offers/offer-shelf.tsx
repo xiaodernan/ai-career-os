@@ -191,7 +191,7 @@ export function OfferShelf() {
                         {row.bonus > 0 && ` + ${money(row.bonus, row.currency, locale)}`}
                         {row.equity > 0 &&
                           ` + ${money(row.equity, row.currency, locale)} ${t("offers.shelfEquityYear")}`}
-                        {" 路 "}
+                        {" · "}
                         {remoteTypeWord(t, row.remoteType)}
                       </p>
                     </div>

@@ -6878,6 +6878,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **215** The decision ledger — the weights only the reader can set (2026-11-15).
+
+  (A new card on `/offers`: the market ranks offers by one deterministic fact — total comp — but it
+  cannot rank what a job does to a life. The ledger is the reader's own weighted matrix: six
+  starter criteria (compensation 5, growth 4, team 4, mission 2, location 3, stability 3 — each
+  0-5, re-weightable, re-movable, removable), up to eight criteria with reader-written rows,
+  0-10 scores per offer from the shelf, A recorded zero is a real score. The weighted totals are
+  computed client-side (`lib/offers/decision-ledger.ts`, pure and unit-tested, tie-aware: only
+  scored rows can lead, an all-zero result is not a signal), persisted in the reader's browser
+  under `careeros.ledger.v1` (nothing sent anywhere, like the first-quarter plan), and the
+  verdict line reads "The ledger's call: {label} leads — {total} of {max}, on the weights you
+  set, not the market's." Full EN+ZH copy (33 keys each, parity gate kept honest). Live-verified
+  in both languages on the rebuilt container: two real offers on the shelf, all twelve cells
+  scored, verdict named Northwind — Principal 160/210 (vs Acme 157/210) in both languages,
+  localStorage round-tripped across a reload, zero console errors. Riding along: the stray `路`
+  character in `offer-shelf.tsx`'s separator — a raw Chinese glyph inside English copy since
+  5222b30 — is now a middle dot; measured gone in the rebuilt container. vitest **1386/1386**
+  (+23: the pure module, the SSR component, i18n), tsc clean, copy census re-pinned to **190
+  sources** (+1), verify_gates **569/569**.)
+
 - [x] **214** The playbook — the reader's manual, public and bilingual (2026-11-15).
 
   (A public `/playbook` page, EN+ZH, modeled as a real product manual: the pitch, the loop end
@@ -6886,10 +6906,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   reader's material; whitelist per agent; data stays local; evidence-bound or honest "I don't
   know"), keyboard power moves, six FAQ entries and a print path. The print CSS hides the chrome
   and the body flows in one column. Reachable from the 404 page. The showcase-sync generator
-  (`scripts/showcase-sync.py`) rebuilds `public/showcase.html` — a single, self-contained dark
-  one-screen card with measured numbers (routes, top-level epics, work items, test floor) — for
-  embedding in xiaodernan.github.io or any portfolio; the sync contract is documented in
-  `docs/SYNC_TO_PORTFOLIO.md` with three embedding options. Measured: vitest **1363/1363** (+3 tab
+  (`scripts/showcase-sync.py`) rebuilds `frontend/public/showcase.html` — a single, self-contained
+  dark one-screen card with measured numbers (signed-in routes=25, page routes=38, top-level
+  epics=80, work items=366, test floor 1360+) — for embedding in xiaodernan.github.io or any
+  portfolio; it is served by the Next.js frontend at `/showcase.html` (HTTP 200 on the rebuilt
+  container) and the sync contract is documented in `docs/SYNC_TO_PORTFOLIO.md` with three embedding
+  options (link/iframe/copy-in) and the exact commands. Measured: vitest **1363/1363** (+3 tab
   tests), tsc clean, copy census **189 sources** (+2 playbook page + metadata shell). Lighthouse
   on `/playbook`: a11y **1.0**, best-practices **1.0**, SEO 0.75 (recorded false negative).)
 

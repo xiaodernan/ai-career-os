@@ -29,7 +29,7 @@ VITEST_FILES = sum(1 for _ in FRONTEND.rglob("*.test.*"))
 ITEM_EPICS = len(re.findall(r"(?m)^- \[x\] \*\*\d+(?:\.\d+)?\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8")))
 TOP_EPICS = len({int(m.group(1)) for m in re.finditer(r"(?m)^- \[x\] \*\*(\d+)\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8"))})
 NAV_ROUTES = sum(1 for _ in FRONTEND.joinpath("src/components/layout/nav.ts").read_text(encoding="utf-8").splitlines() if "href:" in _)
-TESTS = "1360+"  # the suite's measured floor today; grows with each epic.
+TESTS = "1380+"  # the suite's measured floor today; grows with each epic.
 TODAY = _dt.date.today().isoformat()
 
 

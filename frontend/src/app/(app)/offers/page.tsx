@@ -24,6 +24,7 @@ import { OfferShelf } from "@/components/offers/offer-shelf";
 import { OfferDayOnePacket } from "@/components/offers/offer-day-one-packet";
 import { OfferFirstQuarter } from "@/components/offers/offer-first-quarter";
 import { OfferReplies } from "@/components/offers/offer-replies";
+import { OfferDecisionLedger } from "@/components/offers/offer-decision-ledger";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -142,6 +143,9 @@ export default function OffersPage() {
 
       {/* The bookend: the two letters every negotiation ends with. */}
       <OfferReplies />
+
+      {/* The decision ledger (Epic 215): the weights only the reader can set. */}
+      <OfferDecisionLedger />
 
       {/* The question */}
       <Card>

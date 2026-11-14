@@ -142,7 +142,9 @@ describe("the browser's copy", () => {
     // 187 with Epic 212: `app/(app)/ceremony/page.tsx` and `app/(app)/ceremony/layout.tsx`.
     // 189 with Epic 214: `app/playbook/page.tsx` (the metadata shell) and
     // `app/playbook/playbook-page.tsx` (the manual itself).
-    expect(browserSources().length).toBe(189);
+    // 190 with Epic 215: `components/offers/offer-decision-ledger.tsx`, the weights
+    // only the reader can set.
+    expect(browserSources().length).toBe(190);
   });
 
   it("finds a sentence, however long it is", () => {
