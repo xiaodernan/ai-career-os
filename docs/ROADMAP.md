@@ -6523,7 +6523,10 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   naming one control; the i18n gate forbids Chinese in the en table. The switcher now
   shows what it does in the reader's locale and lets the visible text be the
   accessible name; the a11y finding and the gate stop disagreeing with each other.
-  Live Lighthouse re-measurement is pending a healthy Docker window. Commit d496771.)
+  Re-measured on the rebuilt stack: accessibility 1.0, best practices 1.0; SEO remains
+  flagged on `meta-description` despite the meta tag present in served HTML and the
+  live DOM — recorded as a Lighthouse false negative for this local target, not
+  "fixed" by fabricating a missing tag. Commit d496771.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
