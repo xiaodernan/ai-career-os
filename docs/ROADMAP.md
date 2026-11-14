@@ -6893,7 +6893,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   shipped zero console errors. EN: "0 APPLICATIONS FILED · 2 INTERVIEWS PRACTICED · 2 OFFERS HELD ·
   7 TOTAL ACTIONS TAKEN"; ZH: "0 已投递申请 · 2 已模拟面试 · 2 手头的 OFFER · 7 全部行动次数".
   vitest **1407/1407** (+4: drawReviewCard stub-canvas cases + component SSR), census **193**,
-  `npm run budget` OK (39 routes, nothing grew), `verify_gates 569/569`.)
+  `npm run budget` OK (39 routes, nothing grew), `verify_gates 569/569`. **Tranche two
+  (2026-11-15, CI told the truth twice in one night):** the Epic 223 commit reddened
+  `test_the_response_shape_contract.py::test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper`
+  because the toast census had been bumped to 66 by Epic 219 but never re-walked after the
+  pocket card (223) added two toast.success call sites — CI walked **68** and said so. Epic 224
+  then added one more (`ceremony.reviewSaved`), so the pin is re-walked and set to **69** with the
+  reason recorded; the process lesson is the same every time it happens here and is now written
+  down: a numeric census is re-measured on every epic that ships a call site, never by arithmetic
+  from the previous number.)
 
 - [x] **223** The pocket — the browser-local half of the reader's work, one downloadable file (2026-11-15).
 
