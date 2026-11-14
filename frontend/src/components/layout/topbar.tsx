@@ -59,7 +59,8 @@ export function Topbar() {
         variant="outline"
         size="sm"
         onClick={open}
-        aria-label={t("chrome.openCommandPalette")}
+        // WCAG 2.5.3: the visible copy names the control; an aria-label that does
+        // not contain it breaks Label in Name (Lighthouse flags it as a mismatch).
         className="hidden h-8 w-52 items-center justify-between px-2.5 text-muted-foreground sm:flex lg:w-60"
       >
         <span className="flex items-center gap-2">
@@ -85,7 +86,8 @@ export function Topbar() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            aria-label={t("chrome.accountMenu")}
+            // WCAG 2.5.3: the visible initials lead the accessible name, so Label in Name holds.
+            aria-label={`${initials} · ${t("chrome.accountMenu")}`}
             className="rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
           >
             <Avatar className="size-8 ring-1 ring-border">

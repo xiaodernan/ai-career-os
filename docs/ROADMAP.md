@@ -6744,6 +6744,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `LLM_PROVIDER=mock`; this stack runs the real relay by design — mock-mode full suite remains the
   pre-merge gate, unchanged).)
 
+- [x] **205** Label in Name holds on the header — WCAG 2.5.3, measured on the rebuilt build (2026-11-14).
+
+  (The rebuilt offers page was Lighthouse-measured through the in-app browser with the stack live:
+  accessibility **1.0**, best practices **1.0**, SEO 0.75. Two `label-content-name-mismatch`
+  findings, both on header controls: the command-palette button's aria-label did not contain its
+  visible copy — the aria-label is gone and the visible copy is the accessible name; the
+  account-menu button's initials now lead its aria-label ("CP · Account menu" / "CP · 账户菜单").
+  SEO 0.75 keeps its recorded false negative on `meta-description` for this local target — no fake
+  tag added. Only the two-file fix (topbar) rode in; the container has not been rebuilt for it —
+  it is source-visible and rides on the next healthy window. A live sign-in as a probe account
+  through the page itself showed the dashboard, zero console errors, and offers rendering end to end.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
