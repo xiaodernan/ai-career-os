@@ -6502,10 +6502,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   native-query / mutation / 404 / mapper / e2e-count census that the new rows and keys
   moved repinned honestly in the same change. E2E README balanced to the measured
   72-spec truth; PRODUCT.md recorded it; architecture.md data model + package list grew.
-  Dual verification: `DataPortabilityControllerTest` 29/29, ai-service suite **2782**,
-  backend gate tests green offline; live round-trip through the bundle HTTP path is pending
-  this session's Docker-VM instability (the VM died three times under the user's memory
-  pressure; killed no user processes). Commit 68833e3.)
+  Verified offline AND live: `DataPortabilityControllerTest` 29/29, ai-service suite
+  **2782**, backend gate tests green, **live round-trip on the rebuilt stack measured end-
+  to-end**: registration → offer-shelf add → export
+  (schema `1.7.0`, `offers: 1`, `total_comp: 250000`) → anonymized export (`label`+`notes`
+  null, numbers intact) → shelf read-back ✓. Commit 68833e3.)
 
 - [x] **191** MMR: one candidate reorder, coverage where diversity matters (2026-11-14).
 
