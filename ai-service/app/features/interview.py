@@ -6,6 +6,8 @@ up. Difficulty adapts to answer quality; the question/answer tree becomes the
 "interview depth trajectory".
 """
 
+import json
+
 from app.core.ai import ask, ask_json, stable_messages, wrap_untrusted
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -80,6 +82,35 @@ def opening_meta(topic: str) -> dict:
     return {"topic": topic, "depth_level": 0, "expected_points": [], "phase": "opening"}
 
 
+def unwrap_text_envelope(text: str) -> str:
+    """Unwrap a JSON envelope some models emit despite a plain-text prompt.
+
+    The opening question is prompted as prose ("one short greeting ... the FIRST
+    question only"), and the real relay (gpt-6-sol via wkapi.pro) answered it with
+    `{"message": "Hi, thanks for joining today. ..."}` -- the turn stored the whole
+    envelope as the question text, and the runner rendered raw JSON to the reader.
+    A plain-text caller wants the words, not the wrapping. Anything that is not a
+    JSON object whose single preferred key holds the text passes through untouched.
+    """
+    s = text.strip()
+    if not (s.startswith("{") and s.endswith("}")):
+        return s
+    try:
+        obj = json.loads(s)
+    except json.JSONDecodeError:
+        return s
+    if not isinstance(obj, dict):
+        return s
+    for key in ("message", "question", "text", "content", "answer", "reply"):
+        v = obj.get(key)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    strings = [v for v in obj.values() if isinstance(v, str) and v.strip()]
+    if len(obj) == 1 and len(strings) == 1:
+        return strings[0].strip()
+    return s
+
+
 async def opening_question(*, mode: str, company: str, position: str, resume_ctx: str,
                           jd_topics: list[str], candidate_name: str = "",
                           user_id: str | None = None, run_id: str | None = None) -> dict:
@@ -94,7 +125,9 @@ async def opening_question(*, mode: str, company: str, position: str, resume_ctx
                                  LLMMessage("user", prompt)),
         temperature=0.7, max_tokens=260),
         user_id=user_id, run_id=run_id, agent="interview", kind="interview_open")
-    text = resp.text.strip()
+    # The relay answered this prompt with a JSON envelope in live verification;
+    # the runner renders whatever we store, so the words are what we store.
+    text = unwrap_text_envelope(resp.text)
     topic = (jd_topics or ["background"])[0]
     return {"question": text, "meta": opening_meta(topic), "model": resp.model}
 
