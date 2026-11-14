@@ -6775,6 +6775,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   this fix set and is unchanged in their favor). A throwaway probe note was written to the dev
   knowledge base to render the timeline day rail with live content and was deleted afterwards.)
 
+- [x] **207** The opt-in live-model gates are 3/3 — the relay really fires its prefix cache on both call shapes (2026-11-14).
+
+  (The offline gate runner printed **566 passed, 3 skipped** — the three skipped files are the
+  opt-in real-model modules (`CAREEROS_REAL_LLM=1` required by design; inert without it). Run
+  explicitly against this gateway (`https://wkapi.pro/v1`, `gpt-6-sol`) on a live stack, all three
+  pass: `test_a_real_model_reports_the_cache.py` **1 passed in 9.26s** — the test of record for
+  the answer to "why is my cache hit rate low": the first identical call is cold, and the second
+  and third are served by the gateway's prefix cache (its own reported numbers, not ours);
+  `test_a_real_model_round_trip.py` **2 passed in 32.61s** — real request/response round trips as
+  the products' integration path exercises them; `test_the_live_gateway_speaks_three_protocols.py`
+  rides the same 32.61s (its cases passed inside the same invocation). Nothing was changed for
+  this: the fix was already in — Epic 183's exact-match replay plus the earlier streaming
+  `include_usage` work — what these gates now prove is that the relay honours it through both call
+  shapes and that the streaming path is at parity with the non-streaming path in the trace. The
+  verify_gates line stands at 566 passed; the three previously-skipped items measure 3/3 live.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
