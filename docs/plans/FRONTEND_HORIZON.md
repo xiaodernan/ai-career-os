@@ -56,6 +56,19 @@ vitest 1325/1325, tsc clean, bundle budget OK (36 routes); e2e not re-run this
 tranche (additive styling only; the last full mock run, 72/72, predates it). The
 remaining scope — StreamChoreography for the copilot bubble itself — is still open.
 
+**Tranche two (2026-11-14, landed).** The waiting gap closed: between send and the
+first stream frame the pending block rendered a lone "Thinking" over nothing. It now
+renders a shimmer bubble the size of a short answer (aria-hidden, three band lines),
+replaced the instant a stream step or the first token lands; ProcessingSteps owns the
+step trail, the streaming bubble owns the tokens.
+
+**Tranche three (2026-11-14, landed).** The action chips arrive 220ms behind the
+answer and its citations (opacity/transform, mount-driven). Epic 2's composed turn is
+complete: reading order answer → evidence → next step, none of it timer-driven.
+Measured across both: vitest 1330/1330 each time, bundle budget OK (36 routes),
+containers rebuilt and serving; `e2e` not re-run for either (additive styling; the
+last full mock run, 72/72, predates both).
+
 ## Epic 3 — the empty states become product
 
 **The Shape.** Every module has an `EmptyState` with an illustration, a sentence,
@@ -103,6 +116,18 @@ foreground-muted, accent) against every paint in the tree; the contrast gate
 (`test_accessibility_contrast_tokens.py`, exists) fails loud when a new token
 drops below 4.5:1. Measured by: audit builds; no text node below the floor on
 either theme; the audit table in `docs/PRODUCT.md` gains a theme column.
+
+**Tranche one (2026-11-14, landed).** The gate the file claimed existed did not;
+it exists now — three cases, both `globals.css` blocks parsed, 26 real token pairs
+(Björn Ottosson's published inverse oklch matrices, pure stdlib, no dependency),
+every failure names its own ratio. First contact caught real rot, exactly as
+predicted: light `--muted-foreground` 0.55→0.52 (4.39→4.98:1 on muted), light
+`--success` 0.58→0.54 (3.95→4.63:1), light `--warning` 0.68→0.55 (2.89→4.86:1),
+dark `--primary`/`--sidebar-primary` 0.62→0.56 (primary-foreground pair 3.67→4.72:1).
+Floor on both themes is now 4.63:1; vitest 1330/1330, bundle budget OK (36 routes),
+container rebuilt and serving. The PRODUCT.md "audit table" was never a real table —
+no fake column was added to it; the measured numbers live in this file and in
+ROADMAP.md's Epic 188.
 
 ## Sequencing
 

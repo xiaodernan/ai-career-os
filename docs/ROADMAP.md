@@ -6465,6 +6465,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   FRONTEND_HORIZON.md carries the tranche; remaining scope (illustrations per promise)
   still open.)
 
+- [x] **188** Epic 4, tranche one: the contrast gate that the docs claimed existed now does — and both themes clear it (2026-11-14).
+
+  (`ai-service/tests/test_accessibility_contrast_tokens.py`. Both `globals.css`
+  blocks parsed; 26 token pairs the product actually paints, measured by WCAG
+  relative luminance — pure stdlib oklch→oklab→linear sRGB→Y, no dependency.
+  First contact caught real rot: light `--muted-foreground` 0.55→0.52,
+  light `--success` 0.58→0.54, light `--warning` 0.68→0.55, dark `--primary` and
+  `--sidebar-primary` 0.62→0.56 (both four-word pairs now ≥4.5:1). Both themes
+  floor at 4.63:1 / 4.72:1. vitest **1330/1330**, tsc clean, bundle budget OK
+  (36 routes), frontend container rebuilt and serving; PRODUCT.md was not given a
+  fake "theme column" — the measured results live here and in FRONTEND_HORIZON.md.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
