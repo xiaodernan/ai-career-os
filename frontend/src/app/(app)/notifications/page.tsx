@@ -2,17 +2,32 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Check, CheckCheck, X } from "lucide-react";
+import {
+  AlertOctagon,
+  ArrowUpRight,
+  BellRing,
+  Check,
+  CheckCheck,
+  Clock,
+  FilePlus2,
+  Inbox,
+  MoonStar,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyComposition } from "@/components/common/empty-composition";
 import { GradientText } from "@/components/ui/gradient-text";
 import { reminderPatch, snoozeReminder } from "@/lib/application-edit";
 import { relativeTime } from "@/lib/format";
 import { asInboxKind, kindsPresent, rowsUnder } from "@/lib/inbox-filter";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { stageLabel } from "@/lib/pipeline";
+import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useUpdateApplication } from "@/lib/hooks/actions";
 import {
@@ -56,6 +71,23 @@ type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 /** The address bar's filter, absent until the reader picks one. */
 const VIEW_DEFAULTS: { kind?: string; unread?: boolean } = { kind: undefined, unread: undefined };
+
+const KIND_ICONS: Record<string, React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>> = {
+  reminder: Clock,
+  stale: MoonStar,
+  ingestion_failed: AlertOctagon,
+  ingestion_created: FilePlus2,
+  saved_search: Search,
+  reply: Inbox,
+};
+const KIND_TINT: Record<string, string> = {
+  reminder: "text-warning border-warning/40 bg-warning/10",
+  stale: "text-muted-foreground border-border/70 bg-muted",
+  ingestion_failed: "text-destructive border-destructive/40 bg-destructive/10",
+  ingestion_created: "text-success border-success/40 bg-success/10",
+  saved_search: "text-primary border-primary/40 bg-primary/10",
+  reply: "text-primary border-primary/40 bg-primary/10",
+};
 
 function kindKey(kind: string): string {
   switch (kind) {
@@ -286,14 +318,31 @@ export default function NotificationsPage() {
                     const name = nameOf(item, t);
                     const applicationId =
                       item.kind === "reminder" ? reminderApplicationId(item.key) : null;
+                    const Icon = KIND_ICONS[item.kind] ?? BellRing;
                     return (
                       <li
                         key={item.key}
-                        className="rounded-lg border border-border/70 p-3"
+                        className={cn(
+                          "group rounded-lg border p-3 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-soft",
+                          item.read
+                            ? "border-border/70 hover:border-border"
+                            : "border-primary/25 bg-primary/[0.04] hover:border-primary/40",
+                        )}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-105",
+                                KIND_TINT[item.kind] ??
+                                  "text-muted-foreground border-border/60 bg-muted",
+                              )}
+                            >
+                              <Icon className="size-4" aria-hidden />
+                            </span>
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
                               <Badge variant={kindVariant(item.kind)}>
                                 {t(kindKey(item.kind))}
                               </Badge>
@@ -317,9 +366,12 @@ export default function NotificationsPage() {
                             {item.subject && (
                               <p className="text-xs text-muted-foreground">{item.subject}</p>
                             )}
-                            {item.note && <p className="text-xs text-danger">{item.note}</p>}
+                            {item.note && (
+                              <p className="text-xs text-danger">{item.note}</p>
+                            )}
+                            </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-1">
+                          <div className="flex shrink-0 items-center gap-0.5">
                             {/* The reminder's two answers (43.2). The clear travels through the same
                                 picker-shaped patch as the dialog: emptying a reminder is spelled as
                                 an explicit command there, and this page must not invent a second
@@ -398,12 +450,13 @@ export default function NotificationsPage() {
               )}
             </>
           ) : inbox.isSuccess ? (
-            <div className="space-y-1 py-6 text-center">
-              <p className="text-sm font-medium">{t("notifications.empty")}</p>
-              <p className="text-xs text-muted-foreground">
-                {t("notifications.emptyDescription")}
-              </p>
-            </div>
+            <EmptyComposition
+              icon={<Sparkles aria-hidden />}
+              promise={t("notifications.allCaughtUpTitle")}
+              title={t("notifications.empty")}
+              description={t("notifications.allCaughtUpDescription")}
+              className="py-8"
+            />
           ) : inbox.isError ? (
             <p className="text-sm text-muted-foreground">{t("notifications.unavailable")}</p>
           ) : null}

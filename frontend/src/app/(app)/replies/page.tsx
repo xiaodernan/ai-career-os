@@ -6,7 +6,7 @@ import { ArrowUpRight, Inbox, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
-import { EmptyState } from "@/components/common/empty-state";
+import { EmptyComposition } from "@/components/common/empty-composition";
 import { ErrorState } from "@/components/common/error-state";
 import { Pagination } from "@/components/common/pagination";
 import { Badge } from "@/components/ui/badge";
@@ -446,8 +446,9 @@ export default function RepliesPage() {
               })}
             </ul>
           ) : state.q ? (
-            <EmptyState
+            <EmptyComposition
               icon={<Search aria-hidden />}
+              promise={t("replies.inboxPromise")}
               title={t("replies.noMatch", { query: state.q })}
               // Under a chip or the waiting scope, "clear the search" alone would leave the
               // reader looking at the same empty page -- every filter has to go together.
@@ -476,8 +477,9 @@ export default function RepliesPage() {
               }
             />
           ) : state.intent ? (
-            <EmptyState
+            <EmptyComposition
               icon={<Inbox aria-hidden />}
+              promise={t("replies.inboxPromise")}
               title={t("replies.noIntentMatch")}
               // Under the waiting scope, letters may read this way and still be filed --
               // saying none carry the reading would blame the reading for the scope's work.
@@ -496,8 +498,9 @@ export default function RepliesPage() {
             // An empty waiting pile is good news, not an empty inbox: every letter already
             // names its card, so the settings link would solve a problem this reader does
             // not have.
-            <EmptyState
+            <EmptyComposition
               icon={<Inbox aria-hidden />}
+              promise={t("replies.inboxPromise")}
               title={t("replies.noUnfiledMatch")}
               description={t("replies.noUnfiledMatchDescription")}
               action={
@@ -507,8 +510,9 @@ export default function RepliesPage() {
               }
             />
           ) : (
-            <EmptyState
+            <EmptyComposition
               icon={<Inbox aria-hidden />}
+              promise={t("replies.inboxPromise")}
               title={t("replies.empty")}
               description={t("replies.emptyDescription")}
               action={

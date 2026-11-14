@@ -1299,6 +1299,9 @@ export const translations = {
       empty: "Nothing needs your attention right now.",
       emptyDescription:
         "A reminder that comes due, an application that goes quiet, a failed feed pull, a pull that created postings, a saved search that finds new postings, or a reply from a recruiter will appear here.",
+      allCaughtUpTitle: "The inbox is quiet.",
+      allCaughtUpDescription:
+        "Reminders, stalled applications, failed pulls, new postings, saved searches and recruiter replies — all caught up. You can hear yourself think in here.",
       unavailable: "The inbox couldn't be loaded.",
       kindReminder: "Reminder",
       kindStale: "Gone quiet",
@@ -1651,6 +1654,7 @@ export const translations = {
         "The letter reads as a {intent}, so the classifier suggests {stage}. This moves the card now; you can move it back at any time.",
       applyStageToast: "The card moved.",
       getAddress: "Get your address",
+      inboxPromise: "The replies pile is clear — no letter is waiting for you.",
       empty: "No replies yet",
       emptyDescription:
         "Forward recruiter mail to your reply address and each letter lands here, attached to the application it answers.",
@@ -4526,6 +4530,9 @@ export const translations = {
       empty: "现在没有需要你关注的事项。",
       emptyDescription:
         "到期的提醒、久无动静的申请、失败的订阅拉取、带来新职位的拉取、找到新职位的已保存搜索，或招聘方的回复，都会出现在这里。",
+      allCaughtUpTitle: "通知栏安静了。",
+      allCaughtUpDescription:
+        "到期的提醒、久无动静的申请、失败的拉取、新职位、已保存搜索和招聘回复——都已处理完。这里听得见自己的呼吸。",
       unavailable: "通知列表加载失败。",
       kindReminder: "提醒",
       kindStale: "久无动静",
@@ -4903,6 +4910,7 @@ export const translations = {
       applyStageDescription:
         "这封信读起来像{intent}，所以分类器建议{stage}。这会立刻移动这张卡片；你随时可以移回来。",
       applyStageToast: "卡片已移动。",
+      inboxPromise: "收件箱清空——没有信在等你。",
       getAddress: "获取你的地址",
       empty: "还没有回信",
       emptyDescription:

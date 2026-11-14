@@ -257,7 +257,7 @@ describe("the notifications page", () => {
     const empty = render();
     expect(empty).toContain("Nothing needs your attention right now.");
     expect(empty).toContain(
-      "A reminder that comes due, an application that goes quiet, a failed feed pull, a pull that created postings, a saved search that finds new postings, or a reply from a recruiter will appear here."
+      "Reminders, stalled applications, failed pulls, new postings, saved searches and recruiter replies — all caught up. You can hear yourself think in here."
     );
     expect(empty).toContain("Everything here is read.");
     // An empty inbox has no kinds to filter by, so it offers no filter.
