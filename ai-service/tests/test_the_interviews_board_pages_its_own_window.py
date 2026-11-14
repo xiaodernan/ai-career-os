@@ -129,9 +129,11 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
         f"{request}")
     # #228 moved the literal to the route's own 20, so the two now agree; what this gate
     # still pins is that a caller's window overrides it rather than replaces it.
-    # Three callers now: the board (its own page), the report (59.1) and the runner (62.1).
-    # The last two ask for one card's newest window and are gated on the card existing.
+    # Four callers now: the board (its own page), the report (59.1), the runner (62.1) —
+    # and the closing ceremony (212), which reads the interview total for its stat tiles.
     assert hook_calls("useInterviewSessions") == [
+        ("app/(app)/ceremony/page.tsx",
+         "{ size: 1, page: 0 }"),
         ("app/(app)/interviews/[id]/page.tsx",
          "{ applicationId: data?.applicationId ?? undefined, size: 20, "
          "enabled: Boolean(data?.applicationId), }"),

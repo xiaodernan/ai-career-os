@@ -69,8 +69,11 @@ MODULE_VIEW_SCREENS = [
 # (81 brought the timeline in on the boundary shell, 6/27.)
 # The growth page joined with 10.3: its report is a mutation's answer, so it branches
 # on its own `isPending` rather than either shell.
+# The letters gallery (210) and the closing ceremony (212) branch on their own
+# `isPending`/`isError` arms rather than either shell.
 OWN_FLAG_SCREENS = [
     "frontend/src/app/(app)/analysis/page.tsx",
+    "frontend/src/app/(app)/ceremony/page.tsx",
     "frontend/src/app/(app)/companies/[id]/page.tsx",
     "frontend/src/app/(app)/copilot/page.tsx",
     "frontend/src/app/(app)/data/page.tsx",
@@ -79,6 +82,7 @@ OWN_FLAG_SCREENS = [
     "frontend/src/app/(app)/interviews/[id]/page.tsx",
     "frontend/src/app/(app)/interviews/[id]/report/page.tsx",
     "frontend/src/app/(app)/jobs/[id]/page.tsx",
+    "frontend/src/app/(app)/letters/page.tsx",
     "frontend/src/app/(app)/monitoring/page.tsx",
     # The notification center joined with 19.4: its inbox is a query with its own
     # `isError` arm, not either shared shell.
@@ -132,7 +136,7 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 35, "app/%s page.tsx files, not the 35 this file walks (Epic 81 joined, the paste-to-tailor Studio page joined since)" % len(out)
+    assert len(out) == 38, "app/%s page.tsx files, not the 38 this file walks (Epics 210/212/214 joined since this pin: letters, ceremony, playbook)" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
@@ -187,7 +191,7 @@ def status_of(status: str) -> list:
 
 def test_the_contract_called_single_is_used_by_six_of_the_twenty_eight_app_screens():
     screens = app_screens()
-    assert len(screens) == 28, "%d screens under app/(app), not 28" % len(screens)
+    assert len(screens) == 30, "%d screens under app/(app), not 30" % len(screens)
     users = boundary_users()
     assert users == BOUNDARY_SCREENS, "the boundary is used by %s" % [u.split("app/")[-1] for u in users]
     assert stmt(read(BOUNDARY), "single async contract used by every surface") == \
@@ -195,7 +199,7 @@ def test_the_contract_called_single_is_used_by_six_of_the_twenty_eight_app_scree
         "the file's own claim about its reach moved, so the set above needs re-measuring, not this pin"
     )
     non = [s for s in screens if s not in users]
-    assert len(non) == 22, "%d screens render without the contract this file calls single" % len(non)
+    assert len(non) == 24, "%d screens render without the contract this file calls single" % len(non)
 
 
 def test_twenty_two_of_the_twenty_eight_screens_decide_the_async_state_somewhere_else():
@@ -208,7 +212,7 @@ def test_twenty_two_of_the_twenty_eight_screens_decide_the_async_state_somewhere
     flags = set(own_flag_screens())
     bare = [s for s in neither if s not in flags]
     assert bare == [], "%s render a query with no failure branch at all -- this file used to claim so" % bare
-    assert len(b) + len(mv) + len(neither) == len(screens) == 28, "the three sets stopped covering the app"
+    assert len(b) + len(mv) + len(neither) == len(screens) == 30, "the three sets stopped covering the app"
     assert stmt(read(MODULE_VIEW), "shared async list shell for every") == \
         "* ModuleView \u2014 the shared async list shell for every (app) resource page.", (
         "the second shell's own universality claim moved, so the 5/5/15 split above needs re-measuring")
@@ -398,4 +402,4 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
     assert len(not_found_codes()) == 37 and len(boundary_users()) == 6
-    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 17
+    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 19

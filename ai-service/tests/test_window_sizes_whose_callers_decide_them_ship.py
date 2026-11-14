@@ -173,6 +173,10 @@ SITES = {
                          # pager counts the matches rather than the pipeline and page two of a word
                          # is the second page of that word.
                          "{ page: state.page, size: PAGE_SIZE, q: state.q }"),
+                        # Epic 212: the closing ceremony reads the applications total
+                        # for its stat tiles.
+                        ("app/(app)/ceremony/page.tsx",
+                         "{ size: 20, page: 0 }"),
                         # 47.3's job page asks the pipeline whether this posting is already on the
                         # board, so it names a window of one row it will never page through.
                         ("app/(app)/jobs/[id]/page.tsx",
@@ -193,11 +197,17 @@ SITES = {
                      "{ q: state.q, relation: state.relation, page: state.page, size: PAGE_SIZE, }")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
-    "useKnowledgeNotes": [("components/knowledge/notes-panel.tsx",
-                          # 64.2's tag chips narrow the same list; the filter rides beside
-                          # the window and the hook spreads whatever the page passes.
-                          "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }")],
+    "useKnowledgeNotes": [("app/(app)/ceremony/page.tsx",
+                           # Epic 212: the closing ceremony reads the notes total for its stat tiles.
+                           "{ size: 1, page: 0 }"),
+                          ("components/knowledge/notes-panel.tsx",
+                           # 64.2's tag chips narrow the same list; the filter rides beside
+                           # the window and the hook spreads whatever the page passes.
+                           "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }")],
     "useInterviewSessions": [
+        # Epic 212: the closing ceremony reads the interview total for its stat tiles.
+        ("app/(app)/ceremony/page.tsx",
+         "{ size: 1, page: 0 }"),
         # 62.1's runner asks for the card's siblings so the retry can read what the last
         # completed rehearsal missed; it only asks once the detail names the card.
         ("app/(app)/interviews/[id]/page.tsx",

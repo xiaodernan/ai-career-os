@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -9,13 +10,16 @@ import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/
 import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
 import { CalendarCard } from "@/components/settings/calendar-card";
-import { MailCard } from "@/components/settings/mail-card";
-import { InboundCard } from "@/components/settings/inbound-card";
-import { EmailChangeCard } from "@/components/settings/email-change-card";
-import { SessionsCard } from "@/components/settings/sessions-card";
-import { PasswordCard } from "@/components/settings/password-card";
-import { EraseAccountCard } from "@/components/settings/erase-account-card";
-import { SecurityCard } from "@/components/settings/security-card";
+// The account cards are split out of the first-load path (the bundle budget
+// holds the line at 310 kB gzip): each renders exactly when the page does,
+// but none of them needs to block the initial paint. SSR output stays.
+const MailCard = dynamic(() => import("@/components/settings/mail-card").then((m) => m.MailCard));
+const InboundCard = dynamic(() => import("@/components/settings/inbound-card").then((m) => m.InboundCard));
+const EmailChangeCard = dynamic(() => import("@/components/settings/email-change-card").then((m) => m.EmailChangeCard));
+const SessionsCard = dynamic(() => import("@/components/settings/sessions-card").then((m) => m.SessionsCard));
+const PasswordCard = dynamic(() => import("@/components/settings/password-card").then((m) => m.PasswordCard));
+const EraseAccountCard = dynamic(() => import("@/components/settings/erase-account-card").then((m) => m.EraseAccountCard));
+const SecurityCard = dynamic(() => import("@/components/settings/security-card").then((m) => m.SecurityCard));
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";

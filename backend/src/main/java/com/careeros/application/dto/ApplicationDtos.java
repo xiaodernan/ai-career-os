@@ -66,10 +66,6 @@ public final class ApplicationDtos {
                                     OffsetDateTime createdAt, OffsetDateTime updatedAt) {
     }
 
-    /** The gallery's paging cap, server-side: 200 letters cover every shelf this product has ever seen. */
-    public record LetterCatalogResponse(List<LetterCatalogItem> items, int total) {
-    }
-
     /** A draft the reader chose to keep; the application row supplies the posting and version. */
     public record SaveLetterRequest(@JsonAlias("resume_version_id") UUID resumeVersionId,
                                     String mode, String tone, String length,

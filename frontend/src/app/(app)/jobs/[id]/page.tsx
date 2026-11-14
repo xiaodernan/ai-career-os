@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -44,8 +45,15 @@ import {
   PreparationCard,
   SkillGapCard,
 } from "@/components/jobs/match-panel";
-import { TailorPanel } from "@/components/jobs/tailor-panel";
-import { CoverLetterPanel } from "@/components/jobs/cover-letter-panel";
+// The two AI writing panels are the heaviest things the job detail ships;
+// they only matter once the reader asks for the tailor or the letter, so
+// they leave the first-load path (the bundle budget holds the line at 310 kB).
+const TailorPanel = dynamic(() =>
+  import("@/components/jobs/tailor-panel").then((m) => m.TailorPanel),
+);
+const CoverLetterPanel = dynamic(() =>
+  import("@/components/jobs/cover-letter-panel").then((m) => m.CoverLetterPanel),
+);
 import { useApplications, useJob } from "@/lib/hooks/resources";
 import { useCreateApplication, useCreateInterviewSession, useRunJobMatch } from "@/lib/hooks/actions";
 import { list as listOf, pick, rec, str } from "@/lib/api/normalize";

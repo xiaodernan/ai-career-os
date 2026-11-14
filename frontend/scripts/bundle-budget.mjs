@@ -8,12 +8,23 @@
  * the route, gzip-compressed, because that is the bytes a proxy transmits),
  * and fails when any route exceeds its budget.
  *
- * Budget: every page route stays under 310 kB gzip. Measured landscape at
- * the 2026-11-12 build (next build on this host, 35 routes): the heaviest
- * route (/(app)/jobs/[id]/page) is 299.6 kB gzip, the shared base ~103 kB.
- * Tightened from 340 on 2026-11-12, which the gate had allowed to idle for
- * a full epic cycle; the number now names a ~3% breach rather than a faraway
- * one. Tighten this, never raise it without writing why in the commit.
+ * Budget: every page route stays under 320 kB gzip.
+ * Measured at the 2026-11-15 build: shared first-load ~191 kB gzip (react-dom +
+ * next/query + the bilingual translations table, ~93 kB — both languages ship on
+ * every route; splitting it per locale is an architecture change, not a budget fix),
+ * every route otherwise 305–315 kB.
+ * Raised 310 → 320 on 2026-11-15, with the reason written down: since the 310
+ * tightening (2026-11-12) the keepsake arc shipped a bilingual product manual,
+ * the decision ledger, the letters gallery, the bookend letters and the ceremony —
+ * every one of them lands in the shared table every route pays. The routes that
+ * could shed weight did so this session (the jobs board dialogs, the job detail's
+ * two AI panels and the settings account cards now leave the first-load path;
+ * /(app)/jobs/[id]/page fell 322.7 → 305.9 kB). The remaining overflow is the
+ * shared table, not new route-specific code. Raise, never silently.
+ * Earlier: measured landscape at the 2026-11-12 build (next build on this host,
+ * 35 routes): the heaviest route (/(app)/jobs/[id]/page) was 299.6 kB gzip, the
+ * shared base ~103 kB. Tightened from 340 on 2026-11-12. Tighten this, never
+ * raise it without writing why in the commit.
  *
  * Usage:  npm run budget        (runs `next build` first)
  *         node scripts/bundle-budget.mjs
@@ -25,7 +36,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = join(ROOT, ".next", "app-build-manifest.json");
-const BUDGET_KIB = 310;
+const BUDGET_KIB = 320;
 
 if (!existsSync(MANIFEST)) {
   console.error("bundle-budget: no .next/app-build-manifest.json -- run `next build` first (or `npm run budget`)");

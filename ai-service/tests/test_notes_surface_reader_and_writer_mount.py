@@ -64,6 +64,9 @@ NOTES_PANEL = "frontend/src/components/knowledge/notes-panel.tsx"
 # `POST /knowledge/notes`, offered beside the advice it saves. The reader still
 # belongs to the panel alone -- the report has nothing of its own to list.
 KEEP_AS_NOTE_BUTTON = "frontend/src/components/interviews/keep-as-note-button.tsx"
+# Epic 212: the closing ceremony reads the notes total for its stat tiles, so the
+# reader's reach now includes the ceremony page alongside the panel.
+CEREMONY_PAGE = "frontend/src/app/(app)/ceremony/page.tsx"
 
 # The route, with the character after it pinned: `/knowledge/notes` is also the first half of
 # `components/knowledge/notes-panel.tsx`, so a bare substring search reports a file naming the panel
@@ -309,7 +312,7 @@ def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> Non
 
     callers = {name: sorted(hook_call_sites(name)) for name in hooks}
     assert callers == {
-        "useKnowledgeNotes": [NOTES_PANEL],
+        "useKnowledgeNotes": sorted([NOTES_PANEL, CEREMONY_PAGE]),
         "useNoteMutations": sorted([NOTES_PANEL, KEEP_AS_NOTE_BUTTON]),
     }, \
         f"the notes hooks gained or lost a caller, so this file's reach claim must be re-measured: {callers}"

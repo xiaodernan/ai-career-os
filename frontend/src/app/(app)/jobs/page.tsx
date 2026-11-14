@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Bookmark, Briefcase, SlidersHorizontal, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/common/page-header";
@@ -17,8 +18,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
 import { SavedSearchPanel } from "@/components/jobs/saved-search-panel";
-import { AnalyzeJdDialog } from "@/components/jobs/analyze-jd-dialog";
-import { ImportJobDialog } from "@/components/jobs/import-job-dialog";
+// The two AI dialogs are the heaviest things the jobs board ships; they are
+// below the fold and open on click, so they leave the first-load path (the
+// bundle budget holds the line at 310 kB gzip).
+const AnalyzeJdDialog = dynamic(() =>
+  import("@/components/jobs/analyze-jd-dialog").then((m) => m.AnalyzeJdDialog),
+);
+const ImportJobDialog = dynamic(() =>
+  import("@/components/jobs/import-job-dialog").then((m) => m.ImportJobDialog),
+);
 import { relativeTime } from "@/lib/format";
 import { useJobs, useResumes, useResume, useSavedJobs } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";

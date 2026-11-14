@@ -123,6 +123,8 @@ def test_the_notes_hook_takes_the_window_the_way_every_other_list_hook_does():
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useKnowledgeNotes") == [
+        ("app/(app)/ceremony/page.tsx",
+         "{ size: 1, page: 0 }"),
         ("components/knowledge/notes-panel.tsx",
          "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }"),
     ], f"the call sites moved: {hook_calls('useKnowledgeNotes')}"

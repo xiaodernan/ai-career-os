@@ -130,7 +130,10 @@ ENVELOPE = ["items", "total", "page", "size"]
 READERS = {
     # The inbox (19.3) reads `items` and nothing else: its unread badge is the answer's own
     # `unread`, and the list is one unpaged answer, so no strip here reads a window.
-    "items": ["app/(app)/applications/page.tsx", "app/(app)/copilot/page.tsx",
+    # Epic 212: the ceremony reads the rows' presence to bind its stat tiles; 210's letters
+    # gallery renders the kept letters; 209/211/215's offers surfaces read the shelf rows.
+    "items": ["app/(app)/applications/page.tsx", "app/(app)/ceremony/page.tsx",
+              "app/(app)/copilot/page.tsx",
               "app/(app)/dashboard/page.tsx",
               # 59.1's report and 62.1's runner both ask for the card's siblings; they read the
               # rows and nothing else -- the window they want is the one the hook defaults to.
@@ -139,15 +142,21 @@ READERS = {
               # board -- and the answer it reads is the page's `items`, empty or not. It pages
               # nothing and reads no window, so it joins `items` alone.
               "app/(app)/jobs/[id]/page.tsx", "app/(app)/jobs/page.tsx",
+              "app/(app)/letters/page.tsx",
               "app/(app)/notifications/page.tsx", "app/(app)/replies/page.tsx",
               "components/common/module-view.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",
               # The nightly history card (20.1) reads the page's rows and nothing else.
               "components/monitoring/nightly-history.tsx",
+              "components/offers/offer-day-one-packet.tsx",
+              "components/offers/offer-decision-ledger.tsx",
+              "components/offers/offer-first-quarter.tsx",
+              "components/offers/offer-replies.tsx",
               # 185's shelf renders each held offer from the page's rows; it reads
               # `items` alone and pages nothing.
               "components/offers/offer-shelf.tsx", "lib/hooks/resources.ts"],
     "total": ["app/(app)/activity/page.tsx", "app/(app)/applications/page.tsx",
+              "app/(app)/ceremony/page.tsx",
               "app/(app)/companies/page.tsx", "app/(app)/copilot/page.tsx",
               "app/(app)/interviews/page.tsx", "app/(app)/jobs/page.tsx",
               "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",

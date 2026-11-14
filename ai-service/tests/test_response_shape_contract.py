@@ -1103,8 +1103,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # (the offer shelf: `OfferItem`, `OfferShelfResponse`, `UpsertOfferRequest`,
     # `UpsertOfferResponse`, `DeleteOfferResponse` on `OfferShelfDtos`). The pin was red on the
     # trees that landed those two epics; this pass counts the repository again.
-    assert len(declared) == 221, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 221 measured"
+    # 225 with Epic 196 (the calendar decision lane: `CalendarFeed.Deadline`) and
+    # Epic 210 (the letters join: `LetterCatalogItem`, `LetterCatalogResponse`,
+    # `LetterFile`). Nothing else since the 221 count; the repository was walked again.
+    assert len(declared) == 225, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 225 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -1388,7 +1391,11 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # `useDeleteOffer` a removed one, and the Match Studio's tailor success
     # (`studio.tailoredReady`) — three more through the same shared handler, landed
     # in the same completion pass.
-    assert len(toasts) == 64, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 65 with Epic 215: the decision ledger announces its clear
+    # (`offers.ledgerResetDone`) through the same shared handler; the offer-replies
+    # `.txt` download and the two letters' mailto do not carry a success toast — one
+    # line, measured, is the whole move.
+    assert len(toasts) == 65, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 
@@ -3611,7 +3618,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1776 rather than 1758 since Epic 185's `OfferShelfItem`, `OfferShelf` and
         # `OfferShelfResponse` interfaces (plus their doc comments) landed above the trace
         # union — the union itself stays put.
-        ("types.ts", 1776, "kind:"),
+        # 1792 rather than 1776 since Epic 212's envelope (`/api/v1/letters`) joined
+        # above the union — the letters/offers rows shifted the trace union down; the
+        # union itself stays put.
+        ("types.ts", 1792, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

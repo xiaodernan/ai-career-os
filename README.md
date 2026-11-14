@@ -112,7 +112,8 @@ e2e/           Playwright golden-journey suite (PRD §35), run against the live 
 docs/          origin spec, architecture, product plan, roadmap, product, API, RAG,
                agents, evaluation, security, deployment, export, demo, runbook,
                quality gates, worktree consolidation, microservices,
-               Spring Cloud readiness, edge operations lockdown
+               Spring Cloud readiness, edge operations lockdown,
+               sync to portfolio
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 

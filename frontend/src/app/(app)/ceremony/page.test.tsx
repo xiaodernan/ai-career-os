@@ -15,12 +15,20 @@ vi.mock("@/lib/i18n/locale-context", () => ({
   }),
 }));
 
-const state = vi.hoisted(() => ({
-  apps: { data: { items: [] as unknown[], total: 17 }, isPending: false, isError: false } as any,
-  interviews: { data: { items: [], total: 9 }, isPending: false, isError: false } as any,
-  offers: { data: { items: [] as unknown[], total: 0 }, isPending: false, isError: false } as any,
-  letters: { data: { items: [], total: 3 }, total: 3, isPending: false, isError: false, refetch: () => {} } as any,
-  notes: { data: { items: [], total: 23 }, isPending: false, isError: false } as any,
+type MockQuery = {
+  data?: unknown;
+  total?: number;
+  isPending: boolean;
+  isError: boolean;
+  refetch?: () => void;
+};
+
+const state = vi.hoisted((): Record<"apps" | "interviews" | "offers" | "letters" | "notes" | "heatmap", MockQuery> => ({
+  apps: { data: { items: [] as unknown[], total: 17 }, isPending: false, isError: false },
+  interviews: { data: { items: [], total: 9 }, isPending: false, isError: false },
+  offers: { data: { items: [] as unknown[], total: 0 }, isPending: false, isError: false },
+  letters: { data: { items: [], total: 3 }, total: 3, isPending: false, isError: false, refetch: () => {} },
+  notes: { data: { items: [], total: 23 }, isPending: false, isError: false },
   heatmap: {
     data: {
       days: 366,
@@ -34,7 +42,7 @@ const state = vi.hoisted(() => ({
     },
     isPending: false,
     isError: false,
-  } as any,
+  },
 }));
 
 vi.mock("@/lib/hooks/resources", () => ({

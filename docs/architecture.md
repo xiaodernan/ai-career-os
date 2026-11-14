@@ -71,7 +71,7 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 求职平台/
 ├── docker-compose.yml            # postgres(pgvector) redis minio (+ optional profile: apps)
 ├── .env.example
-├── docs/                         # origin spec, architecture, product-plan, roadmap, product, api, rag, agents, evaluation, security, deployment, export, demo, runbook, quality-gates, worktree-consolidation, microservices, spring-cloud-readiness, edge-operations-lockdown
+├── docs/                         # origin spec, architecture, product-plan, roadmap, product, api, rag, agents, evaluation, security, deployment, export, demo, runbook, quality-gates, worktree-consolidation, microservices, spring-cloud-readiness, edge-operations-lockdown, sync-to-portfolio
 ├── backend/                      # Spring Boot (Maven)
 │   └── src/main/java/com/careeros/
 │       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting

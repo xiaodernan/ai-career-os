@@ -180,7 +180,11 @@ CALLERS = {
     "useSavedJobs": ["app/(app)/jobs/page.test.tsx", "app/(app)/jobs/page.tsx",
                      "lib/job-filter.test.ts"],
     "useConversations": ["app/(app)/copilot/page.tsx"],
-    "useKnowledgeNotes": ["components/knowledge/notes-panel.tsx"],
+    # Epic 212: the closing ceremony reads the notes total through the same hook,
+    # so the reach now covers the ceremony page (and its test, which names the hook)
+    # alongside the notes panel.
+    "useKnowledgeNotes": ["app/(app)/ceremony/page.test.tsx", "app/(app)/ceremony/page.tsx",
+                          "components/knowledge/notes-panel.tsx"],
     "useAIUsage": ["app/(app)/dashboard/page.tsx"],
 }
 COPILOT_READS = {"createdAt", "id", "lastMessagePreview", "title", "updatedAt"}
