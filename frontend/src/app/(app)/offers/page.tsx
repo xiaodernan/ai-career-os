@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { BadgeDollarSign, Handshake, Scale, Target } from "lucide-react";
+import { BadgeDollarSign, Handshake, Printer, Scale, Target } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,11 +124,13 @@ export default function OffersPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <PageHeader
-        frontDoor
-        title={t("offers.title")}
-        description={t("offers.description")}
-      />
+      <div className="print:hidden">
+        <PageHeader
+          frontDoor
+          title={t("offers.title")}
+          description={t("offers.description")}
+        />
+      </div>
 
       {/* The shelf (Epic 185): the offers the reader holds, compared by one number.
           It sits above the actions because the actions are about ONE offer -- the
@@ -147,8 +149,11 @@ export default function OffersPage() {
       {/* The decision ledger (Epic 215): the weights only the reader can set. */}
       <OfferDecisionLedger />
 
-      {/* The question */}
-      <Card>
+      {/* The AI kitchen: benchmark, negotiation, counter-offer, comparison.
+          Everything here is input to the decision, not the decision — the packet on
+          paper is the shelf, the packets and the ledger, so this whole row stays
+          off the page. */}
+      <Card className="print:hidden">
         <CardHeader>
           <CardTitle className="text-base">{t("offers.roleAndOffer")}</CardTitle>
           <CardDescription>
@@ -237,7 +242,7 @@ export default function OffersPage() {
 
       {/* Benchmark */}
       {bench && (
-        <Card>
+        <Card className="print:hidden">
           <CardHeader>
             <CardTitle className="text-base">{t("offers.whatTheMarketPays")}</CardTitle>
             <CardDescription>
@@ -267,7 +272,7 @@ export default function OffersPage() {
 
       {/* Negotiation plan */}
       {plan && (
-        <Card>
+        <Card className="print:hidden">
           <CardHeader>
             <CardTitle className="text-base">{t("offers.negotiationPlan")}</CardTitle>
             <CardDescription>{t("offers.againstTheMarket")}</CardDescription>
@@ -300,7 +305,7 @@ export default function OffersPage() {
 
       {/* Counter-offer draft */}
       {draft && (
-        <Card>
+        <Card className="print:hidden">
           <CardHeader>
             <CardTitle className="text-base">{t("offers.counterOfferDraft")}</CardTitle>
             <CardDescription>
@@ -336,7 +341,7 @@ export default function OffersPage() {
       )}
 
       {/* Comparison */}
-      <Card>
+      <Card className="print:hidden">
         <CardHeader>
           <CardTitle className="text-base">{t("offers.compareOffers")}</CardTitle>
           <CardDescription>
@@ -405,6 +410,17 @@ export default function OffersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* The packet on paper: the shelf, the day-one packet, the first quarter,
+          the letters you kept and the ledger's call — everything a salary
+          conversation is actually about, with the AI kitchen off the page. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4 print:hidden">
+        <p className="max-w-md text-xs leading-relaxed text-muted-foreground">{t("offers.packetPrintHint")}</p>
+        <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Printer aria-hidden className="size-4" />
+          <span>{t("offers.packetPrint")}</span>
+        </Button>
+      </div>
     </div>
   );
 }

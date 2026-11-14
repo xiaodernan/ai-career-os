@@ -1104,6 +1104,9 @@ export const translations = {
       ledgerRemoveCriterion: "Remove this criterion",
       ledgerReset: "Clear the ledger",
       ledgerResetDone: "The ledger is cleared. Your offers are untouched.",
+      packetPrint: "Print the packet",
+      packetPrintHint:
+        "Everything a salary conversation is actually about, kept on paper: the shelf, your day-one packet, the letters you kept, the ledger's call. The AI kitchen stays off the page.",
     },
     // Analysis
     analysis: {
@@ -4597,6 +4600,9 @@ export const translations = {
       ledgerRemoveCriterion: "删除这条标准",
       ledgerReset: "清空账簿",
       ledgerResetDone: "账簿已清空。你的 offer 记录不受影响。",
+      packetPrint: "打印这份纸质稿",
+      packetPrintHint:
+        "薪资谈判真正用得上的所有东西，都留在纸上：offer 货架、入职首周的清单、你留下的信、账簿的裁决。AI 顾问不上纸。",
     },
     // Analysis
     analysis: {

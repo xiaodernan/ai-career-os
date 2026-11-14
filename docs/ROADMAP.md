@@ -6878,6 +6878,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **218** The packet, on paper — the negotiation's own print path (2026-11-15).
+
+  (`/offers` printed as the full page: the market benchmarks, the negotiation scripts, the
+  AI comparison — six pages of everything, most of which is *input* to the decision. The packet
+  a reader brings into a salary conversation is shorter: the shelf, the day-one packet, the
+  first quarter, the letters they kept, the ledger's call. The page's own print path now says
+  so: the `PageHeader` and the whole AI-kitchen row (the one-question card, the benchmark card,
+  the negotiation-plan card, the counter-offer card and the comparison card) are `print:hidden`,
+  and a slim print row at the foot — the packetPrint hint and a `Printer` button driving
+  `window.print()` — appears on screen only. The paper output keeps the shelf table (totals in
+  tabular figures), the first-quarter acts, the two negotiation letters and the ledger table
+  with its weighted total and verdict line; `@page` and the `print-quiet` rules from Epic 212
+  do the paper-side work. Both languages: `offers.packetPrint` and `offers.packetPrintHint`
+  ("Print the packet" / "打印这份纸质稿" — the AI kitchen stays off the page, in EN and ZH).
+  Measured: vitest **1386/1386**, tsc clean, `npm run budget` OK (39 routes, no route grew),
+  copy census unchanged at **190** (no new browser source). Live on the rebuilt container, ZH
+  locale: the print row renders with the button, zero console errors; the button is the only
+  interactive control in it, `print:hidden` so paper gets the decision and not the chrome.)
+
 - [x] **217** The red CI is repaired — main goes green again (2026-11-15).
 
   (Epics 215 and 216 pushed red and nobody noticed, because `verify_gates.ps1` covers a
