@@ -6995,7 +6995,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the `400fa2a` repair push, found the numbers had moved (the card now counts 83 top-level epics)
   and committed `d01e53e` (`chore(showcase): regenerate the portfolio card`) by itself — the
   exact contract, first try. On the follow-up push it found a byte-identical file and committed
-  nothing: the no-churn rule holds in production, not just in the YAML.)
+  nothing: the no-churn rule holds in production, not just in the YAML. **Tranche three
+  (2026-11-15):** the test-file count disagreed by machine — 305 on the dev box (node_modules
+  counted), 155 in the bot's bare checkout — because the rglob walked the filesystem. The
+  counter is now `git ls-files -z` filtered for `.test.` (157 everywhere, deterministic), so the
+  card can never disagree between the machine that generated it and the CI that re-checks it.)
 
 - [x] **215** The decision ledger — the weights only the reader can set (2026-11-15).
 
