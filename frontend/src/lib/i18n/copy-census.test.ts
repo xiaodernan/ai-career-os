@@ -144,7 +144,9 @@ describe("the browser's copy", () => {
     // `app/playbook/playbook-page.tsx` (the manual itself).
     // 190 with Epic 215: `components/offers/offer-decision-ledger.tsx`, the weights
     // only the reader can set.
-    expect(browserSources().length).toBe(190);
+    // 191 with Epic 219: `components/interviews/debrief-card.tsx`, the reader's own two
+    // lines on a rehearsal.
+    expect(browserSources().length).toBe(191);
   });
 
   it("finds a sentence, however long it is", () => {

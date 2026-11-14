@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { PracticeLine } from "@/components/interviews/practice-line";
+import { DebriefCard } from "@/components/interviews/debrief-card";
 import { BetterAnswerNoteButton } from "@/components/interviews/better-answer-note-button";
 import { StudyNoteButton } from "@/components/interviews/study-note-button";
 import { GapNoteButton } from "@/components/interviews/gap-note-button";
@@ -290,6 +291,10 @@ export default function InterviewReportPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Your own words first, then the evaluator's verdict — the reader writes
+          their debrief before reading the dimensions. */}
+      <DebriefCard sessionId={data.id} />
 
       {/* Dimensions */}
       {dims.length > 0 && (

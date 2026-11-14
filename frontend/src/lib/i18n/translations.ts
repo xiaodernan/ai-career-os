@@ -3212,6 +3212,20 @@ export const translations = {
         legendScore: "your score",
         hoverDots: "hover the dots for each question",
       },
+      debrief: {
+        eyebrow: "Your own words",
+        title: "The debrief",
+        hint: "The AI scored the session. This one is yours: what actually happened, and what you'll do differently. Two lines each, stored in this browser only — nothing is sent anywhere.",
+        whatHappened: "What actually happened",
+        whatHappenedPlaceholder:
+          "e.g. I rambled on the second question and never reached the STAR shape…",
+        differently: "What I'll do differently",
+        differentlyPlaceholder:
+          "e.g. Name the result first, then the steps — and breathe before the openings…",
+        savedLocal: "Saved in this browser",
+        reset: "Clear the debrief",
+        resetDone: "The debrief is cleared. The session record is untouched.",
+      },
     },
     // Jobs
     jobs: {
@@ -6536,6 +6550,20 @@ export const translations = {
         legendDepth: "代理连续追问了多少个问题",
         legendScore: "你的得分",
         hoverDots: "悬停圆点查看每道题",
+      },
+      debrief: {
+        eyebrow: "你自己的话",
+        title: "复盘",
+        hint: "AI 给这场面试打了分。这一页是你的：到底发生了什么，下次你会怎么做。各写两行，只存在这个浏览器里——不会发往任何地方。",
+        whatHappened: "到底发生了什么",
+        whatHappenedPlaceholder:
+          "例如：第二题我跑题了，没能用 STAR 结构把话讲完……",
+        differently: "下次我会怎么做",
+        differentlyPlaceholder:
+          "例如：先说结果，再说步骤——开口之前，先深呼吸一次……",
+        savedLocal: "已保存在这个浏览器里",
+        reset: "清空复盘",
+        resetDone: "复盘已清空。这场面试的记录不受影响。",
       },
     },
     // Jobs

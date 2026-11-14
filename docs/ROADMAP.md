@@ -6878,6 +6878,41 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **220** The opening question arrives as words, not as the model's JSON envelope (2026-11-15).
+
+  (Live verification with the real relay (`gpt-6-sol` via wkapi.pro) caught a defect the mock
+  provider could never surface: the interview opening prompt asks for a short greeting and one
+  question, and the model answered with `{"message":"Hi, thanks for joining today. ..."}` — the
+  turn stored the whole envelope as the question text and the runner rendered raw JSON to the
+  candidate (probe account `ledgerprobe-1794677011601@example.com`, session `ccb0aebe-e027-4f90-ab75-75b68afe8a9a`,
+  2026-11-15). `unwrap_text_envelope()` (pure, seven unit cases) unwraps a JSON object whose
+  single preferred key holds the text (`message`/`question`/`text`/`content`/`answer`/`reply`,
+  else a sole string leaf), passes anything else through untouched, and is applied at exactly the
+  one raw-text call site (`interview_open`); the `advance` path already goes through `ask_json`.
+  Measured after the rebuild: a fresh session (`cf06d269-86e6-4731-9438-7300786fb27b`) opened with
+  plain prose — "Could you briefly walk me through your background and what led you to pursue this
+  Senior Backend Engineer role?" — and the full loop ran against the live model: one answer
+  graded **88/100** with specific, honest feedback (no quantification cited, motivation missing),
+  adaptive "代理想再往深一层" follow-up gate offered, report finalized, all on screen. New gate
+  file `test_the_opening_question_unwraps_the_models_json_envelope.py` (7/7); ai-service suite
+  re-run green (**2791 passed**, 8 skipped; the one `toast.success` census re-pinned 65→**66** with
+  the reason recorded).)
+
+- [x] **219** The debrief — the reader's two lines on a rehearsal (2026-11-15).
+
+  (The AI scores every answer against its rubric; no surface gave the reader the floor to judge
+  the session themselves. `The debrief` card now rides the interview report page — two fields,
+  "What actually happened" and "What I'll do differently", persisted in the browser only under
+  `careeros.debrief.<sessionId>` (the same local-first shape as the decision ledger, Epic 215).
+  Nothing is sent anywhere, nothing is graded; the card is deliberately absent when the session
+  has no report. EN+ZH copy (`interviews.debrief.*`, nine keys each); pure module
+  `lib/interviews/debrief.ts` with an injectable storage port (garbage-tolerant load, clamped
+  fields, per-session isolation — tested). Live-verified on the rebuilt container, both locales:
+  typed into both fields in Chinese ("我分两段回答了开场问题…" / "下次先用 STAR 讲完一个具体案例…"),
+  the "已保存在这个浏览器里" indicator appeared, the content round-tripped across a full page
+  reload, and the EN locale renders the full card in English. Component SSR test + lib test
+  (+7 tests, **1393/1393**), copy census re-pinned to **191** (+1).)
+
 - [x] **218** The packet, on paper — the negotiation's own print path (2026-11-15).
 
   (`/offers` printed as the full page: the market benchmarks, the negotiation scripts, the

@@ -1391,11 +1391,11 @@ def test_the_response_envelope_has_exactly_one_wrapper_and_one_unwrapper():
     # `useDeleteOffer` a removed one, and the Match Studio's tailor success
     # (`studio.tailoredReady`) — three more through the same shared handler, landed
     # in the same completion pass.
-    # 65 with Epic 215: the decision ledger announces its clear
-    # (`offers.ledgerResetDone`) through the same shared handler; the offer-replies
-    # `.txt` download and the two letters' mailto do not carry a success toast — one
-    # line, measured, is the whole move.
-    assert len(toasts) == 65, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
+    # 66 with Epic 219: the interview debrief announces its clear
+    # (`interviews.debrief.resetDone`) through the same shared handler — the ledger's
+    # clear (215) was the previous move; the bookend letters and the print paths
+    # still carry none.
+    assert len(toasts) == 66, (f"{len(toasts)} `toast.success` lines came out of the same walk: that is "
                                "the floor proving the scan reached the pages and the hooks, so a walk "
                                "narrowed to the api directory cannot pass quietly")
 

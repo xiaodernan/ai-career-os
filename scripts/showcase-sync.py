@@ -24,7 +24,21 @@ ROUTES = sorted(
     f.relative_to(FRONTEND / "src" / "app")
     for f in (FRONTEND / "src" / "app").rglob("page.tsx")
 )
-VITEST_FILES = sum(1 for _ in FRONTEND.rglob("*.test.*"))
+# Deterministic across machines: count tracked test files, not whatever
+# happens to sit on disk (node_modules polluted local runs to 305; a bare
+# checkout without npm ci counted 155 — same repo, two numbers).
+try:
+    import subprocess
+
+    _tracked = subprocess.check_output(
+        ["git", "ls-files", "-z"], cwd=REPO
+    ).decode("utf-8").split("\0")
+    VITEST_FILES = sum(
+        1 for f in _tracked
+        if ".test." in f and f.rsplit(".", 1)[-1] in ("ts", "tsx", "js", "mjs")
+    )
+except Exception:
+    VITEST_FILES = sum(1 for _ in (FRONTEND / "src").rglob("*.test.*"))
 ITEM_EPICS = len(re.findall(r"(?m)^- \[x\] \*\*\d+(?:\.\d+)?\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8")))
 TOP_EPICS = len({int(m.group(1)) for m in re.finditer(r"(?m)^- \[x\] \*\*(\d+)\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8"))})
 NAV_ROUTES = sum(1 for _ in FRONTEND.joinpath("src/components/layout/nav.ts").read_text(encoding="utf-8").splitlines() if "href:" in _)
