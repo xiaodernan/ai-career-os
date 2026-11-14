@@ -97,7 +97,7 @@ def page() -> str:
 </html>"""
 
 
-out = REPO / "public" / "showcase.html"
+out = REPO / "frontend" / "public" / "showcase.html"
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(page(), encoding="utf-8")
 print(f"wrote {out.relative_to(REPO)} — nav routes={NAV_ROUTES}, page routes={len(ROUTES)}, top-level epics={TOP_EPICS}, work items={ITEM_EPICS}, test files={VITEST_FILES}")

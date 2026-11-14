@@ -4,9 +4,11 @@ Your personal portfolio at **https://xiaodernan.github.io/** — this repo canno
 to it directly (it is a separate repository on your GitHub), but the sync is landed
 as a single, self-contained file in this repo:
 
-> **`public/showcase.html`**
+> **`frontend/public/showcase.html`**
 
-Zero dependencies, zero build step — copy it anywhere and open it.
+It is served by the Next.js frontend at `/showcase.html` (HTTP 200), and the file
+is also a committed, standalone asset you can copy anywhere. Zero dependencies,
+zero build step for the copy.
 
 ## What's in it
 
@@ -28,7 +30,7 @@ The script reads:
 - `frontend/src/app/**/page.tsx` — page route count
 - hard-coded floor `TESTS = "1360+"` — bump when the suite crosses a round number
 
-It rewrites `public/showcase.html` in place. Commit the result.
+It rewrites `frontend/public/showcase.html` in place. Commit the result.
 
 ## When to refresh
 
@@ -57,7 +59,7 @@ any origin with zero CORS concerns.
 **Option C — copy the file in directly:**
 
 1. Run `scripts/showcase-sync.py`.
-2. `cp public/showcase.html <your-portfolio-repo>/showcase/ai-career-os.html`
+2. `cp frontend/public/showcase.html <your-portfolio-repo>/showcase/ai-career-os.html`
 3. Link from your portfolio landing page: `<a href="/showcase/ai-career-os.html">`.
 4. Commit. Done.
 
