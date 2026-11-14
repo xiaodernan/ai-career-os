@@ -744,7 +744,10 @@ function MessageRow({ message }: { message: ChatMessage }) {
       )}
 
       {!isUser && actions.length > 0 && (
-        <div className="flex max-w-[85%] flex-wrap gap-1.5">
+        // The action chips arrive only when the model supplied actions, and they
+        // arrive after the citations — reading order: answer, evidence, next step.
+        // Opacity/transform only, mount-driven, collapsible under reduced motion.
+        <div className="flex max-w-[85%] flex-wrap gap-1.5 animate-fade-up" style={{ animationDelay: "220ms" }}>
           {actions.map((a, i) => {
             // The orchestrator writes the label in English; the browser says it
             // in the reader's language when the kind fixes the phrase. An
