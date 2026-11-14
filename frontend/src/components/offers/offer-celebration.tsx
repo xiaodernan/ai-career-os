@@ -28,6 +28,12 @@ export interface OfferCelebrationProps {
   role: string | null;
   company: string | null;
   onContinue: () => void;
+  /**
+   * Which finish line this overlay marks. `offer` is the card moving to
+   * `offer` (the offers shelf is one screen away); `accepted` is the reader's
+   * *decision* on the shelf — the moment a preference becomes an answer.
+   */
+  variant?: "offer" | "accepted";
 }
 
 const PIECES = [
@@ -53,7 +59,7 @@ const PIECES = [
   { left: "70%", delay: "690ms", dur: "2400ms", size: 7, hue: "var(--destructive)", rot: -18 },
 ];
 
-export function OfferCelebration({ open, role, company, onContinue }: OfferCelebrationProps) {
+export function OfferCelebration({ open, role, company, onContinue, variant = "offer" }: OfferCelebrationProps) {
   const { t } = useLocale();
   if (!open) return null;
 
@@ -62,13 +68,21 @@ export function OfferCelebration({ open, role, company, onContinue }: OfferCeleb
       ? t("offers.celebrationSubtitle", { role, company })
       : role
         ? t("offers.celebrationSubtitleRole", { role })
-        : t("offers.celebrationSubtitleBare");
+        : variant === "accepted"
+          ? t("offers.committedSubtitleBare")
+          : t("offers.celebrationSubtitleBare");
+
+  const title = variant === "accepted" ? t("offers.committedTitle") : t("offers.celebrationTitle");
+  const ariaLabel = variant === "accepted" ? t("offers.committedTitle") : t("offers.celebrationTitle");
+  const body = variant === "accepted" ? t("offers.committedBody") : t("offers.celebrationBody");
+  const primaryLabel = variant === "accepted" ? t("offers.committedShelf") : t("offers.celebrationShelf");
+  const primaryHref = variant === "accepted" ? "#day-one-packet" : "/offers";
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("offers.celebrationTitle")}
+      aria-label={ariaLabel}
       className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-background/70 backdrop-blur-md animate-fade-in"
     >
       {/* The rain. Every piece is decorative; the copy is the content. */}
@@ -98,7 +112,7 @@ export function OfferCelebration({ open, role, company, onContinue }: OfferCeleb
           className="mt-6 font-serif text-display-md font-medium tracking-tight text-balance animate-fade-up"
           style={{ animationDelay: "120ms" }}
         >
-          {t("offers.celebrationTitle")}
+          {title}
         </h2>
         <p
           className="mt-2 text-base text-muted-foreground text-balance animate-fade-up"
@@ -110,14 +124,14 @@ export function OfferCelebration({ open, role, company, onContinue }: OfferCeleb
           className="mt-3 text-sm text-muted-foreground/80 text-balance animate-fade-up"
           style={{ animationDelay: "250ms" }}
         >
-          {t("offers.celebrationBody")}
+          {body}
         </p>
         <div
           className="mt-7 flex flex-wrap items-center justify-center gap-2 animate-fade-up"
           style={{ animationDelay: "310ms" }}
         >
           <Button variant="ai" size="lg" asChild className="glow-on-hover">
-            <Link href="/offers">{t("offers.celebrationShelf")}</Link>
+            <Link href={primaryHref} onClick={onContinue}>{primaryLabel}</Link>
           </Button>
           <Button variant="ghost" size="lg" onClick={onContinue}>
             {t("offers.celebrationContinue")}

@@ -84,7 +84,8 @@ export function OfferDayOnePacket() {
 
   return (
     <Card
-      className="overflow-hidden border-success/30 bg-gradient-to-br from-success/5 via-card to-card shadow-card"
+      id="day-one-packet"
+      className="overflow-hidden border-success/30 bg-gradient-to-br from-success/5 via-card to-card shadow-card scroll-mt-24"
       data-testid="day-one-packet"
     >
       <CardHeader className="flex flex-row items-start gap-4 space-y-0">

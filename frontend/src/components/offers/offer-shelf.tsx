@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useDeleteOffer, useSaveOffer } from "@/lib/hooks/offers";
 import { useOfferShelf } from "@/lib/hooks/resources";
+import { OfferCelebration } from "@/components/offers/offer-celebration";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { OfferShelfItem } from "@/lib/api/types";
 import { remoteTypeWord } from "@/lib/status-words";
@@ -73,6 +74,9 @@ export function OfferShelf() {
   const remove = useDeleteOffer();
   const [draft, setDraft] = React.useState<Draft>(EMPTY);
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  // The commit moment (Epic 201): set when a row crosses into `accepted`, so the
+  // reader's answer — not just the offer's arrival — gets its finish line.
+  const [committed, setCommitted] = React.useState<string | null>(null);
 
   const items = shelf.data?.items ?? [];
   const accepted = items.find((row) => row.decision === "accepted") ?? null;
@@ -118,6 +122,7 @@ export function OfferShelf() {
   };
 
   return (
+    <>
     <Card>
       <CardHeader className="gap-1.5">
         <CardTitle className="flex items-center gap-2 text-base">
@@ -202,7 +207,8 @@ export function OfferShelf() {
                             type="button"
                             aria-pressed={active}
                             disabled={save.isPending}
-                            onClick={() =>
+                            onClick={() => {
+                              const previous = row.decision ?? "pending";
                               save.mutate({
                                 id: row.id,
                                 label: row.label,
@@ -214,8 +220,14 @@ export function OfferShelf() {
                                 deadline: row.deadline ?? undefined,
                                 notes: row.notes ?? undefined,
                                 decision: state,
-                              })
-                            }
+                              });
+                              // The transition is the moment: an honest tap on "taking it"
+                              // from anywhere else deserves the finish line; re-tapping
+                              // an already-accepted row does not re-fire it.
+                              if (state === "accepted" && previous !== "accepted") {
+                                setCommitted(row.label);
+                              }
+                            }}
                             className={cn(
                               "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium transition-colors",
                               active && state === "accepted" && "border-success/40 bg-success/15 text-success",
@@ -360,5 +372,13 @@ export function OfferShelf() {
         </div>
       </CardContent>
     </Card>
+    <OfferCelebration
+      open={Boolean(committed)}
+      role={committed}
+      company={null}
+      variant="accepted"
+      onContinue={() => setCommitted(null)}
+    />
+    </>
   );
 }

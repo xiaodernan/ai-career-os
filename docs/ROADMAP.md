@@ -6678,6 +6678,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   e2e shelf spec's own assertions (the title line) are untouched by the additive copy line;
   e2e not re-run this tranche (host); container not rebuilt (host, ~1–2 GB).)
 
+- [x] **201** The commit moment — the decision gets a finish line, not just the offer (2026-11-14).
+
+  (Epic 193 gave the *arrival* of an offer its ceremony; the reader's actual answer — marking
+  the shelf row "Taking it" — was wiring a toggle with no moment. `OfferCelebration` grows a
+  `variant`: `offer` (unchanged) and `accepted` — "The call is made.", the aria-label it owns,
+  the body beside the answer's paper form, one primary ask ("See the first week" →
+  `#day-one-packet`, the day-one packet now carries `id="day-one-packet"` and `scroll-mt-24` so
+  the anchor lands under the chrome), the same confetti, the same reduced-motion-safe CSS.
+  The shelf fires it only on a real crossing — any state → accepted — never on re-tapping an
+  already-accepted row; dismissing returns the reader to the shelf with the banner and the
+  packet in view. Copy in both languages; `celebrationSubtitleRole` is reused for the role-only
+  line by design. The e2e shelf spec grew the overlay walk: flip "Taking it" → expect the
+  committed title → dismiss via "Keep going" → the banner appears → flip back → gone.
+  e2e NOT re-run here (the container carries the previous build; host — see below); vitest
+  **1342/1342**, tsc clean, translations + copy census green.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

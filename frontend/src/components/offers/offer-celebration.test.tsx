@@ -37,4 +37,26 @@ describe("OfferCelebration", () => {
     );
     expect((html.match(/confetti-piece/g) ?? []).length).toBeGreaterThanOrEqual(20);
   });
+
+  it("the accepted variant names the answer, links to the packet, keeps the rain", () => {
+    const html = renderToStaticMarkup(
+      <OfferCelebration open role="Acme — Senior Backend" company={null} variant="accepted" onContinue={() => {}} />,
+    );
+    expect(html).toContain("[offers.committedTitle]");
+    expect(html).toContain("[offers.committedBody]");
+    // Role-only subtitle reuses the shared role-line key by design.
+    expect(html).toContain("[offers.celebrationSubtitleRole|Acme — Senior Backend]");
+    // The one ask points at the first-week packet, not at the shelf the reader is already on.
+    expect(html).toContain("#day-one-packet");
+    expect(html).not.toContain("[offers.celebrationBody]");
+    expect((html.match(/confetti-piece/g) ?? []).length).toBeGreaterThanOrEqual(20);
+  });
+
+  it("the accepted variant's aria-label is its own title, not the offer's", () => {
+    const html = renderToStaticMarkup(
+      <OfferCelebration open role={null} company={null} variant="accepted" onContinue={() => {}} />,
+    );
+    expect(html).toContain('aria-label="[offers.committedTitle]"');
+    expect(html).toContain("[offers.committedSubtitleBare]");
+  });
 });
