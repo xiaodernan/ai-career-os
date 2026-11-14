@@ -15,7 +15,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * The shape of the ai-service circuit (Epic 85.1).
+ * The shape of the ai-service circuit (Epic 85.1), plus its roof (Epic 203 lives in
+ * {@link com.careeros.ai.AiServiceCircuitBreaker}, not here: the semaphore that refuses
+ * the seventeenth concurrent call is hand-rolled inside the guard, so the cap holds even
+ * if every Spring Cloud customization here drifts).
  *
  * <p>Ten calls is the memory: long enough that one slow burst does not open the circuit,
  * short enough that a dead engine is noticed within a handful of visitors. Five calls is

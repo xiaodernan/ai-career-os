@@ -6705,6 +6705,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   on. Labels follow: EN "Agent tools, wired and counted" / ZH "已接入的代理工具". Copy census and
   landing test stay green; the number on the page is now one any reader can check.)
 
+- [x] **203** The roof — the bridge refuses the flood instead of queueing behind the engine (2026-11-14).
+
+  (A circuit breaker remembers failure; it does not stop a flood from arriving. When the engine
+  slows, each in-flight call pins a backend thread for the length of the 180s read budget and the
+  request queue fills with visitors waiting two minutes each. The guard now holds a fair
+  `Semaphore(16, true)` taken **before** the breaker runs and released in a `finally`: the
+  seventeenth concurrent call is refused in microseconds with the same 503 shape the caller
+  already understands (`AI_SERVICE_UNAVAILABLE`, sentence "AI service is at capacity; try again
+  shortly"), and the permits are handed out in arrival order so a sustained flood cannot starve
+  the first visitor. Hand-rolled deliberately: the Spring Cloud sync bulkhead provider would have
+  demanded the `resilience4j-threadpool-bulkhead` core that this offline Maven repository cannot
+  fetch — a roof that works beats a framework wiring the environment cannot guarantee. Capacity
+  refusals and resting refusals share the code (and the browser's one sentence for it); the
+  refusal sites carry different backend messages, which the frontend never reads. Measured:
+  `AiServiceCircuitBreakerTest` **7/7** including the two roof cases (the seventeenth call refused
+  without entering the engine; permits released on success and on failure; zero capacity refusals
+  across 48 consecutive failing calls — a leak would have refused a visitor who never entered the
+  engine); `com.careeros.ai.**` + `com.careeros.system.**` **50/50**. The frontend container was
+  not rebuilt this tranche (host); the change is backend-side only.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

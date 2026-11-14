@@ -169,6 +169,13 @@ which is why the acceptance had not noticed.
 - **Backend ai-service bridge** is protected by Resilience4j circuit breakers (per-origin and aggregate
   behavior as implemented in `HttpAiServiceClient` / resilience configuration), preventing cascading
   waits when the engine is unavailable and returning fast failures per existing error semantics.
+- **Since Epic 203, the guard also holds a roof**: a fair `Semaphore(16)` inside the bridge refuses the
+  seventeenth concurrent call in microseconds with the same 503 shape the caller already understands
+  (`AI_SERVICE_UNAVAILABLE`) instead of letting a slow engine fill the Tomcat queue. Hand-rolled in the
+  guard, deliberately, rather than wired through Resilience4j's bulkhead auto-configuration (the sync
+  provider would have demanded the threadpool-bulkhead core that this offline repository cannot fetch).
+  Measured by `AiServiceCircuitBreakerTest` (the seventeenth call refused without entering the engine;
+  permits released on success and on failure; no capacity refusal across 48 failing calls).
 - **Gateway edge** also applies circuit-breaker/retry policies on routed traffic as configured in
   `GatewayResilienceConfig` and the route definitions.
 - **Operator visibility**:

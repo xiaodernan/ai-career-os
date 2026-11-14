@@ -10,6 +10,13 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -142,6 +149,81 @@ class AiServiceCircuitBreakerTest {
         })).isInstanceOf(ApiException.class)
                 .hasMessageContaining("resting");
         assertThat(attempts).hasValue(0);
+    }
+
+    @Test
+    void theSeventeenthConcurrentCallIsRefusedWithoutQueuing() throws Exception {
+        AiServiceCircuitBreaker guard = guard();
+        int max = AiServiceCircuitBreaker.MAX_CONCURRENT;
+        CountDownLatch inFlight = new CountDownLatch(max);
+        CountDownLatch release = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(max);
+        List<Future<Object>> held = new ArrayList<>();
+        try {
+            for (int i = 0; i < max; i++) {
+                held.add(pool.submit(() -> guard.call(() -> {
+                    inFlight.countDown();
+                    try {
+                        release.await(5, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        throw new AssertionError(e);
+                    }
+                    return (Object) "held";
+                })));
+            }
+            assertThat(inFlight.await(5, TimeUnit.SECONDS))
+                    .as("all %d seats are in flight", max)
+                    .isTrue();
+
+            // #17: the visitor behind the flood is refused in microseconds and the engine is
+            // never entered on its behalf.
+            ApiException refused = null;
+            try {
+                guard.call(() -> {
+                    throw new AssertionError("the engine must not be entered at capacity");
+                });
+            } catch (ApiException e) {
+                refused = e;
+            }
+            assertThat(refused).isNotNull();
+            assertThat(refused.code()).isEqualTo(ApiErrorCode.AI_SERVICE_UNAVAILABLE);
+            assertThat(refused).hasMessageContaining("capacity");
+
+            release.countDown();
+            for (Future<Object> f : held) {
+                assertThat(f.get(5, TimeUnit.SECONDS)).isEqualTo("held");
+            }
+            // The seats are all back: the next sixteen calls sail through.
+            for (int i = 0; i < max; i++) {
+                assertThat(guard.call(() -> "ok")).isEqualTo("ok");
+            }
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void noPermitLeaksAcrossFortyEightFailingCalls() {
+        AiServiceCircuitBreaker guard = guard();
+        // The test-shape breaker opens at two failures; after that the engine is unreachable
+        // anyway. What must never appear is a "capacity" refusal: a leaked permit would
+        // exhaust the sixteen seats and refuse a visitor who never entered the engine.
+        int capacityRefusals = 0;
+        for (int i = 0; i < 48; i++) {
+            try {
+                guard.call(() -> {
+                    throw new ResourceAccessException("connection refused");
+                });
+            } catch (ApiException e) {
+                if (e.getMessage() != null && e.getMessage().contains("capacity")) {
+                    capacityRefusals++;
+                }
+            } catch (ResourceAccessException expected) {
+                // the engine was reached and answered no, as designed
+            }
+        }
+        assertThat(capacityRefusals).isZero();
     }
 
     /**
