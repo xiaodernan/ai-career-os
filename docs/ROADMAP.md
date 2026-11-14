@@ -6761,6 +6761,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   scores hold (accessibility 1.0, best practices 1.0, SEO 0.75 with only the recorded
   `meta-description` false negative).)
 
+- [x] **206** The e2e query follows the fix — two a11y specs retargeted to the visible copy (2026-11-14).
+
+  (Epic 205's Label in Name fix removed the desktop command-palette button's aria-label, so the
+  e2e specs' `getByLabel("Open command palette")` matched only the hidden mobile icon button and the
+  two a11y-keyboard specs went red for exactly that reason — the same class of defect 205 removed,
+  caught by running the gate. The three call sites now query the desktop button by its accessible
+  name (its visible copy). Measured on the mock-mode stack (`LLM_PROVIDER=mock`, restored to
+  `openai_compat` after): targeted specs — a11y-keyboard, command-palette, offer-arc — **11/11**;
+  the full mock suite ran **44 of 73 green** before the host exhausted memory and the runner died,
+  including every golden-journey AI station in that range. Honest boundary: the remaining 29
+  specs were not re-run this attempt (host memory; the previous full mock run, 73/73, predates
+  this fix set and is unchanged in their favor). A throwaway probe note was written to the dev
+  knowledge base to render the timeline day rail with live content and was deleted afterwards.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
