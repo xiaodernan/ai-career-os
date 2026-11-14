@@ -6544,7 +6544,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   offers shelf link arrive. Frontend 1337/1337 (the dialog's
   `onSuccess` triggers the overlay; new component 3/3). E2E spec 1/1 in mock mode;
   the suite count moves to 73/73 when this runs with it. EN+ZH both keys. Commits
-  pending this message — d496771 back to 80ce15f plus the celebration files.)
+  pending this message — d496771 back to 80ce15f plus the celebration files; the commit below
+  landed with a full mock-mode run after it: **73/73 passed** (the four AI-dependent
+  specs the preamble had silently silenced now pass with the full-prompt mock reader,
+  and the offer-celebration spec rides green with the rest of the suite). The stack was
+  then re-verified healthy on `openai_compat` end-to-end.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
