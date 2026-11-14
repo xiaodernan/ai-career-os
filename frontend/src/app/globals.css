@@ -551,3 +551,12 @@ button, a, [role="button"], input, select, textarea {
   .aurora-blob, .gradient-text, .float-soft, .spin-slow, .shimmer-rule { animation: none !important; }
   .aurora-grid { opacity: 0.4; }
 }
+
+/* Print output: keep ink modest and let browser margins do the work.
+   The keepsake pages hide their chrome on paper; this block tunes the flow. */
+@media print {
+  @page { size: letter; margin: 18mm 16mm; }
+  html, body { background: #fff !important; color: #111 !important; }
+  /* Ink-gentle ask: avoid large radial fills and borders on paper. */
+  .print-quiet { background: transparent !important; box-shadow: none !important; border-color: #ccc !important; }
+}

@@ -81,13 +81,15 @@ export default function LettersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader frontDoor title={t("letters.title")} description={t("letters.description")} />
+      <div className="print:hidden">
+        <PageHeader frontDoor title={t("letters.title")} description={t("letters.description")} />
+      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           ask(draft);
         }}
-        className="flex gap-2"
+        className="flex gap-2 print:hidden"
       >
         <div className="relative flex-1">
           <Search
@@ -158,7 +160,7 @@ export default function LettersPage() {
         />
       ) : (
         <>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground print:hidden">
             <span
               className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 tabular-nums"
               aria-live="polite"
@@ -219,7 +221,7 @@ function LetterCard({
               {keptOn ? ` · ${keptOn}` : null}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5 print:hidden">
             <Button variant="ghost" size="icon-sm" onClick={onCopy} aria-label={t("letters.copy")} title={t("letters.copy")}>
               <Copy aria-hidden className="size-4" />
             </Button>

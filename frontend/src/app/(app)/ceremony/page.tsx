@@ -102,11 +102,11 @@ export default function CeremonyPage() {
       <div className="print:hidden">
         <PageHeader frontDoor title={t("ceremony.title")} description={t("ceremony.description")} />
       </div>
-      <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-b from-violet-50/60 via-background to-background shadow-card print:break-inside-avoid print:border-0 print:shadow-none">
+      <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-b from-violet-50/60 via-background to-background shadow-card print-quiet print:break-inside-avoid print:border-0 print:shadow-none">
         <CardContent className="relative space-y-10 p-6 sm:p-10">
           <span
             aria-hidden
-            className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full"
+            className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full print:hidden"
             style={{
               background:
                 "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 22%, transparent), transparent)",
@@ -114,7 +114,7 @@ export default function CeremonyPage() {
           />
           <span
             aria-hidden
-            className="pointer-events-none absolute -bottom-32 -left-32 h-80 w-80 rounded-full"
+            className="pointer-events-none absolute -bottom-32 -left-32 h-80 w-80 rounded-full print:hidden"
             style={{
               background:
                 "radial-gradient(closest-side, color-mix(in oklch, var(--accent) 18%, transparent), transparent)",
