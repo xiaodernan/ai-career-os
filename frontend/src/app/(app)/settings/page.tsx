@@ -3,7 +3,8 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
-import { Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
+import { ArrowUpDown, Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/profile-cards";
@@ -30,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogout, useUser } from "@/lib/hooks/auth";
 import { useLocale } from "@/lib/i18n/locale-context";
+import { readWheelDirection, writeWheelDirection, type WheelDirection } from "@/lib/wheel-direction";
 import { useUpdateProfile } from "@/lib/hooks/actions";
 import { userRoleWord } from "@/lib/status-words";
 
@@ -39,6 +41,14 @@ const MAX_NAME = 120;
 export default function SettingsPage() {
   const { t } = useLocale();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const [wheelMode, setWheelMode] = React.useState<WheelDirection>("os");
+  React.useEffect(() => setWheelMode(readWheelDirection()), []);
+  const setWheel = React.useCallback((value: string) => {
+    const direction = value === "reverse" ? "reverse" as const : "os" as const;
+    setWheelMode(direction);
+    writeWheelDirection(direction);
+    toast.success(t("settings.wheelSaved"));
+  }, [t]);
   const { data: user, isPending } = useUser();
   const logout = useLogout();
   const updateMe = useUpdateProfile();
@@ -183,6 +193,42 @@ export default function SettingsPage() {
                 resolvedTheme === "dark" ? t("settings.paletteDark") : t("settings.paletteLight"),
             })}
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Scroll direction — Epic 225 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("settings.wheelTitle")}</CardTitle>
+          <CardDescription>{t("settings.wheelDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup
+            value={wheelMode}
+            onValueChange={setWheel}
+            className="grid max-w-md grid-cols-2 gap-3"
+            aria-label={t("settings.wheelTitle")}
+          >
+            {(
+              [
+                { value: "os", labelKey: "settings.wheelOs", icon: Monitor },
+                { value: "reverse", labelKey: "settings.wheelReverse", icon: ArrowUpDown },
+              ] as const
+            ).map(({ value, labelKey, icon: Icon }) => (
+              <Label
+                key={value}
+                htmlFor={`wheel-${value}`}
+                className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors duration-150 hover:bg-accent has-focus-visible:ring-[3px] has-focus-visible:ring-primary/30 ${
+                  wheelMode === value ? "border-primary bg-primary/5 text-foreground" : "border-border"
+                }`}
+              >
+                <Icon className="size-4 text-muted-foreground" aria-hidden />
+                {t(labelKey)}
+                <RadioGroupItem value={value} id={`wheel-${value}`} className="sr-only" />
+              </Label>
+            ))}
+          </RadioGroup>
+          <p className="mt-3 text-xs text-muted-foreground">{t("settings.wheelHint")}</p>
         </CardContent>
       </Card>
 

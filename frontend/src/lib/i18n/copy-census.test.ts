@@ -148,7 +148,8 @@ describe("the browser's copy", () => {
     // lines on a rehearsal.
     // 192 with Epic 223: `components/data/pocket-card.tsx`, the browser's pocket.
     // 193 with Epic 224: `components/ceremony/year-in-review-card.tsx`, the keepsake that travels.
-    expect(browserSources().length).toBe(193);
+    // 194 with Epic 225: `components/layout/wheel-direction.tsx`, the reader's wheel dialect.
+    expect(browserSources().length).toBe(194);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -1712,6 +1712,14 @@ export const translations = {
       appearance: "Appearance",
       appearanceDescription: "The interface follows your system theme by default.",
       renderingIn: "Rendering in {palette} palette.",
+      wheelTitle: "Scroll direction",
+      wheelDescription:
+        "macOS and Windows disagree about which way a wheel goes. Pick how this app scrolls — we never change the setting silently.",
+      wheelOs: "Like my system",
+      wheelReverse: "Reverse the wheel",
+      wheelSaved: "Scroll direction saved.",
+      wheelHint:
+        "macOS “Natural” scrolling feels reversed on a classic Windows wheel, and vice versa — this is the switch between those two dialects.",
       paletteDark: "dark",
       paletteLight: "light",
       keyboard: "Keyboard",
@@ -5273,6 +5281,14 @@ export const translations = {
       appearance: "外观",
       appearanceDescription: "界面默认跟随你的系统主题。",
       renderingIn: "正在以{palette}配色渲染。",
+      wheelTitle: "滚动方向",
+      wheelDescription:
+        "macOS 和 Windows 对滚轮该往哪边滚的问题一直没谈拢。选这款产品怎么滚——我们绝不会偷偷替你改。",
+      wheelOs: "跟随系统",
+      wheelReverse: "反向滚动",
+      wheelSaved: "滚动方向已保存。",
+      wheelHint:
+        "macOS 的“自然滚动”对经典 Windows 滚轮来说明显是反的，反过来也一样——这就是两个方言之间的那个开关。",
       paletteDark: "深色",
       paletteLight: "浅色",
       keyboard: "键盘",

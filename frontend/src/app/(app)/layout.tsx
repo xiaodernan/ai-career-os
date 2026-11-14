@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPaletteProvider } from "@/components/common/command-palette";
+import { WheelDirection } from "@/components/layout/wheel-direction";
 import { SkipLink } from "@/components/layout/skip-link";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
@@ -107,6 +108,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <AuthGuard>
       <AccountLocale />
       <PushRenewals />
+      <WheelDirection />
       <CommandPaletteProvider>
         <SkipLink />
         <div className="flex min-h-dvh">

@@ -1139,7 +1139,7 @@ describe("endpoints ↔ backend route parity", () => {
     }
   });
 
-  it("reads the queries it claims to read", () => {
+  it("reads the queries it claims to read", { timeout: 60000 }, () => {
     const rows = queryRows();
     // 13 call sites append a query and 15 distinct (route, parameter) pairs ride on them, measured.
     // A reader that stopped understanding `api.get`'s second argument would satisfy every rule

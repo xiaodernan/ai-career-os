@@ -6878,6 +6878,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **225** The wheel, the reader's way — a scroll-direction setting that means it (2026-11-15).
+
+  (The report: "the mouse wheel feels backwards in this product; wheel up looks down, wheel down
+  looks up." The honest finding is in the git archaeology, and it is what it is: no code in this
+  repository ever attached a `wheel` handler — `git log -S"addEventListener('wheel'" -- frontend/src`
+  is empty, no stylesheet flips a scroller, no transform inverts one. What a Mac/Windows switch
+  does to the OS's "natural scrolling" toggle had been shipping silently, and a reader trained on
+  one dialect meets another. Epic 225 makes that dialect a choice instead of a surprise: a new
+  "Scroll direction" card in `/settings` (Like my system / Reverse the wheel), full EN+ZH, with a
+  capture-phase provider mounted app-wide (`components/layout/wheel-direction.tsx`) that negates
+  the delta for the window and nested overflow scrollers together, leaves ⌘/Ctrl-wheel (zoom)
+  untouched, applies instantly (not smooth — a reversed wheel must feel like the OS's, not like
+  lag), and detaches completely when the preference is "os". The setting persists at
+  `careeros.wheelDirection` and fires a same-tab `careeros:wheelDirection` event so the flip is
+  instantaneous. Library is pure and unit-tested (`lib/wheel-direction.ts` — normalize/negate/
+  nearest-scroller, 13 cases; 2641 tests pass). Live-verified end to end: dispatching a synthetic
+  `WheelEvent(deltaY: 360)` at `scrollY=400` with "Reverse the wheel" active moves the page to
+  40; with "Like my system", the same event is left entirely to the browser.)
+
 - [x] **224** The year in review — the record that travels (2026-11-15).
 
   (The ceremony inscribes the search; this card hands it over as one image. A new card on
