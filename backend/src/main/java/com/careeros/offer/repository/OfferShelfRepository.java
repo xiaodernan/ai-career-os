@@ -20,4 +20,11 @@ public interface OfferShelfRepository extends JpaRepository<OfferRow, UUID> {
   List<OfferRow> shelfOrder(@Param("userId") UUID userId);
 
   Optional<OfferRow> findByIdAndUserId(UUID id, UUID userId);
+
+  /**
+   * The pending decisions that carry a date: the rows a calendar should ring about.
+   * Accepted and declined rows stay on the shelf but leave the calendar — the feed
+   * carries the open question, not the answered one.
+   */
+  List<OfferRow> findByUserIdAndDecisionAndDeadlineIsNotNullOrderByDeadlineAsc(UUID userId, String decision);
 }

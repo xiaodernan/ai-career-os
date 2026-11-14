@@ -6581,6 +6581,38 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   added, one marked accepted, screenshot captured with the banner, meter, steps and the
   accepted toggle on row #1 green, "Taking it" selected.)
 
+- [x] **196** The calendar carries the offers — the decision day rings a morning ahead, and two red gates the 185/194 work left behind are closed (2026-11-14).
+
+  (The ICS feed was the applications lane only: reminders rang at the moment of the reminder.
+  It now carries a second lane for **pending** offers that hold a deadline — an accepted or
+  passed offer stops ringing because the question was answered; the row stays on the shelf,
+  the calendar carries the open question. The event is keyed `<offer id>@careeros-offer-deadline`
+  (no collision with the `@careeros` application events), its `VALARM` is `-P1D` (a decision
+  deserves the morning, not the moment), `DTSTAMP` is the row's own `updated_at` so a poll does
+  not rewrite the event, and the link leads to `/offers`. The settings card's promise sentence
+  now names both lanes in EN+ZH. Verified live on the rebuilt stack: registered a probe account
+  through `/auth/register`, created a pending offer with a 2027-01-15T17:00Z deadline through
+  `/offers/shelf`, fetched `/api/v1/calendar.ics?token=…` with a token signed per the feed's own
+  `SignedLink` recipe, and read the event back — UID, DTSTAMP/DTSTART/DTEND, `TRIGGER:-P1D`,
+  the `/offers` link — then deleted the probe offer. Offline units: CalendarFeedTest **15/15**
+  (new: the decision lane's shape, the decided-offer exclusion pinned at the derived query, the
+  EN/ZH naming, the UID separation), CalendarControllerTest 6/6, translations + copy-census 26/26.
+
+  Also closed on the way, both red since Epics 185/194 and caught by running the suite:
+  **ApiErrorCodeCensusTest.theNameCensusIsFrozenUnlessThisTestIsEditedOnPurpose** — `OFFER_NOT_FOUND`
+  was in the enum (Epic 185) and missing from the frozen list; added deliberately with its reason,
+  4/4 green. **ApiDocParamContractTest.aBodyRowThatNamesFieldsNamesAllOfThem** — API.md's
+  `POST /offers/shelf` body named eight fields while the endpoint binds `decision` too; the row now
+  names all nine, 18/18 green. Both fail on a clean tree (measured by stash), so they were main's
+  debt, not this epic's.
+
+  Honest boundary: the full backend suite could not be driven to green here — the dev host
+  exhausted Postgres connections mid-suite (`FATAL: sorry, too many clients already`) and Docker
+  Desktop crashed under the build's memory pressure twice; `JobQueueIT` and `ForwardedAddressIT`
+  failed on that connection error (they open their own Spring context against the live DB). The
+  targeted verification above plus the census/doc gates are what ran and passed; the ITs were
+  not faked green and must be re-run on a machine with headroom. Commit below.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

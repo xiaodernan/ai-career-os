@@ -1550,12 +1550,12 @@ export const translations = {
     calendar: {
       title: "Calendar subscription",
       description:
-        "Read your reminders in the calendar app you already open. The address below is the whole credential — anyone holding it can read these reminders, and a new secret retires every address at once.",
+        "Read your reminders and pending offer decision days in the calendar app you already open. The address below is the whole credential — anyone holding it can read these, and a new secret retires every address at once.",
       linkLabel: "Your calendar address",
       copy: "Copy address",
       loading: "Preparing your address…",
       loadFailed: "The address could not be prepared. Reload the page and try again.",
-      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder appears on the calendar's next poll, and stays until you clear it here.",
+      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder — and an undecided offer’s deadline — appears on the calendar’s next poll, and stays until you clear it here.",
     },
     /**
      * The mail-letters card (42.1, 42.2). The three dials used to be reachable only from the
@@ -4823,12 +4823,12 @@ export const translations = {
     calendar: {
       title: "日历订阅",
       description:
-        "在你本来就天天打开的日历应用里读你的提醒。下面这个地址就是全部凭证——拿到它的人就能读到这些提醒，而换一次密钥会让所有地址同时作废。",
+        "在你本来就天天打开的日历应用里读你的提醒和还没决定的录用截止日。下面这个地址就是全部凭证——拿到它的人就能读到这些，而换一次密钥会让所有地址同时作废。",
       linkLabel: "你的日历地址",
       copy: "复制地址",
       loading: "正在准备你的地址……",
       loadFailed: "地址没能准备好。刷新页面再试一次。",
-      hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
+      hint: "把它粘进 Google 日历、Apple 日历或 Outlook 的“从网址订阅”。提醒——和还没拿定主意的录用截止日——会在日历下一次轮询时出现，并一直留到你在这里清掉它。",
     },
     /** 邮件卡片（42.1、42.2）。三个开关过去只能从一封信的页脚进入；这张卡片直接从账号里读出状态、把开关写回账号，并把同一个签名页交到读者手上，不必再翻出一封旧信。 */
     mailLetters: {

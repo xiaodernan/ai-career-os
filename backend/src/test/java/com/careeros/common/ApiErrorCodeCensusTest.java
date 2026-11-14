@@ -125,7 +125,10 @@ class ApiErrorCodeCensusTest {
                 // 20.1: each refusal of a malformed nightly report has one meaning, so each
                 // got its own code rather than one code with three sentences.
                 "NIGHTLY_REPORT_CLOCK_REVERSED", "NIGHTLY_REPORT_STATUS_INVALID", "NIGHTLY_REPORT_SUMMARY_TOO_LARGE",
-                "NOTE_NOT_FOUND", "NOT_FOUND", "PASSWORD_UNCHANGED", "PROFILE_NOT_FOUND",
+                "NOTE_NOT_FOUND", "NOT_FOUND",
+                // 185: the offers shelf answers its own lookups; a caller whose id is not on
+                // the shelf gets this code, not a generic not-found.
+                "OFFER_NOT_FOUND", "PASSWORD_UNCHANGED", "PROFILE_NOT_FOUND",
                 // 33.1: a browser registration is refused, capped or forgotten -- each with its
                 // own sentence, so the settings switch can tell the reader which happened.
                 "PUSH_SUBSCRIPTION_INVALID", "PUSH_SUBSCRIPTION_LIMIT_REACHED",

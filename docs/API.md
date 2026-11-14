@@ -440,7 +440,7 @@ cannot tell the two apart.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/calendar.ics` | the account's reminders as an RFC 5545 document; `token` is the credential, and a forged, retired, missing or erased-account token is a **404** `CALENDAR_LINK_INVALID` |
+| GET | `/calendar.ics` | the account's reminders and pending offer decision deadlines as an RFC 5545 document; `token` is the credential, and a forged, retired, missing or erased-account token is a **404** `CALENDAR_LINK_INVALID` |
 | GET | `/calendar/link` | the signed feed URL for the signed-in account — the settings card's copy target |
 
 ### Inbound mail (`/inbound`)
@@ -577,7 +577,7 @@ against the caller's own offer — no model invents a number here.
 | POST | `/offers/compare` | `{role, location?, seniority?, currency?, matchScore?, offers}` → one row per offer (`label`, `base`, `bonus`, `firstYearCash`, `annualEquity`, `totalComp`, `assessment`), the `best` row, and the engine's notes. The ranking is by **total compensation** — first-year cash plus the grant annualized over its vest — while the market verdict compares **base** to the benchmark, because the benchmark is base salary. An offer with no grant ranks exactly as a cash-only one |
 | POST | `/offers/counter-offer` | `{role, location?, seniority?, currency?, offerBase, matchScore?}` → the deterministic anchor, the reasons behind it, and a script that phrases them. The anchor is computed, never guessed: no model writes a number here |
 | GET | `/offers/shelf` | the reader's own shelf of the offers they hold (Epic 185) — items[] plus total, ordered by deadline first (the clock that forces a decision) with undated rows trailing by recency; each row carries label, base, bonus, equity (the annualized figure the compare action computes — the shelf stores the result, not a vest schedule), currency, remoteType (the jobs vocabulary), deadline, notes and the totalComp the compare view ranks by. Every read and write is owner-scoped; an offer is among the most personal rows this platform keeps |
-| POST | `/offers/shelf` | `{label, base, bonus, equity, currency?, remoteType?, deadline?, notes?}` → 201 with the created row; currency defaults to USD, remoteType to onsite, and both are normalized server-side (currency upper-cased, the remote vocabulary enforced) |
+| POST | `/offers/shelf` | `{label, base, bonus, equity, currency?, remoteType?, deadline?, notes?, decision?}` → 201 with the created row; currency defaults to USD, remoteType to onsite, and both are normalized server-side (currency upper-cased, the remote vocabulary enforced); decision is pending on create and patched through the same body (`pending|accepted|declined`, Epic 194) |
 | PATCH | `/offers/shelf/{id}` | the same body → the updated row; a row another reader sent is a 404, not a leak |
 | DELETE | `/offers/shelf/{id}` | removes the row and answers its id; the shelf that remains is the caller's own |
 | GET | `/offers/shelf/{id}` | one row, for the drawer that deep-links from the compare view |
