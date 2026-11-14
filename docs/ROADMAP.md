@@ -6756,6 +6756,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   it is source-visible and rides on the next healthy window. A live sign-in as a probe account
   through the page itself showed the dashboard, zero console errors, and offers rendering end to end.)
 
+  **Tranche two (2026-11-14, later the same day).** The container was rebuilt for 205 and measured
+  again through the in-app browser with the same page. The two WCAG 2.5.3 findings are **gone**;
+  scores hold (accessibility 1.0, best practices 1.0, SEO 0.75 with only the recorded
+  `meta-description` false negative).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
