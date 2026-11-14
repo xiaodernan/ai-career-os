@@ -1369,6 +1369,22 @@ export interface InboundMail {
   filedAt: string | null;
 }
 
+/** One letter from the shelf the reader keeps across applications (Epic 210). */
+export interface LetterCatalogItem {
+  id: string;
+  applicationId: string;
+  applicationTitle: string;
+  companyName: string;
+  jobId?: string;
+  resumeVersionId?: string;
+  mode?: string;
+  tone?: string;
+  length?: string;
+  body: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 /**
  * What the reply chips count (49.4), and the waiting pile beside them (49.5).
  *

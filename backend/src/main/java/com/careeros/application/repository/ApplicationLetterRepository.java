@@ -16,6 +16,9 @@ public interface ApplicationLetterRepository extends JpaRepository<ApplicationLe
 
     List<ApplicationLetter> findByUserIdOrderByCreatedAtDescIdDesc(UUID userId);
 
+    /** The gallery's own page: every letter past 200 stays under the surface until the ledger grows a pager. */
+    List<ApplicationLetter> findFirst200ByUserIdOrderByCreatedAtDescIdDesc(UUID userId);
+
     Optional<ApplicationLetter> findByIdAndApplicationIdAndUserId(
             UUID id, UUID applicationId, UUID userId);
 

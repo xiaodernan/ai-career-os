@@ -1,5 +1,6 @@
 package com.careeros.application.service;
 
+import com.careeros.application.dto.ApplicationDtos.LetterCatalogItem;
 import com.careeros.application.dto.ApplicationDtos.LetterItem;
 import com.careeros.application.dto.ApplicationDtos.SaveLetterRequest;
 import com.careeros.application.dto.ApplicationDtos.UpdateLetterRequest;
@@ -9,7 +10,9 @@ import com.careeros.application.repository.ApplicationLetterRepository;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,6 +90,36 @@ public class ApplicationLetterService {
                 .stream()
                 .map(ApplicationLetterService::toItem)
                 .toList();
+    }
+
+    /**
+     * Every kept letter for the caller, across all applications, newest first, capped at 200.
+     * The application's title and company come along for the gallery; a letter whose application
+     * row is gone stays in the answer with an empty title rather than disappearing.
+     * The cap is one page the reader cannot be drowned by; the board itself users no letter-level
+     * pagination because the ledger this serves was designed at letters-per-application scale.
+     */
+    @Transactional(readOnly = true)
+    public List<LetterCatalogItem> catalog(UUID userId) {
+        List<ApplicationLetter> mine = letters.findFirst200ByUserIdOrderByCreatedAtDescIdDesc(userId);
+        if (mine.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> appIds = mine.stream().map(ApplicationLetter::getApplicationId).distinct().toList();
+        Map<UUID, Application> titleById = applications.byIds(userId, appIds).stream()
+                .collect(Collectors.toMap(Application::getId, a -> a));
+        return mine.stream()
+                .map(letter -> catalogItem(letter, titleById.get(letter.getApplicationId())))
+                .toList();
+    }
+
+    static LetterCatalogItem catalogItem(ApplicationLetter row, Application app) {
+        return new LetterCatalogItem(row.getId(), row.getApplicationId(),
+                app == null ? "" : app.getTitle(),
+                app == null ? "" : app.getCompanyName(),
+                row.getJobId(), row.getResumeVersionId(),
+                row.getMode(), row.getTone(), row.getLength(),
+                row.getBody(), row.getCreatedAt(), row.getUpdatedAt());
     }
 
     /**

@@ -12,6 +12,7 @@ export const translations = {
       dashboard: "Dashboard",
       notifications: "Notifications",
       replies: "Replies",
+      letters: "Letters",
       resumes: "Resumes",
       jobs: "Jobs",
       applications: "Applications",
@@ -45,6 +46,7 @@ export const translations = {
       dashboard: "Career overview and priorities",
       notifications: "Signals that need your attention",
       replies: "Recruiter replies filed on your applications",
+      letters: "Every letter you kept, in one gallery",
       resumes: "Resume versions and structured profile",
       jobs: "Discovered jobs and AI matches",
       applications: "Pipeline kanban and reminders",
@@ -114,6 +116,35 @@ export const translations = {
         unknown: "Something else",
       },
     },
+    // The ink desk (Epic 210): every letter the reader kept, in one gallery.
+    letters: {
+      title: "Letters",
+      description:
+        "Every cover letter you kept across your applications, newest kept first. One gallery, not seven drawers — read it again, copy it, pack it into the next application.",
+      loading: "Reading the kept letters…",
+      unavailable: "The letters could not be read. Try again in a moment.",
+      count: "{count} letters kept",
+      searchPlaceholder: "Search the kept letters",
+      searchLabel: "Search the kept letters by body, application, company, tone or length",
+      search: "Search",
+      clearSearch: "Clear search",
+      noMatch: "No letter matches “{query}”",
+      noMatchDescription: "Try a shorter word, or clear the search to read them all.",
+      emptyTitle: "Nothing kept yet",
+      emptyPromise: "The gallery starts the moment a draft earns its place.",
+      emptyDescription:
+        "Generate a cover letter for an application and choose to keep it, and it lands here — newest first, kept rather than scrolled past.",
+      emptyAction: "Open the tracker",
+      proof1: "Letters come back from the job page itself — the same reader you already use.",
+      proof2: "Copied is copied: the letter leaves this screen under your control, not the page's.",
+      proof3: "The ledger is yours alone; nothing here is shared with anyone.",
+      copy: "Copy this letter",
+      copied: "Copied",
+      copyFailed: "Couldn't copy the letter",
+      unnamedApplication: "A letter kept for an unnamed application",
+      companyUnknown: "Unknown company",
+      openApplication: "Open the application",
+    },
     // The fit studio (paste a JD → analyze → tailor)
     studio: {
       title: "Match Studio",
@@ -154,6 +185,7 @@ export const translations = {
     // Common actions
     common: {
       clipboardBlocked: "Your browser blocked clipboard access.",
+      copyFailed: "Could not copy to the clipboard.",
       copy: "Copy",
       fileSaved: "File saved to your downloads.",
       openCopilot: "Open Copilot",
@@ -3400,6 +3432,7 @@ export const translations = {
       dashboard: "仪表盘",
       notifications: "通知",
       replies: "回信",
+      letters: "求职信",
       resumes: "简历",
       jobs: "职位",
       applications: "申请",
@@ -3430,6 +3463,7 @@ export const translations = {
       dashboard: "求职全局与优先事项",
       notifications: "需要你关注的信号",
       replies: "归到投递上的招聘方回信",
+      letters: "你留下的每一封信，放在一间展厅",
       resumes: "简历版本与结构化档案",
       jobs: "发现的职位与 AI 匹配",
       applications: "投递看板与提醒",
@@ -3485,6 +3519,35 @@ export const translations = {
         unknown: "其他",
       },
     },
+    // 信笺间（Epic 210）：读者保留的每一封信，一间展厅看完。
+    letters: {
+      title: "求职信",
+      description:
+        "你横跨所有投递保留的每一封求职信，最新保留的在最上面。一间展厅，不是七个抽屉——读一遍、抄走、下一次投递直接带上。",
+      loading: "正在读保留的信……",
+      unavailable: "保留的信读不出来了。稍后再试一次。",
+      count: "已保留 {count} 封信",
+      searchPlaceholder: "搜索保留的信",
+      searchLabel: "按正文、投递、公司、语气或长度搜索保留的信",
+      search: "搜索",
+      clearSearch: "清除搜索",
+      noMatch: "没有信匹配“{query}”",
+      noMatchDescription: "换个短点的词，或者清除搜索看每一封信。",
+      emptyTitle: "还没保留任何信",
+      emptyPromise: "一间展厅，从你愿意再看一眼的那一刻开始。",
+      emptyDescription:
+        "在一个投递里生成求职信并选择保留，它会按时间倒序落在这里——留下来，而不是刷过去。",
+      emptyAction: "打开投递看板",
+      proof1: "信从你自己投递页的编辑器里出来——就是你已经在用的那一支笔。",
+      proof2: "复制就是复制：信离开这个页面，由你决定，不由页面决定。",
+      proof3: "信是你的，谁也不会跟你共享。",
+      copy: "复制这封信",
+      copied: "已复制",
+      copyFailed: "没能复制这封信",
+      unnamedApplication: "一封保留给未命名投递的信",
+      companyUnknown: "未知公司",
+      openApplication: "打开这个投递",
+    },
     // 适配工坊（粘贴职位 → 分析 → 定制简历）
     studio: {
       title: "适配工坊",
@@ -3525,6 +3588,7 @@ export const translations = {
     // Common actions
     common: {
       clipboardBlocked: "浏览器拦截了剪贴板访问。",
+      copyFailed: "没能复制到剪贴板。",
       copy: "复制",
       fileSaved: "文件已保存到下载目录。",
       openCopilot: "打开副驾",

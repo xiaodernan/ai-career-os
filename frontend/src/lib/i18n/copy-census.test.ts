@@ -136,7 +136,9 @@ describe("the browser's copy", () => {
     // one browser source again, honestly counted. 181 with
     // `components/offers/offer-day-one-packet.tsx`, the week after.
     // 182 with `components/offers/offer-first-quarter.tsx`, the first quarter.
-    expect(browserSources().length).toBe(182);
+    // 184 with Epic 210: `app/(app)/letters/page.tsx` (the ink desk itself) and
+    // `app/(app)/letters/layout.tsx` (its metadata shell) — two more .tsx files under the scan.
+    expect(browserSources().length).toBe(184);
   });
 
   it("finds a sentence, however long it is", () => {

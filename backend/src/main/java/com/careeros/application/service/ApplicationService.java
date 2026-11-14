@@ -281,6 +281,22 @@ public class ApplicationService {
         }
     }
 
+    /**
+     * Applications the letters gallery asks about, scoped to this caller.
+     *
+     * <p>The gallery joins each kept letter with the title of the application the letter hangs
+     * off. A per-letter lookup would be a query per letter; one grouped read answers the whole
+     * shelf. Scoped by the caller: this account's letters name this account's applications
+     * only, and a column that missed the filter breaks differently from one that is exact.
+     */
+    @Transactional(readOnly = true)
+    public List<Application> byIds(UUID userId, Collection<UUID> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return applications.findByUserIdAndIdIn(userId, ids);
+    }
+
     /** One application with its letter total read for this caller. */
     @Transactional(readOnly = true)
     public ApplicationItem get(UUID userId, UUID id) {

@@ -6816,6 +6816,32 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   absolute timings on this box fluctuate widely; both runs shared the same corpus and seed, so the
   *ratio* is the measured claim, not the absolute milliseconds.)
 
+- [x] **210** The ink desk — every kept letter in one gallery, not seven drawers (2026-11-14).
+
+  (The kept cover letters had no room of their own: they lived inside one dialog per application
+  and travelled to the palette through the global search, so a reader who wanted their best line
+  back for the next posting had to open board after board. New route `GET /api/v1/letters` answers
+  all of the caller's letters newest-first, capped at 200, joined to the application they hang from
+  in two reads — `ApplicationLetterService::catalog` (findFirst200 + one grouped `findByUserIdAndIdIn`
+  for the applications) — so the gallery never issues N+1; a letter whose application row was lost
+  answers with the letter and an empty title rather than being dropped. New frontend `/letters`:
+  search narrowing in the URL (`?q=`), the kept dials re-said in the reader's language
+  (`coverLetter.tones/*`/`lengths/*` with a stored-word fallback), per-row Copy (sonner
+  `toast.success`), a deep link back to the application (`/applications?application=`), a composed
+  promise for the empty shelf, a composed empty for "no match", the full EN+ZH pair, and the obvious
+  entry in the sidebar/Command palette (`letters` between `applications` and `interviews`).
+  Backend gates: new `ApplicationLetterCatalogTest` 3/3 (the joined titles; the orphaned-letter
+  contract; reader-scoping), `ApplicationLetterServiceTest` 9/9 intact; docs/API.md gains the §2 row;
+  `test_the_api_docs_public_tables_are_the_controllers_own` stays green (569 passed).
+  Frontend: vitest **1350/1350** including 5 new letters-page tests, tsc clean, copy census re-pinned
+  to **184 sources** (+2: the page and its metadata shell), `routes.spec.ts` grew the letters row for
+  the next full mock run. Verified live against the rebuilt stack on a fresh probe account: the
+  registration worked, an application created, a letter kept through
+  `POST /applications/{id}/letters` (tone confident, length standard), the gallery answered
+  `{"items":[…],"total":1}` verbatim, the page rendered "1 letters kept" with badges, body, and zero
+  console errors; Lighthouse on /letters: accessibility **1.0**, best-practices **1.0**, SEO 0.75
+  (same recorded false negative).)
+
 - [x] **209** The first quarter — the plan the offer packet opens onto, land / own / lift (2026-11-14).
 
   (The offers page now ends with what the packet ends on day one: **the first quarter**. Six

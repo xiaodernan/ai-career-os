@@ -76,6 +76,7 @@ Each row is a shipped capability, the route that exposes it, and the API behind 
 | Job ingestion: parse a feed, de-duplicate it, sweep it, plan the write | `/ingestion` | `/jobs/ingest/*` |
 | Data portability: export, preview a restore, redact before sharing | `/data` | `/data-portability/*` |
 | Networking: the contact registry and the follow-up drafts | `/networking` | `/contacts`, `/outreach/draft` |
+| The letter file: every kept cover letter in one gallery | `/letters` | `/letters` |
 | Agent health and today's AI spend | `/monitoring` | `/monitoring/health-report`, `/monitoring/spend-today` |
 | The rate-limit status | `/rate-limit` | `/rate-limit/status` |
 

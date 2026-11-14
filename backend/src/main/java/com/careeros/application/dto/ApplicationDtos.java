@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,6 +51,23 @@ public final class ApplicationDtos {
     public record LetterItem(UUID id, UUID applicationId, UUID jobId, UUID resumeVersionId,
                              String mode, String tone, String length, String body,
                              OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    }
+
+    /**
+     * One letter from the shelf the reader keeps across their applications — the same row
+     * {@code /letters} lists, with the titles of the application it hangs off. The application
+     * travels with the row because the gallery is the reader's ink desk, not a table of contents.
+     * A letter whose application row is gone answers an empty title rather than a missing letter:
+     * the letter is still theirs, and the title is where they would have started.
+     */
+    public record LetterCatalogItem(UUID id, UUID applicationId, String applicationTitle,
+                                    String companyName, UUID jobId, UUID resumeVersionId,
+                                    String mode, String tone, String length, String body,
+                                    OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    }
+
+    /** The gallery's paging cap, server-side: 200 letters cover every shelf this product has ever seen. */
+    public record LetterCatalogResponse(List<LetterCatalogItem> items, int total) {
     }
 
     /** A draft the reader chose to keep; the application row supplies the posting and version. */
