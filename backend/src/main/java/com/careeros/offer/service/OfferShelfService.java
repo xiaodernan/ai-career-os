@@ -87,6 +87,9 @@ public class OfferShelfService {
     row.setRemoteType(request.remoteType() == null ? "onsite" : request.remoteType());
     row.setDeadline(request.deadline());
     row.setNotes(request.notes());
+    if (request.decision() != null) {
+      row.setDecision(request.decision().trim().toLowerCase());
+    }
   }
 
   public static OfferItem toItem(OfferRow row) {
@@ -102,6 +105,7 @@ public class OfferShelfService {
         row.getNotes(),
         row.totalComp(),
         row.getCreatedAt(),
-        row.getUpdatedAt());
+        row.getUpdatedAt(),
+        row.getDecision());
   }
 }

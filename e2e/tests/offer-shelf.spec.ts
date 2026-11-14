@@ -55,4 +55,15 @@ test("the shelf ranks the reader's offers and answers every write", async ({ aut
   await globexRow.getByLabel("Remove this offer").click();
   await expect(page.getByText("Globex — Platform")).toHaveCount(0, { timeout: 20_000 });
   await expect(acmeRow.getByText("Best total comp")).toHaveCount(0);
+
+  // The decision strip is the endgame: default to On hold, flip to Taking it, and
+  // the banner names the row the reader has decided on; flip back to On hold and
+  // the banner is gone.
+  const acme = page.locator("li", { hasText: "Acme" });
+  await expect(acme.getByRole("button", { name: "On hold" })).toHaveAttribute("aria-pressed", "true");
+  await acme.getByRole("button", { name: "Taking it" }).click();
+  await expect(acme.getByRole("button", { name: "Taking it" })).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
+  await expect(page.getByText("Acme — Senior Backend — this is yours.")).toBeVisible({ timeout: 20_000 });
+  await acme.getByRole("button", { name: "On hold" }).click();
+  await expect(page.getByText("Acme — Senior Backend — this is yours.")).toHaveCount(0, { timeout: 20_000 });
 });

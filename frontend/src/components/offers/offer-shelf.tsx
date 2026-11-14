@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import * as React from "react";
-import { BadgeDollarSign, Pencil, Plus, Trash2, Trophy } from "lucide-react";
+import { BadgeDollarSign, Pencil, Plus, Sparkles, Trash2, Trophy } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,6 +75,7 @@ export function OfferShelf() {
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
   const items = shelf.data?.items ?? [];
+  const accepted = items.find((row) => row.decision === "accepted") ?? null;
   const best = items.reduce<OfferShelfItem | null>(
     (top, row) => (!top || row.totalComp > top.totalComp ? row : top),
     null,
@@ -130,6 +132,18 @@ export function OfferShelf() {
         <CardDescription>{t("offers.shelfDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {accepted && (
+          <div
+            role="status"
+            className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3"
+          >
+            <Sparkles aria-hidden className="size-5 shrink-0 text-success" />
+            <div className="min-w-0 text-sm">
+              <p className="font-semibold">{t("offers.shelfTakingTitle", { label: accepted.label })}</p>
+              <p className="text-muted-foreground">{t("offers.shelfTakingBody")}</p>
+            </div>
+          </div>
+        )}
         {shelf.isPending && (
           <div className="space-y-2">
             <div className="h-12 rounded-lg bg-muted/40" />
@@ -170,6 +184,45 @@ export function OfferShelf() {
                         {" 路 "}
                         {remoteTypeWord(t, row.remoteType)}
                       </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 border-t border-border/50 pt-2 text-xs">
+                      <span className="mr-1 text-2xs uppercase tracking-wide text-muted-foreground">
+                        {t("offers.shelfDecisionLabel")}
+                      </span>
+                      {(["pending", "accepted", "declined"] as const).map((state) => {
+                        const active = (row.decision ?? "pending") === state;
+                        return (
+                          <button
+                            key={state}
+                            type="button"
+                            aria-pressed={active}
+                            disabled={save.isPending}
+                            onClick={() =>
+                              save.mutate({
+                                id: row.id,
+                                label: row.label,
+                                base: row.base,
+                                bonus: row.bonus,
+                                equity: row.equity,
+                                currency: row.currency,
+                                remoteType: row.remoteType,
+                                deadline: row.deadline ?? undefined,
+                                notes: row.notes ?? undefined,
+                                decision: state,
+                              })
+                            }
+                            className={cn(
+                              "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium transition-colors",
+                              active && state === "accepted" && "border-success/40 bg-success/15 text-success",
+                              active && state === "declined" && "border-destructive/40 bg-destructive/10 text-destructive",
+                              active && state === "pending" && "border-primary/40 bg-primary/10 text-primary",
+                              !active && "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
+                            )}
+                          >
+                            {t(`offers.shelfDecision_${state}`)}
+                          </button>
+                        );
+                      })}
                     </div>
                     <div className="flex items-center gap-2">
                       {left !== null && (

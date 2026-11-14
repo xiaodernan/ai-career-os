@@ -30,7 +30,8 @@ public final class OfferShelfDtos {
       String notes,
       int totalComp,
       OffsetDateTime createdAt,
-      OffsetDateTime updatedAt) {}
+      OffsetDateTime updatedAt,
+      String decision) {}
 
   public record OfferShelfResponse(List<OfferItem> items, int total) {}
 
@@ -43,7 +44,9 @@ public final class OfferShelfDtos {
       @Pattern(regexp = "onsite|hybrid|remote", message = "must be onsite, hybrid or remote")
           String remoteType,
       OffsetDateTime deadline,
-      @Size(max = 2000) String notes) {}
+      @Size(max = 2000) String notes,
+      @Pattern(regexp = "pending|accepted|declined", message = "must be pending, accepted or declined")
+          String decision) {}
 
   public record UpsertOfferResponse(OfferItem item) {}
 

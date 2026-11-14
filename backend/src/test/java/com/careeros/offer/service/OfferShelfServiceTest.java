@@ -34,7 +34,7 @@ class OfferShelfServiceTest {
     private final OfferShelfService service = new OfferShelfService(repository);
 
     private UpsertOfferRequest request(String label, int base, int bonus, int equity) {
-        return new UpsertOfferRequest(label, base, bonus, equity, "USD", "hybrid", null, null);
+        return new UpsertOfferRequest(label, base, bonus, equity, "USD", "hybrid", null, null, null);
     }
 
     private OfferRow row(UUID id, String label, int base, int bonus, int equity,
@@ -52,6 +52,31 @@ class OfferShelfServiceTest {
         row.setCreatedAt(OffsetDateTime.now());
         row.setUpdatedAt(OffsetDateTime.now());
         return row;
+    }
+
+    @Test
+    void createDefaultsTheDecisionToPending_andAnExplicitDecisionStages() {
+        when(repository.save(any())).thenAnswer(inv -> {
+            OfferRow row = inv.getArgument(0);
+            row.setId(UUID.randomUUID());
+            if (row.getCreatedAt() == null) row.setCreatedAt(OffsetDateTime.now());
+            if (row.getUpdatedAt() == null) row.setUpdatedAt(OffsetDateTime.now());
+            return row;
+        });
+
+        UpsertOfferRequest blank = new UpsertOfferRequest(
+                "Initech", 150000, 0, 0, "USD", "hybrid", null, null, null);
+        ArgumentCaptor<OfferRow> captor = ArgumentCaptor.forClass(OfferRow.class);
+        OfferItem item = service.create(userId, blank);
+
+        org.mockito.Mockito.verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getDecision()).isEqualTo("pending");
+        assertThat(item.decision()).isEqualTo("pending");
+
+        UpsertOfferRequest accepted = new UpsertOfferRequest(
+                "Initech", 150000, 0, 0, "USD", "hybrid", null, null, "accepted");
+        OfferItem acceptedItem = service.create(userId, accepted);
+        assertThat(acceptedItem.decision()).isEqualTo("accepted");
     }
 
     @Test
@@ -91,7 +116,7 @@ class OfferShelfServiceTest {
         });
 
         UpsertOfferRequest blank = new UpsertOfferRequest(
-                "Initech", 150000, 0, 0, null, null, null, null);
+                "Initech", 150000, 0, 0, null, null, null, null, null);
         ArgumentCaptor<OfferRow> captor = ArgumentCaptor.forClass(OfferRow.class);
         OfferItem item = service.create(userId, blank);
 

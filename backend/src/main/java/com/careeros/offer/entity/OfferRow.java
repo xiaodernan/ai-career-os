@@ -49,6 +49,10 @@ public class OfferRow {
     @Column(name = "remote_type", nullable = false, length = 16)
     private String remoteType = "onsite";
 
+    /** pending | accepted | declined — the reader's own state of mind about this row. */
+    @Column(name = "decision", nullable = false, length = 24)
+    private String decision = "pending";
+
     @Column(name = "deadline")
     private OffsetDateTime deadline;
 
@@ -79,6 +83,8 @@ public class OfferRow {
     public void setCurrency(String currency) { this.currency = currency; }
     public String getRemoteType() { return remoteType; }
     public void setRemoteType(String remoteType) { this.remoteType = remoteType; }
+    public String getDecision() { return decision; }
+    public void setDecision(String decision) { this.decision = decision; }
     public OffsetDateTime getDeadline() { return deadline; }
     public void setDeadline(OffsetDateTime deadline) { this.deadline = deadline; }
     public String getNotes() { return notes; }

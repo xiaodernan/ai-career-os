@@ -1944,6 +1944,8 @@ export interface OfferShelfItem {
   totalComp: number;
   createdAt: string;
   updatedAt: string;
+  /** The reader's own state of mind about this row (Epic 194); starter rows default to pending. */
+  decision?: "pending" | "accepted" | "declined";
 }
 
 export interface OfferShelf {

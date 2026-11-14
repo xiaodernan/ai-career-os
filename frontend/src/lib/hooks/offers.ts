@@ -239,6 +239,7 @@ export function useSaveOffer() {
       deadline?: string;
       notes?: string;
       id?: string;
+      decision?: "pending" | "accepted" | "declined";
     }) =>
       // The fields are spelled inline at each call, not forwarded as a variable: the
       // body census reads the call site name by name against the record the
@@ -253,6 +254,7 @@ export function useSaveOffer() {
             remoteType: body.remoteType,
             deadline: body.deadline,
             notes: body.notes,
+            decision: body.decision,
           })) as unknown)
         : ((await api.create<unknown>(endpoints.offerShelf, {
             label: body.label,
@@ -263,6 +265,7 @@ export function useSaveOffer() {
             remoteType: body.remoteType,
             deadline: body.deadline,
             notes: body.notes,
+            decision: body.decision,
           })) as unknown),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["offers", "shelf"] });

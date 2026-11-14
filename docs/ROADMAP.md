@@ -6550,6 +6550,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   and the offer-celebration spec rides green with the rest of the suite). The stack was
   then re-verified healthy on `openai_compat` end-to-end.)
 
+- [x] **194** The offer decision — the shelf remembers the reader's mind about the rows (2026-11-14).
+
+  (Holding is not deciding. The shelf — the reader's record of offers they actually hold —
+  now carries a fourth state toward the endgame beyond totalComp and the deadline clock:
+  `decision` (`pending` default | `accepted` | `declined`), applied exclusively
+  through the upsert and ordered untouched except on the reader's own tap. V41 adds the
+  column with a documented backfill state; the wire carries it end-to-end
+  (`UpsertOfferRequest` validates against the enum vocabulary, `OfferItem` carries it, the
+  service sets a trimmed lowercase value on writes); the browser renders a three-position
+  strip — On hold / Taking it / Passing — at the row's foot, and when any row is accepted
+  a banner above the list names the winner ("Acme — Senior Backend — this is yours.")
+  in the reader's language. Existing rows backfill to pending on V41, verified in-db.
+  Verified: `OfferShelfServiceTest` 4/4 including the decision default + stage,
+  `DataPortabilityControllerTest` 29/29 unchanged, live register→create→patch→patch
+  invalid-value-400 round trips measured; the e2e shelf spec grew the decision strip
+  walk — the row's `aria-pressed` flips and the banner appears and clears — and passes
+  on the rebuilt stack against live. English and Chinese both carry the seven keys.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
