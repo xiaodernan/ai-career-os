@@ -100,6 +100,8 @@ function eventText(
   return event.type ?? t("applications.dialog.update");
 }
 
+import { OfferCelebration } from "@/components/offers/offer-celebration";
+
 export function ApplicationDialog({ application, open, onOpenChange }: ApplicationDialogProps) {
   const { t, locale } = useLocale();
   const editing = application !== null;
@@ -128,6 +130,7 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
   const [offerCompensation, setOfferCompensation] = React.useState("");
   const [rejectionReason, setRejectionReason] = React.useState("");
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+  const [celebrating, setCelebrating] = React.useState(false);
 
   // The form is a copy of the row, so it is rebuilt whenever a different card opens — and on
   // every open, so a cancelled edit never leaks into the next one.
@@ -181,7 +184,12 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
           ...field("notes", notes.trim()),
           ...field("reminderAt", fromReminderInput(reminder) ?? undefined),
         },
-        { onSuccess: () => onOpenChange(false) },
+        {
+          onSuccess: () => {
+            onOpenChange(false);
+            if (status === "offer") setCelebrating(true);
+          },
+        },
       );
       return;
     }
@@ -210,7 +218,15 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
       onOpenChange(false);
       return;
     }
-    updateApp.mutate({ id: application.id, patch }, { onSuccess: () => onOpenChange(false) });
+    updateApp.mutate(
+      { id: application.id, patch },
+      {
+        onSuccess: () => {
+          onOpenChange(false);
+          if (patch.status === "offer" && application.status !== "offer") setCelebrating(true);
+        },
+      },
+    );
   };
 
   return (
@@ -500,6 +516,16 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
             },
           });
         }}
+      />
+      <OfferCelebration
+        open={celebrating}
+        role={editing ? application.title : title.trim() || null}
+        company={
+          editing
+            ? (application.company?.name ?? application.companyName ?? companyName) || null
+            : companyName.trim() || null
+        }
+        onContinue={() => setCelebrating(false)}
       />
     </>
   );

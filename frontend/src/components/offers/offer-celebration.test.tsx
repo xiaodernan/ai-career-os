@@ -1,0 +1,40 @@
+"use client";
+
+import { describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+
+vi.mock("@/lib/i18n/locale-context", () => ({
+  useLocale: () => ({
+    locale: "en",
+    t: (key: string, vars?: Record<string, unknown>) =>
+      vars ? `[${key}|${Object.values(vars).join(",")}]` : `[${key}]`,
+    setLocale: () => undefined,
+  }),
+}));
+
+import { OfferCelebration } from "./offer-celebration";
+
+describe("OfferCelebration", () => {
+  it("renders nothing when closed", () => {
+    expect(renderToStaticMarkup(
+      <OfferCelebration open={false} role="Backend Engineer" company="Acme" onContinue={() => {}} />,
+    )).toBe("");
+  });
+
+  it("names the role and company, points at the offers shelf", () => {
+    const html = renderToStaticMarkup(
+      <OfferCelebration open role="Backend Engineer" company="Acme" onContinue={() => {}} />,
+    );
+    expect(html).toContain("[offers.celebrationTitle]");
+    expect(html).toContain("[offers.celebrationSubtitle|Backend Engineer,Acme]");
+    expect(html).toContain("/offers");
+    expect(html).toContain("role=\"dialog\"");
+  });
+
+  it("renders all confetti pieces in the markup — never hidden behind JS", () => {
+    const html = renderToStaticMarkup(
+      <OfferCelebration open role={null} company={null} onContinue={() => {}} />,
+    );
+    expect((html.match(/confetti-piece/g) ?? []).length).toBeGreaterThanOrEqual(20);
+  });
+});

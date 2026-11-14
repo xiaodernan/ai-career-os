@@ -420,6 +420,32 @@ button, a, [role="button"], input, select, textarea {
   to { transform: rotate(360deg); }
 }
 
+/* The offer confetti: each piece falls once, sways, and rotates. Reduced-motion
+   collapses it via the blanket rule at the bottom of this file. */
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, -6vh, 0) rotateZ(var(--cf-rot, 0deg));
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(14vw, 104vh, 0) rotateZ(calc(var(--cf-rot, 0deg) + 540deg));
+    opacity: 0;
+  }
+}
+.confetti-piece {
+  position: absolute;
+  top: -4vh;
+  border-radius: 2px;
+  animation: confetti-fall var(--cf-dur, 2600ms) cubic-bezier(0.28, 0.36, 0.4, 1) var(--cf-delay, 0ms) both;
+  will-change: transform, opacity;
+}
+
 /* Aurora: layered, blurred radial blobs drifting over a faint grid. */
 .aurora-bg {
   background:

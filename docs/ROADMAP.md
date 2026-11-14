@@ -6528,6 +6528,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   live DOM — recorded as a Lighthouse false negative for this local target, not
   "fixed" by fabricating a missing tag. Commit d496771.)
 
+- [x] **193** The offer celebration -- the moment the loop converges, and the reader is allowed to stop for it (2026-11-14).
+
+  (When a card moves to `offer`, the application dialog's save path renders a
+  full-screen celebration *instead of* closing silently: a trophy in a glow disc, an
+  `offers.celebrationTitle` headline in the reader's language naming the role and the
+  company, a one-line body ("you did not get lucky — the loop did this"), and a single
+  primary ask: open the offers shelf. Pure CSS confetti via a scoped `.confetti-piece`
+  utility and one keyframe block in globals.css; reduced-motion collapses it via the
+  blanket rule; every piece renders in the server markup, no JS required for the first
+  paint. The celebration fires only on an actual transition into `offer` (never
+  re-saves), is dismissible, and rides the same dialog the reader already knows. Landing,
+  kanban, dialog and e2e all walk it: `offer-celebration.spec.ts` opens the deep link,
+  moves the status select to Offer, clicks Save, and asserts both the title and the
+  offers shelf link arrive. Frontend 1337/1337 (the dialog's
+  `onSuccess` triggers the overlay; new component 3/3). E2E spec 1/1 in mock mode;
+  the suite count moves to 73/73 when this runs with it. EN+ZH both keys. Commits
+  pending this message — d496771 back to 80ce15f plus the celebration files.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

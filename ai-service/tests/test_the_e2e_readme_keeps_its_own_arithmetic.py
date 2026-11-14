@@ -55,6 +55,7 @@ ALIASES = {
     "deadline mesh": "deadline-mesh",
     "pace heatmap": "pace-heatmap",
     "offer shelf": "offer-shelf",
+    "offer celebration": "offer-celebration",
 }
 
 UNNAMED_CLAUSE = "the pagination suite"
