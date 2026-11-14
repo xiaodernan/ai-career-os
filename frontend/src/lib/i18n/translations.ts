@@ -181,6 +181,17 @@ export const translations = {
       print: "Print the keepsake",
       printHint: "Save as PDF from the browser's print dialog — the page is tuned for one sheet.",
       grandTotal: "{total} actions · {days} days showed up · {letters} letters kept",
+      reviewTitle: "The year in review",
+      reviewDescription:
+        "One image with the whole year on it — applications, interviews, offers, letters — drawn on your device, ready to keep.",
+      reviewEyebrow: "AI CAREER OS",
+      reviewHeadline: "The search in review",
+      reviewStripRight: "total actions taken",
+      reviewSignOff: "Written from records, not from memory.",
+      reviewDownload: "Download the image",
+      reviewAriaHint: "The review card shows {total} actions and {days} days showed up.",
+      reviewSaved: "The year, in one image.",
+      reviewFailed: "The image could not be drawn — try the print path instead.",
     },
     // The fit studio (paste a JD → analyze → tailor)
     studio: {
@@ -3787,6 +3798,17 @@ export const translations = {
       print: "打印这份留念",
       printHint: "从浏览器的打印对话框另存 PDF——页面为单张版式设计。",
       grandTotal: "{total} 次行动 · 出现 {days} 天 · 保留 {letters} 封信",
+      reviewTitle: "这一年的回顾",
+      reviewDescription:
+        "一张图装下整年——投递、面试、offer、留下的信——在你自己的设备上画出来，够拿得出手。",
+      reviewEyebrow: "AI 求职助手",
+      reviewHeadline: "这一年，一路走来",
+      reviewStripRight: "全部行动次数",
+      reviewSignOff: "一切都有据可查——不是凭记忆，是凭记录。",
+      reviewDownload: "下载这张图",
+      reviewAriaHint: "回顾卡：{total} 次行动，出现 {days} 天。",
+      reviewSaved: "这一年，一张图就够了。",
+      reviewFailed: "图没画出来——试试打印那条路径。",
     },
     // 适配工坊（粘贴职位 → 分析 → 定制简历）
     studio: {

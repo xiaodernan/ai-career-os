@@ -12,6 +12,7 @@ import {
   useOfferShelf,
 } from "@/lib/hooks/resources";
 import { useLetters } from "@/lib/hooks/letters";
+import { YearInReviewCard } from "@/components/ceremony/year-in-review-card";
 import { useActivityHeatmap } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateOnly } from "@/lib/format";
@@ -46,6 +47,16 @@ export default function CeremonyPage() {
   const daysShowed = (heatmap.data?.grid ?? []).filter(
     (day) => day.applications + day.interviews + day.replies + day.aiCalls > 0
   ).length;
+  const reviewNumbers = {
+    applications: appCount,
+    interviews: interviewCount,
+    offers: offerCount,
+    letters: letterCount,
+    notes: noteCount,
+    daysShowed,
+    grandTotal: heatmap.data?.grandTotal ?? 0,
+    year: new Date().getFullYear().toString(),
+  };
   const today = new Date().toISOString().slice(0, 10);
   const grandTotal = heatmap.data?.grandTotal ?? 0;
 
@@ -212,6 +223,9 @@ export default function CeremonyPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* The year in review (Epic 224): the record that travels. */}
+      <YearInReviewCard numbers={reviewNumbers} />
     </div>
   );
 }

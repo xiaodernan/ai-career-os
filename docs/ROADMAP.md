@@ -6878,6 +6878,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **224** The year in review — the record that travels (2026-11-15).
+
+  (The ceremony inscribes the search; this card hands it over as one image. A new card on
+  `/ceremony` ("The year in review / 这一年的回顾") renders a 1080×1350 PNG entirely on-device:
+  eyebrow row, italic headline, 2×2 tiles of route-bound totals (applications, interviews, offers,
+  letters), and a streak strip with days-showed and the grand total of actions — every number the
+  reader's own routes answered, nothing invented. `@page`-quiet styling; the image is drawn by
+  `drawReviewCard(ctx, numbers, strings)` — a deterministic function in `lib/review-card.ts`,
+  string-fed in either language (EN and ZH), with the layout fully unit-pinned via a stub canvas.
+  Download through `canvas.toBlob("image/png")` → `career-os-review-<year>.png`; toast on save.
+  Measured live on the rebuilt container, both locales: ceremony renders the card beneath the
+  keepsake, the intercepted blob was a 134,589-byte PNG after `drawReviewCard` ran, and the page
+  shipped zero console errors. EN: "0 APPLICATIONS FILED · 2 INTERVIEWS PRACTICED · 2 OFFERS HELD ·
+  7 TOTAL ACTIONS TAKEN"; ZH: "0 已投递申请 · 2 已模拟面试 · 2 手头的 OFFER · 7 全部行动次数".
+  vitest **1407/1407** (+4: drawReviewCard stub-canvas cases + component SSR), census **193**,
+  `npm run budget` OK (39 routes, nothing grew), `verify_gates 569/569`.)
+
 - [x] **223** The pocket — the browser-local half of the reader's work, one downloadable file (2026-11-15).
 
   (Four artifacts exist only in the reader's browser by design — they never reached the server, so
