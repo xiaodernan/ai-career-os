@@ -30,6 +30,7 @@ export function LocaleSwitcher({
 }) {
   const { locale, setLocale, t } = useLocale();
   const toChinese = locale === "en";
+  const localeLabel = toChinese ? "中文" : "EN";
 
   return (
     <Button
@@ -37,7 +38,7 @@ export function LocaleSwitcher({
       variant="ghost"
       size="sm"
       onClick={() => setLocale(toChinese ? "zh" : "en")}
-      aria-label={toChinese ? t("chrome.switchToChinese") : t("chrome.switchToEnglish")}
+      aria-label={localeLabel + " · " + (toChinese ? t("chrome.switchToChinese") : t("chrome.switchToEnglish"))}
       className={cn("text-muted-foreground", className)}
     >
       <Globe aria-hidden />

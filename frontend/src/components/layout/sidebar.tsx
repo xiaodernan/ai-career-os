@@ -156,13 +156,15 @@ export function NavLinks({
   );
 }
 
+const BRAND = "CareerOS";
+
 function Brand({ collapsed }: { collapsed?: boolean }) {
   const { t } = useLocale();
   return (
     <Link
       href="/dashboard"
       className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border px-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35 rounded-lg"
-      aria-label={t("chrome.goToDashboard")}
+      aria-label={BRAND + " · " + t("chrome.goToDashboard")}
     >
       <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-soft">
         <Sparkles className="size-4" aria-hidden />
