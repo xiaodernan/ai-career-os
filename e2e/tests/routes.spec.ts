@@ -25,6 +25,7 @@ const ROUTES: { path: string; heading: string }[] = [
   { path: "/applications", heading: "Applications" },
   // Letters (210): the gallery renders the reader's kept letters.
   { path: "/letters", heading: "Letters" },
+  { path: "/ceremony", heading: "The closing ceremony" },
   { path: "/interviews", heading: "Interviews" },
   { path: "/activity", heading: "AI Activity" },
   { path: "/settings", heading: "Settings" },

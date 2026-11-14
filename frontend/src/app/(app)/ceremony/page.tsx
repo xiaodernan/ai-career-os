@@ -127,9 +127,9 @@ export default function CeremonyPage() {
                 {t("ceremony.dateLine", { date: formatDateOnly(today, locale) })}
               </span>
             </div>
-            <h1 className="max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            <p className="max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               {t("ceremony.title")}
-            </h1>
+            </p>
             <p className="max-w-2xl text-base text-muted-foreground">{t("ceremony.epigraph")}</p>
           </div>
 
