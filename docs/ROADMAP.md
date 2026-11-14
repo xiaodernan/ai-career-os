@@ -6450,6 +6450,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   additive styling on the two surfaces; the last full mock run (72/72) predates it.
   `docs/plans/FRONTEND_HORIZON.md` records the remaining StreamChoreography scope.)
 
+- [x] **187** Epic 3, tranche one: five designed empties become promises — composed, both languages, measured (2026-11-14).
+
+  (`components/common/empty-composition.tsx` is the composition the five flat
+  empties were waiting for: ringed glowing icon disc, eyebrow promise sentence in
+  the reader's language, title, CTA, up to three proof points read from shipped
+  behavior (never aspirations). `EmptyState` delegates when passed `promise`/`proofs`;
+  `ModuleView.emptyHint` carries the same two optional fields; fourteen existing call
+  sites keep their shape. Migration: jobs board base case, knowledge base, activity
+  list, applications pipeline, digest weekly letter (now with its compose CTA wired to
+  the existing mutation). 40 new keys in both languages;
+  copy-census pinned 176 sources; vitest **1330/1330**; tsc clean; bundle budget OK
+  (36 routes); e2e `routes.spec.ts` **6/6** in mock mode; live container rebuilt.
+  FRONTEND_HORIZON.md carries the tranche; remaining scope (illustrations per promise)
+  still open.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

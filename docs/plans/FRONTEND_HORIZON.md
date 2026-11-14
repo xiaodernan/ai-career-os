@@ -69,6 +69,29 @@ Scope. A shared `EmptyStateModel` + migration of the five most-seen empties
 copy parity; `EmptyStateModel` prop tests; the pages keep their identity —
 not a template, a composition.
 
+**Tranche one (2026-11-14, landed).** `components/common/empty-composition.tsx`
+is the composed empty: ringed, glowing icon disc; an eyebrow promising the payoff
+in the reader's language (capture it as `promise`); title; description; one CTA;
+up to three proof points taken from shipped behavior, never aspirations, all
+capped at three by construction. `prefers-reduced-motion` collapses the stagger
+(70/130/190/250/310ms, mount-driven, opacity/transform only) via the globals.css
+blanket rule; the content is in the server markup either way; no timers.
+`EmptyState` delegates to the composition when the caller passes `promise` or
+`proofs` and keeps the compact layout for every existing call site;
+`ModuleView`'s `emptyHint` grows the same two optional fields. The five
+most-seen surfaces migrated: **jobs board** (base case; `jobs.boardEmpty*`),
+**knowledge base** (`knowledge.baseIsEmpty*`), **activity** (`activity.empty*`),
+**applications pipeline** (`applications.pipelineIsEmpty*`), and the **digest
+weekly letter** (`analysis.weeklyEmpty*`, gaining its one-call CTA wired to the
+existing compose mutation). Each proof is true of what ships: resume-grounded
+gap/interview output, the cache-read ledger, replies routed back to their
+application. The doc's original five names ("matches") mapped to this codebase's
+roles honestly: no matches screen exists — matches live on the jobs board and
+in /jobs/[id]; the pipeline is the closest reader-facing empty to the board-to-offer
+loop besides it. 40 new keys EN+ZH; copy census pinned 176 sources (+1); vitest
+1330/1330, tsc clean, bundle budget OK (36 routes), e2e `routes.spec.ts` 6/6 green
+in mock mode, live container rebuilt and serving.
+
 ## Epic 4 — the dark room and the candle
 
 **The Shape.** The dark/light theme flip survives only on paper: several shared
