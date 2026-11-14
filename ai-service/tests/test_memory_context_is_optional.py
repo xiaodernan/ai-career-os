@@ -29,6 +29,22 @@ def _patch(monkeypatch, rows=None, exc=None):
 
 
 @pytest.mark.asyncio
+async def test_the_memory_block_is_byte_identical_regardless_of_row_order(monkeypatch):
+    rows = [
+        {"kind": "skill", "content": "Kafka"},
+        {"kind": "profile", "content": "Jetstream"},
+        {"kind": "goal", "content": "platform team"},
+        {"kind": "skill", "content": "Flink"},
+    ]
+    _patch(monkeypatch, rows=rows)
+    reference = await memory.build_memory_context("u1")
+    for _ in range(3):
+        shuffled = list(reversed(rows))
+        _patch(monkeypatch, rows=shuffled)
+        assert await memory.build_memory_context("u1") == reference
+
+
+@pytest.mark.asyncio
 async def test_a_failed_read_yields_no_context_instead_of_failing_the_turn(monkeypatch, caplog):
     _patch(monkeypatch, exc=ConnectionError("db reset"))
     with caplog.at_level(logging.WARNING, logger="agents.memory"):

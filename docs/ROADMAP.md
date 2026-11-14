@@ -6878,6 +6878,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **221** The cache, honestly measured — why streaming reads zero and the prefix is already stable (2026-11-15).
+
+  (The standing complaint was: "cache hit rate is suspiciously low, and streaming always shows
+  non-stream/zero." This session measured it instead of theorizing, using the live relay with
+  opt-in probe calls (non-stream, temperature 0, 26-tool request shape):
+  (1) **Identical payloads hit hard on this relay**: today's layout warmed to `cached=7424` of
+  7555 tokens on the 2nd identical call (98%), and stayed there on the 3rd. (2) **The relay is
+  not byte-strict**: a fully reordered memory block also hit on warm samples (`22023 of 22026`
+  on the shuffled probe), so the "volatile-in-the-middle breaks the cache" theory is unproven —
+  the earlier `prompt_cache_key` no-op holds, and restructuring the message order would have been
+  churn without evidence. (3) **Zero is returned even for identical warm calls sometimes**
+  (alternating `0/6443/0` on the fix-layout; token totals move across identical calls, e.g.
+  7824 → 7865), i.e. the relay is coarse/TTL-ish, not a dependable scorer — plan around
+  "deterministic paths hit," never around a per-call number. (4) **Streaming reports 0 by relay
+  design**: the stream frames carry totals and drop `prompt_tokens_details`, so every streaming
+  row in the dashboard is an honest zero; non-stream deterministic calls report full-prefix hits
+  (`memory_extract` full hit on repeats). Nothing in the invocation was broken; the fix that *was*
+  warranted: `build_memory_context` now renders a deterministic `(kind, key, content)` order
+  instead of `importance/updated_at` (a correction no longer reshuffles every line below it, and
+  the block is byte-identical across turns), with a new byte-identical-regardless-of-row-order
+  test. The monitoring page's "Prompt cache" card states the stream-zero rule in EN and ZH
+  ("hint on the surface, not in this ledger"). New memory test green; ai-service re-run green.)
+
 - [x] **220** The opening question arrives as words, not as the model's JSON envelope (2026-11-15).
 
   (Live verification with the real relay (`gpt-6-sol` via wkapi.pro) caught a defect the mock

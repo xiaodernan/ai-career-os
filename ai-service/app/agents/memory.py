@@ -48,10 +48,20 @@ async def build_memory_context(user_id: str) -> str:
         key = m.get("key")
         by_kind.setdefault(kind, []).append(f"{key}: {content}" if key else content)
     lines = ["## Long-term memory about this user"]
+    entries: list[tuple[str, str]] = []
     for kind, items in by_kind.items():
         label = _KIND_LABEL.get(kind, kind)
         for line in items:
-            lines.append(f"- [{label}] {line}")
+            entries.append((label, line))
+    # Deterministic order, not retrieval order: `get_memories` returns rows by
+    # importance/updated_at, so a single correction anywhere in the block
+    # reshuffles every line after it — and a prefix cache that matches on
+    # bytes misses from the first shuffled line on. Sorted, an edit moves
+    # nothing that does not reference it, and the block is byte-identical
+    # whenever the user's memory is unchanged.
+    entries.sort(key=lambda item: (item[0], item[1]))
+    for label, line in entries:
+        lines.append(f"- [{label}] {line}")
     return "\n".join(lines) if len(lines) > 1 else ""
 
 

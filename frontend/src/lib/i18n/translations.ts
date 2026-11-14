@@ -1187,7 +1187,7 @@ export const translations = {
       spendTodayFailed: "Today's spend couldn't be loaded",
       promptCache: "Prompt cache",
       promptCacheDescription:
-        "How much of the input the model had to read fresh versus served from a cache. Streaming reports usage when the provider asks for it; deterministic calls replay from the exact-match cache.",
+        "How much of the input the model had to read fresh versus served from a cache. A streaming row reads zero by design — this provider omits prompt_tokens_details on stream frames (totals are kept) — so zero there is the relay's honest answer, not a miss. Deterministic calls replay from the exact-match cache.",
       alerts: "Alerts",
       regressions: "Regressions",
       runsAnalyzed: "{count} runs analyzed",
@@ -4692,7 +4692,7 @@ export const translations = {
       spendTodayFailed: "无法加载今日花费",
       promptCache: "提示词缓存",
       promptCacheDescription:
-        "输入里有多少是模型重新读取的、有多少来自缓存。流式路径在提供方要求时上报用量；确定性调用由精确匹配缓存直接回放。",
+        "输入里有多少是模型重新读取的、有多少来自缓存。流式一律显示 0 是这个提供方的规定——流式帧会丢弃 prompt_tokens_details（总数还在）——所以流式行的 0 是诚实的回答，不是未命中。确定性调用由精确匹配缓存直接回放。",
       alerts: "告警",
       regressions: "回归",
       runsAnalyzed: "已分析 {count} 次运行",
