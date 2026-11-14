@@ -20,7 +20,7 @@ import { VirtualList } from "@/components/common/virtual-list";
 import { useTimeline } from "@/lib/hooks/timeline";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatTime } from "@/lib/format";
 import type { TimelineEntry } from "@/lib/api/types";
 
 // Module-level so `setUrl` (a `useCallback` keyed on this object) is stable across renders.
@@ -56,23 +56,24 @@ const VIRTUAL_THRESHOLD = 30;
  * reader stays in control of where the board goes, and the screen's own guard decides whether
  * the id belongs to them.
  */
-const KIND_VISUALS: Record<string, { icon: LucideIcon; labelKey: string; href?: (refId: string) => string }> = {
-  application: { icon: Briefcase, labelKey: "timeline.kinds.application", href: (id) => `/applications?application=${encodeURIComponent(id)}` },
-  note: { icon: StickyNote, labelKey: "timeline.kinds.note" },
-  contact: { icon: Users, labelKey: "timeline.kinds.contact" },
-  resume_version: { icon: FileText, labelKey: "timeline.kinds.resume_version", href: (id) => `/resumes/${encodeURIComponent(id)}` },
-  match: { icon: Target, labelKey: "timeline.kinds.match" },
-  interview: { icon: MessageSquare, labelKey: "timeline.kinds.interview", href: (id) => `/interviews/${encodeURIComponent(id)}` },
-  unknown: { icon: History, labelKey: "timeline.kinds.unknown" },
+const KIND_VISUALS: Record<string, { icon: LucideIcon; labelKey: string; href?: (refId: string) => string; tint: string }> = {
+  application: { icon: Briefcase, labelKey: "timeline.kinds.application", href: (id) => `/applications?application=${encodeURIComponent(id)}`, tint: "text-primary border-primary/30 bg-primary/10" },
+  note: { icon: StickyNote, labelKey: "timeline.kinds.note", tint: "text-warning border-warning/40 bg-warning/10" },
+  contact: { icon: Users, labelKey: "timeline.kinds.contact", tint: "text-success border-success/40 bg-success/10" },
+  resume_version: { icon: FileText, labelKey: "timeline.kinds.resume_version", href: (id) => `/resumes/${encodeURIComponent(id)}`, tint: "text-primary border-primary/30 bg-primary/10" },
+  match: { icon: Target, labelKey: "timeline.kinds.match", tint: "text-success border-success/40 bg-success/10" },
+  interview: { icon: MessageSquare, labelKey: "timeline.kinds.interview", href: (id) => `/interviews/${encodeURIComponent(id)}`, tint: "text-destructive border-destructive/40 bg-destructive/10" },
+  unknown: { icon: History, labelKey: "timeline.kinds.unknown", tint: "text-muted-foreground border-border/60 bg-muted" },
 };
 
-const RowBody = React.memo(function RowBody({ event, locale }: {
+const RowBody = React.memo(function RowBody({ event, locale, clockOnly = false }: {
   event: TimelineEntry;
   locale: "en" | "zh";
+  /** Inside a day group the rail owns the date; the row carries only the clock. */
+  clockOnly?: boolean;
 }) {
   const { t } = useLocale();
-  const visual: { icon: LucideIcon; labelKey: string; href?: (refId: string) => string } =
-    KIND_VISUALS[event.kind] ?? KIND_VISUALS.unknown;
+  const visual: (typeof KIND_VISUALS)[string] = KIND_VISUALS[event.kind] ?? KIND_VISUALS.unknown;
   const Icon = visual.icon;
   const href = visual.href?.(event.refId);
   const title = event.title || t("timeline.kinds.unknown");
@@ -84,9 +85,9 @@ const RowBody = React.memo(function RowBody({ event, locale }: {
     <span title={title} className="block truncate font-medium text-foreground">{title}</span>
   );
   return (
-    <div className="flex h-16 items-center gap-3 rounded-lg border hairline bg-card px-4 shadow-soft">
+    <div className="group flex h-16 items-center gap-3 rounded-lg border hairline bg-card px-4 shadow-soft transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card">
       <span
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted text-muted-foreground [&_svg]:size-4"
+        className={`flex size-8 shrink-0 items-center justify-center rounded-lg border transition-transform duration-200 group-hover:scale-110 [&_svg]:size-4 ${visual.tint}`}
         aria-hidden
       >
         <Icon aria-hidden />
@@ -104,22 +105,54 @@ const RowBody = React.memo(function RowBody({ event, locale }: {
         dateTime={event.at}
         className="shrink-0 text-xs tabular-nums text-muted-foreground"
       >
-        {formatDateTime(event.at, locale)}
+        {clockOnly ? formatTime(event.at, locale) : formatDateTime(event.at, locale)}
       </time>
     </div>
   );
 });
 
-/** One fixed-height li per row: the full render below the threshold keeps the plain list. */
-function TimelineRow({ event, locale }: { event: TimelineEntry; locale: "en" | "zh" }) {
+const rowKey = (event: TimelineEntry) => `${event.kind}:${event.refId}:${event.at}`;
+
+/** Local calendar day, the key the rail groups by; the engine's order drives adjacency. */
+function dayKeyOf(value: string): { key: string; at: Date } {
+  const at = new Date(value);
+  return { key: `${at.getFullYear()}-${at.getMonth()}-${at.getDate()}`, at };
+}
+
+/** One day on the rail (Epic 197): the date in the margin, the events in the column. */
+function DayGroup({ dayKey, at, count, children }: {
+  dayKey: string;
+  at: Date;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const { t, locale } = useLocale();
+  const isToday = dayKey === dayKeyOf(new Date().toISOString()).key;
+  const day = new Intl.DateTimeFormat(locale, { day: "2-digit" }).format(at);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short", month: "short", year: "2-digit" }).format(at);
   return (
-    <li className="h-[72px]">
-      <RowBody event={event} locale={locale} />
+    <li className="contents">
+      <div className="sticky top-20 flex flex-col items-end self-start pt-1 text-right">
+        <span
+          className={`text-2xl font-semibold leading-none tabular-nums sm:text-3xl ${
+            isToday ? "text-primary" : "text-foreground/90"
+          }`}
+        >
+          {day}
+        </span>
+        <span className="mt-1 max-w-16 text-2xs uppercase leading-tight tracking-wide text-muted-foreground">
+          {weekday}
+        </span>
+        <span className="mt-1 text-2xs tabular-nums text-muted-foreground/70">
+          {t("timeline.dayCount", { count })}
+        </span>
+      </div>
+      <ol className="flex flex-col gap-2 border-l hairline py-1 pl-3 sm:pl-4">
+        {children}
+      </ol>
     </li>
   );
 }
-
-const rowKey = (event: TimelineEntry) => `${event.kind}:${event.refId}:${event.at}`;
 
 export default function TimelinePage() {
   const { t, locale } = useLocale();
@@ -145,6 +178,21 @@ export default function TimelinePage() {
                         : (query.data ?? [])),
     [query.data, narrowedKind]
   );
+  // Epic 197: below the window threshold the feed reads as days, not as a flat list —
+  // the margin carries the date, the rows carry only the clock.
+  const dayGroups = React.useMemo(() => {
+    const groups: Array<{ key: string; at: Date; events: TimelineEntry[] }> = [];
+    for (const event of visible) {
+      const { key, at } = dayKeyOf(event.at);
+      const last = groups[groups.length - 1];
+      if (last && last.key === key) {
+        last.events.push(event);
+      } else {
+        groups.push({ key, at, events: [event] });
+      }
+    }
+    return groups;
+  }, [visible]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -213,7 +261,8 @@ export default function TimelinePage() {
           }
           // Epic 141: past the threshold, the window engages -- a reader who opened the
           // timeline to look at one recent event no longer pays to draw ten thousand.
-          // Below it the DOM is byte-identical to the pre-windowing page.
+          // Below it, the feed reads as days on a rail (Epic 197); past it, the window
+          // keeps constant-height rows.
           if (visible.length > VIRTUAL_THRESHOLD) {
             return (
               <VirtualList
@@ -227,13 +276,20 @@ export default function TimelinePage() {
             );
           }
           return (
-            <ol className="flex flex-col gap-2">
-              {visible.map((event) => (
-                <TimelineRow
-                  key={rowKey(event)}
-                  event={event}
-                  locale={locale}
-                />
+            <ol className="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-6 sm:grid-cols-[4.5rem_1fr] sm:gap-x-4">
+              {dayGroups.map((group) => (
+                <DayGroup
+                  key={group.key}
+                  dayKey={group.key}
+                  at={group.at}
+                  count={group.events.length}
+                >
+                  {group.events.map((event) => (
+                    <li key={rowKey(event)}>
+                      <RowBody event={event} locale={locale} clockOnly />
+                    </li>
+                  ))}
+                </DayGroup>
               ))}
             </ol>
           );

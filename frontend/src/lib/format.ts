@@ -53,6 +53,14 @@ export function formatDateTime(value: string | null | undefined, locale: Locale)
 
 const narrowFormatters = new Map<string, Intl.RelativeTimeFormat>();
 
+/** "02:05 PM" / "14:05" — the clock in the reader's language; the day lives on the rail. */
+export function formatTime(value: string | null | undefined, locale: Locale): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString(locale, { hour: "2-digit", minute: "2-digit" });
+}
+
 function narrow(locale: Locale, numeric: "auto" | "always"): Intl.RelativeTimeFormat {
   const key = `${locale}:${numeric}`;
   let formatter = narrowFormatters.get(key);

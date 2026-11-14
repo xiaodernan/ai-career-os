@@ -103,6 +103,7 @@ export const translations = {
       kindFilter: "Narrow the timeline by kind",
       filterAll: "All kinds",
       noKindRows: "No {kind} rows yet for this account.",
+      dayCount: "{count} events",
       kinds: {
         application: "Application",
         note: "Note",
@@ -3438,6 +3439,7 @@ export const translations = {
       kindFilter: "按类型收窄时间线",
       filterAll: "全部类型",
       noKindRows: "这个账号下还没有「{kind}」类型的记录。",
+      dayCount: "{count} 条",
       kinds: {
         application: "投递",
         note: "笔记",

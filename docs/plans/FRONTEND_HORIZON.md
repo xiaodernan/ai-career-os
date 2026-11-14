@@ -83,6 +83,26 @@ Measured across both: vitest 1330/1330 each time, bundle budget OK (36 routes),
 containers rebuilt and serving; `e2e` not re-run for either (additive styling; the
 last full mock run, 72/72, predates both).
 
+## Epic 197 — the timeline reads like the story it tells (2026-11-14, landed)
+
+**The Shape.** `/timeline` was a flat list of identical rows: icon chip, title, badge, clock.
+True, ordered, and forgettable. The feed now reads as **days on a rail**: a sticky margin
+carries the date in two sizes (2-digit day over a weekday+month+year line and a
+per-day event count), the events sit in a hairline column under it, and the clock on each
+row shrinks to `HH:MM` because the rail owns the date. Today's day renders in the primary
+colour. Every kind carries a tinted icon chip (application/resume — primary, note — warning,
+contact/match — success, interview — destructive, unknown — muted) with a hover lift;
+transform/opacity only, no layout animation, no timers, `prefers-reduced-motion` untouched.
+The virtual-list path (>30 rows) is unchanged — constant-height rows by contract; the day
+rail is the under-threshold read. One new sentence key, `timeline.dayCount`, in both
+languages; `formatTime` joined `lib/format.ts` (date math stays out of the page).
+
+**Measured.** vitest 1340/1340 (timeline 7/7, i18n sets 97/7 — full suite re-run on this
+tree), tsc clean. Not rebuilt into the container this tranche (host memory is at ~1.4 GB;
+the Next build is not wanted against a tight heap), e2e not re-run (last full mock run
+73/73 stands); bundle budget not re-run for the same reason — additive markup, one key,
+no new dependency or asset.
+
 ## Epic 3 — the empty states become product
 
 **The Shape.** Every module has an `EmptyState` with an illustration, a sentence,

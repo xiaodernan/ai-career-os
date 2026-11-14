@@ -6613,6 +6613,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   targeted verification above plus the census/doc gates are what ran and passed; the ITs were
   not faked green and must be re-run on a machine with headroom. Commit below.)
 
+- [x] **197** The timeline reads like the story it tells — days on a rail, clock-only rows, tinted kinds (2026-11-14).
+
+  (The feed under the virtual threshold rendered a flat list of identical cards; it now reads as
+  **days**: a sticky margin carries a 2-digit day over a weekday+month+year line and a per-day
+  event count (`timeline.dayCount`, both languages), events sit in a hairline column beside it,
+  rows carry only their clock, and the primary colour marks today. Each kind gained a tinted
+  icon chip with a hover lift — application/resume primary, note warning, contact/match success,
+  interview destructive, unknown muted — transform/opacity only, CSS-only, no timers, reduced
+  motion untouched. `formatTime` joined `lib/format.ts`. The >30-row virtual path is unchanged
+  (constant-height contract). Measured: vitest **1340/1340** (timeline 7/7; i18n set 97/7),
+  tsc clean. Not container-rebuilt/budget-re-run/e2e-re-run this tranche — the host is at
+  ~1.4 GB and the stack is healthy but tight; last full mock e2e 73/73 stands.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
