@@ -119,7 +119,7 @@ export function LandingPage() {
         {/* Live stats band — a glass strip under the hero. */}
         <Reveal delay={120} className="mx-auto mt-12 max-w-3xl">
           <div className="glass grid grid-cols-3 divide-x divide-border/60 rounded-2xl px-2 py-5 shadow-card">
-            <Stat value="12K+" label={t("landing.stat1Label")} />
+            <Stat value="26" label={t("landing.stat1Label")} />
             <Stat value="8" label={t("landing.stat2Label")} />
             <Stat value="100%" label={t("landing.stat3Label")} />
           </div>

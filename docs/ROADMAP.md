@@ -6694,6 +6694,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   e2e NOT re-run here (the container carries the previous build; host — see below); vitest
   **1342/1342**, tsc clean, translations + copy census green.)
 
+- [x] **202** The front door stopped inventing its corpus (2026-11-14).
+
+  (The landing page's stat strip read "12K+ Roles indexed". The dev corpus this deployment seeds
+  has **167** jobs in it — measured, `select count(*) from jobs` on the live dev Postgres — so the
+  front door claimed a library four orders of magnitude past what it owns. The strip now counts
+  what is verifiable and true: **26** agent tools (measured two ways: the contract comment in
+  AGENTS.md and `len(ALL_TOOLS)` imported and counted in the ai-service venv = 26), **8** subagents
+  on call (the §2 registry), and the 100% evidence-citation invariant the whole product is built
+  on. Labels follow: EN "Agent tools, wired and counted" / ZH "已接入的代理工具". Copy census and
+  landing test stay green; the number on the page is now one any reader can check.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
