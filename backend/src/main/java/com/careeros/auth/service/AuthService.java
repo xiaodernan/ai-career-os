@@ -12,6 +12,7 @@ import com.careeros.auth.repository.UserProfileRepository;
 import com.careeros.auth.repository.UserRepository;
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import org.springframework.dao.DataIntegrityViolationException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -60,14 +61,23 @@ public class AuthService {
 
     @Transactional
     public User register(RegisterRequest request) {
-        if (users.existsByEmail(request.email())) {
+        String email = request.email().trim();
+        if (users.existsByEmail(email)) {
             throw new ApiException(ApiErrorCode.EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
         User user = new User();
-        user.setEmail(request.email().trim());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setDisplayName(request.displayName().trim());
-        users.save(user);
+        try {
+            users.save(user);
+        } catch (DataIntegrityViolationException duplicate) {
+            // The check and the insert are not one atomic step: two concurrent
+            // registrations with the same address both pass existsByEmail and both
+            // reach the INSERT, and the one that loses hits the unique key.
+            // The reader deserves the same 409 the pre-check gives, not a 500.
+            throw new ApiException(ApiErrorCode.EMAIL_ALREADY_REGISTERED, "Email is already registered");
+        }
 
         UserProfile profile = new UserProfile();
         profile.setUserId(user.getId());

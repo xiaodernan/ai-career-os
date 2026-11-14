@@ -6878,6 +6878,32 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **226** The race the load test found — register answered 500 for a check that already raced (2026-11-15).
+
+  (The brief asked for load testing; the very first burst found a public-endpoint defect: two
+  concurrent registrations with the same email both pass `existsByEmail` and both reach the
+  INSERT, so the loser of the race hits the `users_email_key` unique constraint — and the
+  catch-all surfaced it as an unhandled 500 (read off the access log at
+  `22:30:05.34 · register 500 · 3388ms` / `22:30:05.34 · register 500 · 3395ms`, with
+  `DataIntegrityViolationException` stack traces). The gateway's flaky hop delivered some of
+  these as 503 BACKEND_UNAVAILABLE while the backend kept committing the row. `AuthService.register`
+  now translates `DataIntegrityViolationException` at the `save()` call site into the same
+  `EMAIL_ALREADY_REGISTERED` 409 the pre-check gives, and trims the address once for both the
+  check and the write (a pre-existing inconsistency: the check saw the raw string, the write
+  stored the trimmed one, so a whitespace-variant could bypass the pre-check and hit the constraint).
+  New test `AuthServiceRegisterTest` pins it (the race → 409; the trim; the pre-check conflict) —
+  3/3 green, and the full backend `*Test` tier re-run green before commit (`mvn -q -B test -Dtest='*Test'`,
+  exit 0).
+  Load results against the rebuilt stack (backend direct, host-networking noise excluded):
+  `/health` 300/300 at 62.9 rps (p50 441ms · max 2338ms) · `/jobs?size=12` 200/200 at 87.7 rps
+  (p50 199ms) · `/applications?size=20` 200/200 at 103.7 rps (p50 171ms) · `/knowledge/sources`
+  200/200 at 33.9 rps (p50 606ms — the heaviest read the app offers) · gateway `/health`
+  post-recovery 60/60 at 30.1 rps (p50 557ms). The gateway's circuit breaker went OPEN →
+  HALF_OPEN → CLOSED twice in one session — the failure path works as designed and the stack
+  recovers on its own. The intermittent 503s that remain trace to Docker Desktop's userspace
+  proxy on this host, not to the app (backend direct answered 100% through the whole window,
+  `pg_stat_activity` shows 1 active / 21 idle connections, circuit breaker closed).)
+
 - [x] **225** The wheel, the reader's way — a scroll-direction setting that means it (2026-11-15).
 
   (The report: "the mouse wheel feels backwards in this product; wheel up looks down, wheel down
