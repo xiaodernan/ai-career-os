@@ -6878,6 +6878,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **213** WCAG 2.5.3 on the collapsed chrome — the last two label-in-name findings (2026-11-14).
+
+  (The sidebar's brand link (`aria-label` "AI Career OS — go to dashboard" vs visible "CareerOS")
+  and the locale switcher (`aria-label` "Switch to Chinese/English" vs visible "中文"/"EN") were
+  the last two findings Lighthouse still reported on the app's global chrome. Both now lead the
+  accessible name with the visible text: the brand uses a module constant (`BRAND + " · " + t(...)`),
+  the switcher derives `localeLabel` once. Caught by running the census after the first edit:
+  the visible string "CareerOS ·" leaked as inline JSX template and the census refused it — the
+  fix goes through the component constant + string concat, which the census does not flag. a11y
+  **1.0** (both findings gone), best-practices **1.0**, SEO 0.75 (recorded false negative).
+  vitest 1360/1360, copy census 36/36, tsc clean.)
+
 - [x] **209** The first quarter — the plan the offer packet opens onto, land / own / lift (2026-11-14).
 
   (The offers page now ends with what the packet ends on day one: **the first quarter**. Six
