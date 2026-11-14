@@ -14,6 +14,7 @@ from app.db import observability
 from app.providers.registry import get_embeddings
 from app.rag import caching, store
 from app.rag.compress import compress
+from app.rag.diversity import mmr_reorder
 from app.rag.rerank import rerank
 from app.rag.rewrite import understand
 
@@ -236,6 +237,13 @@ async def _retrieve(query: str, *, user_id: str, run_id: str | None = None,
     top = await rerank(u["rewritten"], merged, top_n=top_k, user_id=user_id, run_id=run_id)
     if task_id:
         taskbus.publish(task_id, "status", {"step": "reranking", "state": "done"})
+
+    # MMR: spend a slice of the relevance budget on coverage, greedy, never a filter.
+    # Determinism comes from the incoming order (exact ties keep it); the model sees
+    # the most relevant *and* most varied evidence first instead of duplicates.
+    top = mmr_reorder(top,
+                      rel=lambda c: max(_num(c.get("rerank")), _num(c.get("rrf"))),
+                      text_of=lambda c: str(c.get("text") or ""))
 
     compressed = compress([u["rewritten"]] + u["keywords"], top)
     evidence = to_evidence(compressed)
