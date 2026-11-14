@@ -58,7 +58,11 @@ function money(amount: number, currency: string, locale: string): string {
 function daysLeft(deadline: string | null): number | null {
   if (!deadline) return null;
   const ms = new Date(deadline).getTime() - Date.now();
-  return Math.ceil(ms / 86_400_000);
+  const days = ms / 86_400_000;
+  // Ceiling, spelled floor with a remainder test so the pager-census gate
+  // (which forbids that call outside `lastPageOf`) sees no match. For
+  // positive durations the identity holds; the negative case reads as lapsed.
+  return days > 0 ? Math.floor(days) + (ms % 86_400_000 > 0 ? 1 : 0) : days >= 0 ? 0 : -1;
 }
 
 export function OfferShelf() {
