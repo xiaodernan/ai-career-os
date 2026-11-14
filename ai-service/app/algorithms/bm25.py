@@ -15,6 +15,7 @@ postings and statistics; `score`/`top_k` read them.
 
 from __future__ import annotations
 
+import heapq
 import math
 import re
 from collections import Counter
@@ -73,26 +74,42 @@ class Bm25:
             return 0.0
         if not 0 <= index < len(self._doc_tokens):
             raise IndexError(index)
-        doc_len = self._doc_len[index]
         freq = self._postings[index]
-        numerator_scale = self.k1 + 1
-        length_norm = self.k1 * (1 - self.b + self.b * (doc_len / self._avgdl if self._avgdl else 0.0))
+        idf_by_term = {term: self.idf(term) for term in set(tokens)}
+        return self._score_tf(freq, self._doc_len[index], idf_by_term)
+
+    def _score_tf(self, freq: Counter[str], doc_len: int, idf_by_term: dict[str, float]) -> float:
+        """The inner dot product; shared by score() and scores()."""
+        if doc_len == 0:
+            return 0.0
+        k1 = self.k1
+        # One length-normalization term per document, not per term.
+        length_norm = k1 * (1 - self.b + self.b * (doc_len / self._avgdl if self._avgdl else 0.0))
+        num_scale = k1 + 1
         total = 0.0
-        for term in set(tokens):
+        for term, idf in idf_by_term.items():
             tf = freq.get(term, 0)
-            if tf == 0:
-                continue
-            total += self.idf(term) * (tf * numerator_scale) / (tf + length_norm)
+            if tf:
+                total += idf * (tf * num_scale) / (tf + length_norm)
         return total
 
     def scores(self, query: Iterable[str] | str) -> list[float]:
         tokens = _as_tokens(query)
-        return [self.score(tokens, i) for i in range(len(self._doc_tokens))]
+        if not tokens or not self._doc_tokens:
+            return [0.0] * len(self._doc_tokens)
+        # IDF is a property of the term and the corpus, not of the document:
+        # computing it once per query term replaces the per-document
+        # recomputation (a log-factor per term per document in long corpora).
+        idf_by_term = {term: self.idf(term) for term in set(tokens)}
+        return [self._score_tf(freq, doc_len, idf_by_term)
+                for freq, doc_len in zip(self._postings, self._doc_len)]
 
     def top_k(self, query: Iterable[str] | str, k: int) -> list[tuple[int, float]]:
         """The k highest-scoring documents, best first (ties by earlier index)."""
         if k < 0:
             raise ValueError("k must be >= 0")
         scored = [(index, score) for index, score in enumerate(self.scores(query))]
-        scored.sort(key=lambda item: (-item[1], item[0]))
-        return scored[:k]
+        # sorted() orders by (-score, index) ascending — highest first, earliest
+        # index wins ties — so the k smallest by that same key are exactly the
+        # sorted prefix, via C heap on the large side (the module's own rule).
+        return heapq.nsmallest(k, scored, key=lambda item: (-item[1], item[0]))
