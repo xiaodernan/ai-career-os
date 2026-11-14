@@ -26,6 +26,7 @@ import { OfferFirstQuarter } from "@/components/offers/offer-first-quarter";
 import { OfferReplies } from "@/components/offers/offer-replies";
 import { OfferDecisionLedger } from "@/components/offers/offer-decision-ledger";
 import { OfferRehearsalCard } from "@/components/offers/offer-rehearsal-card";
+import { OfferCommitmentCard } from "@/components/offers/offer-commitment-card";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -152,6 +153,9 @@ export default function OffersPage() {
 
       {/* The rehearsal room (Epic 227): the ask, before the offer. */}
       <OfferRehearsalCard />
+
+      {/* The week's one line (Epic 228): the sentence you will say out loud. */}
+      <OfferCommitmentCard />
 
       {/* The AI kitchen: benchmark, negotiation, counter-offer, comparison.
           Everything here is input to the decision, not the decision — the packet on

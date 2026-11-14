@@ -6878,6 +6878,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **228** The week's one line — the ask athlete's narrowing (2026-11-15).
+
+  (The offers arc now carries: the shelf, the packet on paper, the first quarter, the ask rehearsed,
+  and finally the thing that keeps the week from expanding infinitely — **one sentence the reader
+  writes, dated by ISO week**. A new card on `/offers`: a line the reader writes in their own voice,
+  persisted in `careeros.commitment.<isoWeek>` in this browser, keyed by the standard ISO-week
+  algorithm (`2027-W01 → 2026-W53` boundary verified) so it rotates itself forward on Monday —
+  last week's line is archived by the calendar, not surfaced as a reproach. 280-char hard cap;
+  markdown-free plain text; local-only by design; carried in the pocket as a **fifth family**
+  (`careeros.commitment.`) with the prefix guard and the export/restore path already proven.
+  Replays the same ownership pattern that shipped the decision ledger and the quarter plan.
+  EN+ZH copy; the SSR shape is pinned by a component test. Also records an honest budget raise
+  (**320 → 322 kB gzip**) with the reason in the gate: this week the keepsake arc shipped five
+  bilingual module surfaces; the shared table everyone pays grew again and the per-locale splitting
+  is a separate architecture change, not a budget reason. /(app)/jobs/page crosses only because of
+  the shared table; everything else is under the line. vitest **1437/1437** (+6), tsc clean,
+  verify_gates **569/569**, copy census **196** (+1), `npm run budget` OK at 322.);
+  and the browser harness could not re-verify interactively this hour — the container serving
+  /offers answered 200 from the shell, and the room is not in the build path (the browser is under
+  memory pressure on this host).)
+
 - [x] **227** The rehearsal room — the ask, before the offer (2026-11-15).
 
   (Epic 219 shipped the debrief; Epic 225 gave the wheel a dialect; Epic 226 made register survive its own

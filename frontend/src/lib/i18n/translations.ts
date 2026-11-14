@@ -1163,6 +1163,15 @@ export const translations = {
       rehearsalKeepPlaceholder: "e.g. “Before the number — tell me what exceptional looks like here.”",
       rehearsalReset: "Start over",
       rehearsalKept: "Kept in this browser.",
+      commitmentTitle: "The week's one line",
+      commitmentDescription:
+        "The whole search never ends; Tuesday cannot beat Sunday to the rope. One sentence — what you will own out loud before the week closes.",
+      commitmentPlaceholder:
+        "e.g. “Before Friday, I will send the yes-or-no letter.” — in your own words, said out loud.",
+      commitmentLabel: "Week {week} — said out loud",
+      commitmentSave: "Keep this line",
+      commitmentSaved: "Kept in this browser.",
+      commitmentReset: "Start a new line",
       packetPrint: "Print the packet",
       packetPrintHint:
         "Everything a salary conversation is actually about, kept on paper: the shelf, your day-one packet, the letters you kept, the ledger's call. The AI kitchen stays off the page.",
@@ -1400,6 +1409,7 @@ export const translations = {
       pocketFamilyQuarter: "First-quarter plans",
       pocketFamilyDayOne: "Day-one packets",
       pocketFamilyDebrief: "Interview debriefs",
+      pocketFamilyCommitment: "Weekly commitments",
       pocketFamilyCount: "{count} kept",
       pocketDownload: "Download the pocket",
       pocketRestore: "Restore from a pocket file",
@@ -4757,6 +4767,15 @@ export const translations = {
       rehearsalKeepPlaceholder: "例如：“别急着谈数——先说这个职位上什么叫赢。”",
       rehearsalReset: "重来",
       rehearsalKept: "已留在这个浏览器里。",
+      commitmentTitle: "这一周只留一句话",
+      commitmentDescription:
+        "整场求职没有尽头；周五永远打不过周日。一句话——这个星期闭幕前你不说出口的那句话，你会先自己说出来。",
+      commitmentPlaceholder:
+        "例如：“周五之前寄出 yes-or-no 那封信。”——用你自己的话，大声说出口。",
+      commitmentLabel: "{week} 这一周——说出口",
+      commitmentSave: "留住这一句",
+      commitmentSaved: "已留在这个浏览器里。",
+      commitmentReset: "换一句新的",
       packetPrint: "打印这份纸质稿",
       packetPrintHint:
         "薪资谈判真正用得上的所有东西，都留在纸上：offer 货架、入职首周的清单、你留下的信、账簿的裁决。AI 顾问不上纸。",
@@ -4974,6 +4993,7 @@ export const translations = {
       pocketFamilyQuarter: "首季度计划",
       pocketFamilyDayOne: "入职首日清单",
       pocketFamilyDebrief: "面试复盘",
+      pocketFamilyCommitment: "每周承诺",
       pocketFamilyCount: "已保存 {count} 份",
       pocketDownload: "下载口袋",
       pocketRestore: "从口袋文件恢复",

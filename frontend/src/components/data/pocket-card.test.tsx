@@ -15,7 +15,7 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), info: vi.fn(), error: vi.f
 import { PocketCard } from "./pocket-card";
 
 describe("PocketCard", () => {
-  it("renders the pocket with its four families, restore path and download path", () => {
+  it("renders the pocket with its five families, restore path and download path", () => {
     const html = renderToStaticMarkup(<PocketCard />);
     expect(html).toContain('data-testid="pocket-card"');
     expect(html).toContain("[data.pocketTitle]");
@@ -23,6 +23,7 @@ describe("PocketCard", () => {
     expect(html).toContain("[data.pocketFamilyQuarter]");
     expect(html).toContain("[data.pocketFamilyDayOne]");
     expect(html).toContain("[data.pocketFamilyDebrief]");
+    expect(html).toContain("[data.pocketFamilyCommitment]");
     expect(html).toContain("[data.pocketDownload]");
     expect(html).toContain("[data.pocketRestore]");
     expect(html).toContain('accept=".json,application/json"');

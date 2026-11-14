@@ -1,12 +1,13 @@
 /**
  * The pocket (Epic 223) — the browser-local half of the reader's work.
  *
- * Four things the person wrote in their browser live nowhere else:
+ * Five things the person wrote in their browser live nowhere else:
  *
  *   careeros.ledger.v1     the decision ledger — criteria, weights, per-offer scores
  *   careeros.quarter.*     the first-quarter plan's ticks, keyed by the accepted offer row
  *   careeros.dayone.*      the day-one packet's ticks, same shape
  *   careeros.debrief.*     the after-action debriefs, keyed by interview session id
+ *   careeros.commitment.*  one line the reader wrote, keyed by ISO week — what they will own next
  *
  * The server cannot see them by design (they never left the browser), so
  * the export bundle omits them. This module is their suitcase — the one
@@ -22,6 +23,7 @@ export const POCKET_PREFIXES = [
   "careeros.quarter.",
   "careeros.dayone.",
   "careeros.debrief.",
+  "careeros.commitment.",
 ] as const;
 
 export interface PocketFamily {
@@ -122,6 +124,9 @@ export function restorePocket(manifest: PocketManifest, storage: StorageLike | n
   return { restored, skipped };
 }
 
+/** The four families the pocket holds, in the order they're written in. */
+export const POCKET_COMMITMENT_PREFIX = "careeros.commitment.";
+
 /** A short human sentence for the family line, exported so callers cannot drift. */
 export function familyLabelKey(prefix: string): string {
   switch (prefix) {
@@ -133,6 +138,8 @@ export function familyLabelKey(prefix: string): string {
       return "data.pocketFamilyDayOne";
     case "careeros.debrief.":
       return "data.pocketFamilyDebrief";
+    case POCKET_COMMITMENT_PREFIX:
+      return "data.pocketFamilyCommitment";
     default:
       return "data.pocketFamilyLedger";
   }
