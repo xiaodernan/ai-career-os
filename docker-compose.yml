@@ -290,6 +290,17 @@ services:
       GATEWAY_BACKEND_URI: http://backend:8080
       GATEWAY_HOSTNAME: gateway
       GATEWAY_CORS_ORIGINS: ${APP_CORS_ORIGINS:-http://localhost:3000}
+      # The edge's budget is one allowance shared by every replica of the edge, not a
+      # per-process cap that triples in production. The Lua script is one atomic
+      # read-refill-take; a Redis outage falls back to this process's own bucket and is
+      # counted, never opened wide. Points at the `redis` service by name on the internal
+      # network — the host-side port would route the edge's hottest decision through
+      # Docker Desktop's proxy for no reason.
+      GATEWAY_RATE_LIMIT_REDIS: "true"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      GATEWAY_RATE_LIMIT_PER_MINUTE: ${GATEWAY_RATE_LIMIT_PER_MINUTE:-1200}
+      GATEWAY_RATE_LIMIT_PERIOD: ${GATEWAY_RATE_LIMIT_PERIOD:-60s}
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:
@@ -302,6 +313,8 @@ services:
       backend:
         condition: service_healthy
       discovery:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   # Opt-in Spring Cloud Config Server (Epic 103): centralizes externalized
