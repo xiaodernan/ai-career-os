@@ -1331,6 +1331,27 @@ export const translations = {
       opDelete: "Delete",
       opSkip: "Unchanged",
       opTotal: "Total",
+      pocketTitle: "The browser's pocket",
+      pocketDescription:
+        "The server cannot see what this browser kept: the decision ledger, the first-quarter plans, the day-one packets, the debriefs. This card is their suitcase — one JSON file with your four families, restorable on any machine.",
+      pocketEmpty:
+        "The pocket is empty. Score the ledger, tick the day-one packet, write the debrief — anything this browser keeps appears here.",
+      pocketEmptyToast: "The pocket is empty — nothing to download yet.",
+      pocketFamilyLedger: "Decision ledger",
+      pocketFamilyQuarter: "First-quarter plans",
+      pocketFamilyDayOne: "Day-one packets",
+      pocketFamilyDebrief: "Interview debriefs",
+      pocketFamilyCount: "{count} kept",
+      pocketDownload: "Download the pocket",
+      pocketRestore: "Restore from a pocket file",
+      pocketRestoreFile: "Choose a pocket file to restore",
+      pocketSaved: "The pocket is yours.",
+      pocketInvalid: "That is not a pocket file this product wrote.",
+      pocketRestored: "Restored {count} entries — nothing else was touched.",
+      pocketRestoredWithSkipped:
+        "Restored {count} entries; skipped {skipped} key(s) this product never wrote.",
+      pocketHint:
+        "Only the four prefixes this product writes are restored — a key from anywhere else is skipped, never overwritten.",
       // The plan's own sentence: the four counts the preview shows, and the
       // promise under the title ("unchanged rows are skipped") made countable.
       planWithCounts:
@@ -4821,6 +4842,27 @@ export const translations = {
       opDelete: "删除",
       opSkip: "未变化",
       opTotal: "合计",
+      pocketTitle: "浏览器里的口袋",
+      pocketDescription:
+        "服务器看不见这个浏览器里留下的东西：决策账簿、入职首季度的计划、入职首日的清单、面试复盘。这张卡就是它们的手提箱——一个 JSON 文件，装着你的四样私有物，哪台机器都能恢复。",
+      pocketEmpty:
+        "口袋还是空的。给账簿打分、勾选入职首日清单、写一段复盘——任何这个浏览器里装着的东西都会出现在这里。",
+      pocketEmptyToast: "口袋是空的——还没有值得下载的东西。",
+      pocketFamilyLedger: "决策账簿",
+      pocketFamilyQuarter: "首季度计划",
+      pocketFamilyDayOne: "入职首日清单",
+      pocketFamilyDebrief: "面试复盘",
+      pocketFamilyCount: "已保存 {count} 份",
+      pocketDownload: "下载口袋",
+      pocketRestore: "从口袋文件恢复",
+      pocketRestoreFile: "选择一个口袋文件来恢复",
+      pocketSaved: "口袋交给你了——它属于你。",
+      pocketInvalid: "这不是这个产品写出来的口袋文件。",
+      pocketRestored: "已恢复 {count} 条——其余内容未被动过。",
+      pocketRestoredWithSkipped:
+        "已恢复 {count} 条；跳过 {skipped} 个这个产品从未写过的键。",
+      pocketHint:
+        "只有这个产品写的四个前缀会被恢复——任何别处来的键都会被跳过，绝不覆盖。",
       planWithCounts: "计划已就绪：新增 {create}、更新 {update}、删除 {delete}、未变化 {skip}。",
       appliedCounts: "新增 {created} · 更新 {updated} · 删除 {deleted} · 未变化 {unchanged}",
     },

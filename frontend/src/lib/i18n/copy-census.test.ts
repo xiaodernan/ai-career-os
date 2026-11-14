@@ -146,7 +146,8 @@ describe("the browser's copy", () => {
     // only the reader can set.
     // 191 with Epic 219: `components/interviews/debrief-card.tsx`, the reader's own two
     // lines on a rehearsal.
-    expect(browserSources().length).toBe(191);
+    // 192 with Epic 223: `components/data/pocket-card.tsx`, the browser's pocket.
+    expect(browserSources().length).toBe(192);
   });
 
   it("finds a sentence, however long it is", () => {

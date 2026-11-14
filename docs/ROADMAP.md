@@ -6878,6 +6878,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **223** The pocket — the browser-local half of the reader's work, one downloadable file (2026-11-15).
+
+  (Four artifacts exist only in the reader's browser by design — they never reached the server, so
+  the export bundle omitted them: `careeros.ledger.v1` (the decision ledger), `careeros.quarter.*`
+  (the first-quarter plans, keyed by the accepted offer row), `careeros.dayone.*` (the day-one
+  packets), `careeros.debrief.*` (the after-action debriefs). The /data page was one file short of
+  "everything you own." Epic 223 adds the pocket there: a card that counts the four families
+  (live counts: 1/1/0/1 on the probe browser), downloads them as `careeros-pocket-YYYY-MM-DD.json`
+  (schema `careeros-pocket/1`, **only the four prefixes — locale, theme and unrelated keys are
+  never included**), and restores from such a file with a strict guard: only keys the product
+  itself wrote are written back; anything else is named as skipped, never overwritten. Restore
+  reports `restored N · skipped M keys this product never wrote` and refreshes the card in place.
+  Live-verified both languages on the rebuilt container and with a synthetic pocket file: two
+  product keys written, `careeros.invoice.evil` and `cookie` both skipped and never written; the
+  probe account's own data was cleaned up after the test. Pure module `lib/pocket.ts` with an
+  injectable storage port (collect/summary/parse/serialize/restore — round-trip tested, including
+  foreign-schema rejection and foreign-prefix skipping), component SSR test (census **192**),
+  `verify_gates` **569/569**, vitest **1403/1403** (+14 tests: pocket lib, pocket card, existing
+  suite stays green).)
+
 - [x] **222** The edge spends from one bucket — the dev gateway joins the shared Redis line (2026-11-15).
 
   (The rate-limit code was built and tested — `RedisBudget`, `InProcessBudget` fallback, 429 with

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Download, FileJson, FileText, Shield, Upload } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { BundleFacts } from "@/components/data/bundle-facts";
+import { PocketCard } from "@/components/data/pocket-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -274,6 +275,9 @@ export default function DataPortabilityPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* The pocket: the server cannot see what the browser kept — Epic 223 */}
+      <PocketCard />
 
       {/* Redact */}
       {bundle && (
