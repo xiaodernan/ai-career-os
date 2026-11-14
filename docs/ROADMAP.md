@@ -6666,6 +6666,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   re-run this tranche — the host is at ~1–2 GB and Docker Desktop has crashed three times today;
   the additive change is markup and one key.)
 
+- [x] **200** The winner's banner carries the number the reader decided by (2026-11-14).
+
+  (The accepted-row banner said "Acme — this is yours." and stopped. Under it now reads one
+  more line, in the row's own currency via the shelf's existing `money()` helper:
+  `shelfTakingNumber` (EN: "{total} total compensation a year — the number you decided on." /
+  ZH: "{total} 一年的总包——你做决定时看的那个数字。"), `tabular-nums`, `text-success` — the reader
+  re-reads the decision they made, not just the name. `totalComp` was already on the row and
+  in the wire shape; nothing new is fetched, no API change, no data change; EN+ZH both.
+  Measured: offers suites 65/65 (shelf + page), full vitest **1340/1340**, tsc clean. The
+  e2e shelf spec's own assertions (the title line) are untouched by the additive copy line;
+  e2e not re-run this tranche (host); container not rebuilt (host, ~1–2 GB).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.

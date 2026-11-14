@@ -883,6 +883,7 @@ export const translations = {
       shelfDecision_accepted: "Taking it",
       shelfDecision_declined: "Passing",
       shelfTakingTitle: "{label} — this is yours.",
+      shelfTakingNumber: "{total} total compensation a year — the number you decided on.",
       shelfTakingBody: "The hard part is over. Take a breath, then build the first week of your new job — start dates, equipment, benefits — before the thank-you emails are done.",
       dayOneTitle: "{role} — your first week is already yours.",
       dayOneDescription:
@@ -4146,6 +4147,7 @@ export const translations = {
       shelfDecision_accepted: "接下了",
       shelfDecision_declined: "不要",
       shelfTakingTitle: "{label}——是你的了。",
+      shelfTakingNumber: "{total} 一年的总包——你做决定时看的那个数字。",
       shelfTakingBody: "最难的部分过去了。先喘口气，然后趁感谢信还没发完，把入职第一周——开始日期、设备、福利——安排好。",
       dayOneTitle: "{role}——你的第一周已经到手。",
       dayOneDescription:

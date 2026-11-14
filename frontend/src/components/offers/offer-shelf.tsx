@@ -141,6 +141,11 @@ export function OfferShelf() {
             <div className="min-w-0 text-sm">
               <p className="font-semibold">{t("offers.shelfTakingTitle", { label: accepted.label })}</p>
               <p className="text-muted-foreground">{t("offers.shelfTakingBody")}</p>
+              <p className="mt-1 font-medium tabular-nums text-success">
+                {t("offers.shelfTakingNumber", {
+                  total: money(accepted.totalComp, accepted.currency, locale),
+                })}
+              </p>
             </div>
           </div>
         )}
