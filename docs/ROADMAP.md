@@ -6878,6 +6878,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **216** The showcase keeps itself honest — CI regenerates the portfolio card (2026-11-15).
+
+  (Epic 214's portfolio-sync story had one manual step left: remembering to re-run the generator.
+  `.github/workflows/ci.yml` gained a `showcase` job that runs on every push to `main`, re-runs
+  `scripts/showcase-sync.py`, and commits the regenerated `frontend/public/showcase.html` back
+  **only when the measured numbers moved** — a new epic, a route, a test floor bump. No movement,
+  no commit. The card itself lost its volatile `Snapshot <date>` line on purpose: time-based churn
+  is exactly what the portfolio-sync contract forbids (material updates only, low frequency), so a
+  quiet push now produces a byte-identical file and the job exits green without committing. The
+  bot commit carries `[skip ci]`; `git pull --rebase` before `HEAD:main` keeps the push honest when
+  main moved. YAML verified with `yaml.safe_load` (all 9 jobs parse; the job is gated to
+  `push` on `refs/heads/main` with `contents: write`). Docs: `docs/SYNC_TO_PORTFOLIO.md` now
+  documents the automation as the primary path, with the manual command as the fallback. The
+  portfolio itself (`xiaodernan.github.io`) still needs the one-time drop or iframe — this closes
+  the repo-side loop completely.)
+
 - [x] **215** The decision ledger — the weights only the reader can set (2026-11-15).
 
   (A new card on `/offers`: the market ranks offers by one deterministic fact — total comp — but it

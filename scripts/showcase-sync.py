@@ -15,7 +15,6 @@ iframe never hits a service — one file, zero dependencies, it just works.
 
 from __future__ import annotations
 
-import datetime as _dt
 import pathlib
 import re
 
@@ -30,7 +29,6 @@ ITEM_EPICS = len(re.findall(r"(?m)^- \[x\] \*\*\d+(?:\.\d+)?\*\*", REPO.joinpath
 TOP_EPICS = len({int(m.group(1)) for m in re.finditer(r"(?m)^- \[x\] \*\*(\d+)\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8"))})
 NAV_ROUTES = sum(1 for _ in FRONTEND.joinpath("src/components/layout/nav.ts").read_text(encoding="utf-8").splitlines() if "href:" in _)
 TESTS = "1380+"  # the suite's measured floor today; grows with each epic.
-TODAY = _dt.date.today().isoformat()
 
 
 def page() -> str:
@@ -91,7 +89,7 @@ def page() -> str:
   </div>
 
   <p><a class="cta" href="https://github.com/xiaodernan/ai-career-os">View on GitHub →</a></p>
-  <p class="muted">Snapshot {TODAY}. {VITEST_FILES} test files, {len(ROUTES)} page routes. Offline harness: mock LLM / hash embeddings.</p>
+  <p class="muted">{VITEST_FILES} test files, {len(ROUTES)} page routes. Offline harness: mock LLM / hash embeddings. Regenerated automatically by CI whenever the measured numbers move.</p>
 </main>
 </body>
 </html>"""
