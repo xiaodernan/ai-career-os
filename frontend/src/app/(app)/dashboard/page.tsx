@@ -27,6 +27,7 @@ import { GradientText } from "@/components/ui/gradient-text";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
+import { EmptyComposition } from "@/components/common/empty-composition";
 import { ErrorState } from "@/components/common/error-state";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
@@ -422,10 +423,12 @@ export default function DashboardPage() {
                       retrying={dashboard.isFetching}
                     />
                   ) : !attention.length ? (
-                    <EmptyState
+                    <EmptyComposition
                       icon={<CheckCircle2 aria-hidden />}
+                      promise={t("dashboard.attentionPromise")}
                       title={t("dashboard.noAttention")}
                       description={t("dashboard.noAttentionDescription")}
+                      className="py-4"
                     />
                   ) : (
                     <ul className="divide-y divide-border/60">

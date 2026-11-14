@@ -759,6 +759,7 @@ export const translations = {
         "Upload and parse a resume — the reviewer agent grades bullets, structure, impact and keyword coverage.",
       noAttention: "Nothing needs attention",
       noAttentionDescription: "Every application has a recent step logged.",
+      attentionPromise: "Nothing is waiting on you — the search is on rails.",
       boardIsEmpty: "The board is empty.",
       emptyPipeline: "Nothing in the pipeline yet",
       emptyPipelineDescription:
@@ -4030,6 +4031,7 @@ export const translations = {
       noResumeScoreDescription: "上传并解析简历——评审代理会打分条目、结构、影响力和关键词覆盖。",
       noAttention: "没有需要关注的事项",
       noAttentionDescription: "每个申请都有近期的进展记录。",
+      attentionPromise: "没有什么在等你——搜索正在正轨上。",
       boardIsEmpty: "看板上还是空的。",
       emptyPipeline: "流水线里还没有东西",
       emptyPipelineDescription:

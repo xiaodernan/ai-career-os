@@ -6649,10 +6649,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 
   Consequences held: (1) `stream_options.include_usage` stays — totals are real and billed from
   them; (2) the recorded 0 is the honest answer for this relay, not a hidden cache miss — the
-  preceding Epic 183 exact-match replay still serves byte-identical deterministic calls for free;
+  Epic 183 exact-match replay still serves byte-identical deterministic calls for free;
   (3) feature one-shots under ~1024 tokens remain uncached on any compliant provider. Recorded
   without code change; the `openai_compat.py` comment on `include_usage` already said the relay
   may "strip `prompt_tokens_details`" — it does, on this relay, exactly that.)
+
+- [x] **199** The dashboard's quiet lane keeps its promise — the composed empty for "nothing is waiting" (2026-11-14).
+
+  (The "Needs attention" card's zero-state was a bare `EmptyState` with a checkmark. It is now the
+  composed promise the rest of the product uses — `EmptyComposition` with a `Sparkles`-sibling
+  payoff line (`dashboard.attentionPromise`, both languages: "Nothing is waiting on you — the
+  search is on rails." / its Chinese twin), the existing `noAttention` title and description
+  unchanged, `py-4` to sit inside the card. No behaviour, API or data change; the rows path is
+  untouched. Measured: dashboard page tests 8/8, translations + copy census green, full vitest
+  and tsc clean (this tranche's gate set). Container rebuild and the bundle budget were not
+  re-run this tranche — the host is at ~1–2 GB and Docker Desktop has crashed three times today;
+  the additive change is markup and one key.)
 
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
