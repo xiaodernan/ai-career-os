@@ -6492,6 +6492,38 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   OK (36 routes), e2e routes.spec **6/6** in mock mode, live container rebuilt and
   serving (openai_compat restored). Copy census pinned 179 sources. Commit 4742b1e.)
 
+- [x] **190** The offer shelf travels with the bundle: one number a restore could not compare (2026-11-14).
+
+  (The v1.6.0 bundle carried every row the reader typed and never an offer. Schema 1.7.0
+  adds `offers` end-to-end: `ExportService::toOffer` (unique `row.put` shape), restore
+  through `ImportService.applyOffers` with the same user-scoped by-id restorable pattern,
+  the anonymized file strips `label` (the employer) and `notes` (the reader's words) while
+  keeping the numbers (they are the deal, not a person), and every reader-table /
+  native-query / mutation / 404 / mapper / e2e-count census that the new rows and keys
+  moved repinned honestly in the same change. E2E README balanced to the measured
+  72-spec truth; PRODUCT.md recorded it; architecture.md data model + package list grew.
+  Dual verification: `DataPortabilityControllerTest` 29/29, ai-service suite **2782**,
+  backend gate tests green offline; live round-trip through the bundle HTTP path is pending
+  this session's Docker-VM instability (the VM died three times under the user's memory
+  pressure; killed no user processes). Commit 68833e3.)
+
+- [x] **191** MMR: one candidate reorder, coverage where diversity matters (2026-11-14).
+
+  (`app/rag/diversity.py`: greedy Maximal Marginal Relevance after the reranker's
+  top-N selection. `lambda*rel - (1-lambda)*max_jaccard` to selected rows; CJK bigrams
+  and Latin word tokens; deterministic, incoming order breaks ties, the set is never
+  filtered or truncated. Pipeline wires it immediately before compression; seven new
+  unit tests pin the reordering shape, and the suite stays at **2782 passed**. No model
+  call, no network, zero tokens. Commit 54090f5.)
+
+- [x] **192** The landing's language switcher is its visible name (2026-11-14).
+
+  (An aria-label override chasing Lighthouse 1.0 was two names in two languages
+  naming one control; the i18n gate forbids Chinese in the en table. The switcher now
+  shows what it does in the reader's locale and lets the visible text be the
+  accessible name; the a11y finding and the gate stop disagreeing with each other.
+  Live Lighthouse re-measurement is pending a healthy Docker window. Commit d496771.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
