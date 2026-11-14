@@ -6913,7 +6913,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   vitest **1386/1386**, `verify_gates 569/569`.
   Also recorded: the Epic 216 push triggered **no CI run at all** because its commit message
   contained GitHub's skip-CI token — amended the message (`c73405b`); the marker is now spelled
-  out in prose, never in brackets.)
+  out in prose, never in brackets. **Tranche two (2026-11-15, after the first repair push):**
+  the run (`43627147215`) was green everywhere but `ai-service`, which counted two regressions
+  introduced by this same repair's own documentation — the Epic 217 text re-backticked the
+  query-carrying calendar route, and the java census was pinned to 225 before the dead record's
+  deletion (CI walked 224). Follow-through (`1f05919`) fixed both and **CI is fully green on
+  main**: every job — ai-service, frontend vitest+tsc, backend, budget, springcloud,
+  springcloud-java ×3, showcase — success, and `offline suites green` success. The showcase
+  bot landed `d01e53e` (the regenerated card) automatically on the 400fa2a push and was
+  idempotent on the next run — Epic 216's no-churn contract holds in production.)
 
 - [x] **216** The showcase keeps itself honest — CI regenerates the portfolio card (2026-11-15).
 
@@ -6929,7 +6937,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `push` on `refs/heads/main` with `contents: write`). Docs: `docs/SYNC_TO_PORTFOLIO.md` now
   documents the automation as the primary path, with the manual command as the fallback. The
   portfolio itself (`xiaodernan.github.io`) still needs the one-time drop or iframe — this closes
-  the repo-side loop completely.)
+  the repo-side loop completely. **Tranche two (2026-11-15, production proof):** the job ran on
+  the `400fa2a` repair push, found the numbers had moved (the card now counts 83 top-level epics)
+  and committed `d01e53e` (`chore(showcase): regenerate the portfolio card`) by itself — the
+  exact contract, first try. On the follow-up push it found a byte-identical file and committed
+  nothing: the no-churn rule holds in production, not just in the YAML.)
 
 - [x] **215** The decision ledger — the weights only the reader can set (2026-11-15).
 
