@@ -624,8 +624,17 @@ function ChatPanel({
                 <div className="max-w-[85%] rounded-2xl border border-border/70 bg-card px-4 py-2.5 text-sm">
                   <StreamingText content={streamText} />
                 </div>
+              ) : streamSteps.length > 0 ? (
+                <ProcessingSteps steps={stepsFromTrail(streamSteps)} />
               ) : (
-                streamSteps.length > 0 && <ProcessingSteps steps={stepsFromTrail(streamSteps)} />
+                // The quiet moment between send and first frame: a shimmer bubble the
+                // size of a short answer, so the reader sees where it will land.
+                // Shimmer band, aria-hidden, gone the instant the stream starts.
+                <div aria-hidden className="max-w-[85%] rounded-2xl border border-border/70 bg-card px-4 py-2.5">
+                  <Skeleton className="h-3.5 w-56" />
+                  <Skeleton className="mt-2 h-3.5 w-4/5" />
+                  <Skeleton className="mt-2 h-3.5 w-2/3" />
+                </div>
               )}
             </div>
           )}
