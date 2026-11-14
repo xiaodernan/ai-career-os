@@ -22,6 +22,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { BarChart } from "@/components/common/bar-chart";
 import { OfferShelf } from "@/components/offers/offer-shelf";
 import { OfferDayOnePacket } from "@/components/offers/offer-day-one-packet";
+import { OfferFirstQuarter } from "@/components/offers/offer-first-quarter";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -134,6 +135,9 @@ export default function OffersPage() {
 
       {/* The packet to day one: the checklist the celebration did not finish. */}
       <OfferDayOnePacket />
+
+      {/* The first quarter: the plan the packet opens onto — land, own, lift. */}
+      <OfferFirstQuarter />
 
       {/* The question */}
       <Card>

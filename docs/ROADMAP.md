@@ -6816,6 +6816,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   absolute timings on this box fluctuate widely; both runs shared the same corpus and seed, so the
   *ratio* is the measured claim, not the absolute milliseconds.)
 
+- [x] **209** The first quarter — the plan the offer packet opens onto, land / own / lift (2026-11-14).
+
+  (The offers page now ends with what the packet ends on day one: **the first quarter**. Six
+  ticks per act, three acts, eighteen items of advice in the reader's language, all EN+ZH — the
+  best early weeks follow a shape: learn the place (land: the three people whose work wins, a
+  coffee each, two rooms listened to in silence, one small thing visibly shipped, a README for the
+  codebase, the 1:1 cadence pinned), own one surface (own: one user-facing wall end-to-end, one
+  honest risk in writing before anyone asks, feedback you would rather not hear, the finished
+  version in week eight), lift the team (lift: the promised outcome with its two-line story,
+  teach one thing cold, the resume updated while the year is fresh). It is advice, not claims:
+  nothing in the card asserts what this product does; the copy is crafted to stand alone in a job
+  conversation. Trigger is the same as the day-one packet's — the card renders only while an
+  accepted row exists on the shelf, `localStorage` persists ticks keyed by that row's id, the
+  meter is a real `role=progressbar` with `aria-valuenow`, `prefers-reduced-motion`-respecting,
+  eighteen keys × 2 languages. Measured: first-quarter test 3/3, full **vitest 1345/1345**, tsc
+  clean, copy census re-pinned to 182 sources (+1, the new component).)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
