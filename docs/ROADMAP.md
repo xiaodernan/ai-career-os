@@ -6725,6 +6725,12 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   engine); `com.careeros.ai.**` + `com.careeros.system.**` **50/50**. The frontend container was
   not rebuilt this tranche (host); the change is backend-side only.)
 
+  **Tranche two (2026-11-14, later).** The backend image was rebuilt and recreated with the roof
+  and it serves live: `/api/v1/health` → `{"status":"ok","db":true,"redis":true,"storage":true,"ai":true,
+  "aiNodes":[{"url":"http://ai-service:8000","up":true}]}` with `buildSha:"dev"`. The Epic 203 gate
+  behaviour is unchanged; the bridge behind every `/api/v1` request now crosses the seam Epic 203
+  shipped.)
+
 - [x] **204** The week catches up — the rebuilt container serves the last five epics, and the host-crashes are named for what they are (2026-11-14).
 
   (The frontend image was rebuilt and recreated — 197 (the day rail), 199 (the composed empty),
