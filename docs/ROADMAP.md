@@ -6907,7 +6907,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `SPRING_DATA_REDIS_HOST=redis`, `SPRING_DATA_REDIS_PORT=6379`, the cap and period are now
   operator-overridable from the environment (`GATEWAY_RATE_LIMIT_PER_MINUTE` / `..._PERIOD`, default
   1200/60s — no behaviour change for anyone not tuning it), and the gateway depends on the `redis`
-  service's health. Measured live on the running stack with a temporary 3/min cap: the first
+  service's health. Measured live on the running stack with a temporary cap of three calls: the first
   requests pass, then the cap bites — **429 with `Retry-After: 60`**, and the container's own
   10-second healthcheck consumes one loopback token before the burst (one of the four that came
   through, exactly the socket-identity accounting the filter documents). Restored to 1200 and
