@@ -6884,16 +6884,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   representative 569 of the suites, not the CI's. Reading the failed run `43622079342` and
   fixing every failure honestly, no gate was weakened to pass:
   **ai-service (14 failed / 2782):** two ROADMAP literacy defects (a backticked
-  `/api/v1/calendar.ics?token=…` that never matches the route it names — query stripped from the
-  literal; and a wrong route, `application-heatmap`, that the Epic 212 entry itself authored —
+  `/api/v1/calendar.ics` example whose query string rode inside the literal and can never match
+  the route — the query stripped; and a wrong route, `application-heatmap`, that the Epic 212
+  entry itself authored —
   the real one is `activity-heatmap`, now corrected), census gates re-pinned to measured truths
   with the ceremony's reach named in each (`useKnowledgeNotes` callers 1→3, the notes/interviews/
   window-size call-site lists gained `(app)/ceremony/page.tsx { size: 1, page: 0 }`,
   page.tsx population 35→38 with Epics 210/212/214, (app) screens 28→30, `OWN_FLAG_SCREENS` 17→19
   adding letters+ceremony, the envelope readers (`items` gained ceremony/letters/day-one-packet/
   decision-ledger/first-quarter/replies, `total` gained ceremony), toast.success floor 64→65,
-  java records walked again 221→225 (`CalendarFeed.Deadline`, `LetterCatalogItem`,
-  `LetterCatalogResponse`, `LetterFile`), the `types.ts` trace union pin moved 1776→1792 with the
+  java records walked again 221→224 (`CalendarFeed.Deadline`, `LetterCatalogItem`,
+  `LetterFile`; `LetterCatalogResponse` was dead and deleted), the `types.ts` trace union pin moved 1776→1792 with the
   line-move recorded, and the repo maps name `SYNC_TO_PORTFOLIO` (README, architecture.md). After
   the re-pins the full suite is **2785 passed, 8 skipped** locally.
   **backend (2 failed):** `LetterCatalogResponse` was dead — nothing constructed it (the letters

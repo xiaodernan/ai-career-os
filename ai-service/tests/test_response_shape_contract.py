@@ -1103,11 +1103,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # (the offer shelf: `OfferItem`, `OfferShelfResponse`, `UpsertOfferRequest`,
     # `UpsertOfferResponse`, `DeleteOfferResponse` on `OfferShelfDtos`). The pin was red on the
     # trees that landed those two epics; this pass counts the repository again.
-    # 225 with Epic 196 (the calendar decision lane: `CalendarFeed.Deadline`) and
-    # Epic 210 (the letters join: `LetterCatalogItem`, `LetterCatalogResponse`,
-    # `LetterFile`). Nothing else since the 221 count; the repository was walked again.
-    assert len(declared) == 225, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 225 measured"
+    # 224 with Epic 196 (the calendar decision lane: `CalendarFeed.Deadline`) and
+    # Epic 210 (the letters join: `LetterCatalogItem`, `LetterFile`; `LetterCatalogResponse`
+    # was declared here too but nothing constructed it, so Epic 217 deleted it as dead code).
+    assert len(declared) == 224, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 224 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
