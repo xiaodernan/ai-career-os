@@ -6833,6 +6833,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   eighteen keys × 2 languages. Measured: first-quarter test 3/3, full **vitest 1345/1345**, tsc
   clean, copy census re-pinned to 182 sources (+1, the new component).)
 
+  **Tranche two (2026-11-14, later the same day).** The frontend image was rebuilt and recreated;
+  a fresh probe account (`quarterprobe3-4008@example.com`) was registered through the public
+  `/auth/register`, an accepted offer ("Lunar Works — Staff Engineer", $300,000 total comp with the
+  commit-moment number line beside the banner) added via `POST /offers/shelf` and
+  `PATCH /offers/shelf/{id}` to `accepted`, and the page driven live through an in-app browser: it
+  renders all three acts end to end with "0 of 18 sealed" (land fully visible), and a tap on one
+  tick persisted `careeros.quarter.cfd4dbd9-…` to `{"quarterOwn1":true}` in localStorage with the
+  meter reading "1 of 18 sealed". The commit moment and the packet ride the same page, verified
+  in the same session.)
+
 ## Definition of Done (per task)
 Implementation + tests + wired into the real API/UI (no placeholder endpoints) +
 lint/build green + a census/contract gate updated where the population moved.
