@@ -74,9 +74,12 @@ export function NotFoundBody() {
         </p>
       </div>
 
-      <div className="animate-fade-up mt-2" style={{ animationDelay: "240ms" }}>
+      <div className="animate-fade-up mt-2 flex flex-wrap items-center justify-center gap-2" style={{ animationDelay: "240ms" }}>
         <Button asChild variant="ai" size="lg" className="glow-halo glow-on-hover">
           <Link href="/dashboard">{t("common.backToDashboard")}</Link>
+        </Button>
+        <Button asChild variant="outline" size="lg">
+          <Link href="/playbook">{t("nav.playbook")}</Link>
         </Button>
       </div>
 

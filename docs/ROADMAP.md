@@ -6878,6 +6878,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **214** The playbook — the reader's manual, public and bilingual (2026-11-15).
+
+  (A public `/playbook` page, EN+ZH, modeled as a real product manual: the pitch, the loop end
+  to end, a five-step quickstart for a first-time user, the map of every room (Find / Prepare /
+  Track / Decide / See), the four rules the AI plays by (never invents — every claim traces to the
+  reader's material; whitelist per agent; data stays local; evidence-bound or honest "I don't
+  know"), keyboard power moves, six FAQ entries and a print path. The print CSS hides the chrome
+  and the body flows in one column. Reachable from the 404 page. The showcase-sync generator
+  (`scripts/showcase-sync.py`) rebuilds `public/showcase.html` — a single, self-contained dark
+  one-screen card with measured numbers (routes, top-level epics, work items, test floor) — for
+  embedding in xiaodernan.github.io or any portfolio; the sync contract is documented in
+  `docs/SYNC_TO_PORTFOLIO.md` with three embedding options. Measured: vitest **1363/1363** (+3 tab
+  tests), tsc clean, copy census **189 sources** (+2 playbook page + metadata shell). Lighthouse
+  on `/playbook`: a11y **1.0**, best-practices **1.0**, SEO 0.75 (recorded false negative).)
+
 - [x] **213** WCAG 2.5.3 on the collapsed chrome — the last two label-in-name findings (2026-11-14).
 
   (The sidebar's brand link (`aria-label` "AI Career OS — go to dashboard" vs visible "CareerOS")

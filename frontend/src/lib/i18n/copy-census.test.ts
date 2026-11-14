@@ -139,8 +139,10 @@ describe("the browser's copy", () => {
     // 184 with Epic 210: `app/(app)/letters/page.tsx` and
     // `app/(app)/letters/layout.tsx` (its metadata shell).
     // 185 with Epic 211: `components/offers/offer-replies.tsx`.
-    // 187 with Epic 212: `app/(app)/ceremony/page.tsx` and `layout.tsx`.
-    expect(browserSources().length).toBe(187);
+    // 187 with Epic 212: `app/(app)/ceremony/page.tsx` and `app/(app)/ceremony/layout.tsx`.
+    // 189 with Epic 214: `app/playbook/page.tsx` (the metadata shell) and
+    // `app/playbook/playbook-page.tsx` (the manual itself).
+    expect(browserSources().length).toBe(189);
   });
 
   it("finds a sentence, however long it is", () => {
