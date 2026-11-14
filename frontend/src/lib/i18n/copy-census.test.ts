@@ -138,7 +138,8 @@ describe("the browser's copy", () => {
     // 182 with `components/offers/offer-first-quarter.tsx`, the first quarter.
     // 184 with Epic 210: `app/(app)/letters/page.tsx` (the ink desk itself) and
     // `app/(app)/letters/layout.tsx` (its metadata shell) — two more .tsx files under the scan.
-    expect(browserSources().length).toBe(184);
+    // 185 with Epic 211: `components/offers/offer-replies.tsx` (the bookend itself).
+    expect(browserSources().length).toBe(185);
   });
 
   it("finds a sentence, however long it is", () => {

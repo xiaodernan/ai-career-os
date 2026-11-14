@@ -23,6 +23,7 @@ import { BarChart } from "@/components/common/bar-chart";
 import { OfferShelf } from "@/components/offers/offer-shelf";
 import { OfferDayOnePacket } from "@/components/offers/offer-day-one-packet";
 import { OfferFirstQuarter } from "@/components/offers/offer-first-quarter";
+import { OfferReplies } from "@/components/offers/offer-replies";
 import { formatSalary } from "@/lib/format";
 import { marketVerdictWord } from "@/lib/status-words";
 
@@ -138,6 +139,9 @@ export default function OffersPage() {
 
       {/* The first quarter: the plan the packet opens onto — land, own, lift. */}
       <OfferFirstQuarter />
+
+      {/* The bookend: the two letters every negotiation ends with. */}
+      <OfferReplies />
 
       {/* The question */}
       <Card>

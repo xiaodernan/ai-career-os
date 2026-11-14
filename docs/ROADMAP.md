@@ -6842,6 +6842,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   console errors; Lighthouse on /letters: accessibility **1.0**, best-practices **1.0**, SEO 0.75
   (same recorded false negative).)
 
+- [x] **211** The bookend — the two letters every negotiation ends with (2026-11-14).
+
+  (The offers arc closed with two letters the reader almost always has to write and almost
+  never enjoys writing. New `OfferReplies` on the shelf: two cards side by side — "The
+  gracious yes" (accept, name the start, close the loop) and "The graceful no" (clear, warm,
+  leaves the door open a crack — one per declined row). No model call, no network round trip;
+  the words ride the i18n table with interpolation of the label's split ("Acme — Staff
+  Engineer" → company/role; bare labels travel whole). Copy, `.txt` download, and
+  mailto-served-with-body per letter. The first version had two real defects caught by running
+  it: `splitLabel` only understood the em dash (a live "Lunar Works - Staff Engineer" rendered
+  the role fallback as the phrase "The gracious yes"), and the letter bodies as inline English
+  strings the copy census rightly refused. Both fixed: the split now accepts " — ", " – " and
+  " - "; the letters live in the table as `offers.replyYesBody`/`replyNoBody` with `{company}`
+  and `{role}` slots (EN+ZH); the census back at **185 sources**. Measured: vitest
+  **1356/1356**, tsc clean; the live stack with a fresh accepted/declined pair renders both
+  letters end-to-end, clicking Copy produces a check-glyph success, the mailto carries the body,
+  and there is zero console error; Lighthouse on /offers: a11y **1.0**, best-practices **1.0**,
+  SEO 0.75 (recorded false negative).)
+
 - [x] **209** The first quarter — the plan the offer packet opens onto, land / own / lift (2026-11-14).
 
   (The offers page now ends with what the packet ends on day one: **the first quarter**. Six
