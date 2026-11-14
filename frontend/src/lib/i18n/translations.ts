@@ -13,6 +13,7 @@ export const translations = {
       notifications: "Notifications",
       replies: "Replies",
       letters: "Letters",
+      ceremony: "Ceremony",
       resumes: "Resumes",
       jobs: "Jobs",
       applications: "Applications",
@@ -47,6 +48,7 @@ export const translations = {
       notifications: "Signals that need your attention",
       replies: "Recruiter replies filed on your applications",
       letters: "Every letter you kept, in one gallery",
+      ceremony: "The closing ceremony of this search",
       resumes: "Resume versions and structured profile",
       jobs: "Discovered jobs and AI matches",
       applications: "Pipeline kanban and reminders",
@@ -144,6 +146,39 @@ export const translations = {
       unnamedApplication: "A letter kept for an unnamed application",
       companyUnknown: "Unknown company",
       openApplication: "Open the application",
+    },
+    // The closing ceremony (Epic 212): the ledger of the whole loop, signed once.
+    ceremony: {
+      title: "The closing ceremony",
+      eyebrow: "THIS SEARCH, YOU CLOSED IT",
+      description:
+        "The whole loop in one composition — the filings, the calluses, the offers and the quiet weeks. Bring a coffee; this is the page you keep.",
+      dateLine: "Written {date}, on purpose.",
+      epigraph: "The campaign was yours. The credits are too.",
+      statApplications: "Applications filed",
+      statInterviews: "Interviews practiced",
+      statOffers: "Offers held",
+      statLetters: "Letters kept",
+      statNotes: "Notes in the base",
+      statDays: "Days showed up",
+      statUnit: "days",
+      letterTitle: "A letter, from you to you",
+      letterPara1:
+        "Dear future me — you filed {applications} applications while everyone you know was asleep. You rehearsed {interviews} times, wrote {notes} notes into the base, and kept {letters} of the letters you will otherwise have to rewrite later in your life.",
+      letterPara2Accepted:
+        "The shelf holds {offers} now, and at least one of them is yours — you accepted it on the day this says yes. The packet, the quarter, the thanks — all of it was earned here.",
+      letterPara2Pending:
+        "The shelf holds {offers} now, and none have earned your yes yet — which means this page is a doorway, not an ending. The ledger records; it does not decide.",
+      letterPara3:
+        "What you did not write down — the call you took in the kitchen, the draft you threw away, the rehearsal where your voice shook and still came out — happened anyway, off the record. Put it in the next one.",
+      codaTitle: "Three sentences worth keeping",
+      coda1: "The room owed honesty — you gave it. That was the whole point.",
+      coda2: "The score is an average; the courage was not.",
+      coda3: "Close this tab proud. The next one opens when you say so.",
+      codaSign: "— The editor",
+      print: "Print the keepsake",
+      printHint: "Save as PDF from the browser's print dialog — the page is tuned for one sheet.",
+      grandTotal: "{total} actions · {days} days showed up · {letters} letters kept",
     },
     // The fit studio (paste a JD → analyze → tailor)
     studio: {
@@ -3449,6 +3484,7 @@ export const translations = {
       notifications: "通知",
       replies: "回信",
       letters: "求职信",
+      ceremony: "闭幕",
       resumes: "简历",
       jobs: "职位",
       applications: "申请",
@@ -3480,6 +3516,7 @@ export const translations = {
       notifications: "需要你关注的信号",
       replies: "归到投递上的招聘方回信",
       letters: "你留下的每一封信，放在一间展厅",
+      ceremony: "这段求职的收尾仪式",
       resumes: "简历版本与结构化档案",
       jobs: "发现的职位与 AI 匹配",
       applications: "投递看板与提醒",
@@ -3563,6 +3600,39 @@ export const translations = {
       unnamedApplication: "一封保留给未命名投递的信",
       companyUnknown: "未知公司",
       openApplication: "打开这个投递",
+    },
+    // 求职的闭幕（Epic 212）：整个闭环的分量，封存一次。
+    ceremony: {
+      title: "收尾仪式",
+      eyebrow: "这一程，你走完了",
+      description:
+        "整个闭环合成一页——那些投出去的、磨出来的、放下的、捡回来的。带一杯咖啡来，这是你留下的一页。",
+      dateLine: "写于 {date}，郑重其事。",
+      epigraph: "这场仗是你的——落幕也是。",
+      statApplications: "已投递申请",
+      statInterviews: "已模拟面试",
+      statOffers: "手头的 offer",
+      statLetters: "保留的求职信",
+      statNotes: "库里的笔记",
+      statDays: "出现的天数",
+      statUnit: "天",
+      letterTitle: "从你写回你的一封信",
+      letterPara1:
+        "亲爱的未来的我——你投了 {applications} 份，别人睡着的时候你还在投。你练了 {interviews} 次，往库里写了 {notes} 条笔记，还留下了 {letters} 封信——这些信往后的某一天会派上用场。",
+      letterPara2Accepted:
+        "这张纸上有你的名字——{offers} 份 offer，至少有一份是你的，你在这个循环里亲手接受了的那一份。日签、报到、第一季度——它们都在等你。",
+      letterPara2Pending:
+        "手上 {offers} 份 offer，一份都没等到你说好的那一天——但这一页不是终点，是门口。账本只记，不替你定。",
+      letterPara3:
+        "你没写下来的东西——那通在厨房里接的电话，那版扔掉的草稿，那次你的声音都在抖、仍旧说出来的模拟——它们发生过，只是不分布在账本上。下一场，写下来。",
+      codaTitle: "三句值得留下的话",
+      coda1: "房间里它欠的诚实——你给了。别的都是细节。",
+      coda2: "打分给平均，勇气不平均。",
+      coda3: "合上这个标签，带着骄傲。下一个打开的那天由你说了算。",
+      codaSign: "—— 编辑",
+      print: "打印这份留念",
+      printHint: "从浏览器的打印对话框另存 PDF——页面为单张版式设计。",
+      grandTotal: "{total} 次行动 · 出现 {days} 天 · 保留 {letters} 封信",
     },
     // 适配工坊（粘贴职位 → 分析 → 定制简历）
     studio: {

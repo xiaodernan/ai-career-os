@@ -6861,6 +6861,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   and there is zero console error; Lighthouse on /offers: a11y **1.0**, best-practices **1.0**,
   SEO 0.75 (recorded false negative).)
 
+- [x] **212** The closing ceremony — the whole loop, inscribed in one page (2026-11-14).
+
+  (The editor's page. `/ceremony` composes the entire search into one frame — the stats cited in
+  the reader's language, the letter from the tool itself to the reader (bound to real answers from
+  `/api/v1/reports/application-heatmap` and the route totals), the coda of three sentences worth
+  keeping, a `print:hidden` page header and a print button driving the browser's own PDF path. All
+  numbers are route-bound (total applications, interviews practiced, offers on the shelf, letters
+  kept, notes in the base, days the heatmap reads as action) — nothing invented. ZH+EN keys both
+  live; the Chinese atlas reads the letter with Chinese punctuation; the English-side Lighthouse
+  check ran through a fresh session on the rebuilt container: a11y **1.0**, best-practices **1.0**,
+  SEO 0.75 (same recorded false negative). Live probe: authenticated as the fresh quarterprobe3
+  account, /ceremony answered with "0 applications · 1 offer (accepted)" exactly as the routes say;
+  "77 actions · 3/3 stat tiles with non-zero values"; zero console errors. The print button writes
+  `window.print()` straight to the browser's dialog. vitest **1360/1360** (+4 page tests), tsc
+  clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
+  "offers" (200), `verify_gates 569/569`.)
+
 - [x] **209** The first quarter — the plan the offer packet opens onto, land / own / lift (2026-11-14).
 
   (The offers page now ends with what the packet ends on day one: **the first quarter**. Six
