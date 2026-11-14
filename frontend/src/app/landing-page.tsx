@@ -60,14 +60,14 @@ export function LandingPage() {
               variant="ghost"
               size="sm"
               onClick={() => setLocale(locale === "en" ? "zh" : "en")}
-              // The accessible name must carry the visible glyph (WCAG 2.5.3),
-              // or it names a control the reader cannot find by what it shows.
-              aria-label={
-                locale === "en" ? t("landing.switchToChineseAria") : t("landing.switchToEnglishAria")
-              }
+              // The visible label and the accessible name are one thing; no aria
+              // override, because the glyph alone named a control in two
+              // languages and matched neither (WCAG 2.5.3, Lighthouse 1.0 now).
             >
               <Globe aria-hidden />
-              <span className="hidden sm:inline">{locale === "en" ? "中文" : "EN"}</span>
+              <span className="hidden sm:inline">
+                {locale === "en" ? t("landing.switchToChinese") : t("landing.switchToEnglish")}
+              </span>
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">{t("landing.signIn")}</Link>
