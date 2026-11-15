@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { Hint } from "@/components/ui/hint";
 import { ManualSheet } from "@/components/layout/open-manual";
 import { useCommandPalette } from "@/components/common/command-palette";
 import { MobileSidebar } from "./sidebar";
@@ -82,8 +83,12 @@ export function Topbar() {
         <Search aria-hidden />
       </Button>
 
-      <ManualSheet />
-      <ThemeToggle />
+      <Hint side="bottom" label={t("chrome.manualOpen")}>
+        <ManualSheet />
+      </Hint>
+      <Hint side="bottom" label={t("chrome.themeToggle")}>
+        <ThemeToggle />
+      </Hint>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

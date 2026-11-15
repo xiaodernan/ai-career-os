@@ -33,6 +33,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { MetricCard } from "@/components/common/metric-card";
 import { NineQuestsCard } from "@/components/dashboard/nine-quests-card";
+import { Hint } from "@/components/ui/hint";
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
@@ -186,18 +187,22 @@ export default function DashboardPage() {
             }
             actions={
               <div className="animate-fade-up flex flex-wrap items-center gap-2" style={{ animationDelay: "160ms" }}>
-                <Button variant="ai" className="glow-halo glow-on-hover" asChild>
-                  <Link href="/copilot">
-                    <Sparkles aria-hidden />
-                    {t("dashboard.askCopilot")}
-                  </Link>
-                </Button>
-                <Button variant="outline" className="glow-on-hover" asChild>
-                  <Link href="/applications">
-                    {t("dashboard.openPipeline")}
-                    <ArrowRight aria-hidden />
-                  </Link>
-                </Button>
+                <Hint side="bottom" label={t("dashboard.copilotHint")}>
+                  <Button variant="ai" className="glow-halo glow-on-hover" asChild>
+                    <Link href="/copilot">
+                      <Sparkles aria-hidden />
+                      {t("dashboard.askCopilot")}
+                    </Link>
+                  </Button>
+                </Hint>
+                <Hint side="bottom" label={t("dashboard.pipelineHint")}>
+                  <Button variant="outline" className="glow-on-hover" asChild>
+                    <Link href="/applications">
+                      {t("dashboard.openPipeline")}
+                      <ArrowRight aria-hidden />
+                    </Link>
+                  </Button>
+                </Hint>
               </div>
             }
           />

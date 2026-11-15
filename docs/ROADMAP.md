@@ -6878,6 +6878,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **245** The hint on the door — main-UI controls learn to speak (2026-11-16).
+
+  (The user asked for attached explanations on the buttons and controls on the main screen —
+  "尽量在主界面上做出各种按键和操作的附带教学说明". A new `Hint` wrapper attaches hover
+  tooltips to the two existing topbar icon buttons (the manual sheet's `HelpCircle` and the
+  `ThemeToggle`'s dark/light glyph — the most visible controls on every signed-in screen) and
+  to the two hero CTAs on `/dashboard` (`Ask the copilot` and `Open pipeline` — each with a
+  sentence about what it does). `TooltipProvider` is now mounted at the app-shell root so every
+  future control inherits the same `Hint`. EN+ZH (two new key pairs: `chrome.themeToggle`,
+  `dashboard.copilotHint`, `dashboard.pipelineHint`; the manual button's tooltip reuses
+  `chrome.manualOpen`). No new browser sources beyond the one `components/ui/hint.tsx` — census
+  bumped to **208**. vitest **1467/1467**, tsc clean, `verify_gates` **569/569**, budget OK at
+  335 (jobs **332.5 kB**), all five routes 200 on the rebuilt container. **What this is not:**
+  a sweep of every button in the product (that is the road for the next arcs); this turn lands
+  the provider and the visible-hyperplane in the two places a new user looks first — the
+  topbar they tap and the hero they read.)
+
 - [x] **244** The ten-minute tour — a new door for a new reader, in the product (2026-11-16).
 
   (A public `/tour` page: "**Your first ten minutes with AI Career OS / AI Career OS——十分钟上手.**"

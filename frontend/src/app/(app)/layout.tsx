@@ -9,6 +9,7 @@ import { CommandPaletteProvider } from "@/components/common/command-palette";
 import { WheelDirection } from "@/components/layout/wheel-direction";
 import { TourVisitMarker } from "@/components/layout/tour-visit-marker";
 import { SkipLink } from "@/components/layout/skip-link";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
 import { renewPushSubscription } from "@/lib/hooks/push";
@@ -111,6 +112,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PushRenewals />
       <WheelDirection />
       <TourVisitMarker />
+      <TooltipProvider delayDuration={200}>
       <CommandPaletteProvider>
         <SkipLink />
         <div className="flex min-h-dvh">
@@ -127,6 +129,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </CommandPaletteProvider>
+      </TooltipProvider>
     </AuthGuard>
   );
 }

@@ -363,6 +363,7 @@ export const translations = {
       commandPaletteDescription: "Search your career workspace and jump between sections",
       commandPalettePlaceholder: "Type a command or search…",
       manualOpen: "The manual — how to play",
+      themeToggle: "Toggle dark and light",
       manualTitle: "The manual",
       manualDescription: "The same doors as /playbook, in your pocket. One sheet, nine rooms, in your language.",
       manualFullLink: "Read the full manual",
@@ -915,6 +916,8 @@ export const translations = {
       staleOrDue: "stale or due reminders",
       onboardingTitle: "Let's build your workspace",
       onboardingDescription: "Nothing here is pre-filled — these steps unlock every feature, in order.",
+      copilotHint: "Ask the assistant — read your resume, the page, or this job",
+      pipelineHint: "Open the kanban — saved to interviewing to offer",
       nineQuestsTitle: "The nine rooms — your walking tour",
       nineQuestsIntro:
         "One checkmark as you open each room. Ten minutes, and the whole product is yours. Kept in this browser only — nothing here scores you.",
@@ -4301,6 +4304,7 @@ export const translations = {
       commandPaletteDescription: "搜索你的求职工作区，在各个板块之间跳转",
       commandPalettePlaceholder: "输入命令或搜索…",
       manualOpen: "说明书——怎么玩",
+      themeToggle: "切换深浅色",
       manualTitle: "说明书",
       manualDescription: "和 /playbook 里同一本，揣在口袋里。一页纸，九个房间，你的语言。",
       manualFullLink: "读完整的说明书",
@@ -4810,6 +4814,8 @@ export const translations = {
       staleOrDue: "个停滞或到期的提醒",
       onboardingTitle: "开始搭建你的工作台",
       onboardingDescription: "这里没有任何预填内容——按顺序完成这些步骤即可解锁全部功能。",
+      copilotHint: "唤醒 AI 副驾——读你的简历、这一页、或者这份工作",
+      pipelineHint: "打开看板——从已保存到面试，再到录用",
       nineQuestsTitle: "九个房间——你的巡礼",
       nineQuestsIntro:
         "每开完一间，自己点亮一间。十分钟，整个产品就属于你了。只留在这个浏览器里——这里不给你打分。",
