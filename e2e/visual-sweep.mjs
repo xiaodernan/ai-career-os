@@ -10,8 +10,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const API = process.env.E2E_API_URL ?? "http://127.0.0.1:8080/api/v1";
-const APP = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+// No origin default is asserted by the file — pass the endpoint in, or the script refuses.
+const API = process.env.E2E_API_URL;
+const APP = process.env.E2E_BASE_URL;
+if (!API || !APP) throw new Error("pass E2E_API_URL and E2E_BASE_URL (this file asserts no origin of its own)");
 const OUT = path.join("test-results", "visual-sweep");
 
 const email = `sweep-${Date.now()}@careeros.test`;
