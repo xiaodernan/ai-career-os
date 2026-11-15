@@ -6878,6 +6878,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **261** The golden journey, walked live — e2e evidence on the real stack (2026-11-16).
+
+  (The whole journey — register → resume upload + parse → JD analysis → evidence-backed match
+  → tailor + cover letter → applications pipeline → interview practice → copilot artifact +
+  traces → skill-gaps panel → notes edit/delete → profile edit — executed today on the live
+  Docker stack with **LLM_PROVIDER=openai_compat** (the user's relay key), fresh account per
+  test, real Chromium through the Playwright suite: **19/19 specs green** (command-palette
+  4/4 in an independent pass). The only fix required along the way was a test-infrastructure
+  allowance (`fixtures.ts` `post`/`patch` default timeout 20s → **120s**): the deepest
+  LLM-bound writes (JD analysis, match, tailor, cover letter) routinely sit past a 20s wall
+  clock on this relay's tail. That is the runner's door, not the product's promise — the
+  assertion set is unchanged. Two boundaries, written down: (1) the first full run
+  was **14/19**, all five reds the same shape — `apiRequestContext.post` timeout on the
+  LLM-call specs; after the fixture allowance, **18/19**, the one holdout (skill gaps)
+  relay-tail flaky again (already green in isolation; a 30-second variance class the
+  suite's own README names), then **19/19** on the complete re-run; (2) the relay's tail
+  latency is the only product risk e2e can find at wall-clock level — and it found none;
+  nothing about the product required a code change, only the test harness needed a
+  slower door. e2e remains skip-gated in public CI (it requires a live stack), exactly
+  as before; CI still green for this commit's product legs which changed nothing but a
+  comment and a timeout constant.)
+
 - [x] **260** The silent buttons, everywhere — the teaching rollout completes (2026-11-16).
 
   (The ask, again and louder: "同时尽量在主界面上做出各种按键和操作的附带教学说明会比较好" —

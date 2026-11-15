@@ -153,11 +153,15 @@ async function postWithRetry(
 /** An API client already authorised as `user`. */
 export function apiFor(request: APIRequestContext, user: E2EUser) {
   const headers = { Authorization: `Bearer ${user.accessToken}` };
+  // Real-relay calls (LLM-bound writes) routinely sit past a 20s wall clock; the allowance is
+  // not an assertion on the product, just the door for a slow upstream — 120s matches the
+  // 90s test budget rather than hiding inside it. See e2e README "when the runner itself falls over".
+  const WRITE_TIMEOUT = 120_000;
   return {
     get: (path: string, params?: Record<string, string | number | boolean | undefined>) =>
       request.get(`${API_URL}${path}`, { headers, params }),
-    post: (path: string, data?: unknown) => request.post(`${API_URL}${path}`, { headers, data }),
-    patch: (path: string, data?: unknown) => request.patch(`${API_URL}${path}`, { headers, data }),
+    post: (path: string, data?: unknown) => request.post(`${API_URL}${path}`, { headers, data, timeout: WRITE_TIMEOUT }),
+    patch: (path: string, data?: unknown) => request.patch(`${API_URL}${path}`, { headers, data, timeout: WRITE_TIMEOUT }),
     delete: (path: string) => request.delete(`${API_URL}${path}`, { headers }),
     /**
      * multipart/form-data upload — the real "Upload Resume" path (PRD §35).
