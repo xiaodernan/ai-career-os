@@ -1784,12 +1784,12 @@ export const translations = {
       renderingIn: "Rendering in {palette} palette.",
       wheelTitle: "Scroll direction",
       wheelDescription:
-        "macOS and Windows disagree about which way a wheel goes. Pick how this app scrolls — we never change the setting silently.",
-      wheelOs: "Like my system",
-      wheelReverse: "Reverse the wheel",
+        "Two dialects, both forced app-wide — the platform is not consulted. Pick the one your fingers expect.",
+      wheelStandard: "The view follows the wheel (down is down)",
+      wheelNatural: "Content follows the gesture",
       wheelSaved: "Scroll direction saved.",
       wheelHint:
-        "macOS “Natural” scrolling feels reversed on a classic Windows wheel, and vice versa — this is the switch between those two dialects.",
+        "Standard moves the view with the notch — down is down on every platform. Natural travels content with the gesture, for readers who expect pull-to-follow on macOS-style “Natural” scrolling or classic Windows wheels.",
       paletteDark: "dark",
       paletteLight: "light",
       keyboard: "Keyboard",
@@ -5772,12 +5772,12 @@ export const translations = {
       renderingIn: "正在以{palette}配色渲染。",
       wheelTitle: "滚动方向",
       wheelDescription:
-        "macOS 和 Windows 对滚轮该往哪边滚的问题一直没谈拢。选这款产品怎么滚——我们绝不会偷偷替你改。",
-      wheelOs: "跟随系统",
-      wheelReverse: "反向滚动",
+        "两种方言，全部由产品自行强制，不看平台脸色。挑一个你的手指认得的就行。",
+      wheelStandard: "视图跟着滚轮走（往下就往下）",
+      wheelNatural: "内容跟着手势走",
       wheelSaved: "滚动方向已保存。",
       wheelHint:
-        "macOS 的“自然滚动”对经典 Windows 滚轮来说明显是反的，反过来也一样——这就是两个方言之间的那个开关。",
+        "「往下滑就往下看」是标准方言：视图沿滚轮一格一格往下走，在所有平台上都如此。反向则是内容跟着手势走，给 macOS 自然滚动的老手准备的——两个方言，一把开关。",
       paletteDark: "深色",
       paletteLight: "浅色",
       keyboard: "键盘",

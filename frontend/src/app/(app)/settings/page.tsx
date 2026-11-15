@@ -3,7 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
-import { ArrowUpDown, Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
+import { ArrowDown, ArrowUpDown, Keyboard, LogOut, Monitor, Moon, Save, Sun } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -41,10 +41,10 @@ const MAX_NAME = 120;
 export default function SettingsPage() {
   const { t } = useLocale();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [wheelMode, setWheelMode] = React.useState<WheelDirection>("os");
+  const [wheelMode, setWheelMode] = React.useState<WheelDirection>("standard");
   React.useEffect(() => setWheelMode(readWheelDirection()), []);
   const setWheel = React.useCallback((value: string) => {
-    const direction = value === "reverse" ? "reverse" as const : "os" as const;
+    const direction = value === "natural" ? "natural" as const : "standard" as const;
     setWheelMode(direction);
     writeWheelDirection(direction);
     toast.success(t("settings.wheelSaved"));
@@ -211,8 +211,8 @@ export default function SettingsPage() {
           >
             {(
               [
-                { value: "os", labelKey: "settings.wheelOs", icon: Monitor },
-                { value: "reverse", labelKey: "settings.wheelReverse", icon: ArrowUpDown },
+                { value: "standard", labelKey: "settings.wheelStandard", icon: ArrowDown },
+                { value: "natural", labelKey: "settings.wheelNatural", icon: ArrowUpDown },
               ] as const
             ).map(({ value, labelKey, icon: Icon }) => (
               <Label

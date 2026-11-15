@@ -6878,6 +6878,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **255** The wheel, reinvented honestly — forced dialects, the platform is not consulted (2026-11-16).
+
+  (The user's report was unambiguous: "往上滑是往下看，往下滑是往上看，搞反了，修复这个功能" —
+  the wheel felt inverted everywhere in the app, and on their machine the app did look
+  inverted. Root cause: the shipped default was an `os` passthrough that left the sign
+  of `deltaY` to the platform; when the other side of the HID disagrees with the reader,
+  there is no code-side guarantee anything feels right. Epic 255 removes the passthrough.
+  Two dialects now, both **forced app-wide**: **standard** (the default, and the literal
+  ask — positive deltaY scrolls toward the page bottom, "往下滑就往下看") and **natural**
+  (content follows the gesture, for pull-to-follow readers). The stored `reverse` key
+  migrates onto `natural`, `os` onto `standard`, bogus onto `standard`. Settings gains a
+  two-way switch ("The view follows the wheel" / "Content follows the gesture", EN+ZH
+  rewritten, zero 中英文夹杂 — the English hint carries no Chinese). Honest trade-off,
+  named here: a macOS-touchpad-natural reader who was born-lucky in passthrough now gets
+  standard by default and one flip restores their dialect. The pure sign/scroll math
+  stayed in `lib/wheel-direction.ts` (unit tests 15/15, migration pinned); the DOM
+  interceptor is capture-phase + `passive: false` on every wheel event, zoom gestures
+  (ctrl/⌘+wheel) stay the browser's own. Full gates: vitest **1483/1483**, tsc clean,
+  `verify_gates` **569/569**, budget OK (settings 337.6 kB — close to but under the 340
+  line), `/settings` HTTP 200 on the rebuilt image.)
+
 - [x] **254** Are the rivers flowing — the freshness strip on the overseer's wall (2026-11-16).
 
   (The operator's second question after "how big is this place?" is "…but is anything

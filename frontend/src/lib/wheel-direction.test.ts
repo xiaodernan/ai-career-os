@@ -4,7 +4,7 @@ import {
   nearestVerticalScroller,
   normalizeWheelDeltaY,
   readWheelDirection,
-  reversedScrollDelta,
+  wheelScrollDelta,
   writeWheelDirection,
   type ScrollNode,
 } from "./wheel-direction";
@@ -29,14 +29,16 @@ function node(partial: Partial<ScrollNode> = {}): ScrollNode {
 }
 
 describe("readWheelDirection / writeWheelDirection", () => {
-  it("defaults to the OS when nothing is stored", () => {
-    expect(readWheelDirection(memoryStorage())).toBe("os");
-    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "reverse" }))).toBe("reverse");
-    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "bogus" }))).toBe("os");
+  it("defaults to standard, migrating Epic 225's `os` onto the forced dialect", () => {
+    expect(readWheelDirection(memoryStorage())).toBe("standard");
+    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "os" }))).toBe("standard");
+    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "reverse" }))).toBe("natural");
+    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "natural" }))).toBe("natural");
+    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "bogus" }))).toBe("standard");
   });
 
-  it("falls back to the OS when storage throws", () => {
-    expect(readWheelDirection(null)).toBe("os");
+  it("falls back to standard when storage throws", () => {
+    expect(readWheelDirection(null)).toBe("standard");
     const broken = {
       getItem(): string | null {
         throw new Error("locked");
@@ -45,16 +47,16 @@ describe("readWheelDirection / writeWheelDirection", () => {
         throw new Error("locked");
       },
     };
-    expect(readWheelDirection(broken)).toBe("os");
-    expect(() => writeWheelDirection("reverse", broken)).not.toThrow();
+    expect(readWheelDirection(broken)).toBe("standard");
+    expect(() => writeWheelDirection("natural", broken)).not.toThrow();
   });
 
-  it("round-trips 'reverse' and only ever emits one of the two values", () => {
+  it("round-trips the two dialects and only ever emits one of the two values", () => {
     const storage = memoryStorage();
-    writeWheelDirection("reverse", storage);
-    expect(storage.getItem("careeros.wheelDirection")).toBe("reverse");
-    writeWheelDirection("os", storage);
-    expect(storage.getItem("careeros.wheelDirection")).toBe("os");
+    writeWheelDirection("natural", storage);
+    expect(storage.getItem("careeros.wheelDirection")).toBe("natural");
+    writeWheelDirection("standard", storage);
+    expect(storage.getItem("careeros.wheelDirection")).toBe("standard");
   });
 });
 
@@ -76,19 +78,32 @@ describe("normalizeWheelDeltaY", () => {
   });
 });
 
-describe("reversedScrollDelta", () => {
-  it("negates the delta the browser would apply", () => {
-    expect(reversedScrollDelta({ deltaY: 120, deltaMode: 0 })).toBe(-120);
-    expect(reversedScrollDelta({ deltaY: -3, deltaMode: 1 })).toBe(48);
+describe("wheelScrollDelta", () => {
+  it("standard: the view travels the notch (positive goes down)", () => {
+    expect(wheelScrollDelta({ deltaY: 120, deltaMode: 0 }, "standard")).toBe(120);
+    expect(wheelScrollDelta({ deltaY: -3, deltaMode: 1 }, "standard")).toBe(-48);
+    expect(wheelScrollDelta({ deltaY: 1, deltaMode: 2 }, "standard")).toBe(40);
   });
 
-  it("leaves the zoom gesture alone", () => {
-    expect(reversedScrollDelta({ deltaY: 120, deltaMode: 0, ctrlKey: true })).toBeNull();
-    expect(reversedScrollDelta({ deltaY: 120, deltaMode: 0, metaKey: true })).toBeNull();
+  it("natural: content travels with the gesture (positive goes up)", () => {
+    expect(wheelScrollDelta({ deltaY: 120, deltaMode: 0 }, "natural")).toBe(-120);
+    expect(wheelScrollDelta({ deltaY: -3, deltaMode: 1 }, "natural")).toBe(48);
+    expect(wheelScrollDelta({ deltaY: 1, deltaMode: 2 }, "natural")).toBe(-40);
+  });
+
+  it("defaults to standard when no dialect is named", () => {
+    expect(wheelScrollDelta({ deltaY: 120, deltaMode: 0 })).toBe(120);
+  });
+
+  it("leaves the zoom gesture alone in both dialects", () => {
+    expect(wheelScrollDelta({ deltaY: 120, deltaMode: 0, ctrlKey: true }, "standard")).toBeNull();
+    expect(wheelScrollDelta({ deltaY: 120, deltaMode: 0, metaKey: true }, "standard")).toBeNull();
+    expect(wheelScrollDelta({ deltaY: 120, deltaMode: 0, ctrlKey: true }, "natural")).toBeNull();
   });
 
   it("is null for a zero delta", () => {
-    expect(reversedScrollDelta({ deltaY: 0, deltaMode: 0 })).toBeNull();
+    expect(wheelScrollDelta({ deltaY: 0, deltaMode: 0 }, "standard")).toBeNull();
+    expect(wheelScrollDelta({ deltaY: 0, deltaMode: 0 }, "natural")).toBeNull();
   });
 });
 

@@ -1,24 +1,28 @@
 /**
- * The wheel, the reader's way (Epic 225).
+ * The wheel, the reader's way.
  *
- * Nothing in this product ever inverted a wheel — `git log
- * -S"addEventListener('wheel'" -- frontend/src` is empty, and no stylesheet
- * flips a scroller. What the reader actually meets is the disagreement
- * between macOS and Windows about what "scroll direction: natural" means,
- * and this module is the answer: one setting, honored app-wide, never
- * applied silently.
+ * The product always applies its own direction now, on every platform: the
+ * reader's complaint was that the old `os` passthrough left "wheel down →
+ * look down" to whatever the desktop did to the signal, and on their machine
+ * it arrived inverted. There are two dialects, both forced app-wide:
  *
- * The pure layer takes structural nodes (no DOM types), so the math and the
- * scroll walk are unit-tested in the node runner; the DOM layer is the
- * capture-phase handler in the layout.
+ *   standard — the view travels the notch (positive deltaY → scrollTop
+ *              increases). "往下滑就往下看". This is the default.
+ *   natural  — content travels with the gesture (positive deltaY → scrollTop
+ *              decreases). For the reader whose fingers expect pull-to-follow.
  *
- * Sign discipline: `reversedScrollDelta` is what the reader asked for when
- * the preference is "reverse the wheel" — the NEGATIVE of the browser's
- * default — and `scrollTop += delta` applies it. Positive scrollTop keeps
- * meaning "further down the page".
+ * The storage key and event are unchanged from Epic 225; a stored value is
+ * migrated on read: "os" → "standard" (the ask), "reverse" → "natural". A
+ * bogus value is standard. The pure layer takes structural nodes (no DOM
+ * types), so the math and the scroll walk are unit-tested in the node runner;
+ * the DOM layer is the capture-phase handler in the layout.
+ *
+ * Sign discipline: `wheelScrollDelta(e, direction)` is the signed step the
+ * reader asked for; applying it is `scrollTop += step`. Positive scrollTop
+ * keeps meaning "further down the page".
  */
 
-export type WheelDirection = "os" | "reverse";
+export type WheelDirection = "standard" | "natural";
 
 const STORAGE_KEY = "careeros.wheelDirection";
 const EVENT = "careeros:wheelDirection";
@@ -34,13 +38,18 @@ type StorageLike = Pick<Storage, "getItem" | "setItem">;
 const defaultStorage = (): StorageLike | null =>
   typeof window === "undefined" ? null : window.localStorage;
 
-/** The stored preference, clamped to the two the product knows. */
+/** The stored preference, clamped to the two the product knows, with migration. */
 export function readWheelDirection(storage: StorageLike | null = defaultStorage()): WheelDirection {
-  if (!storage) return "os";
+  if (!storage) return "standard";
   try {
-    return storage.getItem(STORAGE_KEY) === "reverse" ? "reverse" : "os";
+    const raw = storage.getItem(STORAGE_KEY);
+    // Epic 225 stored "reverse" for pull-to-follow and "os" for passthrough;
+    // both dialects lived in one binary toggle the reader could not see. The
+    // forced default is standard; "reverse" maps onto natural.
+    if (raw === "natural" || raw === "reverse") return "natural";
+    return "standard";
   } catch {
-    return "os";
+    return "standard";
   }
 }
 
@@ -72,19 +81,25 @@ export function normalizeWheelDeltaY(e: { deltaY: number; deltaMode?: number }):
 }
 
 /**
- * The delta the reader asked for when the preference is "reverse the wheel" —
- * the negative of the browser's default. `null` when the browser should keep
- * the event untouched: ctrl/⌘+wheel is the zoom gesture every browser owns.
+ * The signed step for the reader's dialect, or null for the browser to keep the
+ * event untouched: ctrl/⌘+wheel is the zoom gesture every browser owns.
+ *
+ * Standard applies the browser's own direction (positive goes down); natural
+ * negates it. Both are forced; neither consults the platform.
  */
-export function reversedScrollDelta(e: {
-  deltaY: number;
-  deltaMode?: number;
-  ctrlKey?: boolean;
-  metaKey?: boolean;
-}): number | null {
+export function wheelScrollDelta(
+  e: {
+    deltaY: number;
+    deltaMode?: number;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+  },
+  direction: WheelDirection = "standard",
+): number | null {
   if (e.ctrlKey || e.metaKey) return null;
   const natural = normalizeWheelDeltaY(e);
-  return natural === 0 ? null : -natural;
+  if (natural === 0) return null;
+  return direction === "natural" ? -natural : natural;
 }
 
 /** One node of the scroll walk. Structural — the DOM never enters the test. */
