@@ -21,6 +21,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber, relativeTime } from "@/lib/format";
 import { seriesTotal, projectedSparkline } from "@/lib/admin-trend";
+import { funnelReading } from "@/lib/admin-funnel";
 
 interface AdminStats {
   users?: number;
@@ -208,6 +209,12 @@ export default function AdminPage() {
   ] as const;
 
   const trendWeeks = trends?.weeks;
+  const reading = funnel ? funnelReading(funnel.stages ?? [], funnel.matchedReaders) : null;
+  const readingStageLabel = reading?.bottleneckStageId
+    ? (FUNNEL_STAGE_KEYS[reading.bottleneckStageId]
+        ? t(FUNNEL_STAGE_KEYS[reading.bottleneckStageId])
+        : reading.bottleneckStageId)
+    : "";
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10">
@@ -298,6 +305,12 @@ export default function AdminPage() {
           {t("admin.funnelMatchedNote", { count: formatNumber(funnel?.matchedReaders ?? 0) })}
           {" "}{t("admin.funnelFootnote")}
         </p>
+        {reading?.bottleneckStageId && (
+          <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-2xs font-medium text-primary">
+            <Sparkles aria-hidden className="size-3.5" />
+            {t("admin.funnelReadingLine", { stage: readingStageLabel, percent: `${reading.bottleneckPercent}%` })}
+          </p>
+        )}
       </section>
 
       <section>

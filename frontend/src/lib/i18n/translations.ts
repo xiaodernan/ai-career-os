@@ -3974,6 +3974,8 @@ export const translations = {
         "{count} readers carry at least one match on file — matched readers sit beside the line, not inside it.",
       funnelFootnote:
         "The right column is stage-over-stage; the bar runs against everybody who walked in. The seed corpus inflates the early stages — this is history, not prophecy.",
+      funnelReadingLine:
+        "The steepest loss is at {stage} — only {percent} survive the previous stage. Start there.",
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
       journeyTitle: "The golden journey, station by station",
@@ -7767,6 +7769,8 @@ export const translations = {
         "{count} 位读者名下至少有一次匹配——他们在旁边的河里，不在这一条线上。",
       funnelFootnote:
         "最右列是上一站转化率；条形宽度按总进门人数算。种子语料会把早期站点撑得很大——读的是这颗实例的历史，不是预言。",
+      funnelReadingLine:
+        "最陡的一站是 {stage}——只有 {percent} 活过上一站。要动，就动这里。",
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
       journeyTitle: "黄金旅程，逐站验收",

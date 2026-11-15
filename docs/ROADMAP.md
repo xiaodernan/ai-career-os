@@ -6878,6 +6878,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **259** The install reads itself — the funnel's own first move (2026-11-16).
+
+  (Templated arithmetic over the same `GET /admin/funnel` payload, deliberately not
+  generative: the product never writes a sentence a human must take on faith. A pure
+  module `lib/admin-funnel.ts` computes the steepest single-stage loss the install can
+  measure — this install: **offered, 5.8%** (20 of 345 interviewed holders) — and /admin
+  renders one templated line in both languages: "the steepest loss is at {stage} — start
+  there." Matched readers surface as a side share beside the line (4% of the registration
+  cohort here, reported honestly as a 0/100 clamp). Zero-previous stages carry no share and
+  are skipped rather than producing divide-by-zero theater; a degenerate one-stage line
+  yields no bottleneck rather than an invented one. Unit pins include this install's own
+  real shape (23 / 40 / 57 / 6) and the degenerate case. This is the concrete answer to the
+  ask that the project "knows what to do next from its own data" — every number in the line
+  is the tables, every word of it is bilingual, and the arithmetic is one function you can
+  read in a minute. Full gates: vitest **1487/1487**, tsc clean, verify_gates **569/569**,
+  budget OK at 340, /admin **250.9 kB gzip** live, HTTP 200.)
+
 - [x] **258** Where the readers fall — the funnel on the overseer's wall (2026-11-16).
 
   (The ask, again: the admin door should observe user behavior and drive the next
