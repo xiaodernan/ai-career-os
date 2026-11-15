@@ -1,13 +1,15 @@
 /**
  * The pocket (Epic 223) — the browser-local half of the reader's work.
  *
- * Five things the person wrote in their browser live nowhere else:
+ * Six things the person wrote in their browser live nowhere else:
  *
  *   careeros.ledger.v1     the decision ledger — criteria, weights, per-offer scores
  *   careeros.quarter.*     the first-quarter plan's ticks, keyed by the accepted offer row
  *   careeros.dayone.*      the day-one packet's ticks, same shape
  *   careeros.debrief.*     the after-action debriefs, keyed by interview session id
  *   careeros.commitment.*  one line the reader wrote, keyed by ISO week — what they will own next
+ *   careeros.preread.*     the "room you walk into" prep, keyed by company id — the reader's own
+ *                          pre-interview notes, quote the reader's voice to the interview
  *
  * The server cannot see them by design (they never left the browser), so
  * the export bundle omits them. This module is their suitcase — the one
@@ -24,6 +26,7 @@ export const POCKET_PREFIXES = [
   "careeros.dayone.",
   "careeros.debrief.",
   "careeros.commitment.",
+  "careeros.preread.",
 ] as const;
 
 export interface PocketFamily {
@@ -124,8 +127,10 @@ export function restorePocket(manifest: PocketManifest, storage: StorageLike | n
   return { restored, skipped };
 }
 
-/** The four families the pocket holds, in the order they're written in. */
+/** The families the pocket holds, in the order they're written in. */
 export const POCKET_COMMITMENT_PREFIX = "careeros.commitment.";
+/** The sixth family: Epic 268's "room you walk into" prep, one row per researched company. */
+export const POCKET_PREREAD_PREFIX = "careeros.preread.";
 
 /** A short human sentence for the family line, exported so callers cannot drift. */
 export function familyLabelKey(prefix: string): string {
@@ -140,6 +145,8 @@ export function familyLabelKey(prefix: string): string {
       return "data.pocketFamilyDebrief";
     case POCKET_COMMITMENT_PREFIX:
       return "data.pocketFamilyCommitment";
+    case POCKET_PREREAD_PREFIX:
+      return "data.pocketFamilyPreread";
     default:
       return "data.pocketFamilyLedger";
   }

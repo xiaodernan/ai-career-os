@@ -7,8 +7,6 @@ import { ArrowDown, ArrowUpDown, Keyboard, LogOut, Monitor, Moon, Save, Sun } fr
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
-import { CareerProfileCard, CareerProfileMapsCard } from "@/components/settings/profile-cards";
-import { MemoryCard } from "@/components/settings/memory-card";
 import { PushCard } from "@/components/settings/push-card";
 import { CalendarCard } from "@/components/settings/calendar-card";
 // The account cards are split out of the first-load path (the bundle budget
@@ -21,6 +19,9 @@ const SessionsCard = dynamic(() => import("@/components/settings/sessions-card")
 const PasswordCard = dynamic(() => import("@/components/settings/password-card").then((m) => m.PasswordCard));
 const EraseAccountCard = dynamic(() => import("@/components/settings/erase-account-card").then((m) => m.EraseAccountCard));
 const SecurityCard = dynamic(() => import("@/components/settings/security-card").then((m) => m.SecurityCard));
+const CareerProfileCard = dynamic(() => import("@/components/settings/profile-cards").then((m) => m.CareerProfileCard));
+const CareerProfileMapsCard = dynamic(() => import("@/components/settings/profile-cards").then((m) => m.CareerProfileMapsCard));
+const MemoryCard = dynamic(() => import("@/components/settings/memory-card").then((m) => m.MemoryCard));
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";

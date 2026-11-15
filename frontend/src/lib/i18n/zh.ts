@@ -1311,6 +1311,7 @@ export const zh = {
       pocketFamilyDayOne: "入职首日清单",
       pocketFamilyDebrief: "面试复盘",
       pocketFamilyCommitment: "每周承诺",
+      pocketFamilyPreread: "进门之前的笔记",
       pocketFamilyCount: "已保存 {count} 份",
       pocketDownload: "下载口袋",
       pocketRestore: "从口袋文件恢复",
@@ -2711,6 +2712,44 @@ export const zh = {
         noSourcesRecorded: "还没有记录这份档案的出处。",
         open: "打开",
       },
+      prereadTitle: "进门之前",
+      prereadDescription:
+        "公司页写的是这间房是什么；这是你决定带进去什么。五种镜头，用自己的话写——只存在你的浏览器里，谁也读不到。",
+      prereadKeptAt: "已保存 {date}",
+      prereadMoneyLabel: "这间房怎么赚钱",
+      prereadMoneyHint:
+        "这间房押的是哪一注？要让它一直赢下去，什么东西必须保住？",
+      prereadRoleLabel: "这间房的真实范围",
+      prereadRoleHint:
+        "队伍的形状、汇报线、以及三个月时你一个人扛的——没人催的那一件。",
+      prereadYearLabel: "最近十二个月",
+      prereadYearHint:
+        "发了什么、拖了什么、高层换了什么。你的问题都挂在这里。",
+      prereadProofLabel: "你最薄的一环",
+      prereadProofHint:
+        "你知道他们闻到的第一股味道。写明白——这间房里没有别人会替你写。",
+      prereadBetLabel: "为什么非来不可",
+      prereadBetHint:
+        "不是因为头衔，也不是因为名气。那个理由，写在一个谁也读不到的地方。",
+      prereadLevelLine: "一句话",
+      prereadLevelProof: "有据可查",
+      prereadCount: "十分之 {done} 已填满",
+      prereadReset: "清空这页笔记",
+      prereadGate:
+        "先封满十分之八——两个镜头写透——它才敢替你提那两个问题。",
+      prereadGather: "收敛成两个问题",
+      prereadAskThem: "问出去，别照读。这是弹弓，不是讲稿。",
+      prereadQ_money:
+        "你说得最好的是——“{note}”。这间房要一直赢下去，什么必须保住？",
+      prereadQ_role:
+        "站到三个月后的桌子前——如果让我自己把它站稳，你希望我在没人催的情况下交出什么？",
+      prereadQ_year:
+        "关于“{note}”——那一年，对着进门的人，意味着什么样的变化？",
+      prereadQ_proof:
+        "我身上最薄的一环是——“{note}”。在这个房里，什么人用什么办法把它填回来的？",
+      prereadQ_bet:
+        "我为什么非来不可，写在里面了——“{note}”。你要怎么听，才知道这不是鼓掌声？",
+      prereadLensAria: "{lens}——笔记与自评级别",
     },
     // Activity
     activity: {

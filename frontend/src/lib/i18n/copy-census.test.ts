@@ -162,7 +162,8 @@ describe("the browser's copy", () => {
     // 207 with Epic 244: `app/tour/page.tsx` + `app/tour/tour-page.tsx`, the public ten-minute walkthrough.
     // 208 with Epic 245: `components/ui/hint.tsx`, hover explanations on the main-UI controls.
     // 210 with Epic 250: `app/admin/page.tsx` + `app/admin/admin-page.tsx`, overseer's ledger (passphrase-gated).
-    expect(browserSources().length).toBe(210);
+    // 211 with Epic 268: `components/companies/preinterview-kit.tsx`, the room you walk into.
+    expect(browserSources().length).toBe(211);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
+import { PreinterviewKit } from "@/components/companies/preinterview-kit";
 import { useCompany } from "@/lib/hooks/resources";
 import { useCompanyBrief } from "@/lib/hooks/growth";
 import { salaryBandWord } from "@/lib/status-words";
@@ -289,6 +290,9 @@ export default function CompanyDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* The reader's own pre-interview prep — the company page says what the room is, this is what they bring */}
+      <PreinterviewKit companyId={c.id} />
     </div>
   );
 }

@@ -1428,6 +1428,7 @@ export const en = {
       pocketFamilyDayOne: "Day-one packets",
       pocketFamilyDebrief: "Interview debriefs",
       pocketFamilyCommitment: "Weekly commitments",
+      pocketFamilyPreread: "The room you walk into",
       pocketFamilyCount: "{count} kept",
       pocketDownload: "Download the pocket",
       pocketRestore: "Restore from a pocket file",
@@ -2964,6 +2965,44 @@ export const en = {
         noSourcesRecorded: "Nothing recorded where this profile came from yet.",
         open: "Open",
       },
+      prereadTitle: "The room you walk into",
+      prereadDescription:
+        "The company page says what this room is; this is what you decide to bring. Five lenses in your own words — kept in this browser, read by no one else.",
+      prereadKeptAt: "Kept {date}",
+      prereadMoneyLabel: "How the room makes money",
+      prereadMoneyHint:
+        "Which bet does the P&L ride? What has to stay true for this room to keep compounding?",
+      prereadRoleLabel: "The room's real scope",
+      prereadRoleHint:
+        "Team shape, reporting line, and what you own alone by month three — before anyone asks.",
+      prereadYearLabel: "The last twelve months",
+      prereadYearHint:
+        "What shipped, what slipped, what changed at the top. Your questions hang off this.",
+      prereadProofLabel: "Your thinnest joint",
+      prereadProofHint:
+        "The gap you know they'll smell first. Name it plainly — nobody else will in this room.",
+      prereadBetLabel: "Why this room, honestly",
+      prereadBetHint:
+        "Not the title, not the brand. The honest reason — written where nobody can read it but you.",
+      prereadLevelLine: "A line",
+      prereadLevelProof: "Evidence",
+      prereadCount: "{done} of 10 sealed",
+      prereadReset: "Empty the notes",
+      prereadGate:
+        "Seal at least 8 of 10 — two lenses written to the bone — before the kit dares to question you back.",
+      prereadGather: "Gather into two questions",
+      prereadAskThem: "Ask, don't quote — a launchpad, not a script.",
+      prereadQ_money:
+        "You said it best — \"{note}\". What has to stay true for this room to keep compounding?",
+      prereadQ_role:
+        "Month three — if I have to earn this back bench-clear, what would I have shipped without being asked?",
+      prereadQ_year:
+        "About \"{note}\" — what did that year do to the room I would actually be walking into?",
+      prereadQ_proof:
+        "Here is the thinnest joint I carry — \"{note}\". What would a strong hire here do differently with it?",
+      prereadQ_bet:
+        "My reason is in these notes — \"{note}\". What would tell you it is real, not applause?",
+      prereadLensAria: "{lens} — notes and level",
     },
     // Activity
     activity: {

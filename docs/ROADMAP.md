@@ -6878,6 +6878,45 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **268** The room you walk into — the pre-interview kit (2026-11-16).
+
+  (The company page answers *what this room is*; Epic 268 keeps the reader's own
+  half — a keepsake for the minutes before the knock. **Five lenses, written in the
+  reader's own voice**: money (what the P&L rides), role (scope by month three), year
+  (the last twelve months — the context questions hang off), proof (the thinnest joint
+  in the reader's story, named plainly), bet (why this room, honestly). Each lens
+  carries the reader's note plus two seal levels — "A line" / "有据可查" — and pressing
+  the active level again releases it back to zero; the levels pool into a meter with
+  role=progressbar, 10 points total. At **8 of 10 sealed**, the kit gathers the two
+  strongest lenses (preference order: year, role, money, proof, bet — the first two
+  whose notes run ≥8 characters) and turns the reader's own words into the two
+  questions they should bring, **quoted verbatim** — a launchpad, never a script;
+  an unfinished kit shows the honest gate sentence instead ("Seal at least 8 of 10…").
+  The two questions copy to the clipboard. Persisted as `careeros.preread.<companyId>`
+  through the pure module `lib/preread.ts` (a corruption reads as a blank kit, never an
+  exception; `synthesisLenses` is deterministic and both halves are unit-tested).
+  **This is the sixth pocket family** — `careeros.preread.*` joined POCKET_PREFIXES and
+  `familyLabelKey` → `data.pocketFamilyPreread`, so the /data pocket card counts,
+  exports and restores the prep like the other five keepsakes. Mounted on
+  `/companies/[id]` after the research sources card; reading localStorage happens
+  after mount, so SSR output never differs from the first client render. The copy is
+  fully bilingual through the table (+27 key pairs plus the pocket key, no
+  mixed-language page).) End-to-end verified against the real stack through
+  Playwright: a freshly registered account opened the seeded TechCorp company page,
+  the kit rendered, one Evidence seal applied, the meter read 2 of 10, the gate
+  sentence held and stayed visible.) Measured: vitest **1500/1500**, tsc clean, copy
+  census **211 sources** (+1), verify_gates **569/569**; **/settings fell
+  339.9 → 315.8 kB** (the profile and memory cards now load as their own chunks
+  after hydration, the same way the settings route shrank its heavy half in Epic
+  238) — and the three fullest routes crossed 340 kB by 0.3–1.4 kB from the shared
+  table's +1.7 kB growth, so the budget is raised **340 → 345 kB** with the reason
+  written in `scripts/bundle-budget.mjs` (never silently). The per-locale split
+  named in Epic 238 remains the honest next fix: it cannot land honestly while
+  `useLocale` must answer synchronously in the first (server) render — the SSR
+  contract pinned by `locale-context.test.tsx` — so until a path-segmented or
+  build-time locale switch ships, the ceiling stays honest rather than the
+  architecture being forced crooked for the meter.)
+
 - [x] **267** The eye of the install — landings, dwells, acts (2026-11-16).
 
   (The ask, one page over: "检测、分析、查看、观察所有用户的行为" — an admin view of

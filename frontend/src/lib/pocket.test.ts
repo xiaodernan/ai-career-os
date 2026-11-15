@@ -34,18 +34,20 @@ const SAMPLE = {
     differently: "Name the result first.",
   }),
   "careeros.commitment.2026-W47": JSON.stringify({ text: "I will ask for the range." }),
+  "careeros.preread.co-1": JSON.stringify({ notes: {}, levels: {}, keptAt: "2026-11-16T00:00:00.000Z" }),
   "careeros.locale": "zh",
   "unrelated.key": "not ours",
 };
 
 describe("collectPocket", () => {
-  it("collects only the five pocket prefixes, nothing else", () => {
+  it("collects only the six pocket prefixes, nothing else", () => {
     const manifest = collectPocket(fakeStorage(SAMPLE));
     expect(Object.keys(manifest.entries).sort()).toEqual([
       "careeros.commitment.2026-W47",
       "careeros.dayone.offer-1",
       "careeros.debrief.session-9",
       "careeros.ledger.v1",
+      "careeros.preread.co-1",
       "careeros.quarter.offer-1",
     ]);
     expect(manifest.schema).toBe("careeros-pocket/1");
@@ -60,13 +62,14 @@ describe("collectPocket", () => {
 describe("pocketSummary", () => {
   it("groups counts and characters per family", () => {
     const summary = pocketSummary(collectPocket(fakeStorage(SAMPLE)));
-    expect(summary.total).toBe(5);
+    expect(summary.total).toBe(6);
     const byPrefix = Object.fromEntries(summary.families.map((f) => [f.prefix, f.count]));
     expect(byPrefix["careeros.ledger."]).toBe(1);
     expect(byPrefix["careeros.quarter."]).toBe(1);
     expect(byPrefix["careeros.dayone."]).toBe(1);
     expect(byPrefix["careeros.debrief."]).toBe(1);
     expect(byPrefix["careeros.commitment."]).toBe(1);
+    expect(byPrefix["careeros.preread."]).toBe(1);
     expect(summary.characters).toBeGreaterThan(0);
   });
 });
@@ -119,9 +122,10 @@ describe("restorePocket", () => {
     const restored = fakeStorage({});
     const manifest = collectPocket(source);
     const result = restorePocket(manifest, restored);
-    expect(result.restored).toBe(5);
+    expect(result.restored).toBe(6);
     expect(restored.getItem("careeros.ledger.v1")).toBe(SAMPLE["careeros.ledger.v1"]);
     expect(restored.getItem("careeros.debrief.session-9")).toBe(SAMPLE["careeros.debrief.session-9"]);
     expect(restored.getItem("careeros.commitment.2026-W47")).toBe(SAMPLE["careeros.commitment.2026-W47"]);
+    expect(restored.getItem("careeros.preread.co-1")).toBe(SAMPLE["careeros.preread.co-1"]);
   });
 });
