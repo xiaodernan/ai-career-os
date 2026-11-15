@@ -3989,6 +3989,23 @@ export const en = {
       cohortHeaderShare: "%",
       cohortQuietNote:
         "The gap between the two columns is the quietest step in the funnel, spelled out. Fixing it is the first fix the install could make.",
+      attentionTitle: "The eye of the install",
+      attentionLede:
+        "Landings, dwells, and acts — the three numbers that tell the truth about whether this product earns its keep, measured off the browser clock across the trailing thirty days. No per-user rows ever leave the wire.",
+      attentionDays: "Trailing 30 days",
+      attentionLandings: "Landings",
+      attentionDwells: "Dwell reads",
+      attentionActs: "Acts",
+      attentionAnonymousLandings: "Anonymous landings",
+      attentionSignedLandings: "Signed landings",
+      attentionAvgDwell: "Average dwell (ms)",
+      attentionTopTitle: "Where they land and what they do there",
+      attentionTopPath: "Path",
+      attentionTopLandings: "Landings",
+      attentionTopActs: "Acts",
+      attentionTopActRate: "Act rate",
+      attentionFootnote:
+        "Browser clocks, the trailing 30 days; committed means the row exists. Measured, never inferred — a signal here says nothing about what happens next week.",
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
       journeyTitle: "The golden journey, station by station",

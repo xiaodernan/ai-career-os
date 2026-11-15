@@ -53,6 +53,14 @@ export const endpoints = {
     funnel: "/admin/funnel",
     /* The quiet cohort — signup week vs ever acted, dense weeks, never rows (Epic 264). */
     cohort: "/admin/cohort",
+    /* The eye of the install — landings, dwells, acts and top paths (Epic 267). */
+    attention: "/admin/attention",
+  },
+
+  /* ---------------- The attention spine ------ */
+  telemetry: {
+    /* The one writer of the attention rows (Epic 267): land | dwell | act. */
+    attention: "/telemetry/attention",
   },
 
   /* ---------------- Resumes ---------------- */

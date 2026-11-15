@@ -78,6 +78,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/health").permitAll()
                         // The operator's tally (Epic 248): counts only, no names, no content,
                         // no identifiers — answers "how big is this install", not "who did what".
+                        // The attention writer (Epic 267): the browser reports landing/dwelling/acting.
+                        // No PII: path + event + (optionally) the seconds read; a null user is counted as anonymous by design.
+                        .requestMatchers("/api/v1/telemetry/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").permitAll()
                         // Observability surface, pinned to the two exposed endpoints rather
                         // than /actuator/**: the scrape is read-only Micrometer metrics and

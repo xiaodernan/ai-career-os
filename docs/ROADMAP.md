@@ -6878,6 +6878,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **267** The eye of the install — landings, dwells, acts (2026-11-16).
+
+  (The ask, one page over: "检测、分析、查看、观察所有用户的行为" — an admin view of
+  behaviour, not just behaviour's counts. Epic 267 ships the smallest sensor that tells the
+  truth: two rows of attention per page the reader opens — a `land` at mount time and a
+  `dwell` on unmount, both carrying the path and the browser's own clock.
+  Anonymous readers count; a signed-in reader links to the user row; `/admin*` paths are
+  dropped at the writer so the instrument never records itself; the writer is public, the
+  reporter is the reader's own browser via `keepalive: true`. The readout is a new route
+  `GET /api/v1/admin/attention` — counts only, counts of counts: trailing-30-day landings,
+  dwell reads, acts, signed vs anonymous split, average dwell per landing (the milliseconds
+  a reader stayed on a page), and a 12-row table of the most-landed paths with landing/act
+  ratio. No per-reader row ever leaves the surface; the admin sees the shape, never the
+  face. `/admin` gains a new section "The eye of the install" / "实例的眼睛" — six stat tiles
+  (landings, dwells, acts, average dwell, signed/anonymous split) and a table of twelve top
+  paths with act-rate — everything through the bilingual table, EN+ZH. End-to-end verified:
+  POST→200, `/admin/attention` answers real data, rows visibly present in `attention_events`,
+  and the sensor fires from a real Chromium run through the palette suite — 11 landings,
+  3 dwells observed, average 16,655 ms per landing; the install now sees which pages actually
+  keep readers. Command-palette e2e passes through the new attention wiring unchanged.)
+  Measured: vitest **1487/1487**, tsc clean, `verify_gates` **569/569**, budget OK at 340,
+  census **210**, contract gate **18/18**, `AttentionAdminServiceTest` **2/2**;
+  `/admin` HTTP 200 on the rebuilt image.)
+
 - [x] **266** The open door — the portfolio now shows the project (2026-11-16).
 
   (The ask that was repeatedly deferred as "USER STEP": the personal site at

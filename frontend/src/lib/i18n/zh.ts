@@ -3699,6 +3699,23 @@ export const zh = {
       cohortHeaderShare: "%",
       cohortQuietNote:
         "这两列之间的差，就是漏斗里最安静的一步——把它摆出来，比它藏起来好。这是这颗实例能先动的第一刀。",
+      attentionTitle: "实例的眼睛",
+      attentionLede:
+        "落点、停留、动作——这是三个数，能看这个产品有没有站得住脚，是浏览器自己的钟，在最近三十天里读出来的。没有任何一行用户数据离开这台机器。",
+      attentionDays: "最近 30 天",
+      attentionLandings: "落点",
+      attentionDwells: "停留",
+      attentionActs: "动作",
+      attentionAnonymousLandings: "匿名落点",
+      attentionSignedLandings: "注册用户落点",
+      attentionAvgDwell: "平均停留（毫秒）",
+      attentionTopTitle: "读者落在哪，停在哪，做了什么",
+      attentionTopPath: "路径",
+      attentionTopLandings: "落点",
+      attentionTopActs: "动作",
+      attentionTopActRate: "动作率",
+      attentionFootnote:
+        "浏览器的钟，最近三十天；已写入的行就存在。数字是测出来的，不是猜出来的——这台机器能看到的，它就说出来；看不到的，它就不说。",
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
       journeyTitle: "黄金旅程，逐站验收",

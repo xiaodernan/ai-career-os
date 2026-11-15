@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-15T17:45:21.017246Z",
+  "generated_at": "2026-11-15T18:57:34.332292Z",
   "branch": "main",
-  "head": "bc3e618",
-  "total_commits": 1419,
-  "milestone": "Epic 266",
-  "milestone_full": "the ledger of done epics (through 418 items), closed at Epic 266 — The open door",
+  "head": "29ca6e7",
+  "total_commits": 1420,
+  "milestone": "Epic 267",
+  "milestone_full": "the ledger of done epics (through 419 items), closed at Epic 267 — The eye of the install",
   "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 181,
-  "work_items": 418,
-  "epics": 132,
+  "work_items": 419,
+  "epics": 133,
   "feature_surface": [
+    "Epic 267 — The eye of the install",
     "Epic 266 — The open door",
     "Epic 265 — The ledger of words, itemized",
     "Epic 264 — The quiet ones",
     "Epic 263 — The memory model",
-    "Epic 262 — What the reader was actually seeing",
-    "Epic 261 — The golden journey, walked live"
+    "Epic 262 — What the reader was actually seeing"
   ]
 }

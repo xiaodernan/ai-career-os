@@ -75,6 +75,13 @@ screen. A malformed inbound value is replaced, never refused.
 | GET | `/admin/freshness` | the eight "newest row" reads the overseer watches: a flows list of {id, table, newest} for users, applications, interview_sessions, agent_runs, ai_usage_events, knowledge_sources, job_matches, offers — newest is each table's max clock as an ISO instant, or null for a quiet table. Instants only; no row, no name, no reader's content. (Epic 254) |
 | GET | `/admin/cohort` | the quiet cohort, twelve weeks at a time: {weeks, weeksRequested, cohort:[{week, registered, active}]}. "Active" means the literal disjunction of the four tables that record doing — application, interview session, conversation, resume; nothing more is claimed. `?weeks=` bounds the window (1–26, default 12; out-of-range answers with the default). Distinct readers only; no name, no row, no reader's content. (Epic 264) |
 | GET | `/admin/funnel` | where the readers fall — distinct readers counted straight off the tables: a stages list of {id, readers} in the order registered, uploaded, applied, interviewed, offered, plus matchedReaders (a side signal, never a funnel stage — readers apply without ever seeing a match). Distinct readers only; no row, no name, no reader's content. The seed corpus skews stages toward registration volume; treat it as this install's history, not conversion prediction. (Epic 258) |
+| GET | `/admin/attention` | the eye of the install — counts over the trailing 30 days: {days, landings, dwells, acts, signedLandings, anonymousLandings, dwellPerLandingMs, topLandings[{path, landings, dwells, acts}]}. Browser clocks, no per-reader row leaves the surface; instants-only. (Epic 267) |
+
+### Telemetry (`/telemetry`)
+
+| Method | Path | Body / notes |
+|---|---|---|
+| POST | `/telemetry/attention` | `{journey?, path, event, value?}` → records one attention row. `event` is land \| dwell \| act; unauthenticated rows are welcome and counted as anonymous; `/admin*` paths are dropped at the door. Browser-sends via keepalive on page mount and on unmount. |
 
 ### Auth (`/auth`)
 

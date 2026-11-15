@@ -12,6 +12,7 @@ import { SkipLink } from "@/components/layout/skip-link";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
+import { AttentionSensor } from "@/lib/hooks/attention";
 import { renewPushSubscription } from "@/lib/hooks/push";
 import { onPushRenewal } from "@/lib/push";
 import { readStoredLocale, useLocale } from "@/lib/i18n/locale-context";
@@ -115,6 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TooltipProvider delayDuration={200}>
       <CommandPaletteProvider>
         <SkipLink />
+        <AttentionSensor />
         <div className="flex min-h-dvh">
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col">

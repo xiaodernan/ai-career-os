@@ -66,6 +66,24 @@ interface AdminCohort {
   weeksRequested?: number;
 }
 
+interface AdminAttentionItem {
+  path: string;
+  landings: number;
+  dwells: number;
+  acts: number;
+}
+
+interface AdminAttention {
+  days?: number;
+  landings?: number;
+  dwells?: number;
+  acts?: number;
+  signedLandings?: number;
+  anonymousLandings?: number;
+  dwellPerLandingMs?: number;
+  topLandings?: AdminAttentionItem[];
+}
+
 const SECRET = "123"; // the install's one passphrase, by the operator's own choosing
 
 const STATIONS = [
@@ -121,6 +139,7 @@ export default function AdminPage() {
   const [freshness, setFreshness] = React.useState<AdminFreshness | null>(null);
   const [funnel, setFunnel] = React.useState<AdminFunnel | null>(null);
   const [cohort, setCohort] = React.useState<AdminCohort | null>(null);
+  const [attention, setAttention] = React.useState<AdminAttention | null>(null);
 
   React.useEffect(() => {
     if (!unlocked) return;
@@ -142,6 +161,9 @@ export default function AdminPage() {
     api.get<AdminCohort>(endpoints.admin.cohort)
       .then((data) => { if (!cancelled) setCohort(data); })
       .catch(() => { /* as above — a signup cohort is a courtesy, never a blocker */ });
+    api.get<AdminAttention>(endpoints.admin.attention)
+      .then((data) => { if (!cancelled) setAttention(data); })
+      .catch(() => { /* as above — a falling plank is a courtesy, never a blocker */ });
     return () => { cancelled = true; };
   }, [unlocked]);
 
@@ -375,6 +397,56 @@ export default function AdminPage() {
             </>
           );
         })()}
+      </section>
+
+      <section aria-label={t("admin.attentionTitle")}>
+        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.attentionTitle")}</h2>
+        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.attentionLede")}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { labelKey: "admin.attentionLandings", value: attention?.landings },
+            { labelKey: "admin.attentionDwells", value: attention?.dwells },
+            { labelKey: "admin.attentionActs", value: attention?.acts },
+            { labelKey: "admin.attentionAvgDwell", value: attention?.dwellPerLandingMs !== undefined ? Math.round(attention.dwellPerLandingMs) : undefined },
+            { labelKey: "admin.attentionSignedLandings", value: attention?.signedLandings },
+            { labelKey: "admin.attentionAnonymousLandings", value: attention?.anonymousLandings },
+          ].map((item, index) => (
+            <div key={index} className="rounded-2xl border border-border/60 bg-card/60 p-4">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t(item.labelKey)}</p>
+              <p className="mt-2 font-serif text-2xl font-semibold tabular-nums">{item.value === undefined ? "—" : formatNumber(item.value)}</p>
+            </div>
+          ))}
+        </div>
+        <h3 className="mt-5 font-serif text-base font-semibold tracking-tight">{t("admin.attentionTopTitle")}</h3>
+        <div className="mt-3 overflow-hidden rounded-2xl border border-border/60">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border/60 bg-muted/40 text-left text-2xs uppercase tracking-widest text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2.5">{t("admin.attentionTopPath")}</th>
+                <th className="px-4 py-2.5 text-right">{t("admin.attentionTopLandings")}</th>
+                <th className="px-4 py-2.5 text-right">{t("admin.attentionTopActs")}</th>
+                <th className="px-4 py-2.5 text-right">{t("admin.attentionTopActRate")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {(attention?.topLandings ?? []).slice(0, 12).map((row) => {
+                const rate = row.landings > 0 ? Math.round((row.acts / row.landings) * 100) : 0;
+                return (
+                  <tr key={row.path}>
+                    <td className="px-4 py-2 font-mono text-2xs tabular-nums text-muted-foreground">{row.path}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{formatNumber(row.landings)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{formatNumber(row.acts)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{rate}%</td>
+                  </tr>
+                );
+              })}
+              {(attention?.topLandings ?? []).length === 0 && (
+                <tr><td colSpan={4} className="px-4 py-4 text-center text-2xs text-muted-foreground">—</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{t("admin.attentionFootnote")}</p>
       </section>
 
       <section>
