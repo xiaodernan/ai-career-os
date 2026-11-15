@@ -17,13 +17,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminTrendsController {
 
     private final AdminTrendsService trends;
+    private final AdminFreshnessService freshness;
 
-    public AdminTrendsController(AdminTrendsService trends) {
+    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness) {
         this.trends = trends;
+        this.freshness = freshness;
     }
 
     @GetMapping("/trends")
     public Map<String, Object> trends(@RequestParam(defaultValue = "12") int weeks) {
         return trends.trends(weeks);
+    }
+
+    @GetMapping("/freshness")
+    public Map<String, Object> freshness() {
+        return freshness.freshness();
     }
 }

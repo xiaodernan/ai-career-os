@@ -6878,6 +6878,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **254** Are the rivers flowing — the freshness strip on the overseer's wall (2026-11-16).
+
+  (The operator's second question after "how big is this place?" is "…but is anything
+  arriving?" — a picture can look perfect while the tables sit silent for weeks.
+  `GET /api/v1/admin/freshness` answers with eight "newest row" reads off the tables
+  the product already writes: **users · applications · interview_sessions · agent_runs
+  · ai_usage_events · knowledge_sources · job_matches · offers**, each carrying the
+  table's `max(clock)` as an ISO instant, or `null` for a quiet river — an instant is
+  never a row, a name or a reader's content. Closed table list as constants, never a
+  parameter, so the SQL is a floor plan, not a template. Cached through the same
+  `AdminCache` (30s TTL, keys `careeros:v1:admin:freshness`), fail-open like every
+  branch. The `/admin` page gains one slim bordered strip under the stat tiles —
+  each river's name beside its newest row in the reader's own language and direction
+  (`relativeTime`, both locales), computed at render time from the ISO instants so the
+  copy can't drift from the clock it describes. Measured live: every river is today's
+  water — users 06:13Z, applications 01:47Z, agent_runs 03:03Z, offers 2026-11-14 —
+  nothing reads as false freshness; a quiet table answers `null` and renders the dash,
+  never epoch-zero. Backend `AdminFreshnessServiceTest` 3/3 (closed list in order with
+  ISO instants, quiet-table null, the `Instant`/not-the-local-zone pin); response-shape
+  census 226 (`AdminFreshnessService.Flow`, private, reaches no route — same class as
+  `Purge`/`Series`). Full offline suite **2804 passed**; `vitest` **1481/1481**; budget
+  OK at 340; verify_gates **569/569**; `/admin` **249 kB gzip** live on the rebuilt
+  image, HTTP 200.)
+
 - [x] **253** The tally, cached — a read-through for the overseer's wall (2026-11-16).
 
   (The operator's ask was explicit: Redis and caches done right, not cargo-culted.

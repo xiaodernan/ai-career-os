@@ -1110,8 +1110,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # its own query builder). Private to the module and reaching no route, like `Purge`,
     # `Reading`, `Entry` and `Pending`; held to the opener for the same reason -- this walk
     # reads declarations, not routes, so the receipt joins the census.
-    assert len(declared) == 225, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 225 measured"
+    # 226 with Epic 254's `Flow` (the id/table/column triple AdminFreshnessService reads for
+    # the freshness strip) -- same class, same reason, same treatment.
+    assert len(declared) == 226, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 226 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

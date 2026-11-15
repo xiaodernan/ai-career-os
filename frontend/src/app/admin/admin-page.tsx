@@ -10,6 +10,7 @@ import {
   Lock,
   Sparkles,
   Users,
+  Waves,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, relativeTime } from "@/lib/format";
 import { seriesTotal, projectedSparkline } from "@/lib/admin-trend";
 
 interface AdminStats {
@@ -48,6 +49,10 @@ interface AdminTrends {
   weeks?: string[];
   series?: Record<string, number[] | undefined>;
   weeksRequested?: number;
+}
+
+interface AdminFreshness {
+  flows?: Array<{ id: string; table: string; newest: string | null }>;
 }
 
 const SECRET = "123"; // the install's one passphrase, by the operator's own choosing
@@ -88,12 +93,13 @@ const TREND_SERIES = [
  * of what it is. Counts only — no name, no content, no per-user row.
  */
 export default function AdminPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [unlocked, setUnlocked] = React.useState(false);
   const [phrase, setPhrase] = React.useState("");
   const [wrong, setWrong] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats | null>(null);
   const [trends, setTrends] = React.useState<AdminTrends | null>(null);
+  const [freshness, setFreshness] = React.useState<AdminFreshness | null>(null);
 
   React.useEffect(() => {
     if (!unlocked) return;
@@ -106,6 +112,9 @@ export default function AdminPage() {
     api.get<AdminTrends>(endpoints.admin.trends, { weeks: 12 })
       .then((data) => { if (!cancelled) setTrends(data); })
       .catch(() => { /* as above */ });
+    api.get<AdminFreshness>(endpoints.admin.freshness)
+      .then((data) => { if (!cancelled) setFreshness(data); })
+      .catch(() => { /* as above — instants are a courtesy, never a blocker */ });
     return () => { cancelled = true; };
   }, [unlocked]);
 
@@ -212,6 +221,26 @@ export default function AdminPage() {
             </div>
           );
         })}
+      </section>
+
+      <section aria-label={t("admin.flowTitle")}>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-border/60 bg-card/40 px-4 py-3 text-xs">
+          <span className="flex items-center gap-2 font-semibold text-muted-foreground">
+            <Waves aria-hidden className="size-3.5" />
+            {t("admin.flowTitle")}
+          </span>
+          {(freshness?.flows ?? []).map((flow) => (
+            <span key={flow.id} className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground">{flow.id}</span>
+              <span className="tabular-nums text-foreground">
+                {flow.newest ? relativeTime(flow.newest, locale) : "—"}
+              </span>
+            </span>
+          ))}
+          {freshness && freshness.flows?.length === 0 && (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </div>
       </section>
 
       <section>

@@ -3956,6 +3956,7 @@ export const translations = {
       aiEventsLabel: "AI calls",
       trendProjection:
         "The dashed half of each line is a straight line through the trailing twelve weeks — least squares, nothing more. A falling window projects softer than zero and clamps there; a flat window projects flat. Not a forecast, not a market move.",
+      flowTitle: "Newest rows, straight off the tables",
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
       journeyTitle: "The golden journey, station by station",
@@ -7731,6 +7732,7 @@ export const translations = {
       aiEventsLabel: "AI 调用",
       trendProjection:
         "每条线的虚线段是一条穿过最近十二周的直线——最小二乘，仅此而已。下降的窗口向零投影并在此处截断；平坦的窗口投影出平坦。这不是预测，也不是行情。",
+      flowTitle: "最新一行，现拉现查",
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
       journeyTitle: "黄金旅程，逐站验收",
