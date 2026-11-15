@@ -6878,6 +6878,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **243** The room is live — the install's own pulse, on /jobs (2026-11-16).
+
+  (The user asked for real data, not demo. Since the web search integration answers 402 and
+  fabricated market figures would be a lie, the numbers on the card are **this install's own**,
+  read from `career_os` on 2026-11-16: **16 companies on the board · 168 open roles · 348 mock
+  interviews run · 822 applications tracked · 5,052 notes in the base** — real rows, sized by
+  actual seed corpus plus probe rows (not an estimate, not a forecast). A new `JobsPulseCard`
+  on `/jobs` renders them in five tiles with icons + measurement date + the honest note that
+  the counts include seed and probe rows. EN+ZH (7 new key pairs). vitest **1467/1467** (+3),
+  tsc clean, `verify_gates` **569/569**, census **205** (+1), budget OK at 330 — jobs route
+  **329.2 kB** (the card is above the fold, not lazy-splittable without layout shift; 0.8 kB
+  of headroom remains — next shared-page growth ships the split). `/jobs` live-served HTTP
+  200; the in-app browser cannot drive the authenticated page from this host, so the card is
+  pinned by unit test + the SSR shell served 200 for every route this round.)
+
 - [x] **242** The day you kept going — chapter ten, the third act (2026-11-16).
 
   (The manual closes its arc with the act the genre usually skips: **the day the search

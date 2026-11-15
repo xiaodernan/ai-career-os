@@ -158,7 +158,8 @@ describe("the browser's copy", () => {
     // 202 with Epic 237: `components/replies/not-yet-card.tsx`, the not-yet letter.
     // 203 with Epic 239: `components/layout/open-manual.tsx`, the manual riding along in the topbar.
     // 204 with Epic 241: `components/monitoring/operator-ledger-card.tsx`, measured, not guessed.
-    expect(browserSources().length).toBe(204);
+    // 205 with Epic 243: `components/jobs/pulse-card.tsx`, the room is live.
+    expect(browserSources().length).toBe(205);
   });
 
   it("finds a sentence, however long it is", () => {

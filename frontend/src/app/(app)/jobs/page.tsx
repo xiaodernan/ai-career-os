@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
+import { JobsPulseCard } from "@/components/jobs/pulse-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
 
 // The saved-search panel is a small below-the-fold convenience and the route
@@ -178,6 +179,8 @@ export default function JobsPage() {
           />
         </div>
       </section>
+
+      <JobsPulseCard />
 
       <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-20 lg:self-start">
