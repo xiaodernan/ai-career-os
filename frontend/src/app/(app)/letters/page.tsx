@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Copy, Feather, Link2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
+import { Hint } from "@/components/ui/hint";
 import { EmptyComposition } from "@/components/common/empty-composition";
 import { ErrorState } from "@/components/common/error-state";
 import { Badge } from "@/components/ui/badge";
@@ -222,15 +223,19 @@ function LetterCard({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 print:hidden">
-            <Button variant="ghost" size="icon-sm" onClick={onCopy} aria-label={t("letters.copy")} title={t("letters.copy")}>
-              <Copy aria-hidden className="size-4" />
-            </Button>
-            <Button variant="ghost" size="sm" asChild title={t("letters.openApplication")}>
-              <Link href={`/applications?application=${encodeURIComponent(letter.applicationId)}`}>
-                <Link2 aria-hidden className="size-4" />
-                <span className="hidden sm:inline">{t("letters.openApplication")}</span>
-              </Link>
-            </Button>
+            <Hint side="left" label={t("letters.copy")}>
+              <Button variant="ghost" size="icon-sm" onClick={onCopy} aria-label={t("letters.copy")} title={t("letters.copy")}>
+                <Copy aria-hidden className="size-4" />
+              </Button>
+            </Hint>
+            <Hint side="left" label={t("letters.openApplication")}>
+              <Button variant="ghost" size="sm" asChild title={t("letters.openApplication")}>
+                <Link href={`/applications?application=${encodeURIComponent(letter.applicationId)}`}>
+                  <Link2 aria-hidden className="size-4" />
+                  <span className="hidden sm:inline">{t("letters.openApplication")}</span>
+                </Link>
+              </Button>
+            </Hint>
           </div>
         </div>
         <div className="max-h-56 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">

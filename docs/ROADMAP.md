@@ -6878,6 +6878,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **247** The hint multiplies — main surfaces grow hover teaching (2026-11-16).
+
+  (The user's ask keeps ringing: "尽量在主界面上做出各种按键和操作的附带教学说明".
+  This round extends the `<Hint>` wrapper to the most-tapped icon-only actions across the product:
+  the three `/notifications` inbox row buttons (mark read / dismiss), the two `/letters` row buttons
+  (copy body, open the application). `<Hint>` now carries its own `<TooltipProvider>` — the app shell
+  already mounts one, but unit tests and any future public surface render in isolation, and a
+  silent missing-provider crash is worse than one redundant provider (measured: 6 failing calls
+  in the pages test tier before the fix; zero after). No new browser sources — census stayed **208**.
+  vitest **1467/1467**, tsc clean, `verify_gates` **569/569**, budget OK at 335, all three routes
+  live-served 200 on the rebuilt container.)
+
 - [x] **246** The relay's flaky cache-report, measured on the wire (2026-11-16).
 
   (The user kept asking why their API calls show low cache hit rate and "non-stream vs stream" confusion.

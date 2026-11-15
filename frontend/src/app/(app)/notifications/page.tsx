@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
+import { Hint } from "@/components/ui/hint";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -418,25 +419,29 @@ export default function NotificationsPage() {
                               </Button>
                             )}
                             {!item.read && (
+                              <Hint side="left" label={t("notifications.markReadAria", { title: name })}>
+                                <Button
+                                  size="icon-sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  aria-label={t("notifications.markReadAria", { title: name })}
+                                  onClick={() => markRead.mutate([item.key])}
+                                >
+                                  <Check aria-hidden />
+                                </Button>
+                              </Hint>
+                            )}
+                            <Hint side="left" label={t("notifications.dismissAria", { title: name })}>
                               <Button
                                 size="icon-sm"
                                 variant="ghost"
                                 disabled={busy}
-                                aria-label={t("notifications.markReadAria", { title: name })}
-                                onClick={() => markRead.mutate([item.key])}
+                                aria-label={t("notifications.dismissAria", { title: name })}
+                                onClick={() => dismiss.mutate(item.key)}
                               >
-                                <Check aria-hidden />
+                                <X aria-hidden />
                               </Button>
-                            )}
-                            <Button
-                              size="icon-sm"
-                              variant="ghost"
-                              disabled={busy}
-                              aria-label={t("notifications.dismissAria", { title: name })}
-                              onClick={() => dismiss.mutate(item.key)}
-                            >
-                              <X aria-hidden />
-                            </Button>
+                            </Hint>
                           </div>
                         </div>
                       </li>
