@@ -341,7 +341,7 @@ def test_the_floors_sentence_has_a_reader_on_both_screens() -> None:
         assert f'{{issue ?? t("{key}")}}' in text, (
             f"{rel} no longer falls back to {key!r} when the paste clears the floor, so the hint "
             "beside its textarea is blank whenever the paste is long enough")
-    table = read("frontend/src/lib/i18n/translations.ts")
+    table = read("frontend/src/lib/i18n/translations.ts") + read("frontend/src/lib/i18n/en.ts") + read("frontend/src/lib/i18n/zh.ts")
     assert table.count('pasteAtLeast: "') >= 2, (
         "the sentence `jdTextIssue` names is no longer in the translation table for every locale, "
         "so the refusal would render as its key")

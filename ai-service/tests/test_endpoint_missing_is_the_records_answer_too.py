@@ -326,7 +326,7 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
         and ('t("activity.detail.backToActivity")' in empty or "Back to activity" in empty), (
         "the screen's own record-gone copy moved: %s" % " ".join(empty.split())[:200])
     # The key it reads has to carry the sentence the reader needs, in the reader's language.
-    locale = read("frontend/src/lib/i18n/translations.ts")
+    locale = read("frontend/src/lib/i18n/translations.ts") + read("frontend/src/lib/i18n/en.ts") + read("frontend/src/lib/i18n/zh.ts")
     assert 'runGone: "This run is gone"' in locale, (
         "the screen's record-gone copy lost its sentence in the locale table")
     assert 'runGone: "\u8fd9\u6b21\u8fd0\u884c\u5df2\u7ecf\u4e0d\u5728\u4e86"' in locale, (
@@ -341,7 +341,7 @@ def test_the_run_a_user_opens_by_url_id_gets_the_version_sentence():
     assert 'return translate(key, path ? { route: path } : undefined) ?? key;' in read(MISSING), (
         "the fallback sentence is no longer read through the one translating call, so a reader "
         "whose language is not English gets the key back")
-    locale = read("frontend/src/lib/i18n/translations.ts")
+    locale = read("frontend/src/lib/i18n/translations.ts") + read("frontend/src/lib/i18n/en.ts") + read("frontend/src/lib/i18n/zh.ts")
     sentence = ("so this frontend and the backend it is talking to are different versions. "
                 "Nothing is shown in place of the real data.")
     assert locale.count(sentence) == 2, (

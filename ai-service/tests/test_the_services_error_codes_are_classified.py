@@ -215,7 +215,10 @@ def throw_sites() -> tuple[dict[str, set[str]], set[str]]:
 
 def error_sentences() -> list[dict[str, str]]:
     """The table's code -> sentence, one dict per language."""
-    source = TRANSLATIONS.read_text(encoding="utf-8")
+    # The tables split (Epic 265): translations.ts is now the seam; errorCodes lives in en.ts + zh.ts.
+    source = (TRANSLATIONS.read_text(encoding="utf-8")
+              + (TRANSLATIONS.parent / "en.ts").read_text(encoding="utf-8")
+              + (TRANSLATIONS.parent / "zh.ts").read_text(encoding="utf-8"))
     blocks = []
     for match in re.finditer(r"errorCodes:\s*\{", source):
         start = match.end()

@@ -30,6 +30,7 @@ FRONTEND = REPO_ROOT / "frontend" / "src"
 INTERVIEW_FEATURE = APP_ROOT / "features" / "interview.py"
 DIMENSIONS_MODULE = FRONTEND / "lib" / "dimensions.ts"
 TRANSLATIONS = FRONTEND / "lib" / "i18n" / "translations.ts"
+TABLES = (FRONTEND / "lib" / "i18n" / "en.ts", FRONTEND / "lib" / "i18n" / "zh.ts")
 
 
 def _service_dimensions() -> list[str]:
@@ -61,25 +62,14 @@ def _browser_dimensions() -> list[str]:
 def _locale_labels() -> dict[str, set[str]]:
     """The interview dimension labels the locale table holds, per language.
 
-    Read out of the table itself rather than restated here: a gate that
-    keeps its own copy of the vocabulary is a gate that goes green the
-    moment the two drift.
-
-    Each half is bounded by the next one, so a language whose own half has
-    no block cannot fall through to the other language's and pass on its
-    contents.
+    The table split (Epic 265) put the two languages in en.ts / zh.ts; the shape each
+    file carries is one language's whole half, at the same indentations the shared file
+    used to give them.
     """
-    source = TRANSLATIONS.read_text(encoding="utf-8")
     out: dict[str, set[str]] = {}
-    for language, nxt in (("en", "zh"), ("zh", None)):
-        half = source[source.index(f"  {language}: {{") :]
-        if nxt is not None:
-            half = half[: half.index(f"  {nxt}: {{")]
-        # The dimensions block holds four vocabularies; the interview one
-        # is the one these names live in. Reading the whole block would let
-        # a criterion's label satisfy a dimension -- two different tables
-        # that happen to share an indent.
-        block = _block(half, r"^ {4}dimensions: \{")
+    for language, table in (("en", TABLES[0]), ("zh", TABLES[1])):
+        source = table.read_text(encoding="utf-8")
+        block = _block(source, r"^ {4}dimensions: \{")
         if block is None:
             out[language] = set()
             continue

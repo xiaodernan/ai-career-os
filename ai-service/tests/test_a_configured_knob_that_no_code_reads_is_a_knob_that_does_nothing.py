@@ -82,7 +82,7 @@ FE_SOURCE = ROOT / "frontend" / "src" / "components" / "knowledge" / "source-act
 FE_ACTIONS = ROOT / "frontend" / "src" / "lib" / "hooks" / "actions.ts"
 # The upload refusals are copy now: the sentence naming the cap lives in the English
 # catalogue and the screen renders it, so the reader below follows the sentence there.
-FE_COPY = ROOT / "frontend" / "src" / "lib" / "i18n" / "translations.ts"
+FE_COPY = ROOT / "frontend" / "src" / "lib" / "i18n" / "en.ts"
 
 # ---------------------------------------------------------------- the population, pinned both ways
 
