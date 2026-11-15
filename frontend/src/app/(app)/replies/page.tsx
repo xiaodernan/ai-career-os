@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowUpRight, Inbox, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
+import { NotYetCard } from "@/components/replies/not-yet-card";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyComposition } from "@/components/common/empty-composition";
 import { ErrorState } from "@/components/common/error-state";
@@ -537,6 +538,9 @@ export default function RepliesPage() {
           }}
         />
       )}
+
+      {/* The not-yet letter (Epic 237): the reader already held the letter; help them put it down honestly. */}
+      <NotYetCard />
 
       <ConfirmDialog
         open={applyFor !== null}

@@ -1909,6 +1909,32 @@ export const translations = {
       emptyDescription:
         "Forward recruiter mail to your reply address and each letter lands here, attached to the application it answers.",
       paginationLabel: "Replies pages",
+      notYetTitle: "The not-yet letter — read it once more, better",
+      notYetDescription:
+        "Every recruiter's no is a letter a real person read yours and then wrote. Three shapes they actually write; your job is to take the one signal in each and keep it.",
+      notYetReset: "Start a fresh letter",
+      notYetDoor_calibrate_label: "The calibration",
+      notYetDoor_calibrate_quote: "“Other candidates whose backgrounds more closely match…”",
+      notYetDoor_calibrate_decode:
+        "The wall is the bar, not the craft. “More closely matched” almost never means “worse than you” — it means someone else fit their stack line better on paper.",
+      notYetDoor_calibrate_keep:
+        "If you want to know what “more closely” meant — ask. The thread is the one place a closed door sometimes opens.",
+      notYetDoor_hold_label: "The hold",
+      notYetDoor_hold_quote: "“The role has been put on hold for business reasons…”",
+      notYetDoor_hold_decode:
+        "An external constraint — budget, a reorg, a priority nobody told you about. Zero signal about your work; the shortest sentence in the genre, and the most empty.",
+      notYetDoor_hold_keep:
+        "Nothing to decode. File it under “company's problems” and get on with the week — the week is yours, not theirs.",
+      notYetDoor_impress_label: "The almost",
+      notYetDoor_impress_quote: "“We were impressed, but we've decided to move forward…”",
+      notYetDoor_impress_decode:
+        "Close. “Impressed” is a real word in this format. The tiebreaker went elsewhere — and it usually isn't the thing you spent the most time polishing.",
+      notYetDoor_impress_keep:
+        "The one question worth sending: “What made the difference?” The answer is worth more than the no.",
+      notYetKeepTitle: "The sentence you're keeping",
+      notYetKeepDescription: "Your own words — kept in this browser only.",
+      notYetKeepPlaceholder: "e.g. “Impressed. Ask what ‘match’ meant next time.”",
+      notYetKept: "Kept in this browser.",
     },
     /**
      * The second door's card (36.4). The card is the only screen that can turn the
@@ -5641,6 +5667,29 @@ export const translations = {
       emptyDescription:
         "把招聘方的邮件转发到你的回信地址，每封信都会落在这里，并挂到它回答的那次投递上。",
       paginationLabel: "回信分页",
+      notYetTitle: "这封「差一点」——再好好读一遍",
+      notYetDescription:
+        "每一封回信，都是真人读过你的信之后写的。这封不是判词，是一面装了框的镜子。这里有三种最常见的形状——你的活儿是从每一个里面取出那一条有用的信号，然后留下它。",
+      notYetReset: "换一封，重来",
+      notYetDoor_calibrate_label: "校准信",
+      notYetDoor_calibrate_quote: "“其他候选人的背景更贴合……”",
+      notYetDoor_calibrate_decode:
+        "墙在这里是门槛，不是你的手艺。「更贴合」几乎从不意味着「比你差」——它意味着纸面上有人更对准了这个栈。",
+      notYetDoor_calibrate_keep: "想知道「更贴合」指什么——去问。线程是唯一一个关上的门有时会重新打开的地方。",
+      notYetDoor_hold_label: "冰封信",
+      notYetDoor_hold_quote: "“这个岗位因业务原因已暂停招聘……”",
+      notYetDoor_hold_decode:
+        "一个外部约束——预算、重组、一个没人告诉你的优先级。这封信对你的工作没有任何含义；这是全类信件里最短、也最空的一句。",
+      notYetDoor_hold_keep: "不需要解码。把它归档到「公司的问题」里，这一周该干什么干什么——这一周是你的。",
+      notYetDoor_impress_label: "几乎信",
+      notYetDoor_impress_quote: "“我们很欣赏你，但已决定继续推进其他候选人……”",
+      notYetDoor_impress_decode:
+        "接近了。「欣赏」在这种文体里是一个真词。最后的取舍去了别处——而那取舍的理由，和你花最多时间打磨的东西，通常不是同一件事。",
+      notYetDoor_impress_keep: "就值得发出的一个问题：「是什么让你们决定的？」这个答案，比这封回信值钱。",
+      notYetKeepTitle: "你决定留下的那句话",
+      notYetKeepDescription: "你自己的话——只留在这个浏览器里。",
+      notYetKeepPlaceholder: "例如：「欣赏。下次问问那个‘匹配’指的是什么。」",
+      notYetKept: "已留在这个浏览器里。",
     },
     /** 第二道门的卡片（36.4）。每个动作都说清它要付出什么，而不是它做了什么。 */
     security: {

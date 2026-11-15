@@ -155,7 +155,8 @@ describe("the browser's copy", () => {
     // 198 with Epic 233: `components/playbook/first-week-game.tsx`, the playable first week.
     // 200 with Epic 235: `components/dashboard/nine-quests-card.tsx` + `components/layout/tour-visit-marker.tsx`, the walking tour.
     // 201 with Epic 236: `components/playbook/chapter-rail.tsx`, the manual's own index.
-    expect(browserSources().length).toBe(201);
+    // 202 with Epic 237: `components/replies/not-yet-card.tsx`, the not-yet letter.
+    expect(browserSources().length).toBe(202);
   });
 
   it("finds a sentence, however long it is", () => {

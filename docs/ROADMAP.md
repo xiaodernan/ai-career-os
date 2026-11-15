@@ -6878,6 +6878,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **237** The not-yet letter — the door nobody writes down (2026-11-16).
+
+  (`/replies` — where recruiter mail physically lands — finally answers the moment after the no.
+  **The not-yet letter**: three doors, the three shapes recruiter letters actually take — The
+  calibration ("…whose backgrounds more closely match" — the wall is the bar, not the craft), The
+  hold ("…put on hold for business reasons" — an external constraint, zero signal about your work),
+  The almost ("…impressed, but we've decided to move forward" — close; the tiebreaker went elsewhere
+  and usually isn't the thing you polished). Each door expands in place; each keeps the one
+  sentence worth leaving with. Below the inbox: one kept sentence (`careeros.notyet.v1`), the same
+  kept-sentence contract the debrief and the ledger use. EN+ZH (21 new key pairs). Not a game, not
+  a score — the letters are letters. Pinned by storage unit tests + SSR shape; the page itself was
+  verified on the rebuilt container (HTTP 200; the auth splash hides the card from the anonymous
+  shell, as with every route behind the guard). vitest **1464/1464**, tsc clean, `verify_gates`
+  **569/569**, census **202** (+1), budget OK at 330 (jobs route now **329.4 kB** — **0.6 kB of
+  headroom remains**; the per-locale table split is overdue, and the next shared-table growth
+  ships it).)
+
 - [x] **236** The chapter rail — the manual's own index (2026-11-16).
 
   (`/playbook` grew to ten chapters this week and a reader shouldn't have to skim a manual that
