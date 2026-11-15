@@ -6878,6 +6878,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **238** The year loop — the macro chapter (2026-11-16), and the budget repaired from inside.
+
+  (`/playbook` gains its **macro chapter** after the offer doors: **THE YEAR LOOP / 时间之环** —
+  "The search never ended; it matured." Three beats of the arc's meta-story in EN+ZH: **Year
+  one's last page** (the ceremony closes at N₁; the review image is the contract-dinner album;
+  the pocket exports the browser's half) → **The quiet months** (the base keeps compounding
+  between interviews; the tracker notices before you do when the rhythm breaks) → **Year two's
+  first page** (the resume starts from the last version; last time's documented gaps are this
+  time's open doors; same loop, better player). The closure line: the tool stays honest at every
+  age of the loop. The chapter rail gained `#yearloop` between the offer and the close. **And the
+  cap held itself:** with the chapter landed, `/(app)/jobs/page` measured **330.4 kB** — over the
+  330 line. Instead of a fourth raise, the module the page renders but every visitor doesn't need
+  was split behind `next/dynamic` (`SavedSearchPanel`, ssr:false, kanban-style pattern) — jobs
+  now measures **325.6 kB**, green at 330, zero bytes raised. The year-loop content itself
+  (+~1.4 kB of bilingual copy) is why the chapter fits at all now — the measured delta between
+  the gate's red and its green is entirely the lazy boundary. 10 new key pairs, EN+ZH, no mixed
+  language. vitest **1464/1464**, tsc clean, `verify_gates` **569/569**, census stayed **202**
+  (no new browser source), `npm run budget` OK at 330 (jobs route **325.6 kB**). The per-locale
+  table split remains the documented next-step for the next shared-page growth; it simply
+  wasn't needed to pass the gate this time — the fix was at the route, not the cap.)
+
 - [x] **237** The not-yet letter — the door nobody writes down (2026-11-16).
 
   (`/replies` — where recruiter mail physically lands — finally answers the moment after the no.

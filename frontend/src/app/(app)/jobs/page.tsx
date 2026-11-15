@@ -17,7 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobFilterPanel } from "@/components/jobs/job-filters";
-import { SavedSearchPanel } from "@/components/jobs/saved-search-panel";
+
+// The saved-search panel is a small below-the-fold convenience and the route
+// is already the heaviest page in the app; splitting it out like the kanban
+// keeps the shared first-load under the gate's line instead of raising it.
+const SavedSearchPanel = dynamic(
+  () => import("@/components/jobs/saved-search-panel").then((mod) => mod.SavedSearchPanel),
+  { ssr: false, loading: () => <LoadingJobCardSkeleton count={1} /> }
+);
 // The two AI dialogs are the heaviest things the jobs board ships; they are
 // below the fold and open on click, so they leave the first-load path (the
 // bundle budget holds the line at 310 kB gzip).

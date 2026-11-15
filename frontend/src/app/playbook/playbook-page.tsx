@@ -276,6 +276,31 @@ export default function PlaybookPage() {
           </ol>
         </section>
 
+        {/* The year loop — the macro chapter: the arc is a spinner, not a line */}
+        <section id="yearloop" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.yearloopEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">08</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.yearloopTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.yearloopIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {[
+              { title: t("playbook.beatYearOneTitle"), body: t("playbook.beatYearOneBody") },
+              { title: t("playbook.beatQuietTitle"), body: t("playbook.beatQuietBody") },
+              { title: t("playbook.beatYearTwoTitle"), body: t("playbook.beatYearTwoBody") },
+            ].map((beat, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {String(index * 4 + 1).padStart(2, "0")} · {beat.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{beat.body}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.yearloopClosing")}</p>
+        </section>
+
         {/* Colophon */}
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>

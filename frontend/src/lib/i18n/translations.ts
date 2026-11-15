@@ -3778,6 +3778,21 @@ export const translations = {
       firstweekCta: "Finish it for real",
       tocEyebrow: "Jump to",
       colophonTitle: "The close",
+      yearloopEyebrow: "THE YEAR LOOP",
+      yearloopTitle: "The search never ended; it matured",
+      yearloopIntro:
+        "An offer is a signature at the top of a staircase. The loop doesn't terminate — it ages; the next seek begins with the previous resume, not from zero, and the ceremony you already lived is the rehearsal the next year runs on.",
+      beatYearOneTitle: "Year one's last page",
+      beatYearOneBody:
+        "The ceremony closes at N₁. The review image is the album for the contract dinner, the pocket exports the browser's half, and the threads you kept are the ones it leans on.",
+      beatQuietTitle: "The quiet months",
+      beatQuietBody:
+        "No interviews scheduled for a while? The base keeps compounding — notes age well, resumable counts stay visible, and the tracker notices before you do when the rhythm breaks.",
+      beatYearTwoTitle: "Year two's first page",
+      beatYearTwoBody:
+        "New team, new craft, new seek. The resume starts from the last version, the gaps you documented last time are open ones this time, and the same loop runs — same rules, better player.",
+      yearloopClosing:
+        "The tool stays honest at every age of the loop — that is the whole idea. Year two doesn't start over; it inherits everything you already proved.",
       printFromHere: "Print this manual",
     },
     /**
@@ -7353,6 +7368,21 @@ export const translations = {
       firstweekCta: "这次是真的做一遍",
       tocEyebrow: "直达章节",
       colophonTitle: "终章",
+      yearloopEyebrow: "时间之环",
+      yearloopTitle: "搜索从未终结——它只是长大了",
+      yearloopIntro:
+        "一份录用是签在扶梯顶端的名字。这一圈没有终点——它在年复一年里长大；下一次出发，从上一份简历的地方走，不从零开始，而你已经走过的那一圈，是这一年的预演。",
+      beatYearOneTitle: "第一年的最后一页",
+      beatYearOneBody:
+        "收官仪式在 N₁ 闭合。年度回顾图是那顿签约晚餐桌上的相册，口袋导出所有只留在浏览器里的部分，留下的线程，是它之后能倚着的那些。",
+      beatQuietTitle: "安静的几个月",
+      beatQuietBody:
+        "一段时间没有面试？知识库还在复利——笔记越放越值钱，数字一直看在眼里，节奏一断，投递追踪比你先知道。",
+      beatYearTwoTitle: "第二年的第一页",
+      beatYearTwoBody:
+        "新团队、新手艺、新一圈。简历从上一版开始，上一回记录下来的差距，这一次是打开过的门，而同样的圈还跑——同样的规则，更好的玩家。",
+      yearloopClosing:
+        "这个工具在每个年龄段都保持诚实——这就是全部的想法。第二年不是重来；它继承你已经证明过的一切。",
       printFromHere: "打印这份指南",
     },
     /**
