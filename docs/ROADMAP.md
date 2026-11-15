@@ -6878,6 +6878,31 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **253** The tally, cached — a read-through for the overseer's wall (2026-11-16).
+
+  (The operator's ask was explicit: Redis and caches done right, not cargo-culted.
+  `GET /admin/stats` recomputes twenty aggregates on every read and
+  `/admin/trends` five more — perfectly safe to serve 30 seconds stale, which is
+  the whole trick. `AdminCache` mirrors the dashboard cache's (Epic 125) proven
+  shape: `careeros.admin.cache` off/caffeine/redis (default **off**, byte-for-byte
+  pre-cache behaviour), `careeros.admin.cache-ttl-seconds: 30`, a ±10% uniform TTL
+  spread on the Redis branch (no replica-fleet refill convergence), fail-open on
+  every branch (a Redis outage is a miss plus a WARN line, never a failed ledger),
+  and a payload that round-trips through JSON with **every narrow integer widened to
+  a Long** so a hit and a miss answer the same shape, not two types for one route.
+  Keys are `careeros:v1:admin:{stats | trends:{n}}` — bump the prefix when the payload
+  shape changes. Enabled on the dev stack temporarily to measure: stats **330ms →
+  11ms** (miss → hit), trends **60ms → 12ms**, key observed in Redis with the payload
+  exactly as computed; the tracked compose stays default-off as shipped, enabled by
+  env var like the dashboard's. Prometheus meter `careeros.admin.cache` tagged
+  backend/outcome registered on the alarm roster (`careeros_admin_cache_total`) and
+  excused by name in DEPLOYMENT.md — a cache outage is not a fault to page on.
+  Unit gate `AdminCacheTest` 5/5 (mode parsing fails closed, off never touches a
+  null Redis, caffeine round-trip + key isolation, deep-normalize of a nested tree,
+  the jitter band). Full offline suite **2804 passed**.
+  Backend contract gate 18/18; AdminStatsControllerTest 2/2 unchanged; application.yml
+  documents the seam and the YAML 1.1 `false` trap; architecture.md §3 names it.)
+
 - [x] **252** The straight line through the window — the projection, honestly labeled (2026-11-16).
 
   (The operator's ask included 趋势预测 — "trend prediction" — so the overseer's wall now

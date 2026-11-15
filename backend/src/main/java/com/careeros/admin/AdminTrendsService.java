@@ -28,28 +28,34 @@ public class AdminTrendsService {
             new Series("ai_usage_events", "created_at", "aiUsageEvents"));
 
     private final JdbcTemplate jdbc;
+    private final AdminCache cache;
 
-    public AdminTrendsService(JdbcTemplate jdbc) {
+    public AdminTrendsService(JdbcTemplate jdbc, AdminCache cache) {
         this.jdbc = jdbc;
+        this.cache = cache;
     }
 
     /** The full trend payload: the shared week list plus one dense array per series. */
     public Map<String, Object> trends(int weeks) {
         int span = AdminTrends.clampWeeks(weeks);
-        LocalDate now = LocalDate.now(ZoneOffset.UTC);
-        List<String> weeksList = AdminTrends.weeksList(now, span);
-        var start = AdminTrends.windowStart(now, span);
+        // five aggregates the page re-polls; a 30-second window of staleness is honest here (Epic 253)
+        return cache.get("trends:" + span).orElseGet(() -> {
+            LocalDate now = LocalDate.now(ZoneOffset.UTC);
+            List<String> weeksList = AdminTrends.weeksList(now, span);
+            var start = AdminTrends.windowStart(now, span);
 
-        Map<String, List<Long>> series = new java.util.LinkedHashMap<>();
-        for (Series s : SERIES) {
-            series.put(s.key(), dense(s, start, weeksList));
-        }
+            Map<String, List<Long>> series = new java.util.LinkedHashMap<>();
+            for (Series s : SERIES) {
+                series.put(s.key(), dense(s, start, weeksList));
+            }
 
-        Map<String, Object> out = new java.util.LinkedHashMap<>();
-        out.put("weeks", weeksList);
-        out.put("series", series);
-        out.put("weeksRequested", span);
-        return out;
+            Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("weeks", weeksList);
+            out.put("series", series);
+            out.put("weeksRequested", span);
+            cache.put("trends:" + span, out);
+            return out;
+        });
     }
 
     private List<Long> dense(Series s, java.time.Instant start, List<String> weeksList) {

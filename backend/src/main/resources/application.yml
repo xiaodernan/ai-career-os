@@ -37,7 +37,8 @@ spring:
     redis:
       url: ${REDIS_URL:redis://localhost:6379/0}
       # Redis backs the sliding-window rate limiter, the health ping and (when
-      # DASHBOARD_CACHE=redis) the dashboard read-through cache. The backend is
+      # DASHBOARD_CACHE=redis / CAREEROS_ADMIN_CACHE=redis) the dashboard and admin
+      # read-through caches. The backend is
       # fail-open without it, so failing fast is strictly better than waiting --
       # the limiter's documented fail-open path then serves the request instead of
       # stalling on it. Unset, Lettuce's defaults applied and a Redis outage left
@@ -207,6 +208,15 @@ careeros:
     # off, but the yml is the source of the trap.
     cache: "off"
     cache-ttl-seconds: 45
+  admin:
+    # Epic 253 -- the overseer's read-through cache. off = passthrough (the default,
+    # byte for byte the pre-cache behaviour), caffeine = process-local, redis = shared
+    # across replicas over the same connection the rate limiter uses. TTL is the only
+    # invalidation: the operator's tally is a "how big is this install" question, and a
+    # 30-second window of staleness is the whole cost. Enable with the env var
+    # CAREEROS_ADMIN_CACHE=redis (or CAREEROS_ADMIN_CACHE_TTL_SECONDS to retune).
+    cache: "off"
+    cache-ttl-seconds: 30
   ai:
     # Epic 177 — today's AI spend on the monitoring page, straight off ai_usage_events.
     # The caller pays for every model call, so the day's total is the one number that

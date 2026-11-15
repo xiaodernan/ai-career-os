@@ -85,6 +85,7 @@ AI_OPS_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" /
 RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
 QUEUE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "queue" / "QueueMetrics.java"
 DASHBOARD_CACHE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "report" / "service" / "DashboardCache.java"
+ADMIN_CACHE_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "admin" / "AdminCache.java"
 GATEWAY_RATE_LIMIT_FILTER = ROOT / "gateway" / "src" / "main" / "java" / "com" / "careeros" / "gateway" / "GatewayRateLimitFilter.java"
 # The population of MeterRegistry users the roster must cover. The gateway joined it
 # when its edge token bucket's refusal counter moved into the `careeros.` namespace
@@ -125,6 +126,7 @@ METRICS = {
     "careeros_retention_deleted_rows_total": (RETENTION_METRICS, "careeros.retention.deleted_rows"),
     "careeros_retention_last_sweep_timestamp": (RETENTION_METRICS, "careeros.retention.last.sweep.timestamp"),
     "careeros_dashboard_cache_total": (DASHBOARD_CACHE_METRICS, "careeros.dashboard.cache"),
+    "careeros_admin_cache_total": (ADMIN_CACHE_METRICS, "careeros.admin.cache"),
     "careeros_ratelimit_decisions_total": (RATE_LIMIT_METRICS, "careeros.ratelimit.decisions"),
     # 48.2's per-pass verdict. The sweep's own timestamp moves through a night whose listing the
     # store refused -- the pass finishes, its tables and its purge run -- so the alarm about the

@@ -9,6 +9,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * The operator's tally — counts are the contract whatever the numbers are.
@@ -16,11 +18,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 class AdminStatsControllerTest {
 
+    private static AdminCache offCache() {
+        return new AdminCache(null, new SimpleMeterRegistry(), new ObjectMapper(), "off", 30);
+    }
+
     @Test
     void answersEveryCountWithZeroWhenTheRowsAreUnknown() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), org.mockito.ArgumentMatchers.<Class<Long>>any())).thenReturn(5L);
-        AdminStatsController controller = new AdminStatsController(jdbc);
+        AdminStatsController controller = new AdminStatsController(jdbc, offCache());
         var stats = controller.stats();
 
         List<String> keys = List.of(
@@ -39,7 +45,7 @@ class AdminStatsControllerTest {
     void treatsANullCountAsZero() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), org.mockito.ArgumentMatchers.<Class<Long>>any())).thenReturn(null);
-        AdminStatsController controller = new AdminStatsController(jdbc);
+        AdminStatsController controller = new AdminStatsController(jdbc, offCache());
         var stats = controller.stats();
         assertThat(stats.get("users")).isEqualTo(0L);
         assertThat(stats.get("offers")).isEqualTo(0L);
