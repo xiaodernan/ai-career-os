@@ -6878,6 +6878,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **232** Structured envelopes unwind at the JSON seam every task reads (2026-11-15).
+
+  (The golden journey (`scripts/journey_api.py`), run live against the real `gpt-6-sol` after the
+  Epic-220 interview-opening fix, printed `{'tailored': {}, 'diff': {'accepted': [], 'rejected': []}}`.
+  Tracing the exact run (`agent_traces`, kind=`tailor`) showed the relay's literal reply was
+  `{"changes":[],"summary":null,"skillOrder":[],"notes":[]}` — the model's honest refusal to fabricate
+  on a synthetic JD/resume pair, **not** a parser failure; the verifier door was already holding.
+  But the same live traffic proved the *class* still existed at the structured seam: every JSON
+  task goes through `ask_json → _coerce_json`, and the interview fix had lived only in
+  `interview.py`'s prose path. `_coerce_json` now unwinds a **single-key envelope whose value is
+  itself a JSON object** (`message`/`text`/`content`/`answer`/`response`/`reply`/`opener`/`opening`,
+  exactly one key, fenced or bare — plus an outer-brace span so prose around the payload still
+  recovers) before handing the dict to the callers. Same guard discipline as the opening fix:
+  anything else is returned untouched. Pinned by **11 new unit tests**
+  (`test_the_json_tasks_unwrap_the_models_json_envelope.py`), including the payload shape the
+  journey measured. Full offline suite from `ai-service/`: **2804 passed, 8 skipped**;
+  `verify_gates` **569/569**; the journey re-ran green end-to-end after the rebuild (34 stations;
+  the search-jobs station cost **64 ms warm / cold embedding 12–15 s through the relay, 12 h TTL /
+  10k max Caffeine cache — measured, and now documented here**).)
+
 - [x] **231** Nine moves from hello to thank-you — the front door learns the whole arc (2026-11-15).
 
   (The public landing gained the map the product had never shown. **Nine moves, from hello to

@@ -4,6 +4,7 @@ Every feature/agent must call through here so PRD §31/§33 observability holds.
 """
 
 import json
+import re
 import time
 from typing import Any
 
@@ -124,6 +125,59 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
     return resp
 
 
+_ENVELOPE_KEYS = ("message", "text", "content", "answer", "response", "reply",
+                  "opener", "opening")
+
+
+def _inner_from_envelope_text(value: str) -> dict | None:
+    """The object inside an answer field, unwrapping a fenced block if one was used."""
+    s = (value or "").strip()
+    if s.startswith("```"):
+        m = re.search(r"```(?:json)?\s*(.*?)\s*```", s, re.DOTALL)
+        if m:
+            s = m.group(1).strip()
+    if s.startswith("{"):
+        try:
+            inner = json.loads(s)
+        except json.JSONDecodeError:
+            start, end = s.find("{"), s.rfind("}")
+            if start == -1 or end <= start:
+                return None
+            try:
+                inner = json.loads(s[start:end + 1])
+            except json.JSONDecodeError:
+                return None
+        return inner if isinstance(inner, dict) else None
+    start, end = s.find("{"), s.rfind("}")
+    if start != -1 and end > start:
+        try:
+            inner = json.loads(s[start:end + 1])
+        except json.JSONDecodeError:
+            return None
+        return inner if isinstance(inner, dict) else None
+    return None
+
+
+def _unwrap_dict_envelope(parsed: dict) -> dict:
+    """Undo the model's habit of answering with one text field carrying the JSON.
+
+    The 2026-11-15 golden journey measured it live: the relay answered the tailor
+    task with `{"message": "<the real JSON>"}`, `_coerce_json` parsed that faithfully
+    (it is valid outer JSON) and every caller silently saw an empty shape. The
+    interview opening had the same failure, fixed by `interview.unwrap_text_envelope`
+    for prose; this is the structured twin, at the seam every structured task reads.
+    Guarded on purpose: exactly one key, a known answer field, an inner object —
+    anything else is returned untouched.
+    """
+    if not isinstance(parsed, dict) or len(parsed) != 1:
+        return parsed
+    (key, value), = parsed.items()
+    if key not in _ENVELOPE_KEYS or not isinstance(value, str):
+        return parsed
+    inner = _inner_from_envelope_text(value)
+    return inner if inner is not None else parsed
+
+
 def _coerce_json(text: str) -> dict:
     """Parse an LLM reply into a dict, tolerating code fences and stray prose.
 
@@ -151,7 +205,7 @@ def _coerce_json(text: str) -> dict:
     if not isinstance(parsed, dict):
         raise json.JSONDecodeError(
             "the reply is valid JSON but not a JSON object", candidate, 0)
-    return parsed
+    return _unwrap_dict_envelope(parsed)
 
 
 async def ask_json(req: LLMRequest, **kw) -> dict:
