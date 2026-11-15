@@ -367,10 +367,18 @@
   border-color: var(--border);
 }
 
-/* Ensure interactive elements have a minimum touch target size */
-button, a, [role="button"], input, select, textarea {
-  min-height: 44px;
-  min-width: 44px;
+/* Ensure interactive elements have a minimum touch target size — scoped to coarse
+ * pointers (fingers, styluses). The blanket floor was unscoped and priced into
+ * every row of the desktop sidebar: 24 nav items × 44px is 1056px of scroll on a
+ * 731px window, and the reader saw links sliced by the footer's edge. A fine
+ * pointer (mouse, trackpad) meets the WCAG AA target floor at 24px, and the
+ * product's own h-7 (28px) rows clear it comfortably — a scannable desktop rail,
+ * a 44px rail on touch, no in-between personality. */
+@media (pointer: coarse) {
+  button, a, [role="button"], input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Respect user's contrast preferences */

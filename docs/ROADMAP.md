@@ -6878,6 +6878,34 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **262** What the reader was actually seeing — measured, not imagined (2026-11-16).
+
+  (The frontend complaint, many times: "字体的变形 歪曲 重叠 扭曲 实体块互相重叠 挤压", "需要修改
+  一下". This time the diagnosis is a number, not a guess. First the harness: a **Playwright
+  visual sweep** (`e2e/visual-sweep.mjs`) — registers a throwaway account via the real API,
+  signs in, and captures every main route to `e2e/test-results/visual-sweep/`; and two
+  **overflow / occlusion audits** (`e2e/overlap-audit.mjs`, `e2e/occlusion-audit.mjs`) that
+  measure, per route, horizontal page overflow, text clipped by its own box, and — the
+  sharpest test — `document.elementFromPoint` on every interactive element: anything foreign
+  on top of a tap target is a real block (clicks through `pointer-events:none` don't count).
+  **What the measurement said**: every audit ran clean on the page's own overflow (zero
+  routes scrolled horizontally; zero real clipped text — the apparent hits were sr-only and
+  ellipsis-truncated by design), but the occlusion audit found **three nav links under the
+  sidebar footer on every authed route**: the blanket rule `button, a, [role=button],
+  input, select, textarea { min-height:44px; min-width:44px }` in globals.css — an Apple /
+  Material touch floor with no scope — priced 24 nav rows at 44px each = **1056px of content
+  in a 731px scroll viewport**, so Ingestion through Settings sat clipped under the rail's
+  footer on every window narrower than ~1100px. That unscoped floor was the visible product
+  bug. **The fix**: the 44px floor is now scoped to coarse pointers (`@media (pointer:
+  coarse)`), exactly where fingers cannot hit 24/28px targets; fine pointers (mouse,
+  trackpad) keep the product's own 28px rows (`h-7`, gap-0), clearing the WCAG AA floor and
+  fitting the rail whole at ~900px. **Measured before → after**: every route went from 3–4
+  occluded interactive elements to **0**; nav rows compute 28px instead of forced 44px; lazy
+  scroll height dropped 1064px → ~680px. All false positives (decorative gradients, sr-only
+  1px boxes) verified — no others hide there. `verify_gates` **569/569**, vitest
+  **1487/1487**, budget OK at 340, `/admin`, `/jobs` and `/settings` live on the rebuilt
+  image, `/jobs` HTTP 200.)
+
 - [x] **261** The golden journey, walked live — e2e evidence on the real stack (2026-11-16).
 
   (The whole journey — register → resume upload + parse → JD analysis → evidence-backed match

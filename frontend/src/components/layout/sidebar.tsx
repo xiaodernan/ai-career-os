@@ -88,7 +88,7 @@ export function NavLinks({
     <TooltipProvider delayDuration={200}>
       <nav
         aria-label={t("chrome.mainNavigation")}
-        className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2"
+        className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto px-2 py-1"
       >
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -110,7 +110,7 @@ export function NavLinks({
                 collapsed ? (unreadText ? `${label}, ${unreadText}` : label) : undefined
               }
               className={cn(
-                "group flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/35",
+                "group flex h-7 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/35",
                 collapsed && "justify-center px-0",
                 active
                   ? "bg-primary/10 text-primary dark:bg-primary/15 glow-halo"
