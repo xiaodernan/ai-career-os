@@ -6878,7 +6878,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
-- [x] **265** The ledger of words, itemized — the translations file split from one 410 KB scroll into two modules (2026-11-16).
+- [x] **266** The open door — the portfolio now shows the project (2026-11-16).
+
+  (The ask that was repeatedly deferred as "USER STEP": the personal site at
+  `https://xiaodernan.github.io/` didn't reflect the project at all. It is not a user step
+  anymore. Epic 266 wires it end-to-end without a token in the browser or a byte in the repo
+  besides what is already public: the Pages index gains a new project card — **AI Career OS,
+  project 06 in the project index**, colored on the inky purple (oklch-friendly #2d1236) —
+  carrying its own `.minicc-latest` panel that live-fetches
+  `raw.githubusercontent.com/xiaodernan/ai-career-os/main/docs/LATEST.json` on page load
+  (with `assets/career-os/latest.json` as offline fallback) and renders it straight into the
+  five cells: total commits, epics, work items, test files, locales. The workflow behind it
+  (`.github/workflows/sync-career-os.yml`, pushed to `xiaodernan.github.io` master, weekly
+  Monday 13:30 UTC, 30 min after the nexus sync) re-fetches the fact pack from main, rebuilds
+  `assets/career-os/latest.json`, and pushes only if the file moved — the same throttle
+  pattern as `sync-nexus-platform.yml` on the sibling site. A race it already found: three
+  sibling crons (crossrealm, minicc, career-os) all share Monday 13:00–13:30 UTC; the workflow
+  failed its first push with "fetch first" and now rebases past whoever landed the shared
+  `index.html` first. The live portfolio fetch works where both sources are cached, the CI
+  green badge renders because the repo knows `actions/checkout@v4` on node 24, and the
+  card ships a real CI view (current build list) instead of placeholder HTML. One honest
+  note: the Pages site is the operator's own public resume — the view here is what city the
+  README lives in, not the product demo; that's where the public reader enters the world.)
+
+- [x] **265** The ledger of words, itemized — the translations file split (2026-11-16).
 
   (The single-file translations table has been the named architectural debt since the bundle
   budget started needing raises "on language-table growth". The table was one 409,836-byte,

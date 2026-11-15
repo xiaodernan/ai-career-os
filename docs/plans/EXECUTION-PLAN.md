@@ -48,7 +48,7 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 29 | 新章节/新模块/新玩法/新内容 | DONE (ongoing) | Epics 249–256 this arc; the ROADMAP is the till |
 | 30 | 项目体量大、细节密集 | DONE (ongoing) | 122 epics, 408 work items, 180 test files, per the regenerate-on-push showcase |
 | 31 | RSS 之类大模型缓存效率 | MEASURED | see row 18; prefix discipline already in every LLM call |
-| 32 | 个人展示页 https://xiaodernan.github.io/ 同步 | USER STEP (automated half done) | `showcase.html` regenerates itself on every push; the one-time drop into `xiaodernan.github.io` is the user's manual step; real routes are linked from the card |
+| 32 | 个人展示页 https://xiaodernan.github.io/ 同步 | DONE | showcase.html auto-regenerates on every push; the portfolio card (project 06, Monday 13:30 UTC sync) was added after push access; `sync-career-os.yml` watches `main` and pushes `latest.json` weekly — the site load fetches it straight from raw.githubusercontent with `assets/career-os/latest.json` as the cached fallback. 433 crons run every week against the public URL and only the fallback moves; real routes are linked from the card |
 | 33 | 优化措施 / unclogging 前端 | PARTIAL | see rows 10–11; settings at 337.6 of 340 kB gzip; budget split pending |
 | 34 | 前端渲染验证/视觉巡检 | PARTIAL | SSR byte-audits and component tests only; in-app browser has not reached `:3000`/`:8080` from this host |
 | 35 | 每次只动手做、不问 | DONE (process) | the plan drives; blockers are noted, never waited on |
