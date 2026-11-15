@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { ManualSheet } from "@/components/layout/open-manual";
 import { useCommandPalette } from "@/components/common/command-palette";
 import { MobileSidebar } from "./sidebar";
 import { useLogout, useUser } from "@/lib/hooks/auth";
@@ -81,6 +82,7 @@ export function Topbar() {
         <Search aria-hidden />
       </Button>
 
+      <ManualSheet />
       <ThemeToggle />
 
       <DropdownMenu>

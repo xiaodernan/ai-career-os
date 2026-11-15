@@ -156,7 +156,8 @@ describe("the browser's copy", () => {
     // 200 with Epic 235: `components/dashboard/nine-quests-card.tsx` + `components/layout/tour-visit-marker.tsx`, the walking tour.
     // 201 with Epic 236: `components/playbook/chapter-rail.tsx`, the manual's own index.
     // 202 with Epic 237: `components/replies/not-yet-card.tsx`, the not-yet letter.
-    expect(browserSources().length).toBe(202);
+    // 203 with Epic 239: `components/layout/open-manual.tsx`, the manual riding along in the topbar.
+    expect(browserSources().length).toBe(203);
   });
 
   it("finds a sentence, however long it is", () => {

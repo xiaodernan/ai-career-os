@@ -6878,6 +6878,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **239** The manual, riding along — embedded where the customer actually uses the product (2026-11-16).
+
+  (The user's instruction was exact: the manual must not live in the project's docs where "no
+  customer will read it" — it must be a **feature of the product itself**, openable from anywhere
+  in the app. Epic 239 ships `ManualSheet`: a `HelpCircle` button in the topbar, present on every
+  signed-in route, that opens a right-side sheet — **"The manual — how to play"** — with the same
+  nine doors the `/playbook` manual draws, in the reader's language: five rooms-groups (Find the
+  work / Prepare / Track the work / Decide / See the system), every room with its nav label +
+  description straight from the shared table, plus a full-manual CTA to `/playbook` at the bottom.
+  `?` toggles it from anywhere the reader isn't typing (never inside a field; no modifier combos).
+  The sheet **closes on navigation** (each link inside is a door into the app — staying open after
+  the reader walked through would be exactly the annoyance this avoids). EN+ZH (5 new key pairs),
+  WCAG 2.5.3-safe (icon-only, accessible name carries the word), `/playbook` stays the public,
+  printable, crawlable manual — the sheet is its pocket twin. Pinned by a component test against
+  the SSR shape; live-served on the rebuilt container. vitest **1465/1465**, tsc clean,
+  `verify_gates` **569/569**, census **203** (+1), budget OK at 330. The same buttons says the same
+  five rooms have names you can reach from anywhere — this is the user-facing answer the docs
+  never were.)
+
 - [x] **238** The year loop — the macro chapter (2026-11-16), and the budget repaired from inside.
 
   (`/playbook` gains its **macro chapter** after the offer doors: **THE YEAR LOOP / 时间之环** —
