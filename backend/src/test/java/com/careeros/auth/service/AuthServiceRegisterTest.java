@@ -44,7 +44,7 @@ class AuthServiceRegisterTest {
     @Test
     void anAddressThatLostTheInsertRaceAnswersWithTheSameConflictAsThePreCheck() {
         when(users.existsByEmail(any())).thenReturn(false);
-        when(users.save(any(User.class))).thenThrow(new DataIntegrityViolationException(
+        when(users.saveAndFlush(any(User.class))).thenThrow(new DataIntegrityViolationException(
                 "could not execute statement [ERROR: duplicate key value violates unique constraint \"users_email_key\"]"));
 
         assertThatThrownBy(() -> service.register(new RegisterRequest("ada@example.invalid", PASSWORD, "Ada")))
@@ -56,7 +56,7 @@ class AuthServiceRegisterTest {
     void anAddressThatPassedThePreCheckIsRegisteredAndStoredTrimmed() {
         User persisted = new User();
         when(users.existsByEmail(any())).thenReturn(false);
-        when(users.save(any(User.class))).thenAnswer(invocation -> {
+        when(users.saveAndFlush(any(User.class))).thenAnswer(invocation -> {
             User arg = invocation.getArgument(0);
             arg.setId(persisted.getId());
             persisted.setEmail(arg.getEmail());

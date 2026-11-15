@@ -6878,6 +6878,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **234** The register door held — and gave up a deeper race than it knew about (2026-11-16).
+
+  (Epic 226 had found the register race and fixed it — except the fix lived in the wrong place.
+  `users.save()` returns before JPA flushes, so the duplicate-key check ran at **commit time**,
+  outside the `try` that translates it into a 409 — a fuzz burst of 12 concurrent same-email
+  registrations measured it live: **1× 201, 11× 500**. The fix is one word — `saveAndFlush()` —
+  and the same live burst now answers **1× 201, 11× 409**, verified twice on the rebuilt
+  container. **The fuzz run also found a second, older hole:** PostgreSQL forbids U+0000 in
+  text columns, so a `displayName` carrying the byte sailed through every bean constraint and
+  exploded at the database as `INTERNAL_ERROR` — one case in the fuzz turned a perfectly
+  ordinary-looking payload into a 500. The class is closed at the one seam every bound string
+  passes through: a custom `String` deserializer (`config/JacksonConfig`) refuses the byte at
+  the decode layer, so **every** request field carrying NUL now answers `400 MALFORMED_REQUEST`
+  — measured live for the displayName case. `scripts/fuzz_auth.py` (new, ~120 adversarial
+  payloads in six classes + one concurrency burst) is the regression net for all of it; final
+  tally **2xx=21 · 4xx=48 · 5xx=0**. Backend unit tier green (`JacksonConfigTest` 2/2,
+  `AuthServiceRegisterTest` 3/3 with the flush pinned). The known-adjacent unique constraints
+  not yet measured are named for the ledger, not pretended away: `job_matches (user_id,
+  job_id, resume_version_id)`, `saved_searches (user_id, name_norm)`, `user_memories (user_id,
+  kind, key)`, `push_subscriptions (endpoint)`, `inbound_mails (user_id, message_key)`,
+  `interview_turns (session_id, seq)` — candidates for the same save-and-flush treatment once
+  each is measured.)
+
 - [x] **233** Chapter zero — the first week, playable (2026-11-16).
 
   (`/playbook` opens with a game before it teaches a word. **Chapter zero — the first week,

@@ -70,7 +70,11 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setDisplayName(request.displayName().trim());
         try {
-            users.save(user);
+            // Flush now, inside the try: the pre-check and the INSERT are two statements,
+            // and a deferred flush moves the constraint check out of this block and into
+            // the commit, where the 409 below can no longer see it (Epic 226's fix really
+            // lands here, not in the catch). saveAndFlush makes the 409 a 409 for real.
+            users.saveAndFlush(user);
         } catch (DataIntegrityViolationException duplicate) {
             // The check and the insert are not one atomic step: two concurrent
             // registrations with the same address both pass existsByEmail and both
