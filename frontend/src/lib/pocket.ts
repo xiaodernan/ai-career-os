@@ -1,7 +1,7 @@
 /**
  * The pocket (Epic 223) — the browser-local half of the reader's work.
  *
- * Six things the person wrote in their browser live nowhere else:
+ * Seven things the person wrote in their browser live nowhere else:
  *
  *   careeros.ledger.v1     the decision ledger — criteria, weights, per-offer scores
  *   careeros.quarter.*     the first-quarter plan's ticks, keyed by the accepted offer row
@@ -10,6 +10,7 @@
  *   careeros.commitment.*  one line the reader wrote, keyed by ISO week — what they will own next
  *   careeros.preread.*     the "room you walk into" prep, keyed by company id — the reader's own
  *                          pre-interview notes, quote the reader's voice to the interview
+ *   careeros.nearmiss.*    the near-miss shelf of roles not quite landed, keyed as careeros.nearmiss.v1
  *
  * The server cannot see them by design (they never left the browser), so
  * the export bundle omits them. This module is their suitcase — the one
@@ -27,6 +28,7 @@ export const POCKET_PREFIXES = [
   "careeros.debrief.",
   "careeros.commitment.",
   "careeros.preread.",
+  "careeros.nearmiss.",
 ] as const;
 
 export interface PocketFamily {
@@ -131,6 +133,8 @@ export function restorePocket(manifest: PocketManifest, storage: StorageLike | n
 export const POCKET_COMMITMENT_PREFIX = "careeros.commitment.";
 /** The sixth family: Epic 268's "room you walk into" prep, one row per researched company. */
 export const POCKET_PREREAD_PREFIX = "careeros.preread.";
+/** The seventh family: Epic 270's near-miss — the role that almost was. */
+export const POCKET_NEARMISS_PREFIX = "careeros.nearmiss.";
 
 /** A short human sentence for the family line, exported so callers cannot drift. */
 export function familyLabelKey(prefix: string): string {
@@ -147,6 +151,8 @@ export function familyLabelKey(prefix: string): string {
       return "data.pocketFamilyCommitment";
     case POCKET_PREREAD_PREFIX:
       return "data.pocketFamilyPreread";
+    case POCKET_NEARMISS_PREFIX:
+      return "data.pocketFamilyNearMiss";
     default:
       return "data.pocketFamilyLedger";
   }

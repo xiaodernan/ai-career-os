@@ -25,6 +25,7 @@ describe("PocketCard", () => {
     expect(html).toContain("[data.pocketFamilyDebrief]");
     expect(html).toContain("[data.pocketFamilyCommitment]");
     expect(html).toContain("[data.pocketFamilyPreread]");
+    expect(html).toContain("[data.pocketFamilyNearMiss]");
     expect(html).toContain("[data.pocketDownload]");
     expect(html).toContain("[data.pocketRestore]");
     expect(html).toContain('accept=".json,application/json"');

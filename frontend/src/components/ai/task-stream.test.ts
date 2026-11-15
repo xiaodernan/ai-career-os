@@ -14,6 +14,7 @@ describe("TRACE_KINDS", () => {
       "handoff",
       "message",
       "final",
+      "graph_node",
     ]);
   });
 });

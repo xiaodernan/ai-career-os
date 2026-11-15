@@ -25,7 +25,7 @@ import {
  * all live in localStorage by design: they are the reader's own thinking,
  * not search data. The export bundle cannot carry them, so the /data page
  * used to be one file short of "everything". This card closes the gap: a
- * summary of the six families the browser holds, a download that writes
+ * summary of the seven families the browser holds, a download that writes
  * them into one JSON file, and a restore that accepts only the keys the
  * product itself wrote.
  */

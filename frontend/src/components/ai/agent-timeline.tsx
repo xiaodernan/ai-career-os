@@ -15,6 +15,7 @@ import {
   CircleDashed,
   CheckCircle2,
   XCircle,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TraceKind } from "@/lib/trace-kinds";
@@ -48,6 +49,7 @@ const KIND_META: Record<TraceKind, { icon: React.ComponentType<{ className?: str
   handoff: { icon: ArrowRightLeft, text: "text-primary" },
   message: { icon: MessageSquareText, text: "text-muted-foreground" },
   final: { icon: Flag, text: "text-foreground" },
+  graph_node: { icon: Workflow, text: "text-primary" },
 };
 
 export function formatDuration(ms?: number | null): string | null {

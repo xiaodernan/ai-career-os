@@ -163,7 +163,8 @@ describe("the browser's copy", () => {
     // 208 with Epic 245: `components/ui/hint.tsx`, hover explanations on the main-UI controls.
     // 210 with Epic 250: `app/admin/page.tsx` + `app/admin/admin-page.tsx`, overseer's ledger (passphrase-gated).
     // 211 with Epic 268: `components/companies/preinterview-kit.tsx`, the room you walk into.
-    expect(browserSources().length).toBe(211);
+    // 212 with Epic 270: `components/replies/near-miss-card.tsx`, the apart that got away.
+    expect(browserSources().length).toBe(212);
   });
 
   it("finds a sentence, however long it is", () => {

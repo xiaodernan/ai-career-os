@@ -6,6 +6,7 @@ import { ArrowUpRight, Inbox, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { NotYetCard } from "@/components/replies/not-yet-card";
+import { NearMissCard } from "@/components/replies/near-miss-card";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyComposition } from "@/components/common/empty-composition";
 import { ErrorState } from "@/components/common/error-state";
@@ -541,6 +542,9 @@ export default function RepliesPage() {
 
       {/* The not-yet letter (Epic 237): the reader already held the letter; help them put it down honestly. */}
       <NotYetCard />
+
+      {/* The near-miss (Epic 270): the apart that got away — the one worth keeping honestly. */}
+      <NearMissCard />
 
       <ConfirmDialog
         open={applyFor !== null}

@@ -17,6 +17,7 @@ export const TRACE_KINDS = [
   "handoff",
   "message",
   "final",
+  "graph_node",
 ] as const;
 
 export type TraceKind = (typeof TRACE_KINDS)[number];

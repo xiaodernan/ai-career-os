@@ -1,13 +1,15 @@
 """AI Resume Tailoring (PRD §11) with a hard no-fabrication verifier.
 
-The LLM may reorder, re-emphasize and reword — but a post-pass verifier rejects any
+The LLM may reorder, re-emphasize and reword — but a deterministic verifier rejects any
 bullet introducing a skill, company or number absent from the original resume text,
-falling back to the original wording. Fabrication is blocked mechanically, not by
-asking nicely.
+and a bounded revise loop (Epic 269's StateGraph) gives the model exactly one chance to
+route around its first draft's mistakes. A post-pass that still fails renders against
+the original wording. Fabrication is blocked mechanically, not by asking nicely.
 """
 
 import re
 
+from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
@@ -25,6 +27,8 @@ Return JSON:
  "summary":"<new professional summary, <=2 sentences>",
  "skillOrder":["<all original skills, most JD-relevant first>"],
  "notes":["<anything the candidate should double-check>"]}"""
+
+_MAX_DRAFTS = 2
 
 
 def _numbers_in(s: str) -> set[str]:
@@ -47,28 +51,7 @@ def verify_no_fabrication(original_text: str, before: str, after: str) -> str | 
     return None
 
 
-async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id: str,
-                 job_title: str = "", run_id: str | None = None) -> dict:
-    jd = jd if isinstance(jd, dict) else {}
-    matched_query = " ".join(
-        [s.get("name", "") for s in (jd.get("requiredSkills") or [])
-         if isinstance(s, dict)][:12]
-        + [jd.get("title", "")])
-    r = await retrieve(matched_query or jd.get("title", "relevant experience"),
-                       user_id=user_id, run_id=run_id, top_k=8, kinds=["resume", "project"])
-    context = (
-        f"JOB TARGET: {job_title or jd.get('title','')}\n"
-        f"JD REQUIRED: {[s.get('name') for s in (jd.get('requiredSkills') or []) if isinstance(s, dict)]}\n"
-        f"JD PREFERRED: {[s.get('name') for s in (jd.get('preferredSkills') or []) if isinstance(s, dict)]}\n\n"
-        f"CAREER KNOWLEDGE (evidence you may foreground):\n{r.get('context_block','')}\n\n"
-        f"ORIGINAL RESUME JSON:\n{wrap_untrusted('RESUME', str(resume_structured)[:16000])}"
-    )
-    req = LLMRequest(
-        messages=stable_messages(SYSTEM, LLMMessage("user", context)),
-        temperature=0.2, max_tokens=4000)
-    out = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume", kind="tailor")
-    out = out if isinstance(out, dict) else {}
-
+def _split_changes(out: dict, resume_text: str) -> tuple[list[dict], list[dict]]:
     accepted, rejected = [], []
     for ch in out.get("changes") or []:
         if not isinstance(ch, dict) or not ch.get("after"):
@@ -80,12 +63,83 @@ async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id
             rejected.append(ch)
         else:
             accepted.append(ch)
+    return accepted, rejected
 
-    # apply accepted edits onto a copy of the structured resume
-    tailored = _apply_changes(resume_structured, accepted, out, resume_text)
-    return {"tailored": tailored, "diff": {"accepted": accepted, "rejected": rejected},
-            "notes": out.get("notes") or [], "evidence": r["evidence"],
-            "stats": {"accepted": len(accepted), "rejected": len(rejected)}}
+
+async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id: str,
+                 job_title: str = "", run_id: str | None = None) -> dict:
+    jd = jd if isinstance(jd, dict) else {}
+    matched_query = " ".join(
+        [s.get("name", "") for s in (jd.get("requiredSkills") or [])
+         if isinstance(s, dict)][:12]
+        + [jd.get("title", "")])
+
+    async def retrieve_node(state):
+        r = await retrieve(matched_query or jd.get("title", "relevant experience"),
+                           user_id=user_id, run_id=run_id, top_k=8, kinds=["resume", "project"])
+        context = (
+            f"JOB TARGET: {job_title or jd.get('title','')}\n"
+            f"JD REQUIRED: {[s.get('name') for s in (jd.get('requiredSkills') or []) if isinstance(s, dict)]}\n"
+            f"JD PREFERRED: {[s.get('name') for s in (jd.get('preferredSkills') or []) if isinstance(s, dict)]}\n\n"
+            f"CAREER KNOWLEDGE (evidence you may foreground):\n{r.get('context_block','')}\n\n"
+            f"ORIGINAL RESUME JSON:\n{wrap_untrusted('RESUME', str(resume_structured)[:16000])}")
+        return NodeResult(state={"context": context, "evidence": r["evidence"]},
+                          goto="draft",
+                          trace={"context_chars": len(context)})
+
+    async def draft_node(state):
+        prompt = state["context"]
+        if state.get("verifier_feedback"):
+            prompt += ("\n\nVERIFIER REJECTION (rewrite only the offending bullets; "
+                       f"everything it rejected must not reappear): {state['verifier_feedback']}")
+        req = LLMRequest(
+            messages=stable_messages(SYSTEM, LLMMessage("user", prompt)),
+            temperature=0.2, max_tokens=4000)
+        out = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume", kind="tailor")
+        out = out if isinstance(out, dict) else {}
+        return NodeResult(state={"out": out, "attempts": state["attempts"] + 1},
+                          goto="verify",
+                          trace={"attempt": state["attempts"] + 1})
+
+    async def verify_node(state):
+        accepted, rejected = _split_changes(state["out"], resume_text)
+        # the full verdict history stays: an invented bullet that a revised draft
+        # cleans up is still a bullet the verifier had to refuse with named reason.
+        accumulated = state.get("rejected_history", []) + rejected
+        rejected_all = bool(state["out"].get("changes")) and not accepted
+        feedback = "; ".join(
+            str(ch.get("verifier_reject", "")) for ch in rejected)[:400]
+        if rejected_all and state["attempts"] < _MAX_DRAFTS:
+            goto = "draft"
+        else:
+            goto = "render"
+        return NodeResult(
+            state={"accepted": accepted, "rejected": accumulated,
+                   "rejected_history": accumulated,
+                   "verifier_feedback": feedback},
+            goto=goto,
+            trace={"accepted": len(accepted), "rejected": len(rejected), "routing": goto})
+
+    async def render_node(state):
+        out = state["out"]
+        accepted = state["accepted"]
+        tailored = _apply_changes(resume_structured, accepted, out, resume_text)
+        return NodeResult(
+            state={"tailored": tailored,
+                   "diff": {"accepted": accepted, "rejected": state["rejected_history"]},
+                   "notes": out.get("notes") or [],
+                   "stats": {"accepted": len(accepted), "rejected": len(state["rejected_history"])}},
+            goto=None,
+            trace={"changes_applied": len(accepted)})
+
+    graph = StateGraph("retrieve",
+                       {"retrieve": retrieve_node, "draft": draft_node,
+                        "verify": verify_node, "render": render_node},
+                       max_steps=8)
+    final = await graph.run({"attempts": 0}, run_id=run_id, agent="resume")
+    return {"tailored": final["tailored"], "diff": final["diff"],
+            "notes": final["notes"], "evidence": final["evidence"],
+            "stats": final["stats"]}
 
 
 def _apply_changes(structured: dict, changes: list[dict], out: dict,

@@ -6878,6 +6878,49 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **270** The near-miss — the role that almost was (2026-11-16).
+
+  (A new keepsake on `/replies`, beside the not-yet letter: the one close call a
+  reader is allowed to keep — role (named), company (optional), the two-pressed
+  "would you walk in again" toggle, the lesson, and what changed since. Sealed when the
+  role and the lesson both exist (≥2 and ≥8 chars) and nothing beyond is asked. Five
+  slots count into a role=progressbar meter; persistence is a single
+  `careeros.nearmiss.v1` key through the pure module `lib/nearmiss.ts` — the same
+  shape protocol the not-yet letter holds and the preread shelf uses, with a
+  corrupt-reads-blank parser and an injected storage port, unit-tested offline.
+  **The seventh pocket family** — `careeros.nearmiss.*` joined POCKET_PREFIXES,
+  familyLabelKey → `data.pocketFamilyNearMiss`, so the /data pocket card counts,
+  exports and restores the role that almost landed, like its six keepsake siblings.)
+  Copy fully bilingual via the table (~20 key pairs plus the pocket label, no
+  mixed-language page); the copy census re-pinned to **212 sources** (+1).) Measured
+  offline this session: near-miss/pocket suites **19/19**, census/i18n suite
+  **59/59**; no stack touch this round — full e2e gated on the next green window.)
+
+- [x] **269** The StateGraph spine — the engine thinks in explicit nodes (2026-11-16).
+
+  (The user's recurring ask — "状态图的知识也加入" — lands as a real spine in the
+  engine instead of a doc cosplay: `app/agents/stategraph.py` compiles a graph of
+  nodes over typed state channels — shallow-merged updates, conditional edges with
+  routing read off the node's own result, a hard `max_steps` cap that refuses a
+  back-edge bug as `StateGraphOverrun` with the count in the message, and a per-node
+  `graph_node` trace written into the same agent_traces ledger the copilot writes,
+  rendered in the AI Activity timeline as "Flow node" / "图节点" behind a Workflow
+  icon, EN+ZH. Deliberately not that dependency: the engine's hot loop stays
+  offline-deterministic and mock-testable — the graph is the same idea, re-cut for
+  this repo's zero-framework spine. **Wired into one real loop**: `features/tailor`
+  is now retrieve → draft → verify → render — the verifier (skills and numbers)
+  decides the branch, giving the model at most one revised draft when every change
+  it produced was rejected, and keeping the *verifier's full verdict history* in the
+  diff instead of only the final round's tally: an invented bullet the verifier
+  refused, then cleaned by the revised draft, is still an invented bullet the
+  reader deserves to see rejected.) Measured offline on this host: the engine 5/5
+  (chain merge order, conditional back-edge, the overrun cap, unknown-node refusal,
+  shallow merge leaving the caller's state unmutated); the tailor flow 4/4 with the
+  real verifier and a canned LLM (invention rejected → corrected on the retry; a
+  clean first draft costs exactly one call; both attempts fully rejected still
+  renders — the original wording, never an exception). The Activity timeline renders
+  the new kind as "Flow node" / "图节点" with a Workflow icon, EN+ZH.)
+
 - [x] **268** The room you walk into — the pre-interview kit (2026-11-16).
 
   (The company page answers *what this room is*; Epic 268 keeps the reader's own

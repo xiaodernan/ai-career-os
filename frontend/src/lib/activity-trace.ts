@@ -136,6 +136,8 @@ export function stepLabel(
       return str(payload, "role", "text", "message") ?? word;
     case "final":
       return str(payload, "answer_preview", "answer") ?? word;
+    case "graph_node":
+      return str(payload, "node") ?? word;
   }
 }
 
