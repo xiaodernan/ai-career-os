@@ -71,6 +71,7 @@ screen. A malformed inbound value is replaced, never refused.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/admin/stats` | install tally; no auth by design, counts only. Answers twenty long integers from the tables the application itself writes — {users, resumes, applications, interviewsPracticed, interviewTurns, agentRuns, agentTraces, aiUsageEvents, knowledgeSources, notesKept, coverLetters, contacts, memories, companies, jobs, matches, conversations, messages, savedSearches, offers}. No name, no content, and no per-reader row ever crosses this route; a row id is not an answer this route can give. The browser-facing page at /admin opens on one passphrase (the operator's own choice — a courtesy gate, not a security control); the route itself is public so the page never carries a token for it. (Epic 250) |
+| GET | `/admin/trends` | weekly counts for five of the stats' own series, bucketed by ISO week (Monday start, UTC): {weeks, series{users, applications, interviewsPracticed, agentRuns, aiUsageEvents}, weeksRequested}. `?weeks=` bounds the window (1–26, default 12; anything out of range answers with the default). Same counts-only posture; a week with no rows reads as zero rather than a missing key. (Epic 251) |
 
 ### Auth (`/auth`)
 

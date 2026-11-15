@@ -3948,6 +3948,14 @@ export const translations = {
       notesLabel: "Notes kept",
       jobsLabel: "Jobs in corpus",
       messagesLabel: "Messages sent",
+      trendTitle: "The ledger, week over week",
+      trendLede:
+        "Five series counted straight off the tables at the moment you opened this page — Monday-anchored ISO weeks in UTC. A quiet week reads as zero, not as a missing key; each total covers the trailing twelve-week window.",
+      trendAcrossWeeks: "across {count} weeks",
+      trendPeak: "peak {count}",
+      aiEventsLabel: "AI calls",
+      trendFootnote:
+        "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
       journeyTitle: "The golden journey, station by station",
       journeyLede:
         "Measured live on this install. Best-case times — under a quiet machine. Every station hits the real stack; the slow ones are LLM-bound and the cache hit rate is why.",
@@ -7713,6 +7721,14 @@ export const translations = {
       notesLabel: "备注",
       jobsLabel: "职位语料",
       messagesLabel: "消息数",
+      trendTitle: "账本，逐周",
+      trendLede:
+        "五个序列，都是你打开页面这一刻从表里现拉数的——按 ISO 周（周一起始、UTC）。安静的一周读作零，不会变成缺失的键；合计覆盖最近十二周窗口。",
+      trendAcrossWeeks: "共 {count} 周",
+      trendPeak: "峰值 {count}",
+      aiEventsLabel: "AI 调用",
+      trendFootnote:
+        "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
       journeyTitle: "黄金旅程，逐站验收",
       journeyLede:
         "本实例实测值。机器空闲的时候的数。每一站都是真实调用，慢的是 AI 调用，快的因为命中缓存。",

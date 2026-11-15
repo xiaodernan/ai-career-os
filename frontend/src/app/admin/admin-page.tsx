@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
+import { seriesTotal, sparkline } from "@/lib/admin-trend";
 
 interface AdminStats {
   users?: number;
@@ -41,6 +42,12 @@ interface AdminStats {
   offers?: number;
 }
 
+interface AdminTrends {
+  weeks?: string[];
+  series?: Record<string, number[] | undefined>;
+  weeksRequested?: number;
+}
+
 const SECRET = "123"; // the install's one passphrase, by the operator's own choosing
 
 const STATIONS = [
@@ -63,8 +70,16 @@ const RECOMMENDATIONS = [
   { titleKey: "admin.recCorpusTitle", bodyKey: "admin.recCorpusBody" },
 ] as const;
 
+const TREND_SERIES = [
+  { key: "users", labelKey: "admin.usersLabel", icon: Users },
+  { key: "applications", labelKey: "admin.applicationsLabel", icon: BarChart3 },
+  { key: "interviewsPracticed", labelKey: "admin.interviewLabel", icon: Activity },
+  { key: "agentRuns", labelKey: "admin.agentRunsLabel", icon: Sparkles },
+  { key: "aiUsageEvents", labelKey: "admin.aiEventsLabel", icon: Database },
+] as const;
+
 /**
- * /admin — the overseer's ledger (Epic 250).
+ * /admin — the overseer's ledger (Epics 250, 251).
  *
  * The operator's door, behind one passphrase this deployment already carries
  * (123): the one guard the install's one operator asked for, and the ceiling
@@ -76,18 +91,27 @@ export default function AdminPage() {
   const [phrase, setPhrase] = React.useState("");
   const [wrong, setWrong] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats | null>(null);
+  const [trends, setTrends] = React.useState<AdminTrends | null>(null);
 
   React.useEffect(() => {
     if (!unlocked) return;
-    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"}/admin/stats`;
+    const base = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"}`;
     let cancelled = false;
-    fetch(url).then(async (response) => {
-      if (!response.ok) return;
-      const payload = await response.json();
-      if (!cancelled) setStats(payload);
-    }).catch(() => {
-      /* the gate is happy without the database — the operator can probe HTTP by hand if the door flakes */
-    });
+    const load = <T,>(path: string, apply: (payload: T) => void) => {
+      fetch(`${base}${path}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((envelope: { data?: T | null } | null) => {
+          // both admin routes answer inside the shared {success,data,error} envelope
+          if (!cancelled && envelope && typeof envelope === "object" && envelope.data) {
+            apply(envelope.data);
+          }
+        })
+        .catch(() => {
+          /* the gate is happy without the database — the operator can probe HTTP by hand if the door flakes */
+        });
+    };
+    load("/admin/stats", setStats);
+    load("/admin/trends?weeks=12", setTrends);
     return () => { cancelled = true; };
   }, [unlocked]);
 
@@ -163,6 +187,8 @@ export default function AdminPage() {
     { icon: Sparkles, labelKey: "admin.messagesLabel", value: stats?.messages },
   ] as const;
 
+  const trendWeeks = trends?.weeks;
+
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10">
       <div className="border-b border-border/60 pb-6">
@@ -192,6 +218,53 @@ export default function AdminPage() {
             </div>
           );
         })}
+      </section>
+
+      <section>
+        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.trendTitle")}</h2>
+        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.trendLede")}</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {TREND_SERIES.map((serie) => {
+            const values = trends?.series?.[serie.key];
+            const spark = values ? sparkline(values, 120, 36, 3) : null;
+            const total = values ? seriesTotal(values) : undefined;
+            const peak = values && values.length > 0 ? Math.max(...values) : undefined;
+            const Icon = serie.icon;
+            return (
+              <div key={serie.key} className="rounded-2xl border border-border/60 bg-card/60 p-4">
+                <div className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  <Icon aria-hidden className="size-3.5" />
+                  <span>{t(serie.labelKey)}</span>
+                </div>
+                <div className="mt-2 flex items-end justify-between gap-2">
+                  <p className="font-serif text-2xl font-semibold tabular-nums">
+                    {total === undefined ? "—" : formatNumber(total)}
+                  </p>
+                  <svg viewBox="0 0 120 36" className="h-9 w-24 text-primary" aria-hidden="true">
+                    {spark && (
+                      <>
+                        <polyline
+                          points={spark.points}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                        />
+                        <circle cx={spark.last.x} cy={spark.last.y} r={1.6} fill="currentColor" />
+                      </>
+                    )}
+                  </svg>
+                </div>
+                <p className="mt-1 text-2xs tabular-nums text-muted-foreground">
+                  {trendWeeks ? t("admin.trendAcrossWeeks", { count: trendWeeks.length }) : "—"}
+                  {peak !== undefined && peak > 0 ? ` · ${t("admin.trendPeak", { count: formatNumber(peak) })}` : ""}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-2xs leading-relaxed text-muted-foreground">{t("admin.trendFootnote")}</p>
       </section>
 
       <section>

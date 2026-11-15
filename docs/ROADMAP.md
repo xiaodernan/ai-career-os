@@ -6878,6 +6878,42 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **251** The ledger, week over week — the overseer's trend line (2026-11-16).
+
+  (The operator asked the admin door to do what an operator's wall actually does:
+  not just the install's snapshot counts, but the shape of the trailing window.
+  Epic 250 gave `/admin` the counter; this epic gives it the line it drew.
+  **Backend**: `AdminTrendsController` serving `GET /api/v1/admin/trends?weeks=`,
+  a counts-only reply in five series — {users, applications, interviewsPracticed,
+  agentRuns, aiUsageEvents} — bucketed by **ISO week (Monday start, UTC)** and
+  deliberately independent of the database session timezone: the week label and the
+  WHERE lower bound are both computed in the service (`windowStart`, `weeksList`),
+  Monday-anchored and hand-checked, and `date_trunc('week', created_at AT TIME ZONE
+  'UTC')` renders the same Monday the Java side believes in. The fill is **dense**:
+  a quiet week reads as zero, never as a missing key, and rows outside the window
+  are ignored rather than misaligned. `weeks` clamps to 1–26 (default 12). No
+  identifier, no per-reader row — same privacy posture as the stats route, same
+  public-by-design permitAll fence. Unit gate `AdminTrendsServiceTest` 6/6 —
+  Monday anchors, ascending order, dense zero-fill with strangers ignored,
+  window-start at UTC Monday midnight, week clamping, JDBC row folding with a
+  damaged row refused. Live on the install at acceptance time: all-time runs/events
+  are visible in the current week (weeks 2026-08-24 … 2026-11-09) with users 0/0/0/0/
+  153/86/298/120/3508/62/495/**1933**, applications …/**401**, interviews …/**87**,
+  agentRuns/aiUsageEvents saturated at the newest Monday. Measured by `curl`, not by
+  assumption.)
+  **Frontend**: the ledger gains a `Trends` section — five sparkline cards (pure SVG
+  polyline, no chart library) with the twelve-week total, the across-weeks caption,
+  and the peak week, all through the bilingual table (EN+ZH, six new keys under
+  `admin:`). Sparkline math extracted to `lib/admin-trend.ts` (pure, baseline zero,
+  oldest leftmost, negatives clamped to the axis) with `admin-trend.test.ts` 7/7.
+  **One real bug found and fixed on the way**: Epic 250's stats fetch never unwrapped
+  the shared `{success, data, error}` envelope, so a live `/admin` would have rendered
+  eight em-dashes instead of the counts; both fetches unwrap now, typed end-to-end.
+  Measured: vitest **1475/1475**, tsc clean, `verify_gates` **569/569**, census **210**
+  (+2 unchanged), budget OK at 340, /admin **248 kB gzip**, `/admin` HTTP 200.
+  `docs/API.md` documents both routes (the doc-vs-served contract gate goes green
+  both directions).)
+
 - [x] **250** The overseer's ledger — `/admin`, one passphrase, the install's own counter (2026-11-16).
 
   (The user asked for the operator's door: "a view of the whole thing — password 123, everyone

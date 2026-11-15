@@ -831,6 +831,8 @@ describe("endpoints ↔ backend route parity", () => {
       "the feed address is pasted into a calendar client, not fetched by the browser; the settings card copies the URL the backend already signed",
     "/admin/stats":
       "the overseer's ledger reads this straight from the browser with a raw absolute URL (counts only, no per-user rows); it deliberately lives outside endpoints.* so a test edit here measures the browser's actual call sites",
+    "/admin/trends":
+      "the overseer's ledger asks for its five weekly series with the same raw fetch, for the same reason and with the same counts-only posture (Epic 251)",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
     "/mail/preferences/{}/{}":
@@ -1166,7 +1168,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(new Set(handlers.map((h) => `${h.verb} ${h.pattern}`)).size).toBe(handlers.length);
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
-    expect(bound.length).toBe(70);
+    // 71 with Epic 251: `@RequestParam(defaultValue = "12") int weeks` on `GET /admin/trends`.
+    expect(bound.length).toBe(71);
     // 70 parameters in 26 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
@@ -1204,11 +1207,13 @@ describe("endpoints ↔ backend route parity", () => {
     // `days` on `/reports/activity-heatmap` (69 -> 70) -- a window in days rather than rows,
     // and the name is new to this set because every other window counts rows, not time.
     // The latest names are in it now.)
+    // 251's trends route binds `weeks` on `/admin/trends` — a window in weeks rather than rows or days,
+    // and a name this set did not have (70 -> 71, 29 distinct names).
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",
         "kinds", "locale", "location", "maxSalary", "minSalary", "page", "q", "relation", "remote",
-        "days", "resumeId", "size", "skills", "sort", "status", "tag", "title", "token",
+        "days", "weeks", "resumeId", "size", "skills", "sort", "status", "tag", "title", "token",
         "unfiled",
       ])
     );
