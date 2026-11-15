@@ -23,6 +23,12 @@ const ROWS = [
  * every number here is dated, because a number without a date is not a
  * measurement, it is a story.
  */
+const FINDINGS = [
+  { key: "deterministic", copyKey: "monitoring.ledgerFinding1" },
+  { key: "stream", copyKey: "monitoring.ledgerFinding2" },
+  { key: "prefix", copyKey: "monitoring.ledgerFinding3" },
+] as const;
+
 export function OperatorLedgerCard() {
   const { t } = useLocale();
   return (
@@ -48,6 +54,14 @@ export function OperatorLedgerCard() {
             </li>
           ))}
         </ul>
+        <ol className="space-y-1.5 border-t border-border/50 pt-3 text-2xs leading-relaxed text-muted-foreground">
+          {FINDINGS.map((finding) => (
+            <li key={finding.key} className="flex gap-2">
+              <span aria-hidden className="font-mono tabular-nums text-primary/70">{finding.key}</span>
+              <span>{t(finding.copyKey)}</span>
+            </li>
+          ))}
+        </ol>
         <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/40 px-4 py-3 text-xs leading-relaxed">
           <ShieldCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <p className="text-muted-foreground">{t("monitoring.ledgerBody")}</p>

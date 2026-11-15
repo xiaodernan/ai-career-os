@@ -6878,6 +6878,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **246** The relay's flaky cache-report, measured on the wire (2026-11-16).
+
+  (The user kept asking why their API calls show low cache hit rate and "non-stream vs stream" confusion.
+  A clean measurement round, 2026-11-16 direct against `wkapi.pro` with `gpt-6-sol`:
+  **six identical non-stream calls** (the same memory-block prefix, 5,177 input tokens each) —
+  the relay reported `prompt_tokens_details.cached_tokens` on **4/6** calls (**4,992 / 5,177 = 96.5%**
+  cached) and stripped the field on **2/6**; the two stripped calls returned the same `in=5177` total.
+  Warm non-stream identical-prefix pings also observed 94.9% cached (2,353–2,406 ms each, UA
+  Mozilla/5.0). Stream frames: `prompt_tokens_details` **present in some stream frames, stripped in
+  others** — the report is non-deterministic on identical payloads in both paths, so no one call
+  can prove a number. The card on `/monitoring` gets three new measured lines with the actual
+  figures (`ledgerFinding1..3`), both languages, and the honest read in the same breath: streams
+  showing 0 is by design; the relay is not byte-strict (earlier shuffled-memory-block measurement);
+  the exact-match cache works only when bytes are stable; and the non-determinism means
+  "64% of calls report 96.5% cached, the rest report nothing" is the truth, not a figure of speech.
+  EN+ZH. vitest **1467/1467**, tsc clean, `verify_gates` **569/569**, budget OK at 335, `/monitoring`
+  live-served HTTP 200 with the lines in the served markup.)
+
 - [x] **245** The hint on the door — main-UI controls learn to speak (2026-11-16).
 
   (The user asked for attached explanations on the buttons and controls on the main screen —

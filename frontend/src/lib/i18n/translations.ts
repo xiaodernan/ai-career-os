@@ -1267,6 +1267,12 @@ export const translations = {
         "Identical non-stream LLM calls hit the relay prefix cache at 98% (7,424 of 7,555 input tokens). Streams report zero by design (the relay strips the hint on stream frames). The gateway's breaker opened, half-opened, and closed on its own — twice, unattended. 555 model calls ledgered this install; 40% of input tokens were served from cache; resume_parse runs at 75.6% cached.",
       ledgerDateLine:
         "Measured 2026-11-15 and 2026-11-16, on this install. A number without a date is not a measurement — it is a story.",
+      ledgerFinding1:
+        "Identical non-stream calls · relay reported cached tokens on 4/6 · 4,992 of 5,177 input tokens cached (96.5%)",
+      ledgerFinding2:
+        "Stream frames · relay strips prompt_tokens_details · cached shows 0 by design",
+      ledgerFinding3:
+        "Warm identical prefix · 94.9% cached observed earlier on this install",
       alerts: "Alerts",
       regressions: "Regressions",
       runsAnalyzed: "{count} runs analyzed",
@@ -5150,6 +5156,12 @@ export const translations = {
         "相同的不流式 LLM 调用命中中继前缀缓存的概率约 98%（7,424 / 7,555 输入 token）；流式一律为 0（中继丢弃流式帧上的命中标记）；网关熔断器自己开了、半开、又关上——两次，无人值守。这台累计记账 555 次模型调用，40% 的输入 token 来自缓存；resume_parse 有 75.6% 命中缓存。",
       ledgerDateLine:
         "测于 2026-11-15 与 2026-11-16，这一台。没有日期的数字不是测量——是故事。",
+      ledgerFinding1:
+        "完全相同的非流式调用 · 中继在 4/6 次里上报命中 · 4,992 / 5,177 输入令牌走缓存（96.5%）",
+      ledgerFinding2:
+        "流式帧 · 中继剥掉 prompt_tokens_details · 缓存按设计显示 0",
+      ledgerFinding3:
+        "热身相同前缀 · 本安装实测缓存命中率 94.9%",
       alerts: "告警",
       regressions: "回归",
       runsAnalyzed: "已分析 {count} 次运行",
