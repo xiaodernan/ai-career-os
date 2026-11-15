@@ -6878,6 +6878,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **257** The pointer learns — visible teaching on the silent icon buttons (2026-11-16).
+
+  (The user's ask, verbatim: "同时尽量在主界面上做出各种按键和操作的附带教学说明会比较好" —
+  every primary control should carry its own teaching. The copilot page — the single most
+  visited surface after onboarding — had three icon-only buttons with `aria-label` and nothing
+  for a sighted reader: the pencil rename, the trash delete, the send. The kanban drag handle
+  taught nothing; the saved-search trash taught nothing. They all speak now, through the
+  product's own `Hint` (bilingual, `side`, EN+ZH rewritten clean — zero 中英文夹杂): rename /
+  delete chat, send (Enter), drag-to-reorder, delete saved search. Icon-only-with-no-hover is
+  nowhere left on the surfaces shipped this arc. And the copilot route itself had started living
+  at the budget line: rather than raise 340 again (the drift this arc already answered at every
+  crossing), `ArtifactCard` — 14 kB of component tree gated behind artifact-bearing messages —
+  joined the markdown stack in a `next/dynamic` split, taking the route from **340.2 → 328.9 kB
+  gzip**. No budget raise was made; the route pays for its own teaching. Full gates: vitest
+  **1483/1483**, tsc clean, verify_gates **569/569**, `/copilot` and `/applications` HTTP 200 on
+  the rebuilt image after a Docker daemon death mid-pass (relaunched, stack healthy). The
+  in-app browser cannot reach this host's stack (the page renders here; the browser runs on a
+  different host and answers 5xx), so the sweep is SSR byte-audits and component tests — no
+  unverifiable visual promise was made.)
+
 - [x] **256** The siege — high concurrency measured, not dreaded (2026-11-16).
 
   (The user's instruction put the load test in writing: "模拟大量瞬间的海量数据高并发…

@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -32,7 +33,6 @@ import { ProcessingSteps, type ProcessingStep } from "@/components/ai/processing
 import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { EvidenceList } from "@/components/ai/evidence-list";
-import { ArtifactCard } from "@/components/copilot/artifacts";
 import {
   useConversations,
   useConversationMessages,
@@ -54,10 +54,14 @@ import type { ChatMessage } from "@/lib/api/types";
 // chosen anyway -- the hook's own 50 literal never reaches the wire on this path.
 const PAGE_SIZE = 20;
 
-/* Code-split, not a static import: the react-markdown stack is only needed
- * once a message actually renders, so it stays out of the copilot's first load. */
 const StreamingText = dynamic(() =>
   import("@/components/ai/streaming-text").then((m) => m.StreamingText)
+);
+/* Code-split, like StreamingText: the artifact renderer's component tree (match rings, charts,
+ * diff views, the whole normalize stack) is only needed once a message actually carries
+ * artifacts, so it stays out of the copilot's first load. */
+const ArtifactCard = dynamic(() =>
+  import("@/components/copilot/artifacts").then((m) => m.ArtifactCard)
 );
 
 /** The turn's own `status` frames, in arrival order — every step before the last one is done. */
@@ -331,6 +335,7 @@ function ConversationList({
                     {/* Touch has no hover and no focus until tapped, so the actions stay
                         visible below the lg breakpoint and reveal on hover above it. */}
                     <div className="flex items-center opacity-100 transition-opacity duration-150 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                      <Hint side="bottom" label={t("copilot.renameHint")}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -344,6 +349,8 @@ function ConversationList({
                       >
                         <Pencil aria-hidden />
                       </Button>
+                      </Hint>
+                      <Hint side="bottom" label={t("copilot.deleteHint")}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -354,6 +361,7 @@ function ConversationList({
                       >
                         <Trash2 aria-hidden />
                       </Button>
+                      </Hint>
                     </div>
                   </div>
                 )}
@@ -681,6 +689,7 @@ function ChatPanel({
               }
             }}
           />
+          <Hint side="top" label={t("copilot.sendHint")}>
           <Button
             variant="ai"
             size="icon"
@@ -691,6 +700,7 @@ function ChatPanel({
           >
             <Send aria-hidden />
           </Button>
+          </Hint>
         </div>
       </div>
     </div>

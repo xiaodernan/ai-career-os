@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Bookmark, BookmarkPlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import {
   Dialog,
@@ -106,6 +107,7 @@ export function SavedSearchPanel({ value, onApply }: SavedSearchPanelProps) {
               >
                 {search.name}
               </button>
+              <Hint side="top" label={t("savedSearches.deleteHint")}>
               <button
                 type="button"
                 onClick={() => setPendingDelete(search)}
@@ -114,6 +116,7 @@ export function SavedSearchPanel({ value, onApply }: SavedSearchPanelProps) {
               >
                 <Trash2 className="size-3" aria-hidden />
               </button>
+              </Hint>
             </li>
           ))}
         </ul>

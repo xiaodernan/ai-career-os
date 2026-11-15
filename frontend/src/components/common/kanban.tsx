@@ -34,6 +34,7 @@ import { formatDate } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { packetCompleteness } from "@/lib/application-packet";
 import { Badge } from "@/components/ui/badge";
+import { Hint } from "@/components/ui/hint";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface KanbanColumnProps {
@@ -173,6 +174,7 @@ const KanbanCard = React.memo(function KanbanCard({
       aria-grabbed={isDragging}
     >
       <div className="flex items-start gap-2">
+        <Hint side="right" label={t("applications.dragHint")}>
         <div
           {...attributes}
           {...listeners}
@@ -191,6 +193,7 @@ const KanbanCard = React.memo(function KanbanCard({
         >
           <GripVertical className="size-4" aria-hidden />
         </div>
+        </Hint>
         <div className="min-w-0 flex-1">
           {/* The card's own fields open the editor; the drag handle beside it stays the only
               drag activator, so a click here is never mistaken for a move. */}
