@@ -3820,6 +3820,20 @@ export const translations = {
       manualInAppFive:
         "The nine quests on the dashboard — the same nine rooms, checked off as you walk them.",
       manualInAppClosing: "A manual worth reading is one you never had to find.",
+      keptGoingEyebrow: "THE DAY YOU KEPT GOING",
+      keptGoingTitle: "The search viewed from day 100",
+      keptGoingIntro:
+        "Nobody tells you about day 100: the day the calendar forgets why you started, the matches feel arithmetic, the letters read like defaults. This is the act the books skip — the one the tool was built for.",
+      keptGoingBeatOneTitle: "The hope, measured",
+      keptGoingBeatOneBody:
+        "The first two weeks, everything is a signal — every unanswered letter a clue. The match scores feel like weather forecasts. They aren't. The ledger says: measured days, not moods.",
+      keptGoingBeatTwoTitle: "The doubt, catalogued",
+      keptGoingBeatTwoBody:
+        "Day 60. The same failure mode, third week running. The gap report names the real distance — not the one you invent for yourself at midnight. It isn't scolding; it's a map with the wrong turns already drawn.",
+      keptGoingBeatThreeTitle: "The return, ordinary",
+      keptGoingBeatThreeBody:
+        "Day 100. You kept going, for boring reasons: the ritual works, the counts stay visible, the letters keep landing. The sign at the end of the road isn't a trophy — it's the sentence you needed to hear.",
+      keptGoingClosing: "The tool never asks if you're tired. It asks if you hit today. That is the only question the loop answers.",
       printFromHere: "Print this manual",
     },
     /**
@@ -7432,6 +7446,20 @@ export const translations = {
       manualInAppFour: "这个地址——/playbook——公开、可打印，装账号之前你也能读。",
       manualInAppFive: "仪表盘上的九间房——同一份九间房，你走一间，亮一间。",
       manualInAppClosing: "值得读的册子，从来不需要你去找。",
+      keptGoingEyebrow: "你坚持过来的那一天",
+      keptGoingTitle: "从第 100 天看这场搜索",
+      keptGoingIntro:
+        "没人跟你讲第 100 天——信号开始像数学题，匹配像机械仪表，连回信也像默认模板。这是那些书都跳过的第三幕，也是这个工具真正被造出来干的活。",
+      keptGoingBeatOneTitle: "希望，量出来的",
+      keptGoingBeatOneBody:
+        "头两周，什么都是信号——每封没回的信都像线索。匹配分数像天气预报。它们不是。账簿说的是：实数，不是心情。",
+      keptGoingBeatTwoTitle: "怀疑，标注下来的",
+      keptGoingBeatTwoBody:
+        "第 60 天。同一个失败模式，连续第三周。差距报告说的是真正的距离——不是你半夜自己编的那个。它不是训斥，是一张已经把岔路画歪的地图。",
+      keptGoingBeatThreeTitle: "回来，平平无奇地",
+      keptGoingBeatThreeBody:
+        "第 100 天。你坚持了，为了无聊的理由——仪式奏效，数字一直看得见，信一直在进门。路尽头那块牌子不是奖杯——是你在听你自己说完那句话之后，才会信的那句话。",
+      keptGoingClosing: "这个工具从不问累不累。它只问今天接住了没有。这是这一圈唯一回答的问题。",
       printFromHere: "打印这份指南",
     },
     /**

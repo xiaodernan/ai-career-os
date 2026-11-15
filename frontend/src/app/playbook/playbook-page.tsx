@@ -326,6 +326,31 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.manualInAppClosing")}</p>
         </section>
 
+        {/* The day you kept going — the third act, before the close */}
+        <section id="keptgoing" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.keptGoingEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">10</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.keptGoingTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.keptGoingIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {[
+              { title: t("playbook.keptGoingBeatOneTitle"), body: t("playbook.keptGoingBeatOneBody") },
+              { title: t("playbook.keptGoingBeatTwoTitle"), body: t("playbook.keptGoingBeatTwoBody") },
+              { title: t("playbook.keptGoingBeatThreeTitle"), body: t("playbook.keptGoingBeatThreeBody") },
+            ].map((beat, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  {String(index * 4 + 1).padStart(2, "0")} · {beat.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{beat.body}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.keptGoingClosing")}</p>
+        </section>
+
         {/* Colophon */}
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>

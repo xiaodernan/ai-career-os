@@ -6878,6 +6878,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **242** The day you kept going — chapter ten, the third act (2026-11-16).
+
+  (The manual closes its arc with the act the genre usually skips: **the day the search
+  actually stops being fun.** "The day you kept going — the search viewed from day 100" — three
+  beats in EN+ZH, no new sources, no clicks: **The hope, measured** (the first weeks are
+  weather forecasts; the ledger counts days, not moods) → **The doubt, catalogued** (day 60, the
+  same failure mode third week running; the gap report draws the wrong turns already, in a map
+  that isn't scolding) → **The return, ordinary** (day 100; the ritual works, the counts stay
+  visible, the letters keep landing — the sign at the road's end isn't a trophy, it is the sentence
+  the reader needed to hear). Closes: "The tool never asks if you're tired. It asks if you hit
+  today." The chapter rail gained `#keptgoing` between the manual chapter and the colophon.
+  Reuses the existing card list pattern — **zero new browser sources** (census stayed 204), 10 new
+  key pairs, EN+ZH with no mixed language. vitest **1466/1466**, tsc clean, `verify_gates`
+  **569/569**, budget OK at 330 (jobs route **328.0 kB** — 2.0 kB of headroom remains, and the
+  book now holds eleven chapters: 00 → 10). `/playbook` live-served with the chapter present in
+  the markup, +3.1 KB.)
+
 - [x] **241** The operator's ledger — measured, dated, real (2026-11-16).
 
   (The user asked for real data over demo — honest read: no public-market numbers may be baked
