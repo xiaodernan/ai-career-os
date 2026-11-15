@@ -41,6 +41,14 @@ export const endpoints = {
     erase: "/users/me/erase",
   },
 
+  /* ---------------- The overseer's ledger ---------------- */
+  admin: {
+    /* The install's own counter: counts only, never a per-reader row (Epic 250). */
+    stats: "/admin/stats",
+    /* The same counter drawn as five weekly lines, Monday-anchored in UTC (Epic 251). */
+    trends: "/admin/trends",
+  },
+
   /* ---------------- Resumes ---------------- */
   resumes: "/resumes",
   resume: (id: string) => `/resumes/${seg(id)}`,

@@ -6910,9 +6910,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the shared `{success, data, error}` envelope, so a live `/admin` would have rendered
   eight em-dashes instead of the counts; both fetches unwrap now, typed end-to-end.
   Measured: vitest **1475/1475**, tsc clean, `verify_gates` **569/569**, census **210**
-  (+2 unchanged), budget OK at 340, /admin **248 kB gzip**, `/admin` HTTP 200.
+  (+2 unchanged), budget OK at 340, /admin **249 kB gzip**, `/admin` HTTP 200.
   `docs/API.md` documents both routes (the doc-vs-served contract gate goes green
-  both directions).)
+  both directions).
+  **The audit-carry pass (same day, follow-up commit)**: CI's ai-service audit gates
+  reddened on Epics 250/251's additions — every one fixed, none waved through: the
+  browser-surface audit cannot see raw fetches, so the ledger now calls through
+  `endpoints.admin.*` over the shared client (which also unwraps the envelope, so
+  Epic 250's unwrap bug could not recur), and both routes left the frontend
+  never-referenced ledger; SECURITY.md now names `/api/v1/admin/**` as the admitted
+  anonymous surface with the honest note that the passphrase is a courtesy, not a
+  wall; architecture.md §3 names the `admin/` package (the layout-vs-disk gate is
+  two-directional); the app-screens pin walks 40 page.tsx files; the response-shape
+  census reads 225 declared records (`AdminTrendsService.Series`, private, reaching
+  no route — same class as `Purge`/`Reading`/`Entry`/`Pending`). Full offline pytest
+  suite: **2804 passed** (+ the 8 pre-existing skips), the five audit gates verified
+  green locally before pushing.)
 
 - [x] **250** The overseer's ledger — `/admin`, one passphrase, the install's own counter (2026-11-16).
 

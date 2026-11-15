@@ -87,7 +87,12 @@ reachable from a browser.
   HMAC-SHA256 under the same secret, domain-separated by an inbound-specific
   prefix, constant-time compared; the local part is 45 octets so it fits RFC
   5321's mailbox cap, and the answer to a forged, retired or erased-account
-  address is the same 404, so the open internet cannot grade its guesses), and
+  address is the same 404, so the open internet cannot grade its guesses), the
+  operator's tally `/api/v1/admin/**` (Epic 250/251 — **counts only**: no name, no
+  content and no per-reader row crosses `/admin/stats` or `/admin/trends`; the
+  passphrase on the /admin page is a courtesy gate the install chose, not a
+  security control, and this doc names the surface rather than pretend the
+  passphrase is a wall), and
   the internal surface `/api/internal/**` (guarded below).
 
   The edge carries an optional shared-secret gate for its own operations surface

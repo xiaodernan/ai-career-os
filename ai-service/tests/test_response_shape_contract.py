@@ -1106,8 +1106,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 224 with Epic 196 (the calendar decision lane: `CalendarFeed.Deadline`) and
     # Epic 210 (the letters join: `LetterCatalogItem`, `LetterFile`; `LetterCatalogResponse`
     # was declared here too but nothing constructed it, so Epic 217 deleted it as dead code).
-    assert len(declared) == 224, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 224 measured"
+    # 225 with Epic 251's `Series` (the table/column/key triple AdminTrendsService hands to
+    # its own query builder). Private to the module and reaching no route, like `Purge`,
+    # `Reading`, `Entry` and `Pending`; held to the opener for the same reason -- this walk
+    # reads declarations, not routes, so the receipt joins the census.
+    assert len(declared) == 225, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 225 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

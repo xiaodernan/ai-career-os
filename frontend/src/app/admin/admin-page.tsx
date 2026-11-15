@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { api } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
 import { seriesTotal, sparkline } from "@/lib/admin-trend";
@@ -95,23 +97,15 @@ export default function AdminPage() {
 
   React.useEffect(() => {
     if (!unlocked) return;
-    const base = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"}`;
     let cancelled = false;
-    const load = <T,>(path: string, apply: (payload: T) => void) => {
-      fetch(`${base}${path}`)
-        .then((response) => (response.ok ? response.json() : null))
-        .then((envelope: { data?: T | null } | null) => {
-          // both admin routes answer inside the shared {success,data,error} envelope
-          if (!cancelled && envelope && typeof envelope === "object" && envelope.data) {
-            apply(envelope.data);
-          }
-        })
-        .catch(() => {
-          /* the gate is happy without the database — the operator can probe HTTP by hand if the door flakes */
-        });
-    };
-    load("/admin/stats", setStats);
-    load("/admin/trends?weeks=12", setTrends);
+    // the shared client unwraps the {success,data,error} envelope and carries the
+    // correlation id; failures degrade to the em-dash, never to a fabricated number
+    api.get<AdminStats>(endpoints.admin.stats)
+      .then((data) => { if (!cancelled) setStats(data); })
+      .catch(() => { /* the gate is happy without the database — the operator can probe HTTP by hand if the door flakes */ });
+    api.get<AdminTrends>(endpoints.admin.trends, { weeks: 12 })
+      .then((data) => { if (!cancelled) setTrends(data); })
+      .catch(() => { /* as above */ });
     return () => { cancelled = true; };
   }, [unlocked]);
 
