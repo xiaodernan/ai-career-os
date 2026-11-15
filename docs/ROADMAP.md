@@ -6878,6 +6878,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **231** Nine moves from hello to thank-you — the front door learns the whole arc (2026-11-15).
+
+  (The public landing gained the map the product had never shown. **Nine moves, from hello to
+  thank-you** — a 3×3 grid of glass tiles with numbered steps, each linking to its real room:
+  Resume `/resumes` · Fit `/studio` · Growth `/growth` · Letters `/letters` · Rehearse
+  `/interviews` · Track `/applications` · Replies `/replies` · Negotiate `/offers` · Ceremony
+  `/ceremony` — plus the line *"Prefer to read first? The playbook walks all nine."* linking to
+  the public manual. The tiles compose the aurora/glass system the landing already speaks
+  (hover lift, ring, numbered 01–09, icons matched to the routes, focus-visible ring). Also
+  corrected one **unmeasured marketing number** on the same pass: the hero stats band read
+  "100% claims cited to your material" — a claim nobody measured, replaced with **2 — Languages —
+  EN + ZH, entire product** (a number the parity gate measures); the other two stay (26 agent
+  tools, 8 subagents — both pinned by the registry gates). 22 new EN+ZH keys; the landing
+  gate (`landing-page.test.ts`) walks them all — every key resolves in both languages and the
+  two differ. Live-verified in the real built container: `/` served **HTTP 200** with **zero
+  console errors**, `document.documentElement.lang = "en"`, the nine tiles present in order
+  with their real hrefs and ~85 px heights (measured via `evaluate`), EN shell rendering. The
+  screenshot path itself was refused by the desktop window manager ("needs a visible tab"),
+  so visual confirmation beyond the DOM probe is honestly not claimed. vitest **1446/1446**,
+  tsc clean, `verify_gates` **569/569**, copy census stayed **197** (no new browser source —
+  the tiles live inside `landing-page.tsx`), `npm run budget` OK at 325 (jobs route now at
+  **324.8 kB** — 0.2 kB from the line; the per-locale table split remains the debt, next
+  arcs either pay it or raise with a reason, never silently).)
+
 - [x] **230** The first coffee — the conversation before the referral (2026-11-15), and the dead-key census.
 
   (The networking arc gains the room it was missing. The registry knows *who* the reader knows;

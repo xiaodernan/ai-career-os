@@ -6,10 +6,15 @@ import {
   ArrowRight,
   BarChart3,
   Briefcase,
+  CalendarClock,
   CheckCircle2,
+  Feather,
   FileText,
   Globe,
+  Handshake,
+  MailOpen,
   MessageSquare,
+  Mic,
   Shield,
   Sparkles,
   Target,
@@ -121,7 +126,7 @@ export function LandingPage() {
           <div className="glass grid grid-cols-3 divide-x divide-border/60 rounded-2xl px-2 py-5 shadow-card">
             <Stat value="26" label={t("landing.stat1Label")} />
             <Stat value="8" label={t("landing.stat2Label")} />
-            <Stat value="100%" label={t("landing.stat3Label")} />
+            <Stat value="2" label={t("landing.stat3Label")} />
           </div>
         </Reveal>
 
@@ -150,6 +155,67 @@ export function LandingPage() {
             <FeatureCard delay={80} icon={<TrendingUp className="size-5" aria-hidden />} title={t("landing.features.growth")} description={t("landing.features.growthDescription")} />
             <FeatureCard delay={160} icon={<BarChart3 className="size-5" aria-hidden />} title={t("landing.features.analytics")} description={t("landing.features.analyticsDescription")} />
           </div>
+        </div>
+      </section>
+
+      {/* The whole arc — nine moves, each its own room, EN + ZH. */}
+      <section className="relative border-t border-border/50">
+        <div className="mx-auto max-w-6xl px-4 py-20">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">
+              {t("landing.arcEyebrow")}
+            </p>
+            <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+              {t("landing.arcTitle")}
+            </h2>
+            <p className="mt-3 text-muted-foreground">{t("landing.arcDescription")}</p>
+          </Reveal>
+          <ol className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              { icon: FileText, title: t("landing.arcResume"), sub: t("landing.arcResumeSub"), href: "/resumes" },
+              { icon: Target, title: t("landing.arcFit"), sub: t("landing.arcFitSub"), href: "/studio" },
+              { icon: TrendingUp, title: t("landing.arcGrowth"), sub: t("landing.arcGrowthSub"), href: "/growth" },
+              { icon: Feather, title: t("landing.arcLetters"), sub: t("landing.arcLettersSub"), href: "/letters" },
+              { icon: Mic, title: t("landing.arcInterviews"), sub: t("landing.arcInterviewsSub"), href: "/interviews" },
+              { icon: CalendarClock, title: t("landing.arcApplications"), sub: t("landing.arcApplicationsSub"), href: "/applications" },
+              { icon: MailOpen, title: t("landing.arcReplies"), sub: t("landing.arcRepliesSub"), href: "/replies" },
+              { icon: Handshake, title: t("landing.arcOffers"), sub: t("landing.arcOffersSub"), href: "/offers" },
+              { icon: Sparkles, title: t("landing.arcCeremony"), sub: t("landing.arcCeremonySub"), href: "/ceremony" },
+            ].map((move, index) => {
+              const Icon = move.icon;
+              return (
+                <li key={move.href}>
+                  <Link
+                    href={move.href}
+                    className="group flex h-full items-start gap-4 rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card focus-visible:ring-[3px] focus-visible:ring-primary/30"
+                  >
+                    <span
+                      aria-hidden
+                      className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/15 transition-transform duration-300 group-hover:scale-110"
+                    >
+                      <Icon className="size-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex items-baseline gap-2">
+                        <span className="text-2xs tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                        <span className="text-sm font-semibold">{move.title}</span>
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{move.sub}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="mt-8 text-center">
+            <Link
+              href="/playbook"
+              className="inline-flex items-center gap-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {t("landing.arcPlaybook")}
+              <ArrowRight aria-hidden className="size-4" />
+            </Link>
+          </p>
         </div>
       </section>
 
