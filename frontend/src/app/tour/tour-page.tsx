@@ -80,7 +80,7 @@ export default function TourPage() {
           <p className="text-2xs font-semibold uppercase tracking-widest text-primary">
             {t("tour.eyebrow")}
           </p>
-          <h1 className="mt-4 font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+          <h1 className="mt-4 text-balance font-serif text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
             {t("tour.title")}
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-muted-foreground">{t("tour.description")}</p>

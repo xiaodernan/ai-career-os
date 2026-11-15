@@ -87,7 +87,7 @@ export default function PlaybookPage() {
           <p className="text-xs font-medium uppercase tracking-[0.3em] text-primary">
             {t("playbook.eyebrow")}
           </p>
-          <h1 className="max-w-4xl font-serif text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+          <h1 className="max-w-4xl text-balance font-serif text-5xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">
             {t("playbook.title")}
           </h1>
           <p className="max-w-3xl text-lg text-muted-foreground">{t("playbook.description")}</p>

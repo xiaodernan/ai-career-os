@@ -6878,6 +6878,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **248** The typography audit — balanced wrap, a couple of real inches (2026-11-16).
+
+  (The user complained about "font distortion / overlap / squeezing" in the front end. A real
+  programmatic audit of every rendered route returned **zero text-overflow, zero vertical
+  clipping, zero overlapping solid blocks** — the `-z-10` aurora layer sits behind and the headlines
+  do not collide. No invented fixes. What was done: every display *h1* line-wrap is now explicit
+  (`text-balance`, and `text-pretty` on the landing hero — both distribute the line breaks
+  evenly so the eye travels a clean line rather than "Your personal / job-search / operating system"
+  jamming against its own left edge), and the ceremony heading never changes, because a serif at
+  72 px with tracking-tight was designed against the font. One genuine defect *purported* to be visible
+  remains honestly unverifiable on this host — the desktop window is not visible here.
+  vitest **1467/1467**, tsc clean, `verify_gates` **569/569**, budget OK at 335.
+  All three pages live-served 200 on the rebuilt container.)
+
 - [x] **247** The hint multiplies — main surfaces grow hover teaching (2026-11-16).
 
   (The user's ask keeps ringing: "尽量在主界面上做出各种按键和操作的附带教学说明".

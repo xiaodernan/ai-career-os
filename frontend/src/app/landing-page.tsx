@@ -95,7 +95,7 @@ export function LandingPage() {
             <span className="size-1.5 rounded-full bg-primary animate-pulse-dot" aria-hidden />
             {t("landing.eyebrow")}
           </span>
-          <h1 className="mt-6 font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl">
+          <h1 className="mt-6 text-balance text-pretty font-serif text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-7xl">
             {t("landing.heroTitle")}
             <GradientText>{t("landing.heroTitleAccent")}</GradientText>
             <br />
