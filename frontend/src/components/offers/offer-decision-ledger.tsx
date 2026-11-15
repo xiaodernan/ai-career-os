@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -109,7 +110,8 @@ export function OfferDecisionLedger() {
           <CardDescription>{t("offers.ledgerDescription")}</CardDescription>
         </div>
         {dirty && (
-          <Button
+          <Hint side="left" label={t("chrome.resetHint")}>
+<Button
             variant="ghost"
             size="sm"
             className="ml-auto shrink-0"
@@ -119,6 +121,7 @@ export function OfferDecisionLedger() {
             <RotateCcw aria-hidden className="size-4" />
             <span className="hidden sm:inline">{t("offers.ledgerReset")}</span>
           </Button>
+          </Hint>
         )}
       </CardHeader>
       <CardContent className="space-y-4">
@@ -218,6 +221,7 @@ export function OfferDecisionLedger() {
                         );
                       })}
                       <td className="py-2 pl-2 text-right">
+                        <Hint side="left" label={t("chrome.deleteHint")}>
                         <Button
                           variant="ghost"
                           size="icon-sm"
@@ -226,6 +230,7 @@ export function OfferDecisionLedger() {
                         >
                           <Trash2 aria-hidden className="size-3.5 text-muted-foreground" />
                         </Button>
+                        </Hint>
                       </td>
                     </tr>
                   );

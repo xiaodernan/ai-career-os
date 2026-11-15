@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, PartyPopper, RotateCcw, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useOfferShelf } from "@/lib/hooks/resources";
@@ -99,9 +100,11 @@ export function OfferDayOnePacket() {
           <CardDescription>{t("offers.dayOneDescription")}</CardDescription>
         </div>
         {checked > 0 && (
-          <Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.dayOneReset")}>
+                    <Hint side="left" label={t("chrome.resetHint")}>
+<Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.dayOneReset")}>
             <RotateCcw aria-hidden className="size-4" />
           </Button>
+          </Hint>
         )}
       </CardHeader>
       <CardContent className="space-y-4">

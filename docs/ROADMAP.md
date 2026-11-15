@@ -6878,6 +6878,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **260** The silent buttons, everywhere — the teaching rollout completes (2026-11-16).
+
+  (The ask, again and louder: "同时尽量在主界面上做出各种按键和操作的附带教学说明会比较好" —
+  *every* primary control on the main surfaces carries its own teaching now, widget by
+  widget, with one shared bilingual vocabulary for the three shapes: **resetHint** ("再来
+  一次——这张卡从头来过"), **editHint** ("编辑——原地改好"), **deleteHint** ("删掉——它就永远消失了"),
+  plus **menuHint** ("打开菜单——一切都在这里面") for the mobile navigation trigger. Wrapped, in
+  the order they live on screen: the save/unsave toggle on every job card (the single
+  highest-frequency button in the product), the kanban drag handle's debrief, the source
+  actions' delete, the notes panel's edit and delete, the resumes row's delete, the
+  debrief/nine-quests/not-yet/coffee-chat/first-week-game/commitment/day-one/quarter/
+  rehearsal reset-or-replay buttons (all "run it again" clears), the ledger's remove-
+  criterion trash and reset, the offer shelf's edit + delete, and the mobile sheet's
+  trigger. EN and ZH written clean, no 中英文夹杂 anywhere; used-keys gate passes with
+  every key live in both tables. Two ledgers kept honest by the budget: the shared
+  translations table grew ~1 kB and pushed **/jobs over the 340 line — the fix was a
+  deferred dynamic import** of the eight-kilobyte filter panel (ssr preserved,
+  `JobFilterPanel` leaves the first load), **/jobs 341.4 → 338.4 kB gzip**, no raise; and
+  the one malformed wrap (a `<Hint>` around the wrong Button in the decision ledger,
+  caused by an ambiguous anchor) was found by the compiler gate, repaired by hand, and
+  the whole suite re-verified: vitest **1487/1487**, tsc clean, verify_gates **569/569**,
+  budget OK at 340, census **211**, `/jobs` and `/applications` HTTP 200 on the rebuilt
+  image after a Docker daemon death mid-pass (relaunched; all gates back to 569).)
+
 - [x] **259** The install reads itself — the funnel's own first move (2026-11-16).
 
   (Templated arithmetic over the same `GET /admin/funnel` payload, deliberately not

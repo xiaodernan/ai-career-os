@@ -4,6 +4,7 @@ import * as React from "react";
 import { Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { useToggleSaveJob } from "@/lib/hooks/actions";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -31,6 +32,7 @@ export function SaveToggle({
   const [pending, setPending] = React.useState(false);
 
   return (
+    <Hint side="left" label={saved ? t("save.removeHint") : t("save.saveHint")}>
     <Button
       type="button"
       variant={saved ? "ai" : "outline"}
@@ -53,5 +55,6 @@ export function SaveToggle({
       <Bookmark aria-hidden className={saved ? "fill-current" : undefined} />
       {withLabel && (saved ? t("save.saved") : t("save.saveShort"))}
     </Button>
+    </Hint>
   );
 }

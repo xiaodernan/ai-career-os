@@ -5,6 +5,7 @@ import { BadgeDollarSign, Pencil, Plus, Sparkles, Trash2, Trophy } from "lucide-
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -257,7 +258,8 @@ export function OfferShelf() {
                       <span className="text-base font-semibold tabular-nums">
                         {money(row.totalComp, row.currency, locale)}
                       </span>
-                      <Button
+                                            <Hint side="left" label={t("chrome.editHint")}>
+<Button
                         variant="ghost"
                         size="icon-sm"
                         aria-label={t("offers.shelfEdit")}
@@ -265,7 +267,9 @@ export function OfferShelf() {
                       >
                         <Pencil aria-hidden className="size-3.5" />
                       </Button>
-                      <Button
+                      </Hint>
+                                            <Hint side="left" label={t("chrome.deleteHint")}>
+<Button
                         variant="ghost"
                         size="icon-sm"
                         aria-label={t("offers.shelfDelete")}
@@ -274,6 +278,7 @@ export function OfferShelf() {
                       >
                         <Trash2 aria-hidden className="size-3.5 text-destructive" />
                       </Button>
+                      </Hint>
                     </div>
                   </div>
                 </li>

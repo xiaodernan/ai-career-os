@@ -5,6 +5,7 @@ import { Check, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -94,9 +95,11 @@ export function OfferRehearsalCard() {
           <CardDescription>{t("offers.rehearsalDescription")}</CardDescription>
         </div>
         {Object.keys(state.scores).length > 0 && (
-          <Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.rehearsalReset")}>
+                    <Hint side="left" label={t("chrome.resetHint")}>
+<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.rehearsalReset")}>
             <RotateCcw aria-hidden className="size-4" />
           </Button>
+          </Hint>
         )}
       </CardHeader>
       <CardContent className="space-y-4">

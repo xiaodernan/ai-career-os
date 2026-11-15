@@ -93,6 +93,8 @@ export const translations = {
       save: "Save this job",
       saved: "Saved",
       saveShort: "Save",
+      saveHint: "Save — adds this role to your bookmarks",
+      removeHint: "Remove — takes this role out of your bookmarks",
     },
     /**
      * The one screen that answers "what has my search written down, in order" (Epic 81):
@@ -359,6 +361,10 @@ export const translations = {
       openNavigationMenu: "Open navigation menu",
       openCommandPalette: "Open command palette",
       accountMenu: "Account menu",
+      resetHint: "Replay — start this card over",
+      editHint: "Edit — fix it in place",
+      deleteHint: "Delete — gone for good",
+      menuHint: "Open the menu — everything lives behind it",
       commandPaletteTitle: "Command palette",
       commandPaletteDescription: "Search your career workspace and jump between sections",
       commandPalettePlaceholder: "Type a command or search…",
@@ -4162,6 +4168,8 @@ export const translations = {
       save: "收藏这个职位",
       saved: "已收藏",
       saveShort: "收藏",
+      saveHint: "收藏——把这个职位存进你的书签",
+      removeHint: "移除——把这个职位从你的书签里拿走",
     },
     /**
      * 一屏看懂整个求职闭环（Epic 81）：投递、笔记、联系人、简历版本、匹配与模拟面试，
@@ -4400,6 +4408,10 @@ export const translations = {
       openNavigationMenu: "打开导航菜单",
       openCommandPalette: "打开命令面板",
       accountMenu: "账户菜单",
+      resetHint: "再来一次——这张卡从头来过",
+      editHint: "编辑——原地改好",
+      deleteHint: "删掉——它就永远消失了",
+      menuHint: "打开菜单——一切都在这里面",
       commandPaletteTitle: "命令面板",
       commandPaletteDescription: "搜索你的求职工作区，在各个板块之间跳转",
       commandPalettePlaceholder: "输入命令或搜索…",

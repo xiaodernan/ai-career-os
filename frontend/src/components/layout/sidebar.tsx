@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Menu } from "lucide-react";
 import { useNotifications } from "@/lib/hooks/resources";
 
@@ -228,7 +229,8 @@ export function MobileSidebar({ children }: { children: React.ReactNode }) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={menuLabel} className="lg:hidden">
+                <Hint side="right" label={t("chrome.menuHint")}>
+<Button variant="ghost" size="icon-sm" aria-label={menuLabel} className="lg:hidden">
           <span className="relative flex shrink-0 items-center">
             <Menu aria-hidden />
             {unread > 0 && (
@@ -241,6 +243,7 @@ export function MobileSidebar({ children }: { children: React.ReactNode }) {
             )}
           </span>
         </Button>
+        </Hint>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 gap-0 bg-sidebar p-0 text-sidebar-foreground">
         <SheetHeader className="border-b border-sidebar-border px-0">

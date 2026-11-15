@@ -9,6 +9,7 @@ import { formatTags, parseTags, tagIsInert, tagRow } from "@/lib/note-tags";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -206,7 +207,8 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
                     : null}
                 </p>
               </div>
-              <Button
+                            <Hint side="left" label={t("chrome.editHint")}>
+<Button
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("knowledge.notes.editNote", { title: displayTitle })}
@@ -214,7 +216,9 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
               >
                 <Pencil aria-hidden />
               </Button>
-              <Button
+              </Hint>
+                            <Hint side="left" label={t("chrome.deleteHint")}>
+<Button
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("knowledge.notes.deleteNote", { title: displayTitle })}
@@ -222,6 +226,7 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
               >
                 <Trash2 aria-hidden />
               </Button>
+              </Hint>
             </div>
             {note.content && (
               <p className="whitespace-pre-wrap text-sm text-muted-foreground">{note.content}</p>

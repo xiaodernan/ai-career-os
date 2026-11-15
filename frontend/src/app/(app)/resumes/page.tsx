@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { UploadDropzone } from "@/components/resumes/upload-dropzone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Badge } from "@/components/ui/badge";
 import { useDeleteResume } from "@/lib/hooks/actions";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -195,7 +196,8 @@ export default function ResumesPage() {
                               <Sparkles aria-hidden />
                             </Link>
                           </Button>
-                          <Button
+                                                    <Hint side="left" label={t("chrome.deleteHint")}>
+<Button
                             variant="ghost"
                             size="icon-sm"
                             aria-label={t("resumes.deleteAria", { title: r.title })}
@@ -203,6 +205,7 @@ export default function ResumesPage() {
                           >
                             <Trash2 aria-hidden />
                           </Button>
+                          </Hint>
                         </div>
                       </CardContent>
                     </Card>

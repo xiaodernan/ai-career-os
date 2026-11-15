@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileUp, Loader2, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -510,7 +511,8 @@ export function SourceDeleteButton({ id, title }: { id: string; title: string })
   const remove = useDeleteSource();
   return (
     <>
-      <Button
+            <Hint side="left" label={t("chrome.deleteHint")}>
+<Button
         variant="ghost"
         size="icon-sm"
         aria-label={t("knowledge.sources.deleteLabel", { title })}
@@ -518,6 +520,7 @@ export function SourceDeleteButton({ id, title }: { id: string; title: string })
       >
         <Trash2 aria-hidden />
       </Button>
+      </Hint>
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}

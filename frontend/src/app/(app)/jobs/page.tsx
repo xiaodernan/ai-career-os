@@ -17,7 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobsPulseCard } from "@/components/jobs/pulse-card";
-import { JobFilterPanel } from "@/components/jobs/job-filters";
+/* Code-split, like StreamingText on the copilot: the filter panel is eight
+ * kilobytes of chrome only the reader's second job-search minute opens, and it
+ * can afford to arrive one frame later. */
+const JobFilterPanel = dynamic(() =>
+  import("@/components/jobs/job-filters").then((m) => m.JobFilterPanel)
+);
 
 // The saved-search panel is a small below-the-fold convenience and the route
 // is already the heaviest page in the app; splitting it out like the kanban
