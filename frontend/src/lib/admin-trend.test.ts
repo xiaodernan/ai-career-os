@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { seriesTotal, sparkline } from "./admin-trend";
+import { projectedSparkline, seriesTotal, sparkline } from "./admin-trend";
 
 describe("sparkline", () => {
   it("returns null for no points — an empty chart is nothing, not a flat mystery", () => {
@@ -43,6 +43,53 @@ describe("sparkline", () => {
     const out = sparkline([7], 120, 36, 3)!;
     expect(out.points).toBe("3,3");
     expect(out.last).toEqual({ x: 3, y: 3 });
+  });
+});
+
+describe("projectedSparkline", () => {
+  it("returns null for no measured weeks instead of inventing one", () => {
+    expect(projectedSparkline([])).toBeNull();
+  });
+
+  it("fits a perfectly linear window exactly — slope, r2 = 1, and projections on the line", () => {
+    const out = projectedSparkline([2, 4, 6, 8, 10, 12], 4)!;
+    expect(out.slope).toBeCloseTo(2, 5);
+    expect(out.r2).toBeCloseTo(1, 5);
+    const dashed = out.projectionPoints.split(" ").map((pair) => pair.split(",").map(Number));
+    // the seam is the last measured point; four projected slots follow it
+    expect(dashed).toHaveLength(5);
+    const solidFinal = out.points.split(" ").at(-1)!.split(",").map(Number);
+    expect(dashed[0][0]).toBe(solidFinal[0]);
+    expect(dashed[0][1]).toBeCloseTo(solidFinal[1], 5);
+  });
+
+  it("reads a flat window as slope 0 and r2 0 — the honest answer to a flat line", () => {
+    const out = projectedSparkline([5, 5, 5, 5], 4)!;
+    expect(out.slope).toBe(0);
+    expect(out.r2).toBe(0);
+  });
+
+  it("clamps a falling line at the floor rather than projecting negatives", () => {
+    const out = projectedSparkline([100, 75, 50, 25, 5], 4)!;
+    expect(out.slope).toBeLessThan(0);
+    const dashed = out.projectionPoints.split(" ").map((pair) => pair.split(",").map(Number));
+    // every y is inside the box; a negative projection never renders below the axis
+    for (const [, y] of dashed) {
+      expect(y).toBeLessThanOrEqual(33);
+      expect(y).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("keeps r2 inside [0, 1] even for noisy windows", () => {
+    const out = projectedSparkline([0, 30, 5, 25, 10, 40, 8, 33], 4)!;
+    expect(out.r2).toBeGreaterThanOrEqual(0);
+    expect(out.r2).toBeLessThanOrEqual(1);
+  });
+
+  it("a single measured week fits a flat line without dividing by zero", () => {
+    const out = projectedSparkline([7], 4)!;
+    expect(Number.isFinite(out.slope)).toBe(true);
+    expect(out.points).toContain(",");
   });
 });
 

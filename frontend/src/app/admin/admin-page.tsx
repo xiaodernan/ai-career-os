@@ -19,7 +19,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber } from "@/lib/format";
-import { seriesTotal, sparkline } from "@/lib/admin-trend";
+import { seriesTotal, projectedSparkline } from "@/lib/admin-trend";
 
 interface AdminStats {
   users?: number;
@@ -220,7 +220,7 @@ export default function AdminPage() {
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {TREND_SERIES.map((serie) => {
             const values = trends?.series?.[serie.key];
-            const spark = values ? sparkline(values, 120, 36, 3) : null;
+            const spark = values ? projectedSparkline(values, 4, 120, 36, 3) : null;
             const total = values ? seriesTotal(values) : undefined;
             const peak = values && values.length > 0 ? Math.max(...values) : undefined;
             const Icon = serie.icon;
@@ -245,6 +245,15 @@ export default function AdminPage() {
                           strokeLinejoin="round"
                           strokeLinecap="round"
                         />
+                        <polyline
+                          points={spark.projectionPoints}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={1.5}
+                          strokeDasharray="3 2"
+                          strokeLinecap="round"
+                          opacity={0.65}
+                        />
                         <circle cx={spark.last.x} cy={spark.last.y} r={1.6} fill="currentColor" />
                       </>
                     )}
@@ -258,7 +267,8 @@ export default function AdminPage() {
             );
           })}
         </div>
-        <p className="mt-3 text-2xs leading-relaxed text-muted-foreground">{t("admin.trendFootnote")}</p>
+        <p className="mt-3 text-2xs leading-relaxed text-muted-foreground">{t("admin.trendProjection")}</p>
+        <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">{t("admin.trendFootnote")}</p>
       </section>
 
       <section>

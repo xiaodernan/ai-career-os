@@ -6878,6 +6878,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **252** The straight line through the window — the projection, honestly labeled (2026-11-16).
+
+  (The operator's ask included 趋势预测 — "trend prediction" — so the overseer's wall now
+  draws the projection, with the ceiling of what it claims written next to it. Each trend
+  card's sparkline gained the four weeks *after* the window's line: a least-squares fit
+  through the measured twelve ISO weeks, rendered dashed with a soft seam at the last
+  measured point. Falling windows project softer than zero and **clamp at the floor**; a
+  flat window reads as flat (slope exactly 0, r² exactly 0); noisy windows carry r² in
+  [0, 1]. Nothing is extrapolated past the arithmetic's own vocabulary: the section's
+  new EN+ZH note says it plainly — a straight line, least squares, not a forecast, not a
+  market move. The math lives in `lib/admin-trend.ts` (pure: `projectedSparkline`), with
+  six new tests pinning the exact linear case (slope 2/week, r² = 1, seam continuity), the
+  flat case, the negative-clamp case, the r² bounds across noisy windows, and the
+  single-week degenerate fit. `echo`-grade copy avoided on purpose: no prediction of a
+  future the install has no right to claim — the dashed line is labeled as arithmetic.
+  Measured: vitest **1481/1481**, tsc clean, `verify_gates` **569/569**, budget OK at 340,
+  /admin **249 kB gzip**, `/admin` HTTP 200 on the rebuilt image.)
+
 - [x] **251** The ledger, week over week — the overseer's trend line (2026-11-16).
 
   (The operator asked the admin door to do what an operator's wall actually does:
