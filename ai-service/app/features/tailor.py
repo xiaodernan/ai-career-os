@@ -137,9 +137,13 @@ async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id
                         "verify": verify_node, "render": render_node},
                        max_steps=8)
     final = await graph.run({"attempts": 0}, run_id=run_id, agent="resume")
-    return {"tailored": final["tailored"], "diff": final["diff"],
+    # the producer's answer is a literal the wire gate can walk — no pass-through variables
+    # carrying its nested maps.
+    final_diff = final["diff"]
+    return {"tailored": final["tailored"],
+            "diff": {"accepted": final_diff["accepted"], "rejected": final_diff["rejected"]},
             "notes": final["notes"], "evidence": final["evidence"],
-            "stats": final["stats"]}
+            "stats": {"accepted": len(final_diff["accepted"]), "rejected": len(final_diff["rejected"])}}
 
 
 def _apply_changes(structured: dict, changes: list[dict], out: dict,

@@ -113,7 +113,7 @@ docs/          origin spec, architecture, product plan, roadmap, product, API, R
                agents, evaluation, security, deployment, export, demo, runbook,
                quality gates, worktree consolidation, microservices,
                Spring Cloud readiness, edge operations lockdown,
-               sync to portfolio, loadtest, cache relay
+               sync to portfolio, loadtest, cache relay, stategraph
 docker-compose.yml   infra + `--profile app` full-stack containers
 ```
 
