@@ -6,7 +6,7 @@ Two API layers, deliberately separated:
 
 | Layer | Owner | Reachable from | Auth |
 |---|---|---|---|
-| **Public** `/api/v1/*` | Spring Boot | browser, any client | JWT bearer (except `/health`, `/auth/*`) |
+| **Public** `/api/v1/*` | Spring Boot | browser, any client | JWT bearer (except `/health`, `/auth/*`, `/admin/stats`) |
 | **Internal** `/internal/*` | FastAPI ai-service | backend only, private network | `X-Internal-Token` shared secret |
 
 The frontend only ever talks to the backend. The ai-service is never exposed to
@@ -65,6 +65,12 @@ screen. A malformed inbound value is replaced, never refused.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/health` | dependency report; no auth, always **200**. Answers {status, db, redis, storage, ai, aiNodes, buildSha}: status is ok only when all four answered true, otherwise degraded. The aiNodes array is the engine's fleet — one {url, up} row per configured ai-service origin, in configured order, all probed at once (Epic 86.2); ai is true when any of them answered, so one quiet replica is visible in the detail without claiming the engine is gone. The probes run together under one 2-second bound, so a hung dependency is reported false rather than hanging the route; storage is false when no object store is configured. buildSha is the image's commit, or dev for an untagged run. |
+
+### The overseer's ledger (`/admin`)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/admin/stats` | install tally; no auth by design, counts only. Answers twenty long integers from the tables the application itself writes — {users, resumes, applications, interviewsPracticed, interviewTurns, agentRuns, agentTraces, aiUsageEvents, knowledgeSources, notesKept, coverLetters, contacts, memories, companies, jobs, matches, conversations, messages, savedSearches, offers}. No name, no content, and no per-reader row ever crosses this route; a row id is not an answer this route can give. The browser-facing page at /admin opens on one passphrase (the operator's own choice — a courtesy gate, not a security control); the route itself is public so the page never carries a token for it. (Epic 250) |
 
 ### Auth (`/auth`)
 
