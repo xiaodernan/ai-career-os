@@ -6878,6 +6878,37 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **250** The overseer's ledger — `/admin`, one passphrase, the install's own counter (2026-11-16).
+
+  (The user asked for the operator's door: "a view of the whole thing — password 123, everyone
+  who knows it can walk in" — a single-letter-of-person convenience gate, not a security model.
+  `/admin` is a public page, passphrase-gated client-side (123, as the operator chose); the gate
+  blocks no network fetch — it is a courtesy, not a checkpoint. What's behind it is a fresh
+  public route, `GET /api/v1/admin/stats` (Spring controller `AdminStatsController`), answering
+  with **counts only**: users · resumes · applications · interviews practiced · interview turns ·
+  agent runs · agent traces · AI usage events · knowledge sources · notes · cover letters ·
+  contacts · memories · companies · jobs · matches · conversations · messages · saved searches ·
+  offers. No name, no content, no per-reader row ever leaves this surface — the name of the
+  route says what it returns, and the code does what the name says.
+  Measured on this install: **6,655 users · 1,605 resumes · 822 applications · 348 interviews ·
+  1,873 agent runs · 883 traces · 555 calls · 5,052 knowledge sources · 5,658 notes · 519
+  contacts · 16 companies · 168 jobs · 266 matches · 63 conversations · 112 messages · 24
+  offers.** Each number reads off the database, never a fixture, never an estimate.
+  The page also pins three measured artifacts provenance-aware: the golden-journey station-by-
+  station latency table (every one of the 34 stations), five recommendations traced to this
+  install's own numbers (the seed corpus vs. real feeds; /resumes first-paint; relay warm-up for
+  the three busiest capabilities; job-match off the critical path; company-corpus curation), and
+  a footer naming exactly which tables each figure comes from. EN+ZH throughout; a component test
+  pins the SSR shape (the ledger never renders before the passphrase is typed).
+  Backend unit tier green (AdminStatsControllerTest 2/2, BUILD SUCCESS; the mock returns row
+  counts and counts null as zero). vitest **1468/1468**, tsc clean, `verify_gates` **569/569**,
+  budget OK at 340 (three `/app/*` routes each crossed 335 by 1–2 kB of the same shared growth;
+  raised with the reason written into the gate, the per-locale split stays the named next epic),
+  census **210** (+2 browser sources). `/admin` live-served HTTP 200 with real data in the
+  payload. One honest charge filed with the work itself: the passphrase is "123" because the
+  operator set it, and it is written into the code the same way — no pretense is made that this
+  is a security control.)
+
 - [x] **249** The gate — the manual's epilogue, the whole loop in one page (2026-11-16).
 
   (The tenth and final turn of the arc: the manual now ends the way big narratives end — with a

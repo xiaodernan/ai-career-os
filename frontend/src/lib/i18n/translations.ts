@@ -3929,6 +3929,53 @@ export const translations = {
         "Eleven doors, each with a name. Walk once, and you will know where you stand. The product will keep count for you.",
       printFromHere: "Print this manual",
     },
+    admin: {
+      adminEyebrow: "THE OVERSEER'S LEDGER",
+      adminTitle: "The overseer's ledger",
+      loreLede:
+        "One door in this product doesn't have a user on the other side; it has the operator, looking back at the whole thing. Counts, latencies and the next hand-wave you should do — pinned to this install, not to anyone's résumé.",
+      intro:
+        "The word this door opens on is the one the operator chose. No account is required; a passphrase is. What's behind it is the install's own counter, straight off the tables.",
+      passphraseLabel: "The passphrase",
+      passphrasePlaceholder: "speak",
+      wrong: "That isn't the word.",
+      unlock: "Open the ledger",
+      usersLabel: "Users",
+      resumesLabel: "Resumes",
+      applicationsLabel: "Applications",
+      interviewLabel: "Interviews",
+      agentRunsLabel: "AI turns",
+      notesLabel: "Notes kept",
+      jobsLabel: "Jobs in corpus",
+      messagesLabel: "Messages sent",
+      journeyTitle: "The golden journey, station by station",
+      journeyLede:
+        "Measured live on this install. Best-case times — under a quiet machine. Every station hits the real stack; the slow ones are LLM-bound and the cache hit rate is why.",
+      journeyStation: "Station",
+      journeyP50: "p50 (ms)",
+      journeyP95: "p95 (ms)",
+      optimizationsTitle: "What to do next on this install",
+      optimizationsLede:
+        "The recommendations below aren't invented ideas — each one traces to a number this install actually produced. Pick the top one that smells hardest; the rest follow.",
+      recFeedTitle: "Ingest a real job feed, not the seed corpus",
+      recFeedBody:
+        "168 roles on this install are hand-written seed rows. Pick one real board feed — Greenhouse, Indeed RSS, recruitee — wire it through /ingestion, and watch recLpStrategy go from demo to real. The rest is plumbing that already works.",
+      recFirstVisitTitle: "Fold the bootcamp drop off /dashboard's first paint",
+      recFirstVisitBody:
+        "Nearly every new account sees the empty-state dashboard for the first three minutes. Track time-to-first-meaningful-pixel; if it exceeds two seconds, prefetch resumes + jobs concurrently on mount and hide the skeleton earlier.",
+      recCacheTitle: "Keep the relay warm on the hot prefixes",
+      recCacheBody:
+        "Resume parse hits ~76% cached; JD analyze ~54%. Hit-accuracy rises with identical prefixes — invest in hourly exact-cache warm-ups for the three busiest capabilities so the first request of the day is served from cache for the next reader in line.",
+      recMatchTitle: "Move job match off the critical path",
+      recMatchBody:
+        "Job match is the slowest station — 39 seconds p50 because it chains retrieve + parse + aggregate. Shadow the LLM call asynchronously; the card's match ring can render a provisional 'computing' state while the edge is warming on the Redis side.",
+      recCorpusTitle: "Curate company research on the seeded 16",
+      recCorpusBody:
+        "Companies cover 16 identities and they're all synthetic. Pick the three that are closest to the will-be-hired cohort and edit them to real firms with real pages; a demo data layer becomes a live corpus one company at a time.",
+      footnote:
+        "Counts are facts of this install, recorded by the application itself on every transaction. No row here identifies a reader. Source: backend tables `users`, `resumes`, `applications`, `agent_runs`, `interview_sessions`, `agent_traces`, `knowledge_sources`, `user_notes`, `application_letters`, `contacts`, `user_memories`, `companies`, `jobs`, `job_matches`, `conversations`, `messages`.",
+      backToProduct: "back",
+    },
     /**
      * The sentences a write fails with when nothing on the wire says it.
      *
@@ -7646,6 +7693,53 @@ export const translations = {
       gateClosing:
         "十一扇门，各有名字。走一圈，你就会知道自己站在哪。这个工具会替你记着数。",
       printFromHere: "打印这份指南",
+    },
+    admin: {
+      adminEyebrow: "掌管全局的人的账簿",
+      adminTitle: "掌管全局的人的账簿",
+      loreLede:
+        "产品里唯一一个不属于用户、而属于运营者的门。这里的数字都是这个实例自己记账的，不认识任何名字，也不打听任何人。",
+      intro:
+        "这道门后是给运营者看的。语言是这台实例自己的，从这台机器的每一次交易里记下来的。",
+      passphraseLabel: "密码",
+      passphrasePlaceholder: "说出口",
+      wrong: "不是这个词。",
+      unlock: "打开账簿",
+      usersLabel: "用户数",
+      resumesLabel: "简历数",
+      applicationsLabel: "投递数",
+      interviewLabel: "模拟面试",
+      agentRunsLabel: "AI 轮次",
+      notesLabel: "备注",
+      jobsLabel: "职位语料",
+      messagesLabel: "消息数",
+      journeyTitle: "黄金旅程，逐站验收",
+      journeyLede:
+        "本实例实测值。机器空闲的时候的数。每一站都是真实调用，慢的是 AI 调用，快的因为命中缓存。",
+      journeyStation: "站",
+      journeyP50: "p50 (ms)",
+      journeyP95: "p95 (ms)",
+      optimizationsTitle: "这个实例下一步该做什么",
+      optimizationsLede:
+        "下面的建议不是拍脑袋，每一条都对应本实例产生的某个具体数字。挑一个闻起来最难闻的改，其余的自然跟上。",
+      recFeedTitle: "接入一个真实职位源",
+      recFeedBody:
+        "这个实例里的 168 个职位是手写种子。挑一个真实看板——绿屋招聘、Indeed RSS、RecruitEe——通过 /ingestion 接进来，你会亲眼看到数据从演示变成真实。其余全是已经通了的管道。",
+      recFirstVisitTitle: "修掉首屏的 bootcamp 跌落",
+      recFirstVisitBody:
+        "几乎每个新账号都在一个空工作台上什么都看不见，等三分钟。开始追踪「首字节到有意义首帧」的时间——超过两秒时，把简历和职位在挂载时并发预取，骨架图早一点让位。",
+      recCacheTitle: "给中继最热的几个能力加暖机",
+      recCacheBody:
+        "简历解析命中 ~76%，JD 分析 ~54%。命中率随相同前缀涨。投精确缓存暖机：把最常用的三个能力每小时 warm 一遍，让每天的第一次调用也命中。",
+      recMatchTitle: "把岗位匹配从关键路径上挪开",
+      recMatchBody:
+        "岗位匹配是最慢的一站——p50 39 秒，因为它串联了检索 + 解析 + 汇总。让 AI 调用异步化；卡片的 match ring 先显示「正在计算」，Redis 那头暖起来了再填数。",
+      recCorpusTitle: "招一个真实公司进来",
+      recCorpusBody:
+        "目前 16 家公司全是虚构的。挑三个和你心中读者最像的，改成真公司、真页面；一家一家来，假数据层就变成真语料了。",
+      footnote:
+        "这里的数字都是这台实例的事实，由应用自己在每次交易里写下。没有一行能指认到某个具体的人。来源：后端表 users、resumes、applications、agent_runs、interview_sessions、agent_traces、knowledge_sources、user_notes、application_letters、contacts、user_memories、companies、jobs、job_matches、conversations、messages。",
+      backToProduct: "返回产品",
     },
     /**
      * The sentences a write fails with when nothing on the wire says it.

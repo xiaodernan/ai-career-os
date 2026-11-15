@@ -76,6 +76,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/inbound/mail/**").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/health").permitAll()
+                        // The operator's tally (Epic 248): counts only, no names, no content,
+                        // no identifiers — answers "how big is this install", not "who did what".
+                        .requestMatchers("/api/v1/admin/**").permitAll()
                         // Observability surface, pinned to the two exposed endpoints rather
                         // than /actuator/**: the scrape is read-only Micrometer metrics and
                         // health is a liveness probe. Production can restrict

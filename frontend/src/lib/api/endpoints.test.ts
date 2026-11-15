@@ -829,6 +829,8 @@ describe("endpoints ↔ backend route parity", () => {
     // surface the browser reads, not a probe-only route.
     "/calendar.ics":
       "the feed address is pasted into a calendar client, not fetched by the browser; the settings card copies the URL the backend already signed",
+    "/admin/stats":
+      "the overseer's ledger reads this straight from the browser with a raw absolute URL (counts only, no per-user rows); it deliberately lives outside endpoints.* so a test edit here measures the browser's actual call sites",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
     "/mail/preferences/{}/{}":
