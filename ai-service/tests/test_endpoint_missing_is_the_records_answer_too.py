@@ -136,7 +136,7 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 38, "app/%s page.tsx files, not the 38 this file walks (Epics 210/212/214 joined since this pin: letters, ceremony, playbook)" % len(out)
+    assert len(out) == 39, "app/%s page.tsx files, not the 39 this file walks (Epics 210/212/214/244 joined since this pin: letters, ceremony, playbook, tour)" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
