@@ -6878,6 +6878,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **265** The ledger of words, itemized — the translations file split from one 410 KB scroll into two modules (2026-11-16).
+
+  (The single-file translations table has been the named architectural debt since the bundle
+  budget started needing raises "on language-table growth". The table was one 409,836-byte,
+  7,669-line module read by every route, every test, every gate. Epic 265 splits it at the
+  seam: **`en.ts`** (208,580 bytes), **`zh.ts`** (128,831 bytes) and a 449-byte `translations.ts`
+  re-export that preserves the exact exported surface — `Locale`, `translations`,
+  `TranslationKey` — so every call site and every gate reads byte-identical behaviour; the
+  change is structural, not contractual. What it buys: (1) compile-time module isolation — TS,
+  linters, and the census now walk two named tables instead of one; (2) a clear boundary for
+  the follow-up — whether `zh.ts` can be tree-split out of the shared chunk (a build-analysis
+  question, not a line of code), which was the reason the file carried this debt; (3) the
+  `trace-fold` pin updated to read both halves (`foldedSteps:` appears exactly twice now —
+  it is required in both tables). What it does NOT buy yet, honestly stated: no bytes leave
+  first load — Next.js still inlines both tables into the shared chunk, and nothing here
+  changes that; the runtime lazy-load of one language chunk per reader is a real follow-up
+  with an SSR-first-paint constraint to solve, and the split above is the enabler. Also one
+  residual from the split: the English-only Marketer-copy scan stays where it is (copy
+  census unaffected — it reads `.tsx`, not `.ts`). Measured: vitest **1487/1487**, tsc clean,
+  `verify_gates` **569/569**, budget OK at 340, census **210** (zero new browser sources),
+  `/dashboard` HTTP 200 on the rebuilt image. CI all legs green.)
+
 - [x] **264** The quiet ones — who ever acted at all, cohort by cohort (2026-11-16).
 
   (The user's ask in one line: simulate what real users do — most open the page and leave

@@ -181,7 +181,8 @@ describe("the live stream stays wired to the bound", () => {
     new URL("../components/ai/task-stream.tsx", import.meta.url),
     "utf8"
   );
-  const copy = readFileSync(new URL("./i18n/translations.ts", import.meta.url), "utf8");
+  const enSource = readFileSync(new URL("./i18n/en.ts", import.meta.url), "utf8")
+    + readFileSync(new URL("./i18n/zh.ts", import.meta.url), "utf8");
 
   it("folds every trace frame through foldTrace, not a bare state append", () => {
     expect(source).toContain("foldTrace(prev, next)");
@@ -201,6 +202,6 @@ describe("the live stream stays wired to the bound", () => {
     expect(source).toMatch(/tracesOmitted\s*>\s*0/);
     expect(source).toContain('t("ai.taskStream.foldedSteps"');
     // Both halves of the translation table answer the new key.
-    expect(copy.match(/foldedSteps:/g) ?? []).toHaveLength(2);
+    expect(enSource.match(/foldedSteps:/g) ?? []).toHaveLength(2);
   });
 });
