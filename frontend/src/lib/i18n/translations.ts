@@ -3910,6 +3910,23 @@ export const translations = {
       keptGoingBeatThreeBody:
         "Day 100. You kept going, for boring reasons: the ritual works, the counts stay visible, the letters keep landing. The sign at the end of the road isn't a trophy — it's the sentence you needed to hear.",
       keptGoingClosing: "The tool never asks if you're tired. It asks if you hit today. That is the only question the loop answers.",
+      gateEyebrow: "THE GATE",
+      gateTitle: "The whole arc, one page",
+      gateIntro:
+        "Every chapter compressed to one sentence — the whole walk you are about to take. Eleven doors. Read it once before the first room, and once after the ceremony.",
+      gateDoor01: "Hand the resume to the machine — let it read the lines you've been skimming past.",
+      gateDoor02: "The only job here is the one you already wanted; the tool helps you go get it.",
+      gateDoor03: "The score is an estimate, not a verdict — one of many.",
+      gateDoor04: "Every bullet reworded, never invented; the verifier refuses otherwise.",
+      gateDoor05: "Rehearsal is free; the real room isn't — practice until the shaking stops.",
+      gateDoor06: "Every application is a promise kept with a deadline in view.",
+      gateDoor07: "When the letter arrives, the answer is yours to read, file, and answer.",
+      gateDoor08: "The shelf tells you what the market pays; the ledger tells you what it's worth.",
+      gateDoor09: "The paper packet is what you walk into the meeting carrying.",
+      gateDoor10: "The decision is yours — the tool ranks on paper, not on your behalf.",
+      gateDoor11: "The signature is the ending and also the beginning — the loop opens again tomorrow.",
+      gateClosing:
+        "Eleven doors, each with a name. Walk once, and you will know where you stand. The product will keep count for you.",
       printFromHere: "Print this manual",
     },
     /**
@@ -7611,6 +7628,23 @@ export const translations = {
       keptGoingBeatThreeBody:
         "第 100 天。你坚持了，为了无聊的理由——仪式奏效，数字一直看得见，信一直在进门。路尽头那块牌子不是奖杯——是你在听你自己说完那句话之后，才会信的那句话。",
       keptGoingClosing: "这个工具从不问累不累。它只问今天接住了没有。这是这一圈唯一回答的问题。",
+      gateEyebrow: "大门",
+      gateTitle: "整圈路线，一页看完",
+      gateIntro:
+        "每一章压缩成一句话——这就是你即将走的整条路。十一扇门，进第一个屋之前读一遍，签完了仪式再读一遍。",
+      gateDoor01: "把简历交给机器——让它替你读你一直跳过的那些字。",
+      gateDoor02: "这里只有你早就想去的那一份工作；这个工具帮你去拿到它。",
+      gateDoor03: "那个分数是个估计，不是裁决——众多估计之一。",
+      gateDoor04: "每个要点都被改写，但从不编造；校验器会拒绝那样写。",
+      gateDoor05: "预演是免费的，真正的面试间不是——练到手抖消失为止。",
+      gateDoor06: "每份投递都是一份带截止日期的承诺。",
+      gateDoor07: "信到了的时候，怎么读、怎么归档、怎么回——都是你的事。",
+      gateDoor08: "货架告诉你市场给多少钱，账本告诉你这工作值多少钱。",
+      gateDoor09: "那张纸口袋，是你带进会议室的东西。",
+      gateDoor10: "决定是你的——工具只能帮你在纸上排序，不能替你点头。",
+      gateDoor11: "签名是结束，也是开始——明天这圈又重新开了。",
+      gateClosing:
+        "十一扇门，各有名字。走一圈，你就会知道自己站在哪。这个工具会替你记着数。",
       printFromHere: "打印这份指南",
     },
     /**

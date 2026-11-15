@@ -6878,6 +6878,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **249** The gate — the manual's epilogue, the whole loop in one page (2026-11-16).
+
+  (The tenth and final turn of the arc: the manual now ends the way big narratives end — with a
+  **condensed map of the whole journey**, for the reader about to walk it or walk out of it. **The
+  Gate** — "The whole arc, one page" — closes directly on the colophon with eleven numbered sentences,
+  one per door the algorithm took this product through: hand the resume to the machine · read it as a
+  recruiter would · the score is one estimate, not a verdict · every bullet reworded never invented ·
+  the rehearsal you already paid for · the application, the letter, the shelf, the packet, the
+  signature. The reader is invited to read it once before the first room and again after the ceremony.
+  The chapter rail gained a `#gate` anchor between the manual's tenth chapter and the close — same
+  layout, same pattern, same contract. Full EN+ZH, no new browser sources, no dependency changes.
+  vitest **1467/1467**, tsc clean, `verify_gates` **569/569**, budget OK at 335 (/playbook stayed
+  ~240 kB — the well-lit manual grew by one light, not one stack of copy).)
+
 - [x] **248** The typography audit — balanced wrap, a couple of real inches (2026-11-16).
 
   (The user complained about "font distortion / overlap / squeezing" in the front end. A real

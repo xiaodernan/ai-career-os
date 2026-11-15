@@ -351,6 +351,37 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.keptGoingClosing")}</p>
         </section>
 
+        {/* The Gate — the whole loop, one page, for the reader about to walk it */}
+        <section id="gate" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.gateEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">11</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.gateTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.gateIntro")}</p>
+          <ol className="grid gap-2">
+            {[
+              { n: "01", text: t("playbook.gateDoor01") },
+              { n: "02", text: t("playbook.gateDoor02") },
+              { n: "03", text: t("playbook.gateDoor03") },
+              { n: "04", text: t("playbook.gateDoor04") },
+              { n: "05", text: t("playbook.gateDoor05") },
+              { n: "06", text: t("playbook.gateDoor06") },
+              { n: "07", text: t("playbook.gateDoor07") },
+              { n: "08", text: t("playbook.gateDoor08") },
+              { n: "09", text: t("playbook.gateDoor09") },
+              { n: "10", text: t("playbook.gateDoor10") },
+              { n: "11", text: t("playbook.gateDoor11") },
+            ].map((door, i) => (
+              <li key={i} className="flex gap-4 rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-sm leading-relaxed">
+                <span aria-hidden className="shrink-0 tabular-nums font-mono text-2xs text-muted-foreground">{door.n}</span>
+                <span className="text-foreground/90">{door.text}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.gateClosing")}</p>
+        </section>
+
         {/* Colophon */}
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>
