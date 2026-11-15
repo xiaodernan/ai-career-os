@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPaletteProvider } from "@/components/common/command-palette";
 import { WheelDirection } from "@/components/layout/wheel-direction";
+import { TourVisitMarker } from "@/components/layout/tour-visit-marker";
 import { SkipLink } from "@/components/layout/skip-link";
 import { tokenStore } from "@/lib/api/token-store";
 import { useUser } from "@/lib/hooks/auth";
@@ -109,6 +110,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AccountLocale />
       <PushRenewals />
       <WheelDirection />
+      <TourVisitMarker />
       <CommandPaletteProvider>
         <SkipLink />
         <div className="flex min-h-dvh">

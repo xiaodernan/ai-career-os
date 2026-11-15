@@ -6878,6 +6878,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **235** The nine quests — the dashboard's walking tour (2026-11-16).
+
+  (The product finally teaches its own map from inside. **Nine rooms, same order the landing draws
+  them** — `/resumes · /studio · /growth · /letters · /interviews · /applications · /replies ·
+  /offers · /ceremony` — one checkmark per room the reader opens, tracked in
+  `careeros.tour.v1` and nothing else. `TourVisitMarker` mounts once in the authenticated shell
+  and records the route; `NineQuestsCard` on `/dashboard` renders the nine glass tiles with a
+  progress rail (`role="progressbar"`, aria-valuenow wired), a celebratory line at 9/9, and a
+  forget-my-steps reset. Every room's title and description reuse the already-translated `nav.*`
+  / `navDescriptions.*` pairs — **only four new key pairs total** (title, intro, progress line,
+  the done sentence), which keeps the shared bilingual table at +0.3 kB gzip (jobs route now
+  **327.9 kB** — the cap is 330; the per-locale split remains the mandated next step, not another
+  raise). The tour is honestly useless to anything but the reader: no network calls, no scoring,
+  localStorage only, resettable. Pinned by storage unit tests (garbage blobs, unknown routes,
+  exact nine-order) and a component test; **census 200** (+2 browser sources: the marker and the
+  card). Measured live-limits this hour, stated plainly: the in-app browser cannot reach this
+  machine's backend at `:8080` (a network boundary, not a product bug), so the dashboard stays at
+  its splash in that browser and the card could not be interactively probed — instead a byte-level
+  audit of `/login`, `/register`, `/forgot-password` and `/dashboard` confirmed every route's SSR
+  ships its complete interactive shell server-side, and the card's own SSR shape is unit-pinned.
+  vitest **1459/1459**, tsc clean, `verify_gates` **569/569**, `npm run budget` OK at 330,
+  rebuilt and healthy; probe tokens were used only inside this host and never printed.)
+
 - [x] **234** The register door held — and gave up a deeper race than it knew about (2026-11-16).
 
   (Epic 226 had found the register race and fixed it — except the fix lived in the wrong place.

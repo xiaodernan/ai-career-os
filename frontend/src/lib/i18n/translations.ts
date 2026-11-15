@@ -910,6 +910,14 @@ export const translations = {
       staleOrDue: "stale or due reminders",
       onboardingTitle: "Let's build your workspace",
       onboardingDescription: "Nothing here is pre-filled — these steps unlock every feature, in order.",
+      nineQuestsTitle: "The nine rooms — your walking tour",
+      nineQuestsIntro:
+        "One checkmark as you open each room. Ten minutes, and the whole product is yours. Kept in this browser only — nothing here scores you.",
+      nineQuestsProgress: "{done} of {total} rooms walked",
+      nineQuestsClear: "All nine",
+      nineQuestsDone:
+        "All nine. The ceremony is waiting — it happens when you sign. Until then, the loop is yours.",
+      nineQuestsReset: "Forget my steps",
       stepUpload: "Upload your resume",
       stepUploadDescription:
         "Parsing builds the structured profile and knowledge base every agent cites from.",
@@ -4646,6 +4654,13 @@ export const translations = {
       staleOrDue: "个停滞或到期的提醒",
       onboardingTitle: "开始搭建你的工作台",
       onboardingDescription: "这里没有任何预填内容——按顺序完成这些步骤即可解锁全部功能。",
+      nineQuestsTitle: "九个房间——你的巡礼",
+      nineQuestsIntro:
+        "每开完一间，自己点亮一间。十分钟，整个产品就属于你了。只留在这个浏览器里——这里不给你打分。",
+      nineQuestsProgress: "{total} 间里走完了 {done} 间",
+      nineQuestsClear: "九间全亮",
+      nineQuestsDone: "九间都点亮了。收官仪式一直在等着你——签完字才出现。在那之前，这一圈是你的。",
+      nineQuestsReset: "忘掉我的脚印",
       stepUpload: "上传你的简历",
       stepUploadDescription: "解析会生成结构化档案和知识库，每个代理都从这里取证。",
       stepJd: "添加一份职位描述",

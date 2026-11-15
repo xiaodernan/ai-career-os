@@ -32,6 +32,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { MetricCard } from "@/components/common/metric-card";
+import { NineQuestsCard } from "@/components/dashboard/nine-quests-card";
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
 import { SectionBoundary, isEndpointMissing } from "@/components/common/query-boundary";
@@ -202,6 +203,9 @@ export default function DashboardPage() {
           />
         </div>
       </section>
+
+      {/* The nine quests (Epic 235): the walking tour for every reader, new or seasoned. */}
+      <NineQuestsCard />
 
       {/* Adaptive onboarding when the workspace holds nothing yet */}
       {workspaceEmpty ? (
