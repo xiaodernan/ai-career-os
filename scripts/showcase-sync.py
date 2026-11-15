@@ -45,6 +45,55 @@ NAV_ROUTES = sum(1 for _ in FRONTEND.joinpath("src/components/layout/nav.ts").re
 TESTS = "1380+"  # the suite's measured floor today; grows with each epic.
 
 
+def _milestones() -> list[str]:
+    """The six highest-numbered completed epics, deduped against the file's own two orderings."""
+    roadmap = REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8")
+    found = list(re.finditer(r"(?m)^- \[x\] \*\*(\d+)\*\* (.+?)(?:\s*—|\s*\n)", roadmap))
+    by_id = {}
+    for m in found:
+        by_id[int(m.group(1))] = m.group(2).split(".")[0].strip()
+    out = []
+    for n in sorted(by_id.keys(), reverse=True)[:6]:
+        sentence = by_id[n]
+        if sentence:
+            out.append(f"Epic {n} — {sentence}")
+    return out
+
+
+def _latest() -> dict:
+    import datetime
+    import subprocess
+
+    head = subprocess.check_output(["git", "rev-parse", "--short=7", "HEAD"], cwd=REPO).decode("utf-8").strip()
+    total = int(subprocess.check_output(["git", "rev-list", "--count", "HEAD"], cwd=REPO).decode("utf-8").strip())
+    roadmap = REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8")
+    found = list(re.finditer(r"(?m)^- \[x\] \*\*(\d+)\*\* (.+?)(?:\s*—|\s*\n)", roadmap))
+    ids = sorted({int(m.group(1)) for m in found})
+    top_id = ids[-1] if ids else 0
+    milestone = f"Epic {top_id}"
+    top = next(m for m in found if int(m.group(1)) == top_id)
+    milestone_full = f"the ledger of done epics (through {ITEM_EPICS} items), closed at Epic {top_id} — {top.group(2).split('.')[0].strip()}"
+    feature_surface = _milestones()
+    return {
+        "schema_version": "career-os.latest.v1",
+        "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "branch": "main",
+        "head": head,
+        "total_commits": total,
+        "milestone": milestone,
+        "milestone_full": milestone_full,
+        "pushed_at": datetime.date.today().isoformat(),
+        "locales": 2,
+        "page_routes": len(ROUTES),
+        "nav_routes": NAV_ROUTES,
+        "tests": TESTS,
+        "test_files": VITEST_FILES,
+        "work_items": ITEM_EPICS,
+        "epics": TOP_EPICS,
+        "feature_surface": feature_surface,
+    }
+
+
 def page() -> str:
     return f"""<!doctype html>
 <html lang="en">
@@ -112,4 +161,7 @@ def page() -> str:
 out = REPO / "frontend" / "public" / "showcase.html"
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(page(), encoding="utf-8")
+latest = _latest()
+(REPO / "docs" / "LATEST.json").write_text(__import__("json").dumps(latest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 print(f"wrote {out.relative_to(REPO)} — nav routes={NAV_ROUTES}, page routes={len(ROUTES)}, top-level epics={TOP_EPICS}, work items={ITEM_EPICS}, test files={VITEST_FILES}")
+print(f"wrote docs/LATEST.json — head={latest['head']}, milestone={latest['milestone']}")
