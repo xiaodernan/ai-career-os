@@ -159,7 +159,8 @@ describe("the browser's copy", () => {
     // 203 with Epic 239: `components/layout/open-manual.tsx`, the manual riding along in the topbar.
     // 204 with Epic 241: `components/monitoring/operator-ledger-card.tsx`, measured, not guessed.
     // 205 with Epic 243: `components/jobs/pulse-card.tsx`, the room is live.
-    expect(browserSources().length).toBe(205);
+    // 207 with Epic 244: `app/tour/page.tsx` + `app/tour/tour-page.tsx`, the public ten-minute walkthrough.
+    expect(browserSources().length).toBe(207);
   });
 
   it("finds a sentence, however long it is", () => {

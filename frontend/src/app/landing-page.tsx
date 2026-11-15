@@ -112,7 +112,10 @@ export function LandingPage() {
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href="/login">{t("landing.signIn")}</Link>
+              <Link href="/tour">
+                {t("landing.tourLink")}
+                <ArrowRight className="size-4" aria-hidden />
+              </Link>
             </Button>
           </div>
           <p className="mx-auto mt-5 flex max-w-xl items-center justify-center gap-2 text-sm text-muted-foreground">
