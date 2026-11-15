@@ -152,7 +152,8 @@ describe("the browser's copy", () => {
     // 195 with Epic 227: `components/offers/offer-rehearsal-card.tsx`, the room before the ask.
     // 196 with Epic 228: `components/offers/offer-commitment-card.tsx`, the week's one line.
     // 197 with Epic 230: `components/networking/coffee-chat-card.tsx`, the first coffee.
-    expect(browserSources().length).toBe(197);
+    // 198 with Epic 233: `components/playbook/first-week-game.tsx`, the playable first week.
+    expect(browserSources().length).toBe(198);
   });
 
   it("finds a sentence, however long it is", () => {

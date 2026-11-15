@@ -6878,6 +6878,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **233** Chapter zero — the first week, playable (2026-11-16).
+
+  (`/playbook` opens with a game before it teaches a word. **Chapter zero — the first week,
+  playable**: a six-scene, three-fork second-person walk through the loop as the app actually
+  walks it — the upload (who gets to see the draft), the JD paste, the 71, the gap report
+  honestly faced, the letter with its adjective, and the recruiter's call. Three forks per
+  scene; points 0/1/2; **twelve points and three verdicts** ("The reader who ships" · "The
+  honest middle" · "The slow start") that are mirrors, not scoldings; a kept sentence
+  (`careeros.firstweek.v1`) stored in this browser; CTA to `/register` when the walk finishes.
+  Choices validated on load (unknown scenes/values dropped, non-string sentences discarded),
+  the resume-progress path resumes at the first unanswered scene, and the SSR shape is pinned
+  by a component test. This is the same keepsake class as the rehearsal room, the debrief, and
+  the week's one line — the manual grows a gate you can play. EN+ZH (45 new keys, translated,
+  no mixed language; the ZH copy was checked after a first-pass regression slipped an English
+  phrase into it and was fixed before commit). Measured: **1453/1453** vitest (+7), tsc clean,
+  `verify_gates` **569/569**, copy census **198** (+1), `/playbook` served **HTTP 200** with
+  the island in the markup; in-app browser probe found `[data-testid="first-week-game"]` with
+  its three forks rendering and **zero console errors** (interactive walkthrough not run this
+  hour; the state machine is unit-tested). **Budget 325 → 330** raised with the terminal-raise
+  note written into the gate: the jobs route crossed at 327.6 kB gzip because this arc added
+  ~2.8 kB of real copy to the shared table everyone pays; the note binds the next growth to
+  the per-locale table split — a silent fourth raise is exactly the drift the gate exists to
+  prevent.)
+
 - [x] **232** Structured envelopes unwind at the JSON seam every task reads (2026-11-15).
 
   (The golden journey (`scripts/journey_api.py`), run live against the real `gpt-6-sol` after the

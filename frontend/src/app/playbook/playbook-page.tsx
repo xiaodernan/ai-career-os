@@ -18,6 +18,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FirstWeekGame } from "@/components/playbook/first-week-game";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -90,6 +91,15 @@ export default function PlaybookPage() {
           </h1>
           <p className="max-w-3xl text-lg text-muted-foreground">{t("playbook.description")}</p>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("playbook.dateLine")}</p>
+        </section>
+
+        {/* Chapter zero — the loop, playable before it is readable */}
+        <section id="firstweek" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.firstweekEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">00</span>
+          </div>
+          <FirstWeekGame />
         </section>
 
         {/* The loop */}
