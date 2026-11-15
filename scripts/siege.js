@@ -3,11 +3,16 @@
 // legitimately 429 under load. k6 on this host, Docker on this host — the
 // numbers describe this desktop's single-node topology, not production.
 //
-// Run: k6 run scripts/siege.js -e PHASE=baseline|spike|capacity -e TARGET=http://localhost:8080
+// Run: k6 run scripts/siege.js -e PHASE=baseline|spike|capacity -e ROUTE=health|adminStats|adminTrends|adminFreshness|all -e TARGET=<origin>
+// (TARGET is required — the script asserts no origin of its own; pass the
+// loopback origin your stack answers on.)
 import http from "k6/http";
 import { sleep } from "k6";
 
-const TARGET = __ENV.TARGET ?? "http://localhost:8080";
+const TARGET = __ENV.TARGET;
+if (!TARGET) {
+  throw new Error("pass -e TARGET=<origin>, e.g. the loopback origin your stack answers on");
+}
 const PHASE = (__ENV.PHASE ?? "baseline").toLowerCase();
 const ONLY = (__ENV.ROUTE ?? "all").toLowerCase();
 

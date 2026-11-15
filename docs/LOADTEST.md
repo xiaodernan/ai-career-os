@@ -99,12 +99,14 @@ recorded here so the per-route numbers are not mistaken for separate sieges.
 ## Re-running
 
 ```bash
-k6 run scripts/siege.js -e PHASE=baseline -e ROUTE=adminStats
+TARGET=http://localhost:8080   # whatever origin your stack answers on
+k6 run scripts/siege.js -e PHASE=baseline -e ROUTE=adminStats -e TARGET=$TARGET
 # or all four round-robin at once:
-k6 run scripts/siege.js -e PHASE=spike -e ROUTE=all
+k6 run scripts/siege.js -e PHASE=spike -e ROUTE=all -e TARGET=$TARGET
 ```
 
-JSON per-run summaries (`--summary-export out.json`) print the same numbers
-this file carries. If the numbers regress, the first questions are: is Redis
-`up`, is the budget at the yml default, and has the corpus grown past where
+The script asserts no origin of its own — the target arrives by argument, never
+as a literal. JSON per-run summaries (`--summary-export out.json`) print the same
+numbers this file carries. If the numbers regress, the first questions are: is
+Redis `up`, is the budget at the yml default, and has the corpus grown past where
 `COUNT(*)` stays an index scan — the freshness row tells you which.
