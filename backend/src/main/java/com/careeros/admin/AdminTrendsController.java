@@ -19,16 +19,23 @@ public class AdminTrendsController {
     private final AdminTrendsService trends;
     private final AdminFreshnessService freshness;
     private final AdminFunnelService funnel;
+    private final AdminCohortService cohort;
 
-    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness, AdminFunnelService funnel) {
+    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness, AdminFunnelService funnel, AdminCohortService cohort) {
         this.trends = trends;
         this.freshness = freshness;
         this.funnel = funnel;
+        this.cohort = cohort;
     }
 
     @GetMapping("/trends")
     public Map<String, Object> trends(@RequestParam(defaultValue = "12") int weeks) {
         return trends.trends(weeks);
+    }
+
+    @GetMapping("/cohort")
+    public Map<String, Object> cohort(@RequestParam(defaultValue = "12") int weeks) {
+        return cohort.cohort(weeks);
     }
 
     @GetMapping("/freshness")

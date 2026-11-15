@@ -51,6 +51,8 @@ export const endpoints = {
     freshness: "/admin/freshness",
     /* Where the readers fall — stages of distinct readers, never rows (Epic 258). */
     funnel: "/admin/funnel",
+    /* The quiet cohort — signup week vs ever acted, dense weeks, never rows (Epic 264). */
+    cohort: "/admin/cohort",
   },
 
   /* ---------------- Resumes ---------------- */

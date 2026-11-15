@@ -6878,6 +6878,31 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **264** The quiet ones — who ever acted at all, cohort by cohort (2026-11-16).
+
+  (The user's ask in one line: simulate what real users do — most open the page and leave
+  without a word. The install already records the answer, and the overseer never looked at
+  it. `GET /api/v1/admin/cohort` answers it from the tables themselves: twelve ISO weeks
+  (Monday start, UTC, clamp 1–26, default 12), each cohort's signups **and** the ones who
+  ever did anything from this install's own record — the literal disjunction of the four
+  tables that record doing (applications, interview_sessions, conversations, resumes). A
+  quiet week reads as two zeros, never as a missing row; distinct readers only; no name, no
+  reader's content ever leaves the route. Live on this install, twelve weeks: **5,722
+  registered across the seeded weeks, of whom 2,107 — 36.9% — ever acted** (2026-10-19 alone
+  carried 3,508 signups at 30.9% acted, exactly the seed's fingerprint; the organic 2026-11-09
+  cohort reads 2000/619, 31.0%). `/admin` gains a section ("The quiet ones" /
+  "安静的人"): dense table, signups vs ever-acted per week, a proportional bar, and the
+  total once a reader opens the ledger — all EN+ZH, bilingual clean. Read alongside the
+  funnel, this names the founder-market-fit problem the seed was hiding: **two of three
+  registrations never typed a word.** Also — this session re-probed the relay by code audit:
+  the engine's prefix discipline is genuinely sound (one byte-identical preamble, deterministic
+  memory ordering, no timestamps in the hot prefix; exact-match Redis cache for temperature-0
+  calls; the `test_the_engine_shares_one_byte_prefix` gate holds both) — the call method now
+  has three independent proofs it is *not* the problem; the relay's own metering variance is.
+  No engine changes were made on that finding; the doc stands. Measured: vitest **1487/1487**,
+  tsc clean, verify_gates **569/569**, budget OK at 340, full offline suite **2804 passed**,
+  /admin HTTP 200 on the rebuilt image, contract gate 18/18.)
+
 - [x] **263** The memory model — every container sized, every JVM told the truth (2026-11-16).
 
   (The user asked for OS/algorithm/hardware fit to be taken seriously, not tagged. The stack

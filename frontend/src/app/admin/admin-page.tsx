@@ -61,6 +61,11 @@ interface AdminFunnel {
   matchedReaders?: number;
 }
 
+interface AdminCohort {
+  cohort?: Array<{ week: string; registered: number; active: number }>;
+  weeksRequested?: number;
+}
+
 const SECRET = "123"; // the install's one passphrase, by the operator's own choosing
 
 const STATIONS = [
@@ -115,6 +120,7 @@ export default function AdminPage() {
   const [trends, setTrends] = React.useState<AdminTrends | null>(null);
   const [freshness, setFreshness] = React.useState<AdminFreshness | null>(null);
   const [funnel, setFunnel] = React.useState<AdminFunnel | null>(null);
+  const [cohort, setCohort] = React.useState<AdminCohort | null>(null);
 
   React.useEffect(() => {
     if (!unlocked) return;
@@ -133,6 +139,9 @@ export default function AdminPage() {
     api.get<AdminFunnel>(endpoints.admin.funnel)
       .then((data) => { if (!cancelled) setFunnel(data); })
       .catch(() => { /* as above — a reader count is a courtesy, never a blocker */ });
+    api.get<AdminCohort>(endpoints.admin.cohort)
+      .then((data) => { if (!cancelled) setCohort(data); })
+      .catch(() => { /* as above — a signup cohort is a courtesy, never a blocker */ });
     return () => { cancelled = true; };
   }, [unlocked]);
 
@@ -311,6 +320,61 @@ export default function AdminPage() {
             {t("admin.funnelReadingLine", { stage: readingStageLabel, percent: `${reading.bottleneckPercent}%` })}
           </p>
         )}
+      </section>
+
+      <section aria-label={t("admin.cohortTitle")}>
+        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.cohortTitle")}</h2>
+        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.cohortLede")}</p>
+        {(() => {
+          const rows = cohort?.cohort ?? [];
+          const totalRegistered = rows.reduce((sum, r) => sum + r.registered, 0);
+          const totalActive = rows.reduce((sum, r) => sum + r.active, 0);
+          const totalShare = totalRegistered > 0 ? Math.round((totalActive / totalRegistered) * 100) : 0;
+          return (
+            <>
+              {rows.length > 0 && (
+                <p className="mt-3 text-xs font-medium text-foreground">
+                  {t("admin.cohortTotal", { active: formatNumber(totalActive), registered: formatNumber(totalRegistered), percent: String(totalShare) })}
+                </p>
+              )}
+              <div className="mt-4 overflow-x-auto rounded-2xl border border-border/60">
+                <table className="min-w-[520px] w-full text-sm">
+                  <thead className="border-b border-border/60 bg-muted/40 text-left text-2xs uppercase tracking-widest text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-2.5">{t("admin.cohortHeaderWeek")}</th>
+                      <th className="px-4 py-2.5 text-right">{t("admin.cohortHeaderRegistered")}</th>
+                      <th className="px-4 py-2.5 text-right">{t("admin.cohortHeaderActive")}</th>
+                      <th className="px-4 py-2.5 text-right">{t("admin.cohortHeaderShare")}</th>
+                      <th className="px-4 py-2.5 w-48" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {rows.map((row) => {
+                      const share = row.registered > 0 ? Math.round((row.active / row.registered) * 100) : 0;
+                      return (
+                        <tr key={row.week}>
+                          <td className="px-4 py-2 font-mono text-2xs tabular-nums text-muted-foreground">{row.week}</td>
+                          <td className="px-4 py-2 text-right tabular-nums">{formatNumber(row.registered)}</td>
+                          <td className="px-4 py-2 text-right tabular-nums">{formatNumber(row.active)}</td>
+                          <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{share}%</td>
+                          <td className="px-4 py-2">
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60">
+                              <div className="h-2 rounded-full bg-primary/70" style={{ width: `${share}%` }} />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {rows.length === 0 && (
+                      <tr><td colSpan={5} className="px-4 py-4 text-center text-2xs text-muted-foreground">—</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{t("admin.cohortQuietNote")}</p>
+            </>
+          );
+        })()}
       </section>
 
       <section>

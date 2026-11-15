@@ -1165,7 +1165,8 @@ describe("endpoints ↔ backend route parity", () => {
     expect(handlers.flatMap((h) => h.unparsed)).toEqual([]);
     const bound = handlers.flatMap((h) => h.params);
     // 71 with Epic 251: `@RequestParam(defaultValue = "12") int weeks` on `GET /admin/trends`.
-    expect(bound.length).toBe(71);
+    // 72 with Epic 264: the same `weeks` on `GET /admin/cohort`.
+    expect(bound.length).toBe(72);
     // 70 parameters in 26 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
