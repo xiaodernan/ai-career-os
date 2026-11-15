@@ -12,6 +12,7 @@ import { MetricCard } from "@/components/common/metric-card";
 import { BarChart } from "@/components/common/bar-chart";
 import { NightlyHistory } from "@/components/monitoring/nightly-history";
 import { SpendTodayCard } from "@/components/monitoring/spend-today-card";
+import { OperatorLedgerCard } from "@/components/monitoring/operator-ledger-card";
 import { ServiceEngines } from "@/components/monitoring/service-engines";
 import { ServiceResilience } from "@/components/monitoring/service-resilience";
 import { ServiceTopology } from "@/components/monitoring/service-topology";
@@ -135,6 +136,8 @@ export default function MonitoringPage() {
               <CardDescription>{t("monitoring.promptCacheDescription")}</CardDescription>
             </CardHeader>
           </Card>
+
+          <OperatorLedgerCard />
 
           {/* Today's spend (21.x): the one number the user can act on, straight off
               the ledger the engine books every model call to. The bar is the reading,

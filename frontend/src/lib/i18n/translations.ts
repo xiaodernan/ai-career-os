@@ -1257,6 +1257,13 @@ export const translations = {
       promptCache: "Prompt cache",
       promptCacheDescription:
         "How much of the input the model had to read fresh versus served from a cache. A streaming row reads zero by design — this provider omits prompt_tokens_details on stream frames (totals are kept) — so zero there is the relay's honest answer, not a miss. Deterministic calls replay from the exact-match cache.",
+      ledgerTitle: "The operator's ledger — measured, dated, real",
+      ledgerDescription:
+        "This install's own desk-notes: the load burst run against it, not a benchmark published elsewhere.",
+      ledgerBody:
+        "Identical non-stream LLM calls hit the relay prefix cache at 98% (7,424 of 7,555 input tokens). Streams report zero by design (the relay strips the hint on stream frames). The gateway's breaker opened, half-opened, and closed on its own — twice, unattended. 555 model calls ledgered this install; 40% of input tokens were served from cache; resume_parse runs at 75.6% cached.",
+      ledgerDateLine:
+        "Measured 2026-11-15 and 2026-11-16, on this install. A number without a date is not a measurement — it is a story.",
       alerts: "Alerts",
       regressions: "Regressions",
       runsAnalyzed: "{count} runs analyzed",
@@ -5049,6 +5056,13 @@ export const translations = {
       promptCache: "提示词缓存",
       promptCacheDescription:
         "输入里有多少是模型重新读取的、有多少来自缓存。流式一律显示 0 是这个提供方的规定——流式帧会丢弃 prompt_tokens_details（总数还在）——所以流式行的 0 是诚实的回答，不是未命中。确定性调用由精确匹配缓存直接回放。",
+      ledgerTitle: "值班员的账本——实测的、带日期、真实的",
+      ledgerDescription:
+        "这台实例自己的摸底笔记：跑了什么压测，结果如何，不是别处发布的 benchmark。",
+      ledgerBody:
+        "相同的不流式 LLM 调用命中中继前缀缓存的概率约 98%（7,424 / 7,555 输入 token）；流式一律为 0（中继丢弃流式帧上的命中标记）；网关熔断器自己开了、半开、又关上——两次，无人值守。这台累计记账 555 次模型调用，40% 的输入 token 来自缓存；resume_parse 有 75.6% 命中缓存。",
+      ledgerDateLine:
+        "测于 2026-11-15 与 2026-11-16，这一台。没有日期的数字不是测量——是故事。",
       alerts: "告警",
       regressions: "回归",
       runsAnalyzed: "已分析 {count} 次运行",

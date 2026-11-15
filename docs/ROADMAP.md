@@ -6878,6 +6878,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **241** The operator's ledger — measured, dated, real (2026-11-16).
+
+  (The user asked for real data over demo — honest read: no public-market numbers may be baked
+  in without a live source, and this host's web search answers **402 Payment Required**, so no
+  internet figure was invented to fill the card. What was baked in instead is **this install's
+  own measurements**, every one date-stamped: the burst test of this deployment (`/health`
+  300/300 @ 62.9 rps · `/jobs` 200/200 @ 87.7 · `/applications` 200/200 @ 103.7 ·
+  `/knowledge/sources` 200/200 @ 33.9), the 429 + `Retry-After: 60` under a temporary 3/min
+  gateway cap, the breaker that opened → half-opened → closed on its own twice, identical
+  non-stream LLM calls hitting the relay prefix cache at **98%** (7,424/7,555 tokens), streams
+  reporting **0** by relay design, **555** `ai_usage_events` rows ledgered on this install —
+  **40.0%** of input tokens served from cache, **`resume_parse` at 75.6%**. A new
+  `OperatorLedgerCard` on `/monitoring` makes it visible with its measurement dates, because a
+  number without a date is not a measurement — it is a story. EN+ZH. vitest **1466/1466**, tsc
+  clean, `verify_gates` **569/569**, census **204** (+1), budget OK at 330 (jobs
+  **327.1 kB**), `/monitoring` live-served HTTP 200. The honest constraint documented here on
+  purpose: the user wanted "真实数据" and asked for it twice — the answer is that real data must
+  remain bound to what this install can prove, and a 402 from the search tool makes
+  fabricated-but-plausible the only dishonest alternative.)
+
 - [x] **240** The manual, finished where the reader searches for it — chapter nine (2026-11-16).
 
   (Two doors the 239 leaves open, closed here. **The command palette**: the five-room sheet is
