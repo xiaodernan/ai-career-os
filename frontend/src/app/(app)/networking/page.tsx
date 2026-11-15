@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Search, Users } from "lucide-react";
 import { ModuleView } from "@/components/common/module-view";
+import { CoffeeChatCard } from "@/components/networking/coffee-chat-card";
 import { Pagination } from "@/components/common/pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -136,6 +137,8 @@ export default function NetworkingPage() {
           ))}
         </section>
       ) : null}
+      {/* The first coffee (Epic 230): the room before the referral. */}
+      <CoffeeChatCard />
       <ModuleView
         title={t("networking.title")}
         description={t("networking.description")}

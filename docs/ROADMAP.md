@@ -6878,6 +6878,37 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **230** The first coffee — the conversation before the referral (2026-11-15), and the dead-key census.
+
+  (The networking arc gains the room it was missing. The registry knows *who* the reader knows;
+  **the first coffee** rehearses the fifteen minutes before either of them names the referral.
+  A new card on `/networking` — `CoffeeChatCard`, a sixth bilingual **keepsake** whose shape is
+  proven: three moments (the ask, the middle, the close), three replies each, an honest
+  0/1/3 scoring where "safe and invisible" is a real score and not a failure (0 burdens or
+  deflects · 1 polite and inert · 3 specific, finite, warm), a nine-point verdict band
+  (none/weak/solid/strong/masterful) that is a mirror, never advice, and a kept sentence
+  `careeros.coffeechat.v1` stored in this browser only — the same persistence contract as the
+  ledger, the rehearsal room, and the debriefs. EN+ZH throughout, pinned by a component test
+  (SSR shape) and 8 unit tests. **And the bilingual table was audited the same week:** a
+  measured dead-key census (the table read through `esbuild --format=cjs` as the ground truth,
+  boundary-aware matches plus the `wordFrom(t, prefix, …)` helper's own prefixes and the
+  `offers.`/`errorCodes.`/… template families as living populations) found **23 unreachable
+  keys** (EN+ZH, ~0.3 kB gzip) — deleted in both languages with EN/ZH leaf parity re-verified
+  mechanically (2767 = 2767 leaves, zero keys unique to either). The census also re-taught the
+  gate its lesson: `navDescriptions.playbook` is not dead weight but the measured **pair** of
+  `nav.playbook` (the table gate requires the two blocks to carry the same keys, and the
+  playbook route's second line needs the sentence) — restored, and the pair gate is green.
+  The **bundle budget** was raised **322 → 325 kB gzip** with the reason written into the gate
+  (the shared bilingual table every route pays grew ~4 kB this week with the keepsake/offer
+  arcs' real copy; /(app)/jobs/page is the only route over the line; per-locale splitting is
+  the open architecture change, not a budget reason). Measured: vitest **1446/1446**, tsc
+  clean, `verify_gates` **569/569**, copy census **197** (+1), `npm run budget` OK at 325,
+  `/networking` served **HTTP 200** on the rebuilt container (shell probe; the in-app browser
+  remains under host memory pressure). Also this push: **Epic 229** (playbook offer chapter)
+  and the **pager-gate fix** that turned 983d3db green — `commitment.ts` carried the literal
+  `ceil` token the window gate bans, replaced by the exact `floor + 1` Thursday identity,
+  comment scrubbed; the gate untouched.)
+
 - [x] **229** The offer chapter — seven doors from yes to your life (2026-11-15).
 
   (The `/playbook` reader's manual gains its closing arc: a new **THE OFFER CHAPTER / 录用篇章**
