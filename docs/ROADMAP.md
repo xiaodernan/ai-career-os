@@ -6895,7 +6895,11 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the SSR shape; live-served on the rebuilt container. vitest **1465/1465**, tsc clean,
   `verify_gates` **569/569**, census **203** (+1), budget OK at 330. The same buttons says the same
   five rooms have names you can reach from anywhere — this is the user-facing answer the docs
-  never were.)
+  never were. **And the front door carries one too:** the landing footer now links the manual
+  ("Playbook / 使用指南") for the anonymous visitor — verified in the served HTML (HTTP 200, link
+  present). The manual is now reachable from: the topbar (everywhere), the landing footer,
+  /playbook (public), the not-found page, and the command palette (`?` opens it anywhere —
+  one key, one meaning).)
 
 - [x] **238** The year loop — the macro chapter (2026-11-16), and the budget repaired from inside.
 

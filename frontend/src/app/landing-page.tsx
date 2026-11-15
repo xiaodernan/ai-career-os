@@ -261,9 +261,17 @@ export function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border/50">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 text-sm text-muted-foreground">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 text-sm text-muted-foreground">
           <span>© 2026 AI Career OS</span>
-          <span>{t("landing.footerNote")}</span>
+          <span className="flex min-w-0 items-center gap-4">
+            <span className="truncate">{t("landing.footerNote")}</span>
+            <Link
+              href="/playbook"
+              className="hidden shrink-0 font-medium text-primary underline-offset-4 hover:underline sm:inline"
+            >
+              {t("nav.playbook")}
+            </Link>
+          </span>
         </div>
       </footer>
       </main>
