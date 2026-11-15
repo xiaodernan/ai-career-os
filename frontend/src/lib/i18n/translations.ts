@@ -3750,6 +3750,8 @@ export const translations = {
       firstweekSeeVerdict: "See how the week went",
       firstweekReplay: "Walk it again",
       firstweekCta: "Finish it for real",
+      tocEyebrow: "Jump to",
+      colophonTitle: "The close",
       printFromHere: "Print this manual",
     },
     /**
@@ -7300,6 +7302,8 @@ export const translations = {
       firstweekSeeVerdict: "看看这一周走得怎样",
       firstweekReplay: "再走一遍",
       firstweekCta: "这次是真的做一遍",
+      tocEyebrow: "直达章节",
+      colophonTitle: "终章",
       printFromHere: "打印这份指南",
     },
     /**

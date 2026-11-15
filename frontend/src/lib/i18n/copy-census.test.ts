@@ -154,7 +154,8 @@ describe("the browser's copy", () => {
     // 197 with Epic 230: `components/networking/coffee-chat-card.tsx`, the first coffee.
     // 198 with Epic 233: `components/playbook/first-week-game.tsx`, the playable first week.
     // 200 with Epic 235: `components/dashboard/nine-quests-card.tsx` + `components/layout/tour-visit-marker.tsx`, the walking tour.
-    expect(browserSources().length).toBe(200);
+    // 201 with Epic 236: `components/playbook/chapter-rail.tsx`, the manual's own index.
+    expect(browserSources().length).toBe(201);
   });
 
   it("finds a sentence, however long it is", () => {

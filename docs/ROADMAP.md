@@ -6878,6 +6878,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **236** The chapter rail — the manual's own index (2026-11-16).
+
+  (`/playbook` grew to ten chapters this week and a reader shouldn't have to skim a manual that
+  knows what it holds. A compact `ChapterRail` directly under the cover: all nine doors **in
+  order** (`00` first week → `08` the close), one tap away, quiet horizontal chips with numbered
+  prefixes matching the chapter dividers, a `role=navigation` aria-label, bilingual by the same
+  table every other surface reads. Static by design — it cannot fight the page's sticky header.
+  Chips reuse the already-translated chapter titles (`nav`-level zero-cost); only two new key
+  pairs (`playbook.tocEyebrow`, `playbook.colophonTitle`) — jobs route **328.0 kB**, the cap stays
+  330, and the split stays the mandated next step. Pinned by an SSR-shape test; live-served on the
+  rebuilt container (`/playbook` 58 KB, the rail present in the markup). Census **201** (+1).
+  vitest **1460/1460**, tsc clean, `verify_gates` **569/569**, `npm run budget` OK at 330.)
+
 - [x] **235** The nine quests — the dashboard's walking tour (2026-11-16).
 
   (The product finally teaches its own map from inside. **Nine rooms, same order the landing draws

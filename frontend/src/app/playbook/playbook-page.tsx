@@ -18,6 +18,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ChapterRail } from "@/components/playbook/chapter-rail";
 import { FirstWeekGame } from "@/components/playbook/first-week-game";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -92,6 +93,9 @@ export default function PlaybookPage() {
           <p className="max-w-3xl text-lg text-muted-foreground">{t("playbook.description")}</p>
           <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("playbook.dateLine")}</p>
         </section>
+
+        {/* The chapter rail — the manual's own index, one tap per door */}
+        <ChapterRail />
 
         {/* Chapter zero — the loop, playable before it is readable */}
         <section id="firstweek" className="mt-14 space-y-6 border-t border-border/50 pt-14">
