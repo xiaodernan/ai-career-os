@@ -6878,6 +6878,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **256** The siege — high concurrency measured, not dreaded (2026-11-16).
+
+  (The user's instruction put the load test in writing: "模拟大量瞬间的海量数据高并发…
+  看系统会不会崩溃". Epic 256 is that pass, recorded in `docs/LOADTEST.md`, driven by
+  `scripts/siege.js` (k6, public GET-only surface; no writes, no authenticated routes —
+  those legitimately 429 under burst and are not the thing being measured).
+  **The headline, measured**: 10 → 100 → 200 concurrent readers across `/health`,
+  `/admin/stats`, `/admin/trends`, `/admin/freshness` — **zero 5xx at every level**.
+  At 200 VUs the stack saturates gracefully (median 0.2–0.8 s, tail seconds) rather
+  than failing; `/health` stretches by design (the 2-second dependency bound reports
+  false instead of hanging); `/admin/freshness` is the cheapest read by an order of
+  magnitude (`max(clock)` over indexed timestamps). Same siege with the Epic 253 admin
+  cache switched to the redis branch: **2.8× / 5.1× / 4.3× throughput, 9–37× median
+  latency, p95 4–16× better, still 0.00% errors**. Tracked compose stays default-`off`;
+  the cache comparison was measured on a temporary redis override and the default was
+  restored and verified (stats HTTP 200, no cache keys leaking into .env). The Docker
+  Desktop daemon died mid-run and was relaunched; containers came back healthy under
+  `restart: unless-stopped` — the resilience note is in the ROADMAP. Mixed-workload
+  (round-robin) control run: 913 iterations, 0 failures. Full methodology, tables and
+  the honest limits (single node, warm loopback, reads only) in `docs/LOADTEST.md`.)
+
 - [x] **255** The wheel, reinvented honestly — forced dialects, the platform is not consulted (2026-11-16).
 
   (The user's report was unambiguous: "往上滑是往下看，往下滑是往上看，搞反了，修复这个功能" —
