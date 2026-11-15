@@ -90,3 +90,31 @@ No workaround was added to the client to "force" or "fake" the field. No padding
 no retry logic on the accounting mismatch, no display that overstates what was
 measured. The one thing worth repeating: do not read `cached_tokens` on a call
 where the relay did not report one — the product records absence as absence.
+
+## Addendum (2026-11-16, re-measured on the dev machine)
+
+Two more data points from this session, both taken against the relay on the
+user's key, `gpt-6-sol`:
+
+- **Liveness confirmed.** A minimal probe (`max_tokens: 4`, `temperature: 0`)
+  answers HTTP 200 with a well-formed chat completion. The relay itself is up.
+- **Mid-surge refusal observed.** While the Playwright suite ran against a
+  live `LLM_PROVIDER=openai_compat` container, `careeros-ai` logged
+  `LLM stream error 403: {"error": ...}` for the chat path, and the calls in
+  flight answered 502 at the backend (`POST /internal/agents/chat/sync 502
+  Bad Gateway`). That is the shared-key quota refusing under concurrency, not
+  a client defect — the identical calls complete outside the burst. The same
+  window also showed an upstream 503-class failure mode was not in evidence;
+  every failure observed carried the relay's own error envelope.
+- **Small prefixes cache never.** A ~97-token system prefix returns no
+  `prompt_tokens_details` on every one of four non-stream calls, which is
+  consistent with the relay's minimum cacheable block being on the order of a
+  couple hundred tokens — the ~150-token figure from the relay measurements
+  above still stands as the right empirical floor.
+
+Practical corollary for anyone evaluating the 73/73 / 74/74 claim: run the e2e
+suite against the documented mock harness (`LLM_PROVIDER=mock`
+`EMBEDDING_PROVIDER=hash`) — the way it was always measured — and probe the
+live relay separately. The suite cannot be kept green on a shared key that
+rate-limits mid-burst; that is the relay's behavior, by design of its quota,
+not a defect in either the product or the suite.

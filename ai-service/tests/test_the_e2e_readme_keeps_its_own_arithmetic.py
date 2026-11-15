@@ -56,6 +56,7 @@ ALIASES = {
     "pace heatmap": "pace-heatmap",
     "offer shelf": "offer-shelf",
     "offer celebration": "offer-celebration",
+    "pre-interview room": "preread",
 }
 
 UNNAMED_CLAUSE = "the pagination suite"

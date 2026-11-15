@@ -236,7 +236,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/public/showcase.html
+          git add frontend/public/showcase.html docs/LATEST.json
           if git diff --cached --quiet; then
             echo "the numbers didn't move — the committed card is current"
             exit 0
