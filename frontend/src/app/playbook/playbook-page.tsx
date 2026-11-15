@@ -301,6 +301,31 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.yearloopClosing")}</p>
         </section>
 
+        {/* The manual, in the app — the last map before the close */}
+        <section id="manual" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.manualInAppEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">09</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.manualInAppTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.manualInAppIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { text: t("playbook.manualInAppOne"), tag: "01" },
+              { text: t("playbook.manualInAppTwo"), tag: "02" },
+              { text: t("playbook.manualInAppThree"), tag: "03" },
+              { text: t("playbook.manualInAppFour"), tag: "04" },
+              { text: t("playbook.manualInAppFive"), tag: "05" },
+            ].map((door) => (
+              <li key={door.tag} className="flex gap-4 rounded-2xl border border-border/60 bg-card/60 p-5">
+                <span aria-hidden className="text-2xs tabular-nums font-semibold text-primary">{door.tag}</span>
+                <p className="text-sm leading-relaxed text-foreground/90">{door.text}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.manualInAppClosing")}</p>
+        </section>
+
         {/* Colophon */}
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>

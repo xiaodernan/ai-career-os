@@ -24,6 +24,7 @@ describe("ChapterRail", () => {
       "#faq",
       "#offer",
       "#yearloop",
+      "#manual",
       "#about",
     ]) {
       expect(html).toContain(`href="${anchor}"`);

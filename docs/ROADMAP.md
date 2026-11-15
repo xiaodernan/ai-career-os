@@ -6878,6 +6878,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **240** The manual, finished where the reader searches for it — chapter nine (2026-11-16).
+
+  (Two doors the 239 leaves open, closed here. **The command palette**: the five-room sheet is
+  already one tap on every signed-in screen, but the reader who reaches for ⌘K — the habit
+  this app teaches hardest — had no way to ask for the manual itself. The palette now renders a
+  pinned **Playbook / 使用指南** row in its navigation group, always visible on an empty search
+  and matching on both languages' words (playbook, manual, handbook, guide, help, 说明书，
+  手册， 指南， 说明， 帮助）, reusing `nav.playbook` and `navDescriptions.playbook` — zero new
+  copy. **And chapter nine — "This booklet, in your pocket / 口袋里的这本册子"** — teaches the
+  manual inside the manual: five doors in order (the topbar help button · `?` anywhere · ⌘K →
+  "manual" · the public `/playbook` URL itself · the nine quests on the dashboard), closing on
+  the line that names the whole idea: *a manual worth reading is one you never had to find.*
+  9 new key pairs, EN+ZH; the chapter rail re-adds itself between the year loop and the close.
+  vitest **1465/1465**, tsc clean, `verify_gates` **569/569**, census stayed **203**, budget
+  **OK at 330** (jobs route **326.5 kB**), `/playbook` live-served with the chapter in the
+  markup (+5.8 KB). The manual arc is now complete: find it in the app (everywhere), in the
+  palette, in the footer, on the public page, printable — or just press `?`.)
+
 - [x] **239** The manual, riding along — embedded where the customer actually uses the product (2026-11-16).
 
   (The user's instruction was exact: the manual must not live in the project's docs where "no

@@ -3798,6 +3798,21 @@ export const translations = {
         "New team, new craft, new seek. The resume starts from the last version, the gaps you documented last time are open ones this time, and the same loop runs — same rules, better player.",
       yearloopClosing:
         "The tool stays honest at every age of the loop — that is the whole idea. Year two doesn't start over; it inherits everything you already proved.",
+      manualInAppEyebrow: "THE MANUAL, IN THE APP",
+      manualInAppTitle: "This booklet, in your pocket",
+      manualInAppIntro:
+        "The manual travels inside the product — nothing here needed this page; you found it once, and every tap after yours remembers it for you.",
+      manualInAppOne:
+        "The help button in the topbar — every signed-in screen carries it, a question mark at the right edge.",
+      manualInAppTwo:
+        "The question mark, typed anywhere you are not typing into a field. The same sheet, a beat faster.",
+      manualInAppThree:
+        "The command palette (⌘K / Ctrl K) — type “manual” and this booklet comes to you.",
+      manualInAppFour:
+        "This URL — /playbook — public, printable, and readable before you even have an account.",
+      manualInAppFive:
+        "The nine quests on the dashboard — the same nine rooms, checked off as you walk them.",
+      manualInAppClosing: "A manual worth reading is one you never had to find.",
       printFromHere: "Print this manual",
     },
     /**
@@ -7393,6 +7408,16 @@ export const translations = {
         "新团队、新手艺、新一圈。简历从上一版开始，上一回记录下来的差距，这一次是打开过的门，而同样的圈还跑——同样的规则，更好的玩家。",
       yearloopClosing:
         "这个工具在每个年龄段都保持诚实——这就是全部的想法。第二年不是重来；它继承你已经证明过的一切。",
+      manualInAppEyebrow: "这本册子，就藏在应用里",
+      manualInAppTitle: "口袋里的这本册子",
+      manualInAppIntro:
+        "这本册子就藏在这个产品里——什么都不需要记，你看到的每一页，都会替你记住它在哪儿。",
+      manualInAppOne: "顶栏上的帮助按钮——每个登录后的页面都挂着它，最右边的一个问号。",
+      manualInAppTwo: "直接按问号——只要你没在输入框里。同一本，快半拍。",
+      manualInAppThree: "命令面板（⌘K / Ctrl K）——输入「手册」，这本册子自己走到你眼前。",
+      manualInAppFour: "这个地址——/playbook——公开、可打印，装账号之前你也能读。",
+      manualInAppFive: "仪表盘上的九间房——同一份九间房，你走一间，亮一间。",
+      manualInAppClosing: "值得读的册子，从来不需要你去找。",
       printFromHere: "打印这份指南",
     },
     /**

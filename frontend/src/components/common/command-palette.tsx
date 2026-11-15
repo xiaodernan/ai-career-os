@@ -21,7 +21,7 @@ import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
 import { clearRecentSearches, loadRecentSearches, rememberSearch } from "@/lib/recent-searches";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { SearchResults } from "@/lib/api/types";
-import { FileText, Briefcase, Building2, History, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, Trash2, type LucideIcon } from "lucide-react";
+import { FileText, Briefcase, Building2, History, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, Trash2, BookOpen, type LucideIcon } from "lucide-react";
 
 /**
  * CommandPalette — global ⌘K shell (architecture.md §3 search module).
@@ -144,6 +144,18 @@ export function CommandPaletteProvider({
     );
   }, [navItems, query]);
 
+  // The manual is the one door that teaches the doors — surfaced first in the
+  // navigation group, always when the search box is empty, and when the query
+  // names it in either language. Reuses the nav label and its description, so
+  // the palette says the same sentence the sidebar and the topbar say.
+  const manualQueryMatches = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return ["playbook", "manual", "handbook", "guide", "help", "说明书", "手册", "指南", "说明", "帮助"].some(
+      (word) => word.includes(q) || q.includes(word)
+    );
+  }, [query]);
+
   const searchFailed = enabled && results.isError;
 
   const value = React.useMemo(
@@ -229,6 +241,31 @@ export function CommandPaletteProvider({
             )}
 
             <CommandGroup heading={t("chrome.goTo")}>
+              {manualQueryMatches && (
+                <CommandItem
+                  key="playbook"
+                  value="playbook"
+                  keywords={[
+                    "playbook",
+                    "manual",
+                    "handbook",
+                    "guide",
+                    "help",
+                    "说明书",
+                    "手册",
+                    "指南",
+                    "说明",
+                    "帮助",
+                  ]}
+                  onSelect={() => navigate("/playbook")}
+                >
+                  <BookOpen aria-hidden />
+                  <span className="min-w-0 flex-1 truncate">{t("nav.playbook")}</span>
+                  <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+                    {t("navDescriptions.playbook")}
+                  </span>
+                </CommandItem>
+              )}
               {navMatches.map((item) => (
                 <CommandItem
                   key={item.href}
