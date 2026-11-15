@@ -3618,6 +3618,31 @@ export const translations = {
       codaBody:
         "A tool is only as good as the work it helps you do. AI Career OS exists so your best year is not a lucky one — it's the one where the evidence was in order, the titles were read, the interviews were practiced, the replies were filed, the offers were compared, the yes was written well. Bring the work. The tool does the rest.",
       footerSignature: "— The CareerOS team",
+      offerEyebrow: "THE OFFER CHAPTER",
+      offerTitle: "Seven doors from yes to your life",
+      offerIntro:
+        "A search ends the way a negotiation does: you make room, and you walk through it. This is the whole path as this product walks it — seven moments, every one yours, none of them decided for you.",
+      doorShelf: "1 · The shelf",
+      doorShelfBody:
+        "Where every offer you hold lands, ranked by one number the market understands — total compensation — with deadlines kept in view. The trophy names the winner on paper; the decision is yours.",
+      doorPacket: "2 · The paper packet",
+      doorPacketBody:
+        "When the moment arrives, /offers prints a one-page packet: the number, the decision, and the first quarter's rhythm. Bring it to the conversation; bring it home.",
+      doorLedger: "3 · The decision ledger",
+      doorLedgerBody:
+        "The market can rank total comp; only you can rank what the job does to your life. Six starter criteria, eight if you add your own, weighted by the person deciding them — persisted here, scored per offer.",
+      doorRehearsal: "4 · The rehearsal room",
+      doorRehearsalBody:
+        "The salary conversation, rehearsed before it happens. Three hiring-manager pushes, three replies each; the nine-point verdict isn't advice, it's a mirror.",
+      doorCommitment: "5 · The week's one line",
+      doorCommitmentBody:
+        "The narrowing. One sentence a week — the line you will actually say out loud before the week closes. Carried in the pocket, dated by ISO week.",
+      doorReview: "6 · The year in review",
+      doorReviewBody:
+        "One image of the year — applications, interviews, offers, letters kept, days you showed up — drawn on your device, ready for the person handing you the contract or reflecting on the loop.",
+      doorCeremony: "7 · The closing ceremony",
+      doorCeremonyBody:
+        "The last page of the journey: inscribed with your counts and a letter from the tool that watched you build this. It happens when you sign; it can happen again whenever the game loops.",
       printFromHere: "Print this manual",
       playbackShortcut: "?",
     },
@@ -7048,6 +7073,31 @@ export const translations = {
       codaBody:
         "工具好不好，看它帮你做出来的东西。AI Career OS 存在的意义，是让那一整年不靠运气——是证据齐了、版头看过了、面试练过了、回信归档了、offer 比过了、那份“愿意”写得妥帖。把工作带来，工具管剩下的。",
       footerSignature: "—— CareerOS 团队",
+      offerEyebrow: "录用篇章",
+      offerTitle: "从接受到生活的七扇门",
+      offerIntro:
+        "求职的结束方式和谈判一样：先腾出空间，再走进去。这是这个产品和你一起走完的整条路——七个时刻，每一个都属于你，没有一个是被替你决定的。",
+      doorShelf: "1 · 录用货架",
+      doorShelfBody:
+        "你手上每一份录用都摆在这里，按一个大家都听得懂的数字——总包——来排，截止日期也压在同一个视野里。奖杯是给纸上胜者的；决定是给你的。",
+      doorPacket: "2 · 纸面口袋",
+      doorPacketBody:
+        "轮到你定时候，/offers 会打印出一页口袋——数目、决定，还有头一季度的节奏。带它去谈那场对话；带它回家。",
+      doorLedger: "3 · 决策账簿",
+      doorLedgerBody:
+        "市场能排总包；只有你能给这份工作在你人生里打多少分。六条预置标准，加上自己那两条，权重由你自己定——就留在这台浏览器里，一条一条给录用打分。",
+      doorRehearsal: "4 · 预演房间",
+      doorRehearsalBody:
+        "这场该死的薪酬谈判——在它发生之前先在这里过一遍。三个压价思路，三种回复各选一个；九分满分给的不是答案，是一面镜子。",
+      doorCommitment: "5 · 一周一句话",
+      doorCommitmentBody:
+        "收窄。这一周一句话——你周五之前会大声说出来的那句话。进了口袋，按 ISO 周归档，下个周一自己让位。",
+      doorReview: "6 · 年度回顾",
+      doorReviewBody:
+        "这一年的一张图——投递、面试、offer、留下的信、你出现过多少天——在你自己的设备上画好，够用来给捧你到终点的人看，或者给你自己看。",
+      doorCeremony: "7 · 收官仪式",
+      doorCeremonyBody:
+        "这条路的最后一页：一张按你数字刻下的纪念页，和一封看着你走过来的工具写给你的信。签完字之后它才出现；当游戏重新开始，它会再出现一次。",
       printFromHere: "打印这份指南",
       playbackShortcut: "?",
     },

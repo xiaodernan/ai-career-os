@@ -6878,6 +6878,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **229** The offer chapter — seven doors from yes to your life (2026-11-15).
+
+  (The `/playbook` reader's manual gains its closing arc: a new **THE OFFER CHAPTER / 录用篇章**
+  section — "Seven doors from yes to your life" — that walks the whole post-yes path as the product
+  actually walks it: 1 · The shelf (offers ranked by total comp, deadlines visible) · 2 · The paper
+  packet (`/offers` prints the one-page decision) · 3 · The decision ledger (criteria, weights,
+  per-offer scores, browser-local) · 4 · The rehearsal room (the nine-reply salary mirror) ·
+  5 · The week's one line (the ISO-week narrowing) · 6 · The year in review (the on-device PNG on
+  `/ceremony`) · 7 · The closing ceremony (the inscribed last page, whenever the game loops).
+  Full EN+ZH; every door links the product's real route by name inside its body. The chapter
+  needed **zero new browser sources** (the census stays pinned at **196**); it deepens the
+  manual the README and `/playbook` both claim to be. Measured: vitest **1437/1437**, tsc clean,
+  `verify_gates` **569/569**, copy census **196**, live `http://localhost:3000/playbook` served
+  **HTTP 200** with the chapter present in the HTML; the rebuilt frontend container was healthy
+  before the probe. Browser interactive verification was not possible this hour (host memory);
+  the chapter is static prose + one grid of seven cards with existing icons.
+  **And one red main was repaired in the same push:** Epic 228's ISO-week math used the literal
+  ceil token the pager-window gate greps for (`test_the_pager_window_has_one_home.py` bans it
+  anywhere under `frontend/src` outside the one home — it also fires on comment text). The
+  arithmetic was never a page count; ceil is gone, the Thursday `floor + 1` identity is in, the
+  token is out of the comment too, and the gate stands untouched — verified locally, 4/4 gate
+  file plus vitest 5/5 on the pinned boundaries.)
+
 - [x] **228** The week's one line — the ask athlete's narrowing (2026-11-15).
 
   (The offers arc now carries: the shelf, the packet on paper, the first quarter, the ask rehearsed,

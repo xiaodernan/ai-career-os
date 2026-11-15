@@ -228,6 +228,40 @@ export default function PlaybookPage() {
           </dl>
         </section>
 
+        {/* The offer chapter */}
+        <section id="offer" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.offerEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">07</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.offerTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.offerIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {[
+              { title: t("playbook.doorShelf"), body: t("playbook.doorShelfBody"), icon: Trophy },
+              { title: t("playbook.doorPacket"), body: t("playbook.doorPacketBody"), icon: Printer },
+              { title: t("playbook.doorLedger"), body: t("playbook.doorLedgerBody"), icon: BookOpen },
+              { title: t("playbook.doorRehearsal"), body: t("playbook.doorRehearsalBody"), icon: Mic },
+              { title: t("playbook.doorCommitment"), body: t("playbook.doorCommitmentBody"), icon: ClipboardList },
+              { title: t("playbook.doorReview"), body: t("playbook.doorReviewBody"), icon: TrendingUp },
+              { title: t("playbook.doorCeremony"), body: t("playbook.doorCeremonyBody"), icon: Sparkles },
+            ].map((door, index) => {
+              const Icon = door.icon;
+              return (
+                <li key={index} className="flex gap-4 rounded-2xl border border-border/60 bg-card/60 p-5">
+                  <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary">
+                    <Icon className="size-5" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{door.title}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{door.body}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+
         {/* Colophon */}
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>
