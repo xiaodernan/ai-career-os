@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-15T22:38:53.084101Z",
+  "generated_at": "2026-11-15T22:48:54.350361Z",
   "branch": "main",
-  "head": "91fdafa",
+  "head": "b60f4c3",
   "total_commits": 1,
   "milestone": "Epic 270",
   "milestone_full": "the ledger of done epics (through 422 items), closed at Epic 270 — The near-miss",
