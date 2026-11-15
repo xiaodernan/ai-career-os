@@ -4,6 +4,10 @@ services:
     image: pgvector/pgvector:pg16
     container_name: careeros-postgres
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-career_os}
       POSTGRES_USER: ${POSTGRES_USER:-career_os}
@@ -22,6 +26,10 @@ services:
     image: redis:7-alpine
     container_name: careeros-redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "127.0.0.1:16380:6379"
@@ -43,6 +51,10 @@ services:
     image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     container_name: careeros-minio
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-careeros-minio-admin}
@@ -110,6 +122,10 @@ services:
         APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-ai
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-career_os}:${POSTGRES_PASSWORD:-career_os_dev_password}@postgres:5432/${POSTGRES_DB:-career_os}
@@ -153,13 +169,23 @@ services:
         APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
     # Longer than the JVM's 30-second graceful-shutdown phase (application.yml):
     # Docker's 10-second default would SIGKILL the backend mid-drain. 40s leaves the
     # JVM time to cut what outlived its own bound and exit; ShutdownContractTest
     # requires at least phase + 5s in both compose files.
     stop_grace_period: 40s
     env_file: .env
+    # The heap is 75% of the container, not of the host: without this the JVM sizes
+    # itself off /proc's host view and the container limit is a lie the runtime doesn't
+    # know it's under. G1 because the workload is short reads with hot counters;
+    # ExitOnOutOfMemoryError because a silent half-dead JVM is worse than a restart.
+    # Epic 263.
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
@@ -211,7 +237,12 @@ services:
         APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-discovery
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
       EUREKA_HOSTNAME: discovery
       # Single-node default: the zone names this node itself, and with the client
       # off (register/fetch false) the URL is inert. The two-node cloud demo
@@ -245,7 +276,12 @@ services:
         APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-discovery-peer
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
       SPRING_PROFILES_ACTIVE: peer
       EUREKA_HOSTNAME: discovery-peer
       EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka/
@@ -271,7 +307,12 @@ services:
         APP_BUILD_SHA: ${APP_BUILD_SHA:-dev}
     container_name: careeros-gateway
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
       # The dev stack uses the default single-node mode: the gateway's simple discovery
       # client is the answer for `backend` (the same mode the backend's ai-service bridge
       # and the ai-service's own cache eviction use; every service in this stack is one
@@ -325,7 +366,12 @@ services:
       context: ./config-server
     container_name: careeros-config-server
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
       CONFIG_SERVER_PORT: 8888
       CONFIG_SERVER_PROFILE: native
       CONFIG_SERVER_SEARCH_LOCATIONS: classpath:/config-repo,file:/config
@@ -354,7 +400,15 @@ services:
         NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
     container_name: careeros-frontend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    # The browser bundle is built at image-build time; this is the Next server's own
+    # ceiling, kept below the limit so a runaway render pages its own process rather
+    # than the node. 192MB is comfortably above the measured ~74MB resident state. Epic 263.
     environment:
+      NODE_OPTIONS: "--max-old-space-size=192"
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080/api/v1}
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${APP_PUSH_VAPID_PUBLIC_KEY:-}
     ports:

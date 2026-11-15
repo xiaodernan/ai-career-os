@@ -559,6 +559,31 @@ and is set from the production checklist above.
 
 ## Run with Docker (recommended)
 
+### The memory model (Epic 263)
+
+The stack is ten containers and one host, so every container declares the room it may take, and every JVM is told the truth about where it lives. Two rules, both enforced in `docker-compose.yml`:
+
+1. **A limit is declared, and the process is sized against it.** `deploy.resources.limits` caps each service; without it a JVM sizes its heap off `/proc`'s *host* view (7.66 GB on the dev box) and the limit is a lie the runtime never learns it is under. `JAVA_TOOL_OPTIONS` therefore pins every JVM: `-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError` — heap at 75% of the container, G1 (short reads, hot counters), and a restart instead of a silent half-dead process.
+
+2. **Headroom is measured, not presumed.** Caps below are the values in the compose file, with the resident footprint measured on the dev host at acceptance time (all routes 200, the dev corpus loaded):
+
+   | Service | Cap | Measured | Headroom |
+   |---|---|---|---|
+   | backend | 1536M | ~779 MiB | 49% |
+   | discovery | 512M | ~224 MiB | 56% |
+   | gateway | 768M | ~251 MiB | 67% |
+   | frontend | 256M (+ `--max-old-space-size=192`) | ~66 MiB | 74% |
+   | ai-service | 256M | ~53 MiB | 79% |
+   | postgres | 1024M | ~55 MiB (cold cache after recreate) | 95% |
+   | redis | 128M | ~4 MiB | 97% |
+   | minio | 512M | ~100 MiB | 80% |
+
+   These are dev-host figures for a small corpus, not production sizing; on a real host, set the caps to the measured ridge, not to these numbers. What Epic 263 guarantees is the mechanism: heap/GC behaviour matches the cgroup it runs in, and every service has a bounded blast radius.
+
+### Bring-up
+
+Infra only (Postgres, Redis, MinIO + one-shot bucket init + the demo job seed):
+
 Infra only (Postgres, Redis, MinIO + one-shot bucket init + the demo job seed):
 
 ```bash

@@ -6878,6 +6878,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **263** The memory model — every container sized, every JVM told the truth (2026-11-16).
+
+  (The user asked for OS/algorithm/hardware fit to be taken seriously, not tagged. The stack
+  has ten containers on one host (7.66 GB), and every JVM was sizing itself off `/proc`'s
+  **host** view — the classic cgroup blindness: the container cap is a lie the runtime never
+  learns it's under. Epic 263: `docker-compose.yml` now declares `deploy.resources.limits`
+  for every service — backend **1536M**, discovery **512M**, gateway **768M**, frontend
+  **256M** (+ `NODE_OPTIONS=--max-old-space-size=192`), ai-service **256M**, postgres
+  **1024M**, redis **128M**, minio **512M** — and every JVM carries
+  `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError`
+  (heap at 75% of the container, G1 for short reads with hot counters, restart instead of
+  a silent half-dead JVM). Container residents measured live before/after the change:
+  backend 824 → 779 MiB (limit 1.5 GiB, 49% headroom), discovery 224, gateway
+  251, frontend 66 (192MB cap), ai-service 53, redis 4 — all routes 200 post-restart,
+  no behaviour change beyond a bounded blast radius. The model is written down in
+  DEPLOYMENT.md ("The memory model") with per-service caps and measured resident figures,
+  explicitly labelled dev-host numbers, not production sizing. Compose validated
+  (`docker compose config --quiet`); verify_gates **569/569**; no product code touched —
+  this is an operating-system/hardware-fidelity change, the category the ask named.)
+
 - [x] **262** What the reader was actually seeing — measured, not imagined (2026-11-16).
 
   (The frontend complaint, many times: "字体的变形 歪曲 重叠 扭曲 实体块互相重叠 挤压", "需要修改
