@@ -3962,6 +3962,18 @@ export const translations = {
       trendProjection:
         "The dashed half of each line is a straight line through the trailing twelve weeks — least squares, nothing more. A falling window projects softer than zero and clamps there; a flat window projects flat. Not a forecast, not a market move.",
       flowTitle: "Newest rows, straight off the tables",
+      funnelTitle: "Where the readers fall",
+      funnelLede:
+        "Distinct readers per stage, straight off the tables — not events, not sessions. The install's own history: not everyone who walks in uploads, and not everyone who uploads applies. Matched readers live beside the line, not inside it.",
+      funnelStageRegistered: "Registered",
+      funnelStageUploaded: "Uploaded",
+      funnelStageApplied: "Applied",
+      funnelStageInterviewed: "Interviewed",
+      funnelStageOffered: "Holds an offer",
+      funnelMatchedNote:
+        "{count} readers carry at least one match on file — matched readers sit beside the line, not inside it.",
+      funnelFootnote:
+        "The right column is stage-over-stage; the bar runs against everybody who walked in. The seed corpus inflates the early stages — this is history, not prophecy.",
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
       journeyTitle: "The golden journey, station by station",
@@ -7743,6 +7755,18 @@ export const translations = {
       trendProjection:
         "每条线的虚线段是一条穿过最近十二周的直线——最小二乘，仅此而已。下降的窗口向零投影并在此处截断；平坦的窗口投影出平坦。这不是预测，也不是行情。",
       flowTitle: "最新一行，现拉现查",
+      funnelTitle: "读者掉在哪里",
+      funnelLede:
+        "每一站都是从表里现拉的不同读者人数——不是事件数，也不是会话数。这就是这颗实例自己的历史：能进门的不多，能走到尾的更少；带着匹配的人在旁边的河里，不在这一条线上。",
+      funnelStageRegistered: "进了门",
+      funnelStageUploaded: "传了简历",
+      funnelStageApplied: "投了出去",
+      funnelStageInterviewed: "上了麦面试",
+      funnelStageOffered: "签了 offer",
+      funnelMatchedNote:
+        "{count} 位读者名下至少有一次匹配——他们在旁边的河里，不在这一条线上。",
+      funnelFootnote:
+        "最右列是上一站转化率；条形宽度按总进门人数算。种子语料会把早期站点撑得很大——读的是这颗实例的历史，不是预言。",
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
       journeyTitle: "黄金旅程，逐站验收",

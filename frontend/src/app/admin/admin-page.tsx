@@ -55,6 +55,11 @@ interface AdminFreshness {
   flows?: Array<{ id: string; table: string; newest: string | null }>;
 }
 
+interface AdminFunnel {
+  stages?: Array<{ id: string; readers: number }>;
+  matchedReaders?: number;
+}
+
 const SECRET = "123"; // the install's one passphrase, by the operator's own choosing
 
 const STATIONS = [
@@ -76,6 +81,14 @@ const RECOMMENDATIONS = [
   { titleKey: "admin.recMatchTitle", bodyKey: "admin.recMatchBody" },
   { titleKey: "admin.recCorpusTitle", bodyKey: "admin.recCorpusBody" },
 ] as const;
+
+const FUNNEL_STAGE_KEYS: Record<string, string> = {
+  registered: "admin.funnelStageRegistered",
+  uploaded: "admin.funnelStageUploaded",
+  applied: "admin.funnelStageApplied",
+  interviewed: "admin.funnelStageInterviewed",
+  offered: "admin.funnelStageOffered",
+};
 
 const TREND_SERIES = [
   { key: "users", labelKey: "admin.usersLabel", icon: Users },
@@ -100,6 +113,7 @@ export default function AdminPage() {
   const [stats, setStats] = React.useState<AdminStats | null>(null);
   const [trends, setTrends] = React.useState<AdminTrends | null>(null);
   const [freshness, setFreshness] = React.useState<AdminFreshness | null>(null);
+  const [funnel, setFunnel] = React.useState<AdminFunnel | null>(null);
 
   React.useEffect(() => {
     if (!unlocked) return;
@@ -115,6 +129,9 @@ export default function AdminPage() {
     api.get<AdminFreshness>(endpoints.admin.freshness)
       .then((data) => { if (!cancelled) setFreshness(data); })
       .catch(() => { /* as above — instants are a courtesy, never a blocker */ });
+    api.get<AdminFunnel>(endpoints.admin.funnel)
+      .then((data) => { if (!cancelled) setFunnel(data); })
+      .catch(() => { /* as above — a reader count is a courtesy, never a blocker */ });
     return () => { cancelled = true; };
   }, [unlocked]);
 
@@ -241,6 +258,46 @@ export default function AdminPage() {
             <span className="text-muted-foreground">—</span>
           )}
         </div>
+      </section>
+
+      <section aria-label={t("admin.funnelTitle")}>
+        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.funnelTitle")}</h2>
+        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.funnelLede")}</p>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border/60 bg-card/40">
+          {(funnel?.stages ?? []).map((stage, index) => {
+            const stages = funnel?.stages ?? [];
+            const first = stages[0]?.readers ?? 0;
+            const previous = index > 0 ? stages[index - 1]?.readers : undefined;
+            const share = previous && previous > 0 ? Math.round((stage.readers / previous) * 100) : null;
+            const width = first > 0 ? Math.max(2, Math.round((stage.readers / first) * 100)) : 0;
+            return (
+              <div key={stage.id} className="flex items-center gap-3 border-b border-border/40 px-4 py-2.5 last:border-b-0">
+                <span className="w-28 shrink-0 text-xs font-medium text-muted-foreground">
+                  {FUNNEL_STAGE_KEYS[stage.id] ? t(FUNNEL_STAGE_KEYS[stage.id]) : stage.id}
+                </span>
+                <div className="relative h-5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted/60">
+                  <div
+                    className="h-5 rounded-full bg-gradient-to-r from-primary/60 to-primary transition-[width] duration-500"
+                    style={{ width: `${width}%` }}
+                  />
+                </div>
+                <span className="w-16 shrink-0 text-right font-mono text-xs tabular-nums">
+                  {formatNumber(stage.readers)}
+                </span>
+                <span className="w-12 shrink-0 text-right text-2xs tabular-nums text-muted-foreground">
+                  {share === null ? "" : `${share}%`}
+                </span>
+              </div>
+            );
+          })}
+          {!funnel && (
+            <div className="px-4 py-4 text-2xs text-muted-foreground">—</div>
+          )}
+        </div>
+        <p className="mt-2 text-2xs text-muted-foreground">
+          {t("admin.funnelMatchedNote", { count: formatNumber(funnel?.matchedReaders ?? 0) })}
+          {" "}{t("admin.funnelFootnote")}
+        </p>
       </section>
 
       <section>

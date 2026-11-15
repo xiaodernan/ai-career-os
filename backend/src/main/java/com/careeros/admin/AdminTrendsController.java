@@ -18,10 +18,12 @@ public class AdminTrendsController {
 
     private final AdminTrendsService trends;
     private final AdminFreshnessService freshness;
+    private final AdminFunnelService funnel;
 
-    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness) {
+    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness, AdminFunnelService funnel) {
         this.trends = trends;
         this.freshness = freshness;
+        this.funnel = funnel;
     }
 
     @GetMapping("/trends")
@@ -32,5 +34,10 @@ public class AdminTrendsController {
     @GetMapping("/freshness")
     public Map<String, Object> freshness() {
         return freshness.freshness();
+    }
+
+    @GetMapping("/funnel")
+    public Map<String, Object> funnel() {
+        return funnel.funnel();
     }
 }

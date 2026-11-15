@@ -6878,6 +6878,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **258** Where the readers fall — the funnel on the overseer's wall (2026-11-16).
+
+  (The ask, again: the admin door should observe user behavior and drive the next
+  optimizations from the data. Epic 248 gave recommendations; 250 the counter; 251 the
+  weekly line; 252 the projection; 253 the cache; 254 the rivers — and the one question
+  still unanswered was the sequence question: **where do they go?** `GET /admin/funnel`
+  answers it — five stages of **distinct readers**, never rows, counted straight off the
+  tables: registered **6655 → uploaded 1543 (23.2%) → applied 610 (39.5% of uploaders) →
+  interviewed 345 (56.6% of applied) → offered 20 (5.8% of interviewed)**, with
+  **matchedReaders 264** reported *beside* the line, never inside it — readers apply without
+  ever seeing a number, and pretending otherwise flatters nothing. No identifier, no name,
+  no reader's content; the funnel is this install's own rows, monotone by construction,
+  fixed-literal SQL (subquery aliases included), cached 30s with the rest of the overseer's
+  reads, fail-open. `/admin` gains a funnel section — bar width against everybody who walked
+  in, the right column per-stage (in both languages, EN+ZH, bilingual clean) — plus five
+  new stage keys and an honest footnote: the seed corpus inflates the early stages; this is
+  history, not prophecy. The honest gap it exposes, filed with the work: **346 readers
+  applied without any match on file** — the seed wrote applications and matches in two
+  sweeps, and the funnel now shows it; the next real slice is the match-driven cohort vs.
+  the seed cohort, once the feed is real. Measured: vitest **1483/1483**, tsc clean,
+  verify_gates **569/569**, budget OK (/admin 250.6 kB), full offline suite **2804
+  passed**, `/admin` HTTP 200 on the rebuilt image; `ApiDocParamContractTest` 18/18 green.)
+
 - [x] **257** The pointer learns — visible teaching on the silent icon buttons (2026-11-16).
 
   (The user's ask, verbatim: "同时尽量在主界面上做出各种按键和操作的附带教学说明会比较好" —

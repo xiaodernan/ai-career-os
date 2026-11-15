@@ -49,6 +49,8 @@ export const endpoints = {
     trends: "/admin/trends",
     /* The eight "newest row" reads — instants only, never rows (Epic 254). */
     freshness: "/admin/freshness",
+    /* Where the readers fall — stages of distinct readers, never rows (Epic 258). */
+    funnel: "/admin/funnel",
   },
 
   /* ---------------- Resumes ---------------- */
