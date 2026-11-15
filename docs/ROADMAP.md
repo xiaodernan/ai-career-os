@@ -6899,7 +6899,10 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   job_id, resume_version_id)`, `saved_searches (user_id, name_norm)`, `user_memories (user_id,
   kind, key)`, `push_subscriptions (endpoint)`, `inbound_mails (user_id, message_key)`,
   `interview_turns (session_id, seq)` — candidates for the same save-and-flush treatment once
-  each is measured.)
+  each is measured. **Measured negative by inspection:** `job_matches` is written only by
+  ai-service's `persist_match`, as an `INSERT … ON CONFLICT (user_id, job_id,
+  resume_version_id) DO UPDATE` — the double-click case cannot hit the unique key; the
+  `job_matches` race does not exist. The rest remain unmeasured and named as such.)
 
 - [x] **233** Chapter zero — the first week, playable (2026-11-16).
 
