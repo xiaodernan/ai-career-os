@@ -88,6 +88,7 @@ A reason must start with one of three prefixes:
 | `agent_runs` | Bookkeeping: a record of an agent the reader invoked. |
 | `agent_traces` | Bookkeeping: the steps inside such a run. |
 | `ai_usage_events` | Bookkeeping: a meter, not content. |
+| `attention_events` | Bookkeeping: the attention spine's rows — the paths and dwell times the browser reported (Epic 267). A restore has nothing to rebuild from them, and an export would leak the reader's dwell pattern as if it were content. |
 | `companies` | Shared: the company catalogue every reader's postings point at. |
 | `jobs` | Shared: the posting catalogue; a bookmark or an application carries the ids it needs. |
 | `nightly_reports` | Shared: the platform's own nightly measurement of the catalogue, not a reader's data. |

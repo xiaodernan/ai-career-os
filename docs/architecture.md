@@ -76,6 +76,7 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 │   └── src/main/java/com/careeros/
 │       ├── admin/                 # the overseer's door: counts-only install tally + weekly trends, with a read-through cache of its own (Epics 250-253)
 │       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting
+│       ├── attention/            # the attention spine: land/dwell/act rows the install reads to itself (Epic 267)
 │       ├── ai/                   # typed ai-service client + SSE relay
 │       ├── application/          # applications + kanban statuses + notes + reminders
 │       ├── auth/                 # register/login/refresh/logout/reset, JWT, roles
@@ -331,7 +332,17 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 - Indexes: HNSW on chunk.embedding; GIN on tsv; btree on all user_id; partial on
   applications(status); jsonb GIN where queried.
 
-### 4.7 Alerts, scheduled ingestion & the inbox (19.x)
+### 4.7 Attention (Epic 267)
+- `attention_events(id, user_id nullable, journey varchar, path varchar, event enum[land,
+   dwell, act], value text, created_at)` — the one table the attention spine writes. No
+   foreign key on `user_id` because a signed-out landing is honest data, not a violation;
+   counts-only reads join to `users` only through the aggregate. `value` is whatever the
+   client measured (ms for `dwell`, the clicked tile name for `act`, nothing for `land`).
+   Indexes on user_id with created_at DESC, path with created_at DESC, event with
+   created_at DESC — the admin panel's twelve top paths by landings is a scan over the
+   path index with a created_at predicate, not a table scan.
+
+### 4.8 Alerts, scheduled ingestion & the inbox (19.x)
 - `saved_searches(id, user_id, name, criteria jsonb /* the board's own filter names, made
    canonical by the service so the sweep and the alert matcher read one shape */,
    created_at, updated_at)` → the question a board was asked, kept under a name.

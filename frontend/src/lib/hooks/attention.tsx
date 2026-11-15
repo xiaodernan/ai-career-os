@@ -25,7 +25,7 @@ export function AttentionSensor() {
         fetch(`${API_BASE_URL}${endpoints.telemetry.attention}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          // keepalive survives tab close, which is exactly the case we care about most
+          // the tab may already be closing, which is exactly the case this carries
           keepalive: true,
           body: JSON.stringify({ journey: "app", path: pathname, event, value }),
         }).catch(() => undefined);

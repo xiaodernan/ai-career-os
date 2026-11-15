@@ -1112,8 +1112,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # reads declarations, not routes, so the receipt joins the census.
     # 226 with Epic 254's `Flow` (the id/table/column triple AdminFreshnessService reads for
     # the freshness strip) -- same class, same reason, same treatment.
-    assert len(declared) == 226, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 226 measured"
+    # 227 with Epic 267's `AttentionRequest` (the {journey?, path, event, value?} body the
+    # browser posts to its own row-writer; it crosses no service seam and owns no storage,
+    # but it is a wire contract — the shared opener reads it, the wire carries it).
+    assert len(declared) == 227, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 227 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -4116,8 +4119,12 @@ def test_the_stream_media_type_is_written_in_four_spellings_and_read_in_none():
     # transcript and speak bodies as JSON like the LLM providers, a sender like the rest.
     # Eight with 20.1's `app/ops/nightly_report.py`: the nightly recorder posts its own
     # report to the internal route, so the step's outcome reaches the deployment's history.
-    assert kinds == {"request-sender": 8, "cors-allowlist": 1, "test-assertion": 1}, \
-        (f"{kinds}: `Content-Type` is sent eight times, allowed by CORS once, and asserted in a test once. "
+    # Nine with 267's attention sensor (`frontend/src/lib/hooks/attention.tsx`): the browser
+    # posts one row per landed page and one per departure, lowercase `"content-type"` like
+    # the anthropic provider — the reply-then-close shape is the one the census calls a
+    # sender. The hook is the only new sender since 20.1.
+    assert kinds == {"request-sender": 9, "cors-allowlist": 1, "test-assertion": 1}, \
+        (f"{kinds}: `Content-Type` is sent nine times, allowed by CORS once, and asserted in a test once. "
          "This is the population the absence above is drawn from -- an `unclassified` row would be a use "
          "nobody has read")
     # Two rows in `HttpAiServiceClient.java` rather than one: the `post` helper and the `patch`

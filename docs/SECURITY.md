@@ -92,7 +92,12 @@ reachable from a browser.
   content and no per-reader row crosses `/admin/stats` or `/admin/trends`; the
   passphrase on the /admin page is a courtesy gate the install chose, not a
   security control, and this doc names the surface rather than pretend the
-  passphrase is a wall), and
+  passphrase is a wall), the attention spine `/api/v1/telemetry/**` (Epic 267 —
+  **the browser reports its own clock**: one row per landed page and one per
+  departure, with the milliseconds held — nothing else; paths under `/admin/` are
+  dropped at the writer so the instrument never records itself, and the writer
+  refuses anything but `land` / `dwell` / `act`; no per-reader row ever leaves
+  the surface — the admin reads counts, never content), and
   the internal surface `/api/internal/**` (guarded below).
 
   The edge carries an optional shared-secret gate for its own operations surface

@@ -81,7 +81,7 @@ screen. A malformed inbound value is replaced, never refused.
 
 | Method | Path | Body / notes |
 |---|---|---|
-| POST | `/telemetry/attention` | `{journey?, path, event, value?}` → records one attention row. `event` is land \| dwell \| act; unauthenticated rows are welcome and counted as anonymous; `/admin*` paths are dropped at the door. Browser-sends via keepalive on page mount and on unmount. |
+| POST | `/telemetry/attention` | `{journey?, path, event, value?}` → records one attention row. `event` is `land`, `dwell`, or `act`; unauthenticated rows are welcome and counted as anonymous; `/admin*` paths are dropped at the door. Sent as a fire-and-forget POST on mount and on unmount. |
 
 ### Auth (`/auth`)
 

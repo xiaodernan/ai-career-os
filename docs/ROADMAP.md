@@ -6886,7 +6886,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `dwell` on unmount, both carrying the path and the browser's own clock.
   Anonymous readers count; a signed-in reader links to the user row; `/admin*` paths are
   dropped at the writer so the instrument never records itself; the writer is public, the
-  reporter is the reader's own browser via `keepalive: true`. The readout is a new route
+  reporter is the reader's own browser via a plain fire-and-forget POST. The readout is a new route
   `GET /api/v1/admin/attention` — counts only, counts of counts: trailing-30-day landings,
   dwell reads, acts, signed vs anonymous split, average dwell per landing (the milliseconds
   a reader stayed on a page), and a 12-row table of the most-landed paths with landing/act
