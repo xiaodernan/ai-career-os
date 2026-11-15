@@ -217,6 +217,15 @@ EXCUSED_NUMBERS = [
             "the same experiment the entry above excuses, and the roadmap line records that the number "
             "and its excuse had stopped sharing a line"),
     },
+    {
+        "site": "ROADMAP.md's operator-ledger record of the 429 bisect",
+        "pattern": re.compile(re.escape("the 429 + `Retry-After: 60` under a temporary 3/min")),
+        "reason": (
+            "an experiment, not a configuration: the operator lowered the shared Redis edge budget to "
+            "3/min for one burst to watch the 429 + Retry-After answer with his own hands, then restored "
+            "the 1200/min default. No deployment carries the 3, the paragraph says so out loud, and the "
+            "ledger card itself dates the burst to 2026-11-15"),
+    },
 ]
 
 
