@@ -162,6 +162,9 @@ READERS = {
               "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
               "app/(app)/replies/page.tsx",
               "app/(app)/resumes/page.tsx",
+              # Epic 276: the afterward card reads the account's totals (applications,
+              # interviews, show-up days) and nothing else of the window.
+              "components/ceremony/afterward-card.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",
               "components/knowledge/notes-panel.tsx",
               "components/monitoring/nightly-history.tsx"],

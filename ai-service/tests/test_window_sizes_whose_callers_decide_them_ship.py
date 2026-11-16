@@ -183,7 +183,11 @@ SITES = {
                          "id ? { jobId: id, size: 1 } : undefined"),
                         # the replies page's picker asks the ceiling once, to name every card
                         # a waiting letter could answer.
-                        ("app/(app)/replies/page.tsx", "{ size: 100 }")],
+                        ("app/(app)/replies/page.tsx", "{ size: 100 }"),
+                        # 276's afterward card reads the applications total for its own
+                        # three-number frame (role=progressbar).
+                        ("components/ceremony/afterward-card.tsx",
+                         "{ size: 1, page: 0 }")],
     "useCompanies": [("app/(app)/companies/page.tsx",
                       # 58.2 gives the board the question its route has always answered: the
                       # words ride beside the window, so the pager counts the matches rather
@@ -219,7 +223,11 @@ SITES = {
          "enabled: Boolean(session.data?.applicationId), }"),
         ("app/(app)/interviews/page.tsx",
          # 57.1's narrowed list passes the card it is showing; 70.5 adds the word it asks with.
-         "{ page: state.page, size: PAGE_SIZE, applicationId, q: state.q, }")],
+         "{ page: state.page, size: PAGE_SIZE, applicationId, q: state.q, }"),
+        # Epic 276/277's afterward card reads the same total for the same reason —
+        # only when the install actually has an account that carried anything.
+        ("components/ceremony/afterward-card.tsx",
+         "{ size: 1, page: 0 }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx",
                          "{ page: state.page, size: PAGE_SIZE }"),
                         ("app/(app)/dashboard/page.tsx", "{ size: 5 }")],
