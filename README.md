@@ -56,6 +56,11 @@ security model: [docs/SECURITY.md](docs/SECURITY.md) · RAG design: [docs/RAG.md
 worktree consolidation: [docs/WORKTREE_CONSOLIDATION.md](docs/WORKTREE_CONSOLIDATION.md) ·
 forward backlog: [docs/plans/NEXT_HORIZON.md](docs/plans/NEXT_HORIZON.md)
 
+Public surface: the [portfolio card](https://xiaodernan.github.io/ai-career-os/showcase.html) —
+a single self-contained page of measured claims (epics, work items, routes, tests), regenerated
+by CI on every push and committed back only when the numbers move. It never drifts from the
+tree it describes.
+
 ## Quickstart (dev)
 
 ```bash
