@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T11:51:41.098165Z",
+  "generated_at": "2026-11-16T11:51:58.571565Z",
   "branch": "main",
-  "head": "7fcf468",
-  "total_commits": 1460,
+  "head": "a8179ee",
+  "total_commits": 1,
   "milestone": "Epic 283",
   "milestone_full": "the ledger of done epics (through 435 items), closed at Epic 283 — The third verb, written",
   "pushed_at": "2026-11-16",
