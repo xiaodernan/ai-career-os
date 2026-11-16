@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T13:14:57.724541Z",
+  "generated_at": "2026-11-16T13:20:02.204486Z",
   "branch": "main",
-  "head": "014d34d",
-  "total_commits": 1468,
+  "head": "ab391c5",
+  "total_commits": 1,
   "milestone": "Epic 286",
   "milestone_full": "the ledger of done epics (through 438 items), closed at Epic 286 — The NO_PROXY interpolation trap",
   "pushed_at": "2026-11-16",
