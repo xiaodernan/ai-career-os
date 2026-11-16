@@ -239,26 +239,27 @@ jobs:
           git add frontend/public/showcase.html docs/LATEST.json
           if git diff --cached --quiet; then
             echo "the numbers didn't move — the committed card is current"
-            echo "stale=false" >> $GITHUB_ENV
-          else
-            git commit -m "chore(showcase): regenerate the portfolio card [skip ci]"
-            git pull --rebase origin main
-            git push origin HEAD:main
-            echo "stale=true" >> $GITHUB_ENV
+            exit 0
           fi
-      - name: Sync gh-pages when the card was regenerated OR the tip moved
+          git commit -m "chore(showcase): regenerate the portfolio card [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Sync gh-pages with the current card
+        # `git checkout` on gh-pages into a worktree, copy the regenerated card in,
+        # and commit only when the bytes actually changed. No GITHUB_TOKEN clone URL
+        # gymnastics — actions/checkout handles auth cleanly under the job's GITHUB_TOKEN.
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-sync
+          fetch-depth: 0
+      - name: Push gh-pages only when the card moved
         run: |
-          # The portfolio iframes this URL; gh-pages hosts exactly this one artifact.
-          # Pushed on every main build — the atom is deterministic, the URL stable.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          TMP=$(mktemp -d) && git clone --branch gh-pages --depth 1 "$(git remote get-url origin)" "$TMP"
-          cp frontend/public/showcase.html "$TMP"/index.html
-          cp frontend/public/showcase.html "$TMP"/showcase.html
-          cd "$TMP"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp frontend/public/showcase.html gh-pages-sync/index.html
+          cp frontend/public/showcase.html gh-pages-sync/showcase.html
+          cd gh-pages-sync
           git add index.html showcase.html
           if git diff --cached --quiet; then
             echo "gh-pages card is current"
