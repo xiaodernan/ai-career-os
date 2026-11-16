@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T14:51:51.245691Z",
+  "generated_at": "2026-11-16T15:04:50.340256Z",
   "branch": "main",
-  "head": "6b73ef7",
+  "head": "cf32d0f",
   "total_commits": 1,
-  "milestone": "Epic 289",
-  "milestone_full": "the ledger of done epics (through 441 items), closed at Epic 289 — The overseer's synthetic week",
+  "milestone": "Epic 290",
+  "milestone_full": "the ledger of done epics (through 442 items), closed at Epic 290 — The act is written",
   "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 441,
-  "epics": 155,
+  "work_items": 442,
+  "epics": 156,
   "feature_surface": [
+    "Epic 290 — The act is written",
     "Epic 289 — The overseer's synthetic week",
     "Epic 288 — The ledger row the graph writes is pinned in the timeline (2026-11-16)",
     "Epic 287 — The second loop rides the graph",
     "Epic 286 — The NO_PROXY interpolation trap",
-    "Epic 285 — The relay's `gpt-6",
-    "Epic 284 — The relay re-measured"
+    "Epic 285 — The relay's `gpt-6"
   ]
 }
