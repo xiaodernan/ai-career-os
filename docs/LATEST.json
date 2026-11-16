@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T09:45:22.960419Z",
+  "generated_at": "2026-11-16T10:01:10.381626Z",
   "branch": "main",
-  "head": "803532f",
-  "total_commits": 1,
-  "milestone": "Epic 277",
-  "milestone_full": "the ledger of done epics (through 429 items), closed at Epic 277 — The tour opens the afterward door (2026-11-16)",
+  "head": "18cc37b",
+  "total_commits": 1446,
+  "milestone": "Epic 278",
+  "milestone_full": "the ledger of done epics (through 430 items), closed at Epic 278 — The engine, made visible",
   "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
-  "test_files": 186,
-  "work_items": 429,
-  "epics": 143,
+  "test_files": 187,
+  "work_items": 430,
+  "epics": 144,
   "feature_surface": [
+    "Epic 278 — The engine, made visible",
     "Epic 277 — The tour opens the afterward door (2026-11-16)",
     "Epic 276 — Afterward",
     "Epic 275 — The evidence table",
     "Epic 274 — The 74/74 truth",
-    "Epic 273 — The edge of the map",
-    "Epic 272 — The weakest signal"
+    "Epic 273 — The edge of the map"
   ]
 }

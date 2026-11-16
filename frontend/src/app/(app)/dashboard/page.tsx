@@ -42,6 +42,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { JobCard } from "@/components/jobs/job-card";
 import { AttentionRow } from "@/components/dashboard/attention-row";
+import { EngineMapCard } from "@/components/dashboard/engine-map-card";
 import { RecentActivityRow } from "@/components/dashboard/recent-activity";
 import { APPLICATION_STAGES, stageLabel, stageMeta } from "@/lib/pipeline";
 import { useUpdateApplication } from "@/lib/hooks/actions";
@@ -922,6 +923,9 @@ export default function DashboardPage() {
               </Card>
             </aside>
           </div>
+
+          {/* The engine, made visible (Epic 278): the compiled state graph the copilot runs, drawn where the reader already spends their attention. */}
+          <EngineMapCard />
         </>
       )}
     </div>

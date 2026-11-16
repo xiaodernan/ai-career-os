@@ -754,6 +754,25 @@ export const zh = {
       knowledgeBaseDescription: "摄取喂给检索层的来源。",
       aiUsage: "AI消耗",
       aiUsageDescription: "代理记在你账上的请求与令牌。",
+      engineBoundValue: "max_steps = 8",
+      engineLedgerValue: "graph_node",
+      engineEyebrow: "让引擎现身",
+      engineTitle: "你的副驾是怎么跑起来的",
+      engineIntro:
+        "副驾的每一轮都是一个有边界的回路，而不是一次猜。下面这张图就是源代码里那台机器本身——同样的节点名，同样的边，同样的上限——让你按量付费的那件乐器，自己摊在桌面上。",
+      engineRetrieveBody: "读你的简历、你的投递、你的台账——草稿要站住，必先有料。",
+      engineDraftBody: "依照这个岗位的要求写改动，用你的话，沿你的骨架。",
+      engineVerifyBody:
+        "确定性的否决权。每一处被捏造的要点、漂移的事实、编造的细节——都会被指名道姓地退回 draft。",
+      engineRenderBody: "只落被核验放行的部分，写出差异，保住你的原话。",
+      engineRetryLabel:
+        "如果 verify 否决了草稿，它会带着理由打回 draft——这是回路内有上限的重试，不是开放回路。",
+      engineBound:
+        "这台机器拒绝跑超过八个节点；bug 只会变成一次写明步数的拒绝，绝不会变成 token 的无底洞。",
+      engineLedger:
+        "每个节点都会写一行 graph_node 到 AI Activity——这本流水账，就是这台机器的心跳，跑一次、记一次。",
+      engineBookLink: "去书里读这一章",
+      engineActivityLink: "打开流水账",
       skillGaps: "技能差距",
       skillGapsDescription: "来自你已匹配的职位。",
       followUps: "跟进提醒",

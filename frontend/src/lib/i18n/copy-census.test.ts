@@ -165,7 +165,8 @@ describe("the browser's copy", () => {
     // 211 with Epic 268: `components/companies/preinterview-kit.tsx`, the room you walk into.
     // 212 with Epic 270: `components/replies/near-miss-card.tsx`, the apart that got away.
     // 213 with Epic 276: `components/ceremony/afterward-card.tsx`, the weight you carry out.
-    expect(browserSources().length).toBe(213);
+    // 214 with Epic 278: `components/dashboard/engine-map-card.tsx`, the state graph drawn where the reader already reads.
+    expect(browserSources().length).toBe(214);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -6910,6 +6910,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **278** The engine, made visible — the state graph on the dashboard (2026-11-16).
+
+  (The closing loop the product narrates — the bounded state graph behind the
+  copilot's resume-tailor rewrite (retrieve -> draft -> verify -> render, with
+  verify holding a deterministic veto and routing back to draft) — was taught
+  in the book (Epic 271) and in the source (Epic 269), but the reader who
+  spends their mornings on /dashboard never saw it. A new full-width card
+  under the two-column grid draws the compiled map: the four literal node
+  names in execution order, the veto edge with its bounded retry, the hard
+  bound `max_steps = 8`, and the `graph_node` ledger rows that make the
+  machine legible run-by-run in AI Activity. Two links walk outward: into
+  the book's chapter (`/playbook#stategraph`) and into the ledger
+  (`/activity`). Nothing fetched, nothing scored — a map, not a meter; no
+  invented telemetry. Measured: vitest **1517/1517** (+1 file, +5 tests),
+  tsc clean, bundle budget OK at 350, copy census **214 sources** (+1, the
+  new card); no list reads, so the window census did not move.)
+
 - [x] **277** The tour opens the afterward door (2026-11-16).
 
   (The public ten-minute walkthrough — the front door into the product we

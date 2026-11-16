@@ -835,6 +835,25 @@ export const en = {
       knowledgeBaseDescription: "Sources ingestion feeds the retrieval layer.",
       aiUsage: "Agent spend",
       aiUsageDescription: "Requests and tokens the agents billed against your budget.",
+      engineBoundValue: "max_steps = 8",
+      engineLedgerValue: "graph_node",
+      engineEyebrow: "The engine, made visible",
+      engineTitle: "How your copilot actually runs",
+      engineIntro:
+        "Every copilot turn is a bounded loop, not a guess. The map below is the actual machine in the source \u2014 same node names, same edges, same bound \u2014 so the instrument you are billed for is one you can see.",
+      engineRetrieveBody: "Reads your resume, your applications, your history \u2014 the material the draft will stand on.",
+      engineDraftBody: "Writes the changes the job asked for, in your words, on your spine.",
+      engineVerifyBody:
+        "The deterministic veto. An invented bullet, a drifted fact, a fabricated detail \u2014 refused, named, and bounced back to draft.",
+      engineRenderBody: "Applies only what survived verification, writes the diff, keeps your testimony.",
+      engineRetryLabel:
+        "If verify refuses the draft, it routes back to draft with the reasons attached \u2014 a bounded retry inside the loop, never an open one.",
+      engineBound:
+        "The whole machine refuses to run past eight node executions; a bug becomes a refusal with a step count, never a token burn.",
+      engineLedger:
+        "Every node writes a graph_node row into AI Activity \u2014 the ledger is the graph's own heartbeat, visible run by run.",
+      engineBookLink: "Read the chapter in the book",
+      engineActivityLink: "Open the ledger",
       skillGaps: "Top skill gaps",
       skillGapsDescription: "Across your matched jobs.",
       followUps: "Follow-up reminders",
