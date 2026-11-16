@@ -6910,6 +6910,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **296** Capacity re-measure — 200 VU round-robin, six routes, zero failures (2026-11-17).
+
+  (The siege's capacity phase from Epic 292 was re-run after Epics 291–295 and
+  the bundled Docker Desktop restart. 200 VUs across the six read-only routes
+  (`/health`, `/admin/stats|trends|freshness|attention|funnel`) for 70 s on a
+  single-node compose stack on this host. **0/15,269 failures** (0.00%), ~217 rps,
+  p90 1.22 s, p95 1.58 s, max 5.71 s (one tail, JVM warmup). No degradation of the
+  newly-deployed attention spine or funnel routes. The shape matches the
+  `spike=100 VU` baseline; the system has headroom at double the concurrency.
+  LOADTEST.md records the capacity row.)
+
 - [x] **295** The counsel doors — every rule opens the screen it names (2026-11-17).
 
   (The ledger read the wires, computed the seven rules, and stopped at a wall

@@ -78,6 +78,16 @@ overseer's wall never becomes a query load the product can feel.
 
 
 
+
+## Re-measure — capacity phase, 2026-11-17 (after Epics 291–295)
+
+`scripts/siege-e292.js` — six-route round-robin, capacity phase (200 VUs ramped over 40 s), fresh JVM from Docker Desktop reboot on this host, single-node compose:
+
+| | reqs | med | p90 | p95 | max | fail |
+|---|---|---|---|---|---|---|
+| all routes, round-robin | 15,269 | 397 ms | 1.22 s | 1.58 s | 5.71 s | **0.00%** |
+**Zero 5xx, zero timeouts**, ~217 rps sustained at 200 concurrent VUs across six routes, incl. `/admin/attention` and `/admin/funnel` — the two routes Epic 292 added. One tail outlier at 5.71 s caps the run — likely the deferred JVM JIT on the first `/admin/trends` call; it averages under p50 elsewhere in the same run.
+
 ## Epic 292 — the widened siege, measured 2026-11-17
 
 `scripts/siege-e292.js` extends the same protocol to the routes the month added:
