@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T10:46:04.963062Z",
+  "generated_at": "2026-11-16T10:56:24.408236Z",
   "branch": "main",
-  "head": "e9bd315",
+  "head": "4fb15c3",
   "total_commits": 1,
   "milestone": "Epic 280",
   "milestone_full": "the ledger of done epics (through 432 items), closed at Epic 280 — The counsel that reads its own numbers (2026-11-16)",
