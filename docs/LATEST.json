@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T12:12:58.946430Z",
+  "generated_at": "2026-11-16T12:13:20.925094Z",
   "branch": "main",
-  "head": "b13854f",
-  "total_commits": 1462,
+  "head": "1fcea66",
+  "total_commits": 1,
   "milestone": "Epic 284",
   "milestone_full": "the ledger of done epics (through 436 items), closed at Epic 284 — The relay re-measured",
   "pushed_at": "2026-11-16",
