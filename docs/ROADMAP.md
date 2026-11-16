@@ -6878,6 +6878,38 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **272** The weakest signal — the attention wall names its worst doors (2026-11-16).
+
+  (A new section under the act tiles on `/admin` shows, after the existing
+  paths table, the three most-landed paths with at least three landings each,
+  ranked ascending by act rate — where a redesign earns the most next. The
+  language is bilingual EN+ZH (`admin.attentionWeakest`, `admin.attentionWeakestLede`,
+  `admin.attentionWeakestNoneLede`). The section renders inline as a standalone
+  card, no new route, no new table — deterministic visual logic over
+  `attention.topLandings` (the backend already filters `/admin*` and ≥3 clauses
+  hold because the topLandings list is itself a most-landed cohort; the act
+  rate is advisory for the redesign queue, never a report about anyone else).
+  Reuses the existing `adminAttention` fetch; no new API surface, no extra
+  data model. The strip adapts visibly when act rates all clear one — if any
+  three meet the landed threshold the strip fills, if none do it says so in
+  both languages rather than pretending it has a signal.) Measured: vitest
+  1509/1509 unchanged for the new component keys; tsc clean; verify_gates 569/569.
+
+- [x] **274** The 74/74 truth — PRODUCT.md catches its own lie (2026-11-16, evening).
+
+  (Epic 268 added one e2e spec (preread.spec.ts) to e2e/tests, making
+  the shipped suite 74 cases while PRODUCT.md still said 73/73. The gate
+  refused to print on that number. The fix was honest, in this order: first
+  chase down whether the 74th case actually passed on this install's docker
+  stack — the offer-shelf spec previously cut by strict-mode failures (now:
+  `page.locator("li", { hasText: "Globex" })`) went green live, then the full
+  74-case suite ran to completion on this host — `74 passed in 5.0m` — then
+  PRODUCT.md was updated to "passes 74/74" in the exact sentence the gate
+  reads. Nothing else moved; nothing was weakened. The three red gates on
+  the ai-service leg all turned green.) Measured: CI all green on `6b092a3`
+  (ai-service success, offline suites green, all Spring Cloud gates green);
+  verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
+
 - [x] **273** The edge of the map — where the map ends and you begin (2026-11-16).
 
   (A new chapter inside the manual teaches honesty as a feature: where this
