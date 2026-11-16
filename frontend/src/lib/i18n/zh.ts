@@ -3812,10 +3812,12 @@ export const zh = {
       messagesLabel: "消息数",
       trendTitle: "账本，逐周",
       trendLede:
-        "五个序列，都是你打开页面这一刻从表里现拉数的——按 ISO 周（周一起始、UTC）。安静的一周读作零，不会变成缺失的键；合计覆盖最近十二周窗口。",
+        "七个序列，都是你打开页面这一刻从表里现拉数的——按 ISO 周（周一起始、UTC）。安静的一周读作零，不会变成缺失的键；合计覆盖最近十二周窗口。最后两个是注意力台账的心跳：落点是浏览器报到过的每个路径，停留是浏览器的钟量到的每一次读完。",
       trendAcrossWeeks: "共 {count} 周",
       trendPeak: "峰值 {count}",
       aiEventsLabel: "AI 调用",
+      attentionLandsLabel: "注意力落点",
+      attentionDwellsLabel: "停留读数",
       trendProjection:
         "每条线的虚线段是一条穿过最近十二周的直线——最小二乘，仅此而已。下降的窗口向零投影并在此处截断；平坦的窗口投影出平坦。这不是预测，也不是行情。",
       flowTitle: "最新一行，现拉现查",

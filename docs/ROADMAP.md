@@ -6910,6 +6910,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **279** The attention heartbeat, week over week (2026-11-16).
+
+  (The overseer's ledger showed the install's five weekly trends — users,
+  applications, interviewsPracticed, agentRuns, aiUsageEvents — but the
+  attention spine, the one axis that measures whether strangers are actually
+  reading the product, only ever read as a 30-day snapshot. The trends
+  endpoint now answers two more series, counted off the same
+  `attention_events` rows `/admin/attention` aggregates: `attentionLands`
+  (landings, `event='land'`) and `attentionDwells` (dwell reads, `event='dwell'` — `act` is in the schema but unwritten by any caller today, so the pair that actually measures is lands and dwells),
+  bucketed by the same Monday-anchored UTC ISO weeks, dense-filled,
+  zero-safe, cached for 30 s like the rest. The admin page draws seven
+  trend lines instead of five. `AdminTrends.Series` gains a compile-time
+  constant filter (never a user value); the weekly arithmetic gate is
+  unchanged (`AdminTrendsServiceTest` 6/6 still green); the wire contract
+  (`docs/API.md`) documents the new series honestly. No new routes, no new
+  queries beyond two counted ones per poll.)
+
 - [x] **278** The engine, made visible — the state graph on the dashboard (2026-11-16).
 
   (The closing loop the product narrates — the bounded state graph behind the

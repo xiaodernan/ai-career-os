@@ -4102,10 +4102,12 @@ export const en = {
       messagesLabel: "Messages sent",
       trendTitle: "The ledger, week over week",
       trendLede:
-        "Five series counted straight off the tables at the moment you opened this page — Monday-anchored ISO weeks in UTC. A quiet week reads as zero, not as a missing key; each total covers the trailing twelve-week window.",
+        "Seven series counted straight off the tables at the moment you opened this page — Monday-anchored ISO weeks in UTC. A quiet week reads as zero, not as a missing key; each total covers the trailing twelve-week window. The last two are the attention ledger's heartbeat: lands are every route the browser reported an arrival on, dwells are the reads the clock saw out.",
       trendAcrossWeeks: "across {count} weeks",
       trendPeak: "peak {count}",
       aiEventsLabel: "AI calls",
+      attentionLandsLabel: "Attention landings",
+      attentionDwellsLabel: "Dwell reads",
       trendProjection:
         "The dashed half of each line is a straight line through the trailing twelve weeks — least squares, nothing more. A falling window projects softer than zero and clamps there; a flat window projects flat. Not a forecast, not a market move.",
       flowTitle: "Newest rows, straight off the tables",

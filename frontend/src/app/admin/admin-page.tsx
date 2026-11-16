@@ -7,7 +7,9 @@ import {
   ArrowRight,
   BarChart3,
   Database,
+  Eye,
   Lock,
+  Timer,
   Sparkles,
   Users,
   Waves,
@@ -120,6 +122,11 @@ const TREND_SERIES = [
   { key: "interviewsPracticed", labelKey: "admin.interviewLabel", icon: Activity },
   { key: "agentRuns", labelKey: "admin.agentRunsLabel", icon: Sparkles },
   { key: "aiUsageEvents", labelKey: "admin.aiEventsLabel", icon: Database },
+  // The attention ledger's heartbeat (Epic 279): the same rows /admin/attention counts, weekly.
+  // `act` is schema-reserved but unwritten by any caller today — zeros would be noise, so the
+  // card ships the pair that actually measures: lands, and let-dwells-read-dwell.
+  { key: "attentionLands", labelKey: "admin.attentionLandsLabel", icon: Eye },
+  { key: "attentionDwells", labelKey: "admin.attentionDwellsLabel", icon: Timer },
 ] as const;
 
 /**
@@ -476,7 +483,7 @@ export default function AdminPage() {
       <section>
         <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.trendTitle")}</h2>
         <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.trendLede")}</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
           {TREND_SERIES.map((serie) => {
             const values = trends?.series?.[serie.key];
             const spark = values ? projectedSparkline(values, 4, 120, 36, 3) : null;

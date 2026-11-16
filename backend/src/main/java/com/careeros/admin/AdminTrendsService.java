@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * The install's five weekly series, read off the tables (Epic 251).
+ * The install's weekly series, read off the tables (Epic 251; attention heartbeat, Epic 279).
  *
  * <p>One query per series — counts only, grouped by ISO week in UTC, lower-bounded by the
  * Monday that opens the requested window. The week list and the dense fill are computed
@@ -19,13 +19,24 @@ import org.springframework.stereotype.Service;
 @Service
 public class AdminTrendsService {
 
-    /** (table, clock column) pairs — kept as constants so the SQL below has no user input. */
+    /**
+     * (table, clock column, wire key, constant filter) tuples — kept as constants so the SQL
+     * below has no user input. The filter is spliced as a constant, never as a parameter: this
+     * service takes no query text. An empty/null filter means the table's own count.
+     */
     private static final List<Series> SERIES = List.of(
-            new Series("users", "created_at", "users"),
-            new Series("applications", "created_at", "applications"),
-            new Series("interview_sessions", "started_at", "interviewsPracticed"),
-            new Series("agent_runs", "started_at", "agentRuns"),
-            new Series("ai_usage_events", "created_at", "aiUsageEvents"));
+            new Series("users", "created_at", "users", null),
+            new Series("applications", "created_at", "applications", null),
+            new Series("interview_sessions", "started_at", "interviewsPracticed", null),
+            new Series("agent_runs", "started_at", "agentRuns", null),
+            new Series("ai_usage_events", "created_at", "aiUsageEvents", null),
+            // Epic 279: the attention ledger's own heartbeat, the same rows /admin/attention counts
+            // in its trailing-30-days window, now as weekly counts so the overseer can see the
+            // slope of the door the install's strangers are walking through. `act` is in the
+            // schema but unwritten by any caller today, so the pair that actually carries
+            // volume is lands and dwells.
+            new Series("attention_events", "created_at", "attentionLands", "event = 'land'"),
+            new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"));
 
     private final JdbcTemplate jdbc;
     private final AdminCache cache;
@@ -59,16 +70,18 @@ public class AdminTrendsService {
     }
 
     private List<Long> dense(Series s, java.time.Instant start, List<String> weeksList) {
+        // the filter is a compile-time constant from SERIES above — never a user-controlled value
+        String filter = s.where() == null ? "" : " AND " + s.where();
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT to_char(date_trunc('week', " + s.column() + " AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS wk,"
                         + " count(*) AS n"
                         + " FROM " + s.table()
-                        + " WHERE " + s.column() + " >= ?"
+                        + " WHERE " + s.column() + " >= ?" + filter
                         + " GROUP BY 1",
                 Timestamp.from(start));
         return AdminTrends.fillDensity(weeksList, AdminTrends.fold(rows));
     }
 
-    private record Series(String table, String column, String key) {
+    private record Series(String table, String column, String key, String where) {
     }
 }
