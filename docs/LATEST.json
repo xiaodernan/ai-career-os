@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T07:20:02.823890Z",
+  "generated_at": "2026-11-16T07:27:39.575423Z",
   "branch": "main",
-  "head": "d420966",
-  "total_commits": 1,
+  "head": "ab35181",
+  "total_commits": 1435,
   "milestone": "Epic 273",
   "milestone_full": "the ledger of done epics (through 424 items), closed at Epic 273 — The edge of the map",
   "pushed_at": "2026-11-16",
