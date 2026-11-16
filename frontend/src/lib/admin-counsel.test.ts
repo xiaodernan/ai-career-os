@@ -4,7 +4,7 @@ import { deriveCounsel } from "./admin-counsel";
 const labelForStage = (id: string) => `[${id}]`;
 
 const FULL = {
-  stats: { users: 40, applications: 3, interviewsPracticed: 1 },
+  stats: { users: 40, applications: 0, interviewsPracticed: 1 },
   funnel: {
     stages: [
       { id: "registered", readers: 100 },
@@ -39,6 +39,20 @@ const FULL = {
 };
 
 describe("deriveCounsel", () => {
+  it("routes every fired rule to a real screen on this install", () => {
+    const items = deriveCounsel(FULL, { labelForStage });
+    const byId = new Map(items.map((i) => [i.id, i]));
+    expect(byId.get("funnel-cliff")?.href).toBe("/applications");
+    expect(byId.get("cohort-cliff")?.href).toBe("/growth");
+    expect(byId.get("act-rate-zero")?.href).toBe("/");
+    expect(byId.get("dwell-rare")?.href).toBe("/");
+    expect(byId.get("all-anonymous")?.href).toBe("/register");
+    expect(byId.get("attention-collapse")?.href).toBe("/");
+    expect(byId.get("attention-soften")?.href).toBe("/");
+    expect(byId.get("trend-falling")?.href).toBe("/jobs");
+    expect(byId.get("stuck-journey")?.href).toBe("/resumes");
+  });
+
   it("fires the full honest menu when every wire shows the same wall", () => {
     const items = deriveCounsel(FULL, { labelForStage });
     expect(items.map((i) => i.id)).toEqual([
@@ -50,6 +64,7 @@ describe("deriveCounsel", () => {
       "attention-collapse",
       "attention-soften",
       "trend-falling",
+      "stuck-journey",
     ]);
   });
 

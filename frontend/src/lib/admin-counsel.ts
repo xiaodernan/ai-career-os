@@ -62,6 +62,9 @@ export interface CounselItem {
   titleKey: string;
   bodyKey: string;
   vars: Record<string, string | number>;
+  /** Route on this install an operator can actually walk to repair the named issue.
+   *  Absent keys mean no single screen carries the answer — silent for that one. */
+  href?: string;
 }
 
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -95,6 +98,7 @@ function funnelCliff(funnel: CounselFunnel | null | undefined, labelForStage?: (
       toCount: worst.toCount,
       dropPct: Math.round(worst.drop * 100),
     },
+    href: "/applications",
   };
 }
 
@@ -119,6 +123,7 @@ function cohortCliff(cohort: CounselCohort | null | undefined): CounselItem | nu
       active,
       registered,
     },
+    href: "/growth",
   };
 }
 
@@ -133,6 +138,7 @@ function attentionSignals(attention: CounselAttention | null | undefined): Couns
       titleKey: "admin.counselActTitle",
       bodyKey: "admin.counselActBody",
       vars: { landings },
+      href: "/",
     });
   }
   const dwells = attention?.dwells;
@@ -142,6 +148,7 @@ function attentionSignals(attention: CounselAttention | null | undefined): Couns
       titleKey: "admin.counselDwellTitle",
       bodyKey: "admin.counselDwellBody",
       vars: { pct: pct(dwells, landings), dwells, landings },
+      href: "/",
     });
   }
   const signed = attention?.signedLandings;
@@ -152,6 +159,8 @@ function attentionSignals(attention: CounselAttention | null | undefined): Couns
       titleKey: "admin.counselAnonymousTitle",
       bodyKey: "admin.counselAnonymousBody",
       vars: { landings: anonymous },
+      // The door that turns an anonymous reader into a signed one.
+      href: "/register",
     });
   }
   return items;
@@ -187,6 +196,7 @@ function trendFalling(trends: CounselTrends | null | undefined): CounselItem | n
     titleKey: "admin.counselTrendTitle",
     bodyKey: "admin.counselTrendBody",
     vars: { first, last, weeks: apps!.length },
+    href: "/jobs",
   };
 }
 
@@ -200,6 +210,7 @@ function stuckJourney(stats: CounselStats | null | undefined): CounselItem | nul
       titleKey: "admin.counselStuckTitle",
       bodyKey: "admin.counselStuckBody",
       vars: { users },
+      href: "/resumes",
     };
   }
   return null;
@@ -224,6 +235,7 @@ function attentionSoften(trends: CounselTrends | null | undefined): CounselItem 
     titleKey: "admin.counselAttentionSoftenTitle",
     bodyKey: "admin.counselAttentionSoftenBody",
     vars: { recent: Math.round(secondMean), base: Math.round(firstMean) },
+    href: "/",
   };
 }
 
@@ -240,6 +252,7 @@ function attentionCollapse(trends: CounselTrends | null | undefined): CounselIte
     titleKey: "admin.counselAttentionCollapseTitle",
     bodyKey: "admin.counselAttentionCollapseBody",
     vars: { last, base: Math.round(priorMean) },
+    href: "/",
   };
 }
 

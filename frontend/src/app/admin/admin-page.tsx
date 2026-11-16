@@ -652,9 +652,19 @@ export default function AdminPage() {
             {counsel.map((item, index) => (
               <li key={item.id} className="flex gap-3 rounded-xl border border-primary/10 bg-primary/5 p-4">
                 <span aria-hidden className="font-mono text-2xs tabular-nums text-primary">{String(index + 1).padStart(2, "0")}</span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{t(item.titleKey)}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t(item.bodyKey, item.vars)}</p>
+                <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{t(item.titleKey)}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t(item.bodyKey, item.vars)}</p>
+                  </div>
+                  {item.href && (
+                    <Button variant="ghost" size="xs" asChild className="mt-0.5 shrink-0 gap-1.5">
+                      <Link href={item.href}>
+                        {t("admin.counselOpen")}
+                        <ArrowRight aria-hidden className="size-3.5" />
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </li>
             ))}

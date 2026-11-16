@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T17:32:31.361096Z",
+  "generated_at": "2026-11-16T18:05:58.827458Z",
   "branch": "main",
-  "head": "4ad90b2",
-  "total_commits": 1,
-  "milestone": "Epic 294",
-  "milestone_full": "the ledger of done epics (through 446 items), closed at Epic 294 — The door spec",
-  "pushed_at": "2026-11-16",
+  "head": "27c2f50",
+  "total_commits": 1494,
+  "milestone": "Epic 295",
+  "milestone_full": "the ledger of done epics (through 447 items), closed at Epic 295 — The counsel doors",
+  "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 446,
-  "epics": 160,
+  "work_items": 447,
+  "epics": 161,
   "feature_surface": [
+    "Epic 295 — The counsel doors",
     "Epic 294 — The door spec",
     "Epic 293 — The overseer notices the softer signal",
     "Epic 292 — The siege, widened",
     "Epic 291 — The playbook's seventeenth chapter",
-    "Epic 290 — The act is written",
-    "Epic 289 — The overseer's synthetic week"
+    "Epic 290 — The act is written"
   ]
 }

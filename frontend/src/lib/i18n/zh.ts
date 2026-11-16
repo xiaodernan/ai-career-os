@@ -3959,6 +3959,7 @@ export const zh = {
       counselStuckTitle: "注册之后，从未投递",
       counselStuckBody:
         "{users} 人注册了，投递是 0。旅程死在了第一次会话里的某个角落。把注册后最快的三步——上传、匹配、投递——放进一页，让每一个新读者都走过它。",
+      counselOpen: "打开",
       counselEmpty:
         "喂这一段的数据线还没有答——没有测到就没有，不杜撰。等有了数再回来。",
       footnote:

@@ -4249,6 +4249,7 @@ export const en = {
       counselStuckTitle: "Registered, never applying",
       counselStuckBody:
         "{users} registered and zero applications. The journey dies somewhere inside the first session. Put the three fastest first actions — upload, match, apply — on one screen and walk every new reader through it.",
+      counselOpen: "Open",
       counselEmpty:
         "The wires that feed this section haven't answered yet — nothing measured, nothing invented. Open again once the install has data.",
       footnote:

@@ -6910,6 +6910,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **295** The counsel doors — every rule opens the screen it names (2026-11-17).
+
+  (The ledger read the wires, computed the seven rules, and stopped at a wall
+  of text: no address, no next move. Every counsel item now carries an `href`
+  to the correct screen on this install:
+    funnel-cliff -> /applications (the pipeline the cliff carved),
+    cohort-cliff -> /growth (the first-session curve the density reads from),
+    act-rate-zero / dwell-rare / attention-collapse / attention-soften -> /
+      (the fold to tighten), all-anonymous -> /register (the turn from
+      reader into worker), trend-falling -> /jobs (the feed that walks
+      the pipeline back out), stuck-journey -> /resumes (the missing
+      artifact that stalls the journey before the application).
+
+  The admin panel renders every fired rule with an `Open` button; a rule
+  with no href renders plain. Measured live: unlock 123 -> the fired
+  rules each link to their screen — the funnel cliff, the cohort split,
+  the persistence deficit, the dwell reads, the anonymous ledger. The
+  signed absence and the trend lines stay on this install's real wires;
+  no rule invents a metric it cannot see. Budget 355 kB; census 214;
+  vitest **1534/1534** (+1 spec asserting all nine rule hrefs).)
+
 - [x] **294** The door spec — walked end to end in Playwright (2026-11-17).
 
   (Epic 249 installed the shared-passphrase door without an auth wall on the
