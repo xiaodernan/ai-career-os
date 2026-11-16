@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T05:35:24.403743Z",
+  "generated_at": "2026-11-16T06:44:40.835089Z",
   "branch": "main",
-  "head": "0ee1e0b",
+  "head": "99b9369",
   "total_commits": 1,
   "milestone": "Epic 271",
   "milestone_full": "the ledger of done epics (through 423 items), closed at Epic 271 — The manual teaches the state graph (2026-11-16)",
