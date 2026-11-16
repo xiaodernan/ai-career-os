@@ -3691,9 +3691,9 @@ export const zh = {
       ledgerDwellTitle: "停留",
       ledgerDwellBody:
         "如果你的眼睛停了下来，标签页自己的钟会记下一次停留——一个毫秒数。永远不是截图、不是滚动轨迹、不是一段段落日志。",
-      ledgerActTitle: "动作（已预留，尚未有人写入）",
+      ledgerActTitle: "动作（已有人敲第一次）",
       ledgerActBody:
-        "架构里预留了第三个动词——一个 act，一个真正意味着什么的点击——而目前还没有人写入它。哪天有人写入了，同一组数字就学会了说它。",
+        "一个 act，是一次真正意味着什么的点击。现在只有首页的「免费开始」按钮替它敲这下琴——只有在读者想敲它的时候，以匿名的方式记一次。数据线会随真实的读者来填充——永远没有附加的数值，永远没有身份。",
       ledgerWireLand: "event = 'land'",
       ledgerWireDwell: "event = 'dwell'",
       ledgerWireAct: "event = 'act'",

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { ProductPreview } from "@/components/marketing/product-preview";
+import { trackAct } from "@/lib/hooks/attention";
 import { AuroraBackground } from "@/components/ui/aurora";
 import { Reveal } from "@/components/ui/reveal";
 import { GradientText } from "@/components/ui/gradient-text";
@@ -106,7 +107,7 @@ export function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button variant="ai" size="lg" asChild className="glow-on-hover">
-              <Link href="/register">
+              <Link href="/register" onClick={() => trackAct("/", "public")}>
                 {t("landing.startFree")}
                 <ArrowRight className="size-4" aria-hidden />
               </Link>

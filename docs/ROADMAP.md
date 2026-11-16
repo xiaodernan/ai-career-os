@@ -6910,6 +6910,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **283** The third verb, written — an anonymous act at the front door (2026-11-16).
+
+  (The playbook's newest chapter promised the act stat would stay reserved
+  until something wrote it. Now one door does: the landing hero's "start
+  free" button — the single most meaningful tap on the page — posts
+  `event='act'` through the same fire-and-forget beacon the sensor uses,
+  with `journey: public`, no value, no identity, ever. The attention hook
+  grows `trackAct(path, journey)` as the shared wire for every future
+  action signal (same posture: no value, no fingerprint, swallowed
+  failures). The chapter and the corpus updated in both languages to say
+  what is true today: one door writes the act, the wire fills as readers
+  do. Measured: vitest **1528/1528** (+1 file, +3 tests), tsc clean, the
+  window-census gates 23/23 untouched (no list reads added), bundle budget
+  OK at 355; census unchanged at 214.)
+
 - [x] **282** The IT harness stops drowning the tiny CI Postgres (2026-11-16).
 
   (The scheduled nightly (`schedule`/`workflow_dispatch`, not a push gate)

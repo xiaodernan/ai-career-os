@@ -3976,9 +3976,9 @@ export const en = {
       ledgerDwellTitle: "The dwell read",
       ledgerDwellBody:
         "If your eyes stayed, the tab's own clock records a dwell read — a number of milliseconds. Never a screenshot, never a scroll-path, never a paragraph log.",
-      ledgerActTitle: "The act (reserved, unwritten)",
+      ledgerActTitle: "The act (written, one door so far)",
       ledgerActBody:
-        "The schema reserves a third verb — an act, a tap that meant something — and nothing writes it yet. The day something does, the same numbers learn to speak it.",
+        "An act is a tap that meant something. The front door's start-free button posts one, anonymously, whenever a reader means it. The wire fills as readers fill it — never with a value, never with an identity.",
       ledgerWireLand: "event = 'land'",
       ledgerWireDwell: "event = 'dwell'",
       ledgerWireAct: "event = 'act'",
