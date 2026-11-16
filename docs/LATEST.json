@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T12:25:26.785614Z",
+  "generated_at": "2026-11-16T12:28:47.801928Z",
   "branch": "main",
-  "head": "cc7227c",
-  "total_commits": 1464,
+  "head": "d65f8af",
+  "total_commits": 1,
   "milestone": "Epic 285",
   "milestone_full": "the ledger of done epics (through 437 items), closed at Epic 285 — The relay's `gpt-6",
   "pushed_at": "2026-11-16",
