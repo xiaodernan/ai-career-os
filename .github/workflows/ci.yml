@@ -234,8 +234,8 @@ jobs:
         run: python scripts/showcase-sync.py
       - name: Commit it back, only when the numbers moved
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/showcase.html docs/LATEST.json
           if git diff --cached --quiet; then
             echo "the numbers didn't move — the committed card is current"
@@ -255,8 +255,8 @@ jobs:
           fetch-depth: 0
       - name: Push gh-pages only when the card moved
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           cp frontend/public/showcase.html gh-pages-sync/index.html
           cp frontend/public/showcase.html gh-pages-sync/showcase.html
           cd gh-pages-sync
