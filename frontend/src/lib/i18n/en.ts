@@ -3966,6 +3966,20 @@ export const en = {
       firstweekReplay: "Walk it again",
       firstweekCta: "Finish it for real",
       tocEyebrow: "Jump to",
+      afterwardEyebrow: "The round trip",
+      afterwardTitle: "What you carry when the loop ends",
+      afterwardIntro:
+        "A career search does not end with an offer; it ends — for better or worse — when you walk out of the room. The install is not a scoreboard. It is a quiet observer of how often you knock, how many times you rehearse, and how many days you show up at all. This final chapter is about what stays with you when the room is empty: not the number, not the review, but the discipline.",
+      afterwardKnockTitle: "Doors knocked",
+      afterwardKnockBody:
+        "Inside the install: every application is named out loud, filed, and time-boxed. Nothing is lost to the doomscroll of a job board and the emptiness of a vague reply. The door's rhythm is the arc — the same door is there after everything falls apart, too.",
+      afterwardRehearseTitle: "Times rehearsed",
+      afterwardRehearseBody:
+        "The rehearsal is the discipline the install cannot give you for free. The room only records what you brought; what you give it is what you practiced. Every session is a single honest note straight from the surviving voice of that session — fed back into the next one until the grace comes from memory.",
+      afterwardDaily:
+        "You do not visit this install on a whim. Each time you open it you have paid for the privilege in honest hours — typing, thinking, breathing, walking the loops. The counter keeps every one. The difference between a ritual and a habit is that the habit turns up on the days it does not feel like it.",
+      afterwardCarry:
+        "Close the laptop. Walk out of the door. What the install recorded is it — the knock, the rehearsal, the humility to begin again on Monday. Bring that back next time you walk in here; it is the only thing the install will ever ask of you.",
       ledgerEyebrow: "The eye that watches back",
       ledgerTitle: "The ledger watches back",
       ledgerIntro:

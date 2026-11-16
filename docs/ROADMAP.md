@@ -6910,6 +6910,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **291** The playbook's seventeenth chapter — Afterward (2026-11-16).
+
+  (The manual taught the loop and the ceremony and the book's own
+  material — the one thing it did not teach was the held hand that
+  carries out: what a reader does after the arc is over. The install
+  narrates your rounds; it cannot narrate what you do in the corridor
+  when the meeting is done. "Afterward — the round trip / 来回一趟" is
+  the penultimate chapter: the knock you made, the rehearsals you
+  survived, the discipline of walking in on Monday anyway. Seventeen
+  keys in both languages; the rail re-counts; the colophon flows
+  after; the manual now arcs end-to-end, door to door.)
+
 - [x] **290** The act is written — the reserved-unwritten language retired (2026-11-16).
 
   (Epic 283 put one hand on the verb at the front door; Epic 289 put a

@@ -463,6 +463,32 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.edgeClosing")}</p>
         </section>
 
+
+        {/* Afterward — the one chapter the reader takes with them (Epic 291) */}
+        <section id="afterward" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.afterwardEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">16</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.afterwardTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.afterwardIntro")}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { titleKey: "playbook.afterwardKnockTitle", bodyKey: "playbook.afterwardKnockBody" },
+              { titleKey: "playbook.afterwardRehearseTitle", bodyKey: "playbook.afterwardRehearseBody" },
+            ].map((node, index) => (
+              <div key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {t(node.titleKey)}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t(node.bodyKey)}</p>
+              </div>
+            ))}
+          </div>
+          <p className="max-w-4xl text-sm leading-relaxed text-foreground/90">{t("playbook.afterwardDaily")}</p>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.afterwardCarry")}</p>
+        </section>
+
         {/* Colophon */}
 
         {/* The ledger watches back — the one chapter about the install itself (Epic 281) */}
