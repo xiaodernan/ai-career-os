@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T10:34:03.840962Z",
+  "generated_at": "2026-11-16T10:35:12.853066Z",
   "branch": "main",
-  "head": "abf1ca3",
-  "total_commits": 1448,
+  "head": "d48d2c1",
+  "total_commits": 1,
   "milestone": "Epic 279",
   "milestone_full": "the ledger of done epics (through 431 items), closed at Epic 279 — The attention heartbeat, week over week (2026-11-16)",
   "pushed_at": "2026-11-16",
