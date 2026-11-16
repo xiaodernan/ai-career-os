@@ -30,13 +30,12 @@ public class AdminTrendsService {
             new Series("interview_sessions", "started_at", "interviewsPracticed", null),
             new Series("agent_runs", "started_at", "agentRuns", null),
             new Series("ai_usage_events", "created_at", "aiUsageEvents", null),
-            // Epic 279: the attention ledger's own heartbeat, the same rows /admin/attention counts
-            // in its trailing-30-days window, now as weekly counts so the overseer can see the
-            // slope of the door the install's strangers are walking through. `act` is in the
-            // schema but unwritten by any caller today, so the pair that actually carries
-            // volume is lands and dwells.
-            new Series("attention_events", "created_at", "attentionLands", "event = 'land'"),
-            new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"));
+    // The weekly install window (Epic 279): the two steady lines the door shows. The third
+    // kind (`act`) is written since Epic 283 by the landing's Start-free CTA and by the
+    // overseer's synthetic-week door (Epic 289) — it stays out of the weekly frame because
+    // a sparse series reads worse than silence, and the trailing-30-day door already counts it.
+    new Series("attention_events", "created_at", "attentionLands", "event = 'land'"),
+    new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"));
 
     private final JdbcTemplate jdbc;
     private final AdminCache cache;

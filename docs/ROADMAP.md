@@ -6910,6 +6910,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **290** The act is written — the reserved-unwritten language retired (2026-11-16).
+
+  (Epic 283 put one hand on the verb at the front door; Epic 289 put a
+  second behind the overseer's synthetic week. The repo still told the
+  story it stopped telling on the wire: three files claimed `act` was
+  schema-reserved-but-unwritten — the Java trends service's comment, the
+  frontend trends-card comment, and the API.md `/admin/trends` row. All
+  three now say what is true: act is written at the door and by the
+  simulator, both belong to the same `attention_events` ledger, and the
+  weekly frame deliberately omits the line because a sparse series reads
+  worse than silence. The trailing-30-day door carries the real number.
+  Three files changed; no wiring, no routes, no schema.)
+
 - [x] **289** The overseer's synthetic week — the simulator door (2026-11-16).
 
   (The attention spine accepted only real arrivals: on a fresh install the

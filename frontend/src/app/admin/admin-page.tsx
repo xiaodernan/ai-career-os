@@ -116,8 +116,9 @@ const TREND_SERIES = [
   { key: "agentRuns", labelKey: "admin.agentRunsLabel", icon: Sparkles },
   { key: "aiUsageEvents", labelKey: "admin.aiEventsLabel", icon: Database },
   // The attention ledger's heartbeat (Epic 279): the same rows /admin/attention counts, weekly.
-  // `act` is schema-reserved but unwritten by any caller today — zeros would be noise, so the
-  // card ships the pair that actually measures: lands, and let-dwells-read-dwell.
+  // `act` is written since Epic 283 (the landing's Start-free CTA) and by this door's synthetic
+  // week — it stays out of the weekly frame deliberately: sparse lines read worse than silence,
+  // and the trailing-30-day door counts the number for readers who check it.
   { key: "attentionLands", labelKey: "admin.attentionLandsLabel", icon: Eye },
   { key: "attentionDwells", labelKey: "admin.attentionDwellsLabel", icon: Timer },
 ] as const;
