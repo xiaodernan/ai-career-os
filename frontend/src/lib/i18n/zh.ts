@@ -3686,6 +3686,27 @@ export const zh = {
       keptGoingBeatThreeBody:
         "第 100 天。你坚持了，为了无聊的理由——仪式奏效，数字一直看得见，信一直在进门。路尽头那块牌子不是奖杯——是你在听你自己说完那句话之后，才会信的那句话。",
       keptGoingClosing: "这个工具从不问累不累。它只问今天接住了没有。这是这一圈唯一回答的问题。",
+      stategraphEyebrow: "引擎之下",
+      stategraphTitle: "引擎怎么想——状态图",
+      stategraphIntro:
+        "这个产品最重要的几道关，是用一幅幅有名字的节点拼成的图——不是一条更聪明的提示词。简历定稿那条路——把你的简历改写成对准某个职位的样子——就是 retrieve、draft、verify、render 四个节点连成一个流程跑下来的。每一步都记得自己在哪一站；每一步都把自己的名字写进账本；这张图不会无限绕圈——它有一把上限，到了上限就不跑了，不会空转烧钱。",
+      stategraphRetrieveTitle: "retrieve——先把你自己的材料摊在桌面上",
+      stategraphRetrieveBody:
+        "模型还没写一个字之前，两边都已经摆出全了：职位那一边（公司、岗位、带宽）和你这一边（简历原文、分数、短板）。取料用的是跟所有 AI 调用同一条混合 RAG——你的材料为准，不是模型脑子里“一份简历该长什么样”。",
+      stategraphDraftTitle: "draft——模型在你的材料之上提笔",
+      stategraphDraftBody:
+        "这是这个流程里唯一模型可以发挥的地方。它针对你现在的版本提出修改草案——改写的要点、换位的技能、一份摘要——但它写的每一处主张，都会在下一站被原样对回你的材料。",
+      stategraphVerifyTitle: "verify——谁是老实人，谁说了算",
+      stategraphVerifyBody:
+        "不是模型自评。一台确定性校验器读回草案：它写的技能是不是都在你的简历或职位里出现过？它写的数字能不能追溯到同一份材料？编造的技能会被打回 draft 重写一次，并把退回理由一并写在回执里。一次通过的稿子生成成品；两次都在编的稿子会被拒掉——你的原始措辞原封不动送出去。",
+      stategraphRenderTitle: "render——决定落笔之前，你看到的是一张清单",
+      stategraphRenderBody:
+        "通过校验的修改落在你的结构化简历副本上，面板按块给你看差异，每个改动都标注：用了、还是打回来并附上具体理由。没有静默改动；没有编造混进去。同一个形状——写、按你的材料校验、渲染落笔——是全产品所有引擎的一样形状。",
+      stategraphLedgerTitle: "你在哪里看到它——账本，不是魔法",
+      stategraphLedgerBody:
+        "每个节点都记在这次运行的图中：AI Activity 里可以看到 retrieve、draft、verify、render 四个节点按顺序排好的行，旁边是时长——机器自己写的字，不是只有工程师才能看懂的反馈。",
+      stategraphClosing:
+        "状态图是这个产品两条合起来的承诺：模型可以有意见——但从不只是关于你，从来没有能越过校验的关——它改了什么，账本上清清楚楚一笔一笔写在回答旁边，你逐句就能核对。",
       gateEyebrow: "大门",
       gateTitle: "整圈路线，一页看完",
       gateIntro:

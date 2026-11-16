@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-15T22:48:54.350361Z",
+  "generated_at": "2026-11-16T05:34:09.590812Z",
   "branch": "main",
-  "head": "b60f4c3",
-  "total_commits": 1,
-  "milestone": "Epic 270",
-  "milestone_full": "the ledger of done epics (through 422 items), closed at Epic 270 — The near-miss",
-  "pushed_at": "2026-11-15",
+  "head": "02a0fff",
+  "total_commits": 1429,
+  "milestone": "Epic 271",
+  "milestone_full": "the ledger of done epics (through 423 items), closed at Epic 271 — The manual teaches the state graph (2026-11-16)",
+  "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 185,
-  "work_items": 422,
-  "epics": 136,
+  "work_items": 423,
+  "epics": 137,
   "feature_surface": [
+    "Epic 271 — The manual teaches the state graph (2026-11-16)",
     "Epic 270 — The near-miss",
     "Epic 269 — The StateGraph spine",
     "Epic 268 — The room you walk into",
     "Epic 267 — The eye of the install",
-    "Epic 266 — The open door",
-    "Epic 265 — The ledger of words, itemized"
+    "Epic 266 — The open door"
   ]
 }

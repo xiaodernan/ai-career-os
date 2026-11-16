@@ -351,11 +351,41 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.keptGoingClosing")}</p>
         </section>
 
+        {/* How the engine thinks — the state graph (Epic 269 in the book) */}
+        <section id="stategraph" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.stategraphEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">11</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.stategraphTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.stategraphIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {[
+              { title: t("playbook.stategraphRetrieveTitle"), body: t("playbook.stategraphRetrieveBody") },
+              { title: t("playbook.stategraphDraftTitle"), body: t("playbook.stategraphDraftBody") },
+              { title: t("playbook.stategraphVerifyTitle"), body: t("playbook.stategraphVerifyBody") },
+              { title: t("playbook.stategraphRenderTitle"), body: t("playbook.stategraphRenderBody") },
+            ].map((node, index) => (
+              <li key={node.title} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {node.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{node.body}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-5">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("playbook.stategraphLedgerTitle")}</p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.stategraphLedgerBody")}</p>
+          </div>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.stategraphClosing")}</p>
+        </section>
+
         {/* The Gate — the whole loop, one page, for the reader about to walk it */}
         <section id="gate" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.gateEyebrow")}</p>
-            <span className="text-2xs tabular-nums text-muted-foreground">11</span>
+            <span className="text-2xs tabular-nums text-muted-foreground">12</span>
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.gateTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.gateIntro")}</p>

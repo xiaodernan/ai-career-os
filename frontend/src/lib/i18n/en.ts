@@ -3976,6 +3976,27 @@ export const en = {
       keptGoingBeatThreeBody:
         "Day 100. You kept going, for boring reasons: the ritual works, the counts stay visible, the letters keep landing. The sign at the end of the road isn't a trophy — it's the sentence you needed to hear.",
       keptGoingClosing: "The tool never asks if you're tired. It asks if you hit today. That is the only question the loop answers.",
+      stategraphEyebrow: "Under the hood",
+      stategraphTitle: "How the engine thinks — the state graph",
+      stategraphIntro:
+        "The product's most important passes are drawn as explicit graphs of named nodes, not a smarter prompt. The tailor pipeline — the path that rewrites your resume for a posting — runs retrieve, draft, verify, render as one flow. Each node knows where it is; each writes its own line into the ledger; the graph cannot loop forever — it is capped, and the cap refuses a runaway instead of spinning one.",
+      stategraphRetrieveTitle: "retrieve — the engine reads your material first",
+      stategraphRetrieveBody:
+        "Before the model writes a word, both sides are put on the table: the posting (job, company, comp band) and you (resume text, scores, gaps). The retrieval is the same hybrid RAG that grounds every other AI call — your own material, never the model's memory of what a resume should look like.",
+      stategraphDraftTitle: "draft — the model writes over those notes, nothing else",
+      stategraphDraftBody:
+        "This is the only place the model invents. It proposes a diff against your current version — reworded bullets, re-ordered skills, a summary — but every claim it writes is later read back against your material by the next node.",
+      stategraphVerifyTitle: "verify — the honest one wins the veto",
+      stategraphVerifyBody:
+        "Not the model's own opinion. A deterministic verifier scans the draft: whether every skill it names appears in your resume or posting, and whether every number it writes traces back to the same. Invented skills get routed back to draft once with the rejection spelled out. A draft that passes renders; a draft that invents twice is refused — the original wording ships, unchanged.",
+      stategraphRenderTitle: "render — the version you can read, before it ships",
+      stategraphRenderBody:
+        "The accepted changes apply onto a copy of your structured resume, and the panel shows you the diff with each hunk tagged: accepted, or rejected with the exact reason printed beside it. Nothing silently changes; nothing invented reaches the file. The same shape — write, verify against what's yours, render — carries every engine in the product.",
+      stategraphLedgerTitle: "How you see it — the ledger, not the magic",
+      stategraphLedgerBody:
+        "Every node is recorded as a graph_node trace on the run: in AI Activity you will see rows named retrieve, draft, verify, render for a tailor turn, in order, with durations beside them — the machine's own handwriting, not a summary only an engineer could read.",
+      stategraphClosing:
+        "The state graph is the product's promise in one shape: the model may have opinions — never about you alone, never without the veto — and the truth of what it edited is spelled out in ink beside the answer, where you can audit it line by line.",
       gateEyebrow: "THE GATE",
       gateTitle: "The whole arc, one page",
       gateIntro:

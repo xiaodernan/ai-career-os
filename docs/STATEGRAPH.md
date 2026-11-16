@@ -72,6 +72,15 @@ deserved to see rejected), and the stats line reflects both worlds.
   the guarantees are runtime (merge order, step cap, trace), not static — same
   honesty tier as the rest of the repo.
 
+## The manual chapter
+
+The playbook carries a reader-facing chapter — "How the engine thinks —
+the state graph" (`#stategraph`, rail chapter 11) — teaching the reader the
+four nodes by name (retrieve, draft, verify, render) and one promise the graph
+keeps: the model never gets the last word; a deterministic verifier gets the
+veto. It is written once, in both languages, and the Activity timeline's flow
+node rows are the same diagram.
+
 ## Honest limits
 
 The verifier decides the branch, which is the whole power and the whole constraint

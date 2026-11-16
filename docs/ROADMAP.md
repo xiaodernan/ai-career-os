@@ -6878,6 +6878,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **271** The manual teaches the state graph (2026-11-16).
+
+  (The manual now explains the product's spine, not just its doors: a new
+  chapter — "How the engine thinks — the state graph" / "引擎怎么想——状态图" —
+  sits between #keptgoing and #gate (chapter 11 of the manual, railed with
+  `#stategraph` between #keptgoing and #gate). It names the four nodes of the
+  resume-tailor flow exactly as they ship (retrieve, draft, verify, render),
+  what the deterministic veto is, why two drafts are the ceiling, and how the
+  reader sees every node as a row in the AI Activity ledger — "Flow node" /
+  "图节点" — because the product's engine is an explicit graph, not a smarter
+  prompt. Written once, in both languages, all strings through the table.)
+  Measured: playbook suites **62/62**, i18n/census **62/62**, verify_gates
+  **566 passed** (three skips unchanged), tsc clean; the manual's print
+  stylesheet remains honest (the writing prints, chrome does not).)
+
 - [x] **270** The near-miss — the role that almost was (2026-11-16).
 
   (A new keepsake on `/replies`, beside the not-yet letter: the one close call a

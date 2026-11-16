@@ -17,6 +17,7 @@ const CHAPTERS = [
   { href: "#yearloop", titleKey: "playbook.yearloopTitle" },
   { href: "#manual", titleKey: "playbook.manualInAppTitle" },
   { href: "#keptgoing", titleKey: "playbook.keptGoingTitle" },
+  { href: "#stategraph", titleKey: "playbook.stategraphTitle" },
   { href: "#gate", titleKey: "playbook.gateTitle" },
   { href: "#about", titleKey: "playbook.colophonTitle" },
 ] as const;
