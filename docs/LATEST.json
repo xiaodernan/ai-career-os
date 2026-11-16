@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T15:52:42.024635Z",
+  "generated_at": "2026-11-16T16:03:58.343165Z",
   "branch": "main",
-  "head": "7aa6d71",
-  "total_commits": 1,
-  "milestone": "Epic 291",
-  "milestone_full": "the ledger of done epics (through 443 items), closed at Epic 291 — The playbook's seventeenth chapter",
-  "pushed_at": "2026-11-16",
+  "head": "f747832",
+  "total_commits": 1484,
+  "milestone": "Epic 292",
+  "milestone_full": "the ledger of done epics (through 444 items), closed at Epic 292 — The siege, widened",
+  "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 443,
-  "epics": 157,
+  "work_items": 444,
+  "epics": 158,
   "feature_surface": [
+    "Epic 292 — The siege, widened",
     "Epic 291 — The playbook's seventeenth chapter",
     "Epic 290 — The act is written",
     "Epic 289 — The overseer's synthetic week",
     "Epic 288 — The ledger row the graph writes is pinned in the timeline (2026-11-16)",
-    "Epic 287 — The second loop rides the graph",
-    "Epic 286 — The NO_PROXY interpolation trap"
+    "Epic 287 — The second loop rides the graph"
   ]
 }

@@ -76,6 +76,28 @@ This is what the read-through cache is for. The shipped default stays `off`
 what changes in production, when the operator flips it, is a guarantee that the
 overseer's wall never becomes a query load the product can feel.
 
+
+
+## Epic 292 — the widened siege, measured 2026-11-17
+
+`scripts/siege-e292.js` extends the same protocol to the routes the month added:
+
+- `GET /api/v1/admin/attention` — the trailing-30-day aggregate (`land/dwell/act` roll-up, `topLandings`, `dwellPerLandingMs`), the same rows `admin/attention` feeds from the attention spine.
+- `GET /api/v1/admin/funnel` — the lower half of the funnel (`registered → uploaded → applied → interviewed → offered`) the admin page draws.
+
+Run, same host, same single-node docker topology, fresh stack healthy after Docker Desktop crashed around midnight:
+
+| Route | Phase (VUs) | reqs | med | p95 | max | 5xx / EOF |
+|---|---|---|---|---|---|---|
+| all routes, round-robin | spike (100) | 20,283 | 142 ms | 412 ms | 1.19 s | **0** |
+p95 pages: p99 held under 500 ms, max 1.19 s — the tail is the per-request `/health` probe's 2-second bound, by design.
+
+Observations:
+
+- Zero 5xx / zero EOF against the steady-state stack, on the same box that showed 100% EOF when the k6 start raced Compose's health gate (backend still coming up at 15:59Z, 121 s to boot). The readout distinction matters for the next run: `http_req_failed 100%` from the same script on the same host is Compose, not the code.
+- The attention endpoint is in the same league as the original four read-only routes: all six promise sub-500 ms p95 on this host with 100 VUs.
+
+
 ## Mixed-workload control run
 
 One 10-VU round-robin over all four routes (the default profile) completed

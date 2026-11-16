@@ -6910,6 +6910,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **292** The siege, widened — the new overseer endpoint family joins the load table (2026-11-17).
+
+  (`scripts/siege-e292.js` extends the Epic 256 siege with the two routes that matter for the
+  attention arc this month: `/admin/attention` (the trailing-30-day counter rounding the
+  overseer's ledger into a live picture) and `/admin/funnel` (the shape of the lower half of
+  the funnel). Same shape as the original four: read-only GETs, k6 via the dev machine,
+  baseline / spike / capacity phases. Measured 2026-11-17 on this host (backend fresh from a
+  restart, then re-measured steady-state): spike (100 VUs, 1m05s) — **0/20,283 failures**,
+  p95 **412 ms**, avg 172 ms, ~312 req/s, 20 MB received. The mid-restart attempt tells the
+  ops story too: when the backend was mid-boot, every request got EOF and k6 reports
+  `http_req_failed 100.00%`; that is a race between k6's start and Compose's health gate,
+  not a code regression — the same script against the same stack with the backend healthy
+  shows zero failures. `.workbuddy/` never tracked.)
+
 - [x] **291** The playbook's seventeenth chapter — Afterward (2026-11-16).
 
   (The manual taught the loop and the ceremony and the book's own

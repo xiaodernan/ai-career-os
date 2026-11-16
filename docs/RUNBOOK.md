@@ -160,6 +160,12 @@ SHA the run tested — and diff from there. The nightly job tests the whole stac
 so a red night can be the ai-service, the backend, the frontend build or the eval
 suite; the step names say which.
 
+## The siege shows `http_req_failed 100%` — check a running stack first
+
+**What it looks like.** `scripts/siege.js` (or `siege-e292.js`) runs, every iteration returns EOF, k6 reports `http_req_failed 100.00%` and `data_received 0 B`.
+
+**What to read.** Docker Compose's health gate. The backend's `start_period` is generous (~120 s for a cold boot); if k6 starts before the health check passes it sees an EOF for every request. It is Compose, not the code. Confirm with `docker compose ps` (`careeros-backend | Up (healthy)`) and a single `curl http://127.0.0.1:8080/api/v1/health` — when that's 200, rerun the siege.
+
 ## The AI relay answers 502 from inside compose though the host reaches it fine
 
 **What the alert looks like.** Every AI call inside the stack fails fast:
