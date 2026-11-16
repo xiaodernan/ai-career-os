@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T11:51:58.571565Z",
+  "generated_at": "2026-11-16T12:12:58.946430Z",
   "branch": "main",
-  "head": "a8179ee",
-  "total_commits": 1,
-  "milestone": "Epic 283",
-  "milestone_full": "the ledger of done epics (through 435 items), closed at Epic 283 — The third verb, written",
+  "head": "b13854f",
+  "total_commits": 1462,
+  "milestone": "Epic 284",
+  "milestone_full": "the ledger of done epics (through 436 items), closed at Epic 284 — The relay re-measured",
   "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 435,
-  "epics": 149,
+  "work_items": 436,
+  "epics": 150,
   "feature_surface": [
+    "Epic 284 — The relay re-measured",
     "Epic 283 — The third verb, written",
     "Epic 282 — The IT harness stops drowning the tiny CI Postgres (2026-11-16)",
     "Epic 281 — The ledger watches back",
     "Epic 280 — The counsel that reads its own numbers (2026-11-16)",
-    "Epic 279 — The attention pulse, week over week (2026-11-16)",
-    "Epic 278 — The engine, made visible"
+    "Epic 279 — The attention pulse, week over week (2026-11-16)"
   ]
 }

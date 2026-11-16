@@ -1294,18 +1294,18 @@ export const en = {
       spendTodayFailed: "Today's spend couldn't be loaded",
       promptCache: "Prompt cache",
       promptCacheDescription:
-        "How much of the input the model had to read fresh versus served from a cache. A streaming row reads zero by design — this provider omits prompt_tokens_details on stream frames (totals are kept) — so zero there is the relay's honest answer, not a miss. Deterministic calls replay from the exact-match cache.",
+        "How much of the input the model reads fresh versus served from a cache. On this relay (aizzz.xyz, measured 2026-11-16 with include_usage): streaming rows carry prompt_tokens_details reliably — 8 of 8 probes, 8,192 of 8,353 input tokens from cache (98.1%). Non-stream rows report it randomly — a zero there is under-reporting, not a miss. Deterministic calls replay from the exact-match cache.",
       ledgerTitle: "The operator's ledger — measured, dated, real",
       ledgerDescription:
         "This install's own desk-notes: the load burst run against it, not a benchmark published elsewhere.",
       ledgerBody:
-        "Identical non-stream LLM calls hit the relay prefix cache at 98% (7,424 of 7,555 input tokens). Streams report zero by design (the relay strips the hint on stream frames). The gateway's breaker opened, half-opened, and closed on its own — twice, unattended. 555 model calls ledgered this install; 40% of input tokens were served from cache; resume_parse runs at 75.6% cached.",
+        "Identical calls re-measured 2026-11-16 against this relay (aizzz.xyz, gpt-6.1-terra): stream frames carried prompt_tokens_details in 8 of 8 probes — 8,192 of 8,353 input tokens cached (98.1%). Non-stream rows report it randomly (5 of 8 this sample; the 3 omissions are the relay's choice, not a miss). The gateway's breaker opened, half-opened, and closed on its own — twice, unattended. 555 model calls ledgered this install; 40% of input tokens were served from cache; resume_parse runs at 75.6% cached.",
       ledgerDateLine:
         "Measured 2026-11-15 and 2026-11-16, on this install. A number without a date is not a measurement — it is a story.",
       ledgerFinding1:
-        "Identical non-stream calls · relay reported cached tokens on 4/6 · 4,992 of 5,177 input tokens cached (96.5%)",
+        "Identical non-stream calls · reporting is random · 5 of 8 carried the hint this sample, always 8,192 of 8,353 input tokens cached when carried",
       ledgerFinding2:
-        "Stream frames · relay strips prompt_tokens_details · cached shows 0 by design",
+        "Stream frames · include_usage honored · cached tokens reported on 8 of 8 probes · 8,192 of 8,353 input tokens cached (98.1%)",
       ledgerFinding3:
         "Warm identical prefix · 94.9% cached observed earlier on this install",
       alerts: "Alerts",

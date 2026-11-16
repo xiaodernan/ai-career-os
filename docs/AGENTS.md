@@ -156,6 +156,8 @@ them as a timeline (`components/ai/agent-timeline.tsx`, `/activity` and
 `/activity/[id]`). This is PRD §47 Demo 6 — you can open any run and see agent → tools
 → retrieval → sources → LLM → final answer.
 
+**Measured relay behavior, re-taken 2026-11-16 (aizzz.xyz, gpt-6.1-terra).** Streams now carry `prompt_tokens_details` when the call sets `stream_options.include_usage` — 8 of 8 probes, 8,192 of 8,353 input tokens served from cache (98.1%). Non-stream carriage remains nondeterministic (5 of 8 this session, always 8192 cached when carried). The 2026-11-14 note below is the previous endpoint's behavior (wkapi.pro / gpt-6-sol), kept as the record of how the claim evolved; the operator ledger copy now reads the measured truth for the current relay. The engine's streaming turns are therefore the reliable cache telemetry window on this relay — the earlier conclusion that neither path is deterministic was also a property of the old endpoint, not of this one.
+
 **Measured relay behavior (2026-11-14).** On this stack's dev gateway (`openai_compat`,
 `gpt-6-sol`), the stream's terminal usage chunk carries the totals (`prompt_tokens`,
 `completion_tokens`, `total_tokens`) and **no `prompt_tokens_details`** — `include_usage` is

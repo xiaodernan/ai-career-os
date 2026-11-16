@@ -6910,6 +6910,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **284** The relay re-measured — streams report the cache, non-stream reports when it wants to (2026-11-16).
+
+  (Eight identical non-stream and eight identical stream calls, one fixed
+  byte-stable prefix (~8.1k tokens), temperature 0.2, `include_usage` on
+  the stream side, through the operator's Clash Verge proxy — the relay
+  changed under the exact question the user asked about. Answers:
+  streams carried `prompt_tokens_details` on **8 of 8** probes (8,192 of
+  8,353 input tokens from cache, 98.1%); non-stream carried it on
+  **5 of 8** this sample, always 8,192 of 8,353 when carried. The
+  2026-11-15 section's claim that streams report zero was true of the
+  previous endpoint (wkapi.pro / gpt-6-sol) and false of this one; the
+  belief "streams report better" was the one reliable observation the
+  two sessions shared. No line of the client needed to change — the
+  deterministic replay path stands, the stable-prefix message shape was
+  already correct, `prompt_cache_key` already fans repeats to the shard
+  holding the prefix. The operator ledger copy (both languages) now
+  states the measured facts and the relay name and date; `docs/AGENTS.md`
+  records the 2026-11-16 delta next to the 2026-11-14 note (kept as the
+  record of how the claim evolved); `docs/CACHE-RELAY.md` gains the same
+  addendum. The Compose-wired `/monitoring` page says what the relay
+  actually answered, honestly, in the reader's language.)
+
 - [x] **283** The third verb, written — an anonymous act at the front door (2026-11-16).
 
   (The playbook's newest chapter promised the act stat would stay reserved

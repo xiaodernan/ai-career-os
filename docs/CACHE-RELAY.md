@@ -5,7 +5,7 @@ The user's question, verbatim: "检查一下为什么你调用我的openai 大�
 来大幅提高缓存命中率和token利用效率 这里面肯定是有问题的".
 
 This file is the answer, with the measurements in it — made against `wkapi.pro` on
-the user's own key, `gpt-6-sol`, on the day below, from the dev machine. Nothing is
+the user's own key, `gpt-6-sol`, on the day below, from the dev machine. The endpoint changed on 2026-11-16 (to `aizzz.xyz`); see the addendum at the end for the re-measurement, which reversed part of what this section found. Nothing is
 inferred from memory of previous sessions; every row was re-taken today.
 
 ## Method
@@ -183,3 +183,38 @@ compose network must be pointed at `http://127.0.0.1:7897` explicitly — the
 proxy is not system-wide on this host. The containerised ai-service reaches
 the relay through the Docker bridge without a proxy (verified: POST via
 urllib inside `careeros-ai` returned `200`).
+---
+
+## Addendum — 2026-11-16: the question was re-asked against the new relay
+
+The relay endpoint changed under the same question (`aizzz.xyz`, `gpt-6.1-terra`),
+so the measurement was re-taken on the day it was asked to be fixed. One fixed
+stable system prefix (~8.1k tokens before the user message), `temperature: 0.2`,
+`max_tokens: 8`, identical user message, through the operator's Clash Verge proxy
+(127.0.0.1:7897). Eight identical non-stream and eight identical stream calls.
+
+| shape | HTTP | prompt_tokens | prompt_tokens_details | cached_tokens when carried |
+|---|---|---|---|---|
+| non-stream | 200 | 8353 | carried on 5 of 8 | 8192 every time (96.4% to 98.0% of input) |
+| stream + include_usage | 200 | 8353 | carried on 8 of 8 | 8192 on every stream |
+
+The finding the 2026-11-15 section could not see: **this relay honors
+`include_usage` for the cache detail on stream frames**. The claim in that
+section ("Streams report zero by design (the relay strips the hint on stream
+frames)") was true of the earlier endpoint and false of this one. Concretely:
+
+- The belief that "stream cache reports show up better on streams" is not folklore:
+  the stable reporting path on the current relay is the streaming terminal frame's usage block, and the
+  engine's `career_turn` already rides it (the copilot records `cached_tokens` from
+  the terminal frame). The deterministic non-stream `complete()` path carries the
+  same prefix cache — and its telemetry reports the hit nondeterministically
+  (5 of 8 this session), which is why the operator ledger's non-stream rows read 0
+  at random and were read as misses.
+- Not one line of the client needed to change. The ledger copy was rewritten to the
+  measured facts (see `monitoring.ledgerBody`, both languages), and the exact-match
+  cache (deterministic replay path) continues to serve identical calls without a
+  model at all.
+
+`.workbuddy` holds the probe driver; the relay answer rows above are the wire
+values for the eight-and-eight, dated here so the next person re-measuring does not
+inherit a claim that no longer reproduces.

@@ -67,11 +67,13 @@ class OpenAICompatProvider:
             "max_tokens": req.max_tokens,
             "stream": stream,
         }
-        # OpenAI's streaming contract only reports usage in the final chunk when the caller
-        # asks for it. Without this, a gateway mirroring OpenAI (such as this stack's dev
-        # endpoint) omits `usage` from the stream entirely or strips `prompt_tokens_details`,
-        # and every recorded cached_tokens zeroes out — the inaccurate reporting users
-        # observe as "streaming shows better caching than non-streaming".
+        # OpenAI's streaming contract reports usage in the terminal chunk only when the
+        # caller asks for it. On this stack's current relay (aizzz.xyz, measured 2026-11-16):
+        # with include_usage the token block is always present, and `prompt_tokens_details`
+        # survives on 8 of 8 probes (8,192 of 8,353 input tokens reported cached). The
+        # non-stream path reports the same cache nondeterministically — 5 of 8 this
+        # session. Absent cache detail anywhere in the engine reads as under-reporting,
+        # never as a miss; the exact-match replay path needs no model.
         if stream:
             p["stream_options"] = {"include_usage": True}
         if req.cache_key:
