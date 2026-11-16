@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T15:04:50.340256Z",
+  "generated_at": "2026-11-16T15:26:29.081234Z",
   "branch": "main",
-  "head": "cf32d0f",
+  "head": "1dec790",
   "total_commits": 1,
   "milestone": "Epic 290",
   "milestone_full": "the ledger of done epics (through 442 items), closed at Epic 290 — The act is written",
