@@ -3878,22 +3878,30 @@ export const zh = {
       journeyP95: "p95 (ms)",
       optimizationsTitle: "这个实例下一步该做什么",
       optimizationsLede:
-        "下面的建议不是拍脑袋，每一条都对应本实例产生的某个具体数字。挑一个闻起来最难闻的改，其余的自然跟上。",
-      recFeedTitle: "接入一个真实职位源",
-      recFeedBody:
-        "这个实例里的 168 个职位是手写种子。挑一个真实看板——绿屋招聘、Indeed RSS、RecruitEe——通过 /ingestion 接进来，你会亲眼看到数据从演示变成真实。其余全是已经通了的管道。",
-      recFirstVisitTitle: "修掉首屏的 bootcamp 跌落",
-      recFirstVisitBody:
-        "几乎每个新账号都在一个空工作台上什么都看不见，等三分钟。开始追踪「首字节到有意义首帧」的时间——超过两秒时，把简历和职位在挂载时并发预取，骨架图早一点让位。",
-      recCacheTitle: "给中继最热的几个能力加暖机",
-      recCacheBody:
-        "简历解析命中 ~76%，JD 分析 ~54%。命中率随相同前缀涨。投精确缓存暖机：把最常用的三个能力每小时 warm 一遍，让每天的第一次调用也命中。",
-      recMatchTitle: "把岗位匹配从关键路径上挪开",
-      recMatchBody:
-        "岗位匹配是最慢的一站——p50 39 秒，因为它串联了检索 + 解析 + 汇总。让 AI 调用异步化；卡片的 match ring 先显示「正在计算」，Redis 那头暖起来了再填数。",
-      recCorpusTitle: "招一个真实公司进来",
-      recCorpusBody:
-        "目前 16 家公司全是虚构的。挑三个和你心中读者最像的，改成真公司、真页面；一家一家来，假数据层就变成真语料了。",
+        "这些不是编出来的建议——它们是这一页自己的数据线在你打开它那一刻跑出来的规则。看不到输入的规则保持沉默；从最难闻的那一条开工。",
+      counselFunnelTitle: "交接处正在出血",
+      counselFunnelBody:
+        "{from} → {to} 是这台实例自己漏斗里最陡的一段——{fromCount} 人到 {toCount} 人（单一步流失 {dropPct}%）。先修这一步，再动它上游的任何东西。",
+      counselCohortTitle: "首次会话的悬崖",
+      counselCohortBody:
+        "最近 {weeks} 周注册的读者，只有 {retentionPct}% 回来过（{registered} 人里 {active} 人）。悬崖在哪里开始，就在哪里最便宜——盯住注册之后前十分钟里发生的一切。",
+      counselActTitle: "注意力没有落点",
+      counselActBody:
+        "三十天里 {landings} 位读者落地，一次点击都没有。这台实例没有任何一页能把注意力变成行动——给最忙的那一页一个主按钮，一个明确的第一步。",
+      counselDwellTitle: "读完就走的落地",
+      counselDwellBody:
+        "{landings} 次落地里，只有 {pct}% 读完了（{dwells} 次停留）—— 陌生人来了、瞄了、就走了。把首屏收紧：一句话、一个动作，其余全部撤下去。",
+      counselAnonymousTitle: "一本陌生人的账",
+      counselAnonymousBody:
+        "三十天 {landings} 次落地，全部是匿名读者。签名路径——注册、第一次见到价值、第一次留下东西——从未真正被走通。请你自己完整走一遍，计时，痛处自然会浮上来。",
+      counselTrendTitle: "投递量正在变薄",
+      counselTrendBody:
+        "窗口内投递量在下落（首周 {first} 份、末周 {last} 份，共 {weeks} 周）。是需求先变了——喂热这块板：保存的搜索、定时摄取的频率，以及那个提醒「某份投递还在」的轻推。",
+      counselStuckTitle: "注册之后，从未投递",
+      counselStuckBody:
+        "{users} 人注册了，投递是 0。旅程死在了第一次会话里的某个角落。把注册后最快的三步——上传、匹配、投递——放进一页，让每一个新读者都走过它。",
+      counselEmpty:
+        "喂这一段的数据线还没有答——没有测到就没有，不杜撰。等有了数再回来。",
       footnote:
         "这里的数字都是这台实例的事实，由应用自己在每次交易里写下。没有一行能指认到某个具体的人。来源：后端表 users、resumes、applications、agent_runs、interview_sessions、agent_traces、knowledge_sources、user_notes、application_letters、contacts、user_memories、companies、jobs、job_matches、conversations、messages。",
       backToProduct: "返回产品",

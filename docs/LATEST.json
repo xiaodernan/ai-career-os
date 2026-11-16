@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T10:35:12.853066Z",
+  "generated_at": "2026-11-16T10:45:19.775454Z",
   "branch": "main",
-  "head": "d48d2c1",
-  "total_commits": 1,
-  "milestone": "Epic 279",
-  "milestone_full": "the ledger of done epics (through 431 items), closed at Epic 279 — The attention heartbeat, week over week (2026-11-16)",
+  "head": "9e68a21",
+  "total_commits": 1450,
+  "milestone": "Epic 280",
+  "milestone_full": "the ledger of done epics (through 432 items), closed at Epic 280 — The counsel that reads its own numbers (2026-11-16)",
   "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
-  "test_files": 187,
-  "work_items": 431,
-  "epics": 145,
+  "test_files": 188,
+  "work_items": 432,
+  "epics": 146,
   "feature_surface": [
+    "Epic 280 — The counsel that reads its own numbers (2026-11-16)",
     "Epic 279 — The attention heartbeat, week over week (2026-11-16)",
     "Epic 278 — The engine, made visible",
     "Epic 277 — The tour opens the afterward door (2026-11-16)",
     "Epic 276 — Afterward",
-    "Epic 275 — The evidence table",
-    "Epic 274 — The 74/74 truth"
+    "Epic 275 — The evidence table"
   ]
 }

@@ -6910,6 +6910,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **280** The counsel that reads its own numbers (2026-11-16).
+
+  (The admin opened with a section promising "each line traces to a number
+  this install actually produced" — and five hardcoded sentences followed,
+  identical on day one and day ninety. The section now derives every line
+  at render time from the page's own seven wires (stats, trends, funnel,
+  cohort, attention). Seven rules, each plain arithmetic, each silent
+  where its input cannot be seen; bodies carry the measured numbers via
+  locale-table vars, in both languages. On this install's live numbers
+  the section reads: funnel-cliff at registered→uploaded (7,122 → 1,638,
+  77% lost at one step), cohort-cliff (30.5% of the newest four weeks came
+  back, 903 of 2,957), act-rate-zero (851 landings, 0 taps in 30 days),
+  dwell-rare (5.0% of landings dwell-read, 53 of 851), all-anonymous (every
+  one of the 851 landing readers anonymous). `trend-falling` stays silent
+  — applications slope is +18/week across the 12-week window (0,0,0,18,
+  16,20,6,299,5,57,414,23) — and `stuck-journey` is silent because the
+  install delivered 646 applications. Pure `lib/admin-counsel.ts` +
+  8-case spec; the five stale rec* keys are removed from both locale tables.
+  Measured: vitest **1525/1525** (+1 file, +8 tests), tsc clean, budget
+  OK at 350, census unchanged at 214.)
+
 - [x] **279** The attention heartbeat, week over week (2026-11-16).
 
   (The overseer's ledger showed the install's five weekly trends — users,

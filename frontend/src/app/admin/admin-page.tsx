@@ -24,6 +24,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber, relativeTime } from "@/lib/format";
 import { seriesTotal, projectedSparkline } from "@/lib/admin-trend";
 import { funnelReading } from "@/lib/admin-funnel";
+import { deriveCounsel } from "@/lib/admin-counsel";
 
 interface AdminStats {
   users?: number;
@@ -98,14 +99,6 @@ const STATIONS = [
   { name: "list knowledge", p50: 50, p95: 50 },
   { name: "search jobs", p50: 15226, p95: 15226 },
   { name: "job match", p50: 39604, p95: 39604 },
-] as const;
-
-const RECOMMENDATIONS = [
-  { titleKey: "admin.recFeedTitle", bodyKey: "admin.recFeedBody" },
-  { titleKey: "admin.recFirstVisitTitle", bodyKey: "admin.recFirstVisitBody" },
-  { titleKey: "admin.recCacheTitle", bodyKey: "admin.recCacheBody" },
-  { titleKey: "admin.recMatchTitle", bodyKey: "admin.recMatchBody" },
-  { titleKey: "admin.recCorpusTitle", bodyKey: "admin.recCorpusBody" },
 ] as const;
 
 const FUNNEL_STAGE_KEYS: Record<string, string> = {
@@ -253,6 +246,14 @@ export default function AdminPage() {
         ? t(FUNNEL_STAGE_KEYS[reading.bottleneckStageId])
         : reading.bottleneckStageId)
     : "";
+
+  // The counsel (Epic 280): every item is derived from this page's own wires at the moment of
+  // render — nothing hardcoded, no rule that cannot see its input stays silent. Stage names ride
+  // the same label table the funnel section uses, so they read as the reader hears them.
+  const counsel = deriveCounsel(
+    { stats, trends, funnel, cohort, attention },
+    { labelForStage: (id) => (FUNNEL_STAGE_KEYS[id] ? t(FUNNEL_STAGE_KEYS[id]) : id) }
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10">
@@ -565,17 +566,21 @@ export default function AdminPage() {
       <section>
         <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.optimizationsTitle")}</h2>
         <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.optimizationsLede")}</p>
-        <ol className="mt-4 grid gap-2">
-          {RECOMMENDATIONS.map((rec, index) => (
-            <li key={index} className="flex gap-3 rounded-xl border border-primary/10 bg-primary/5 p-4">
-              <span aria-hidden className="font-mono text-2xs tabular-nums text-primary">{String(index + 1).padStart(2, "0")}</span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">{t(rec.titleKey)}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t(rec.bodyKey)}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        {counsel.length > 0 ? (
+          <ol className="mt-4 grid gap-2">
+            {counsel.map((item, index) => (
+              <li key={item.id} className="flex gap-3 rounded-xl border border-primary/10 bg-primary/5 p-4">
+                <span aria-hidden className="font-mono text-2xs tabular-nums text-primary">{String(index + 1).padStart(2, "0")}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{t(item.titleKey)}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t(item.bodyKey, item.vars)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("admin.counselEmpty")}</p>
+        )}
       </section>
 
       <div className="border-t border-border/60 pt-6 text-2xs text-muted-foreground">

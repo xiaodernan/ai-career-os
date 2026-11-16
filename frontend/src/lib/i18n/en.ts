@@ -4168,22 +4168,30 @@ export const en = {
       journeyP95: "p95 (ms)",
       optimizationsTitle: "What to do next on this install",
       optimizationsLede:
-        "The recommendations below aren't invented ideas — each one traces to a number this install actually produced. Pick the top one that smells hardest; the rest follow.",
-      recFeedTitle: "Ingest a real job feed, not the seed corpus",
-      recFeedBody:
-        "168 roles on this install are hand-written seed rows. Pick one real board feed — Greenhouse, Indeed RSS, recruitee — wire it through /ingestion, and watch recLpStrategy go from demo to real. The rest is plumbing that already works.",
-      recFirstVisitTitle: "Fold the bootcamp drop off /dashboard's first paint",
-      recFirstVisitBody:
-        "Nearly every new account sees the empty-state dashboard for the first three minutes. Track time-to-first-meaningful-pixel; if it exceeds two seconds, prefetch resumes + jobs concurrently on mount and hide the skeleton earlier.",
-      recCacheTitle: "Keep the relay warm on the hot prefixes",
-      recCacheBody:
-        "Resume parse hits ~76% cached; JD analyze ~54%. Hit-accuracy rises with identical prefixes — invest in hourly exact-cache warm-ups for the three busiest capabilities so the first request of the day is served from cache for the next reader in line.",
-      recMatchTitle: "Move job match off the critical path",
-      recMatchBody:
-        "Job match is the slowest station — 39 seconds p50 because it chains retrieve + parse + aggregate. Shadow the LLM call asynchronously; the card's match ring can render a provisional 'computing' state while the edge is warming on the Redis side.",
-      recCorpusTitle: "Curate company research on the seeded 16",
-      recCorpusBody:
-        "Companies cover 16 identities and they're all synthetic. Pick the three that are closest to the will-be-hired cohort and edit them to real firms with real pages; a demo data layer becomes a live corpus one company at a time.",
+        "These aren't invented ideas — they're rules reading this page's own wires at the moment you opened it. A rule that cannot see its input stays silent; pick the top item that smells hardest and start there.",
+      counselFunnelTitle: "The hand-off is bleeding",
+      counselFunnelBody:
+        "{from} \u2192 {to} is the steepest drop on this install's own funnel — {fromCount} to {toCount} readers ({dropPct}% lost in one step). Open that exact screen and repair the ask before you touch anything upstream of it.",
+      counselCohortTitle: "The first-session cliff",
+      counselCohortBody:
+        "Only {retentionPct}% of readers across the last {weeks} weeks ever came back ({active} of {registered}). The cliff is cheapest to repair where it starts — watch everything that happens in the first ten minutes after signup.",
+      counselActTitle: "Attention with no ask attached",
+      counselActBody:
+        "{landings} readers landed in thirty days and not one tapped. No screen on this install turns attention into action — give the busiest page one primary, unmissable first ask.",
+      counselDwellTitle: "Readers who never dwell",
+      counselDwellBody:
+        "Only {pct}% of the {landings} landings ended in a dwell read ({dwells} reads) — strangers arrive, glance, and leave before the first screen convinced them. Tighten the fold: one message, one ask, nothing else above it.",
+      counselAnonymousTitle: "A ledger of strangers",
+      counselAnonymousBody:
+        "Every one of the {landings} landing readers in thirty days was anonymous. The signed journey — signup, first value, the first keep — was never exercised. Walk it once yourself, time it, and see where it stalls.",
+      counselTrendTitle: "Applications are thinning",
+      counselTrendBody:
+        "Applications fell across the window ({first} in the opening week, {last} in the last, across {weeks} weeks). Demand thinned — feed the board: saved searches, ingestion cadence, and the nudge that reminds a stalled application it exists.",
+      counselStuckTitle: "Registered, never applying",
+      counselStuckBody:
+        "{users} registered and zero applications. The journey dies somewhere inside the first session. Put the three fastest first actions — upload, match, apply — on one screen and walk every new reader through it.",
+      counselEmpty:
+        "The wires that feed this section haven't answered yet — nothing measured, nothing invented. Open again once the install has data.",
       footnote:
         "Counts are facts of this install, recorded by the application itself on every transaction. No row here identifies a reader. Source: backend tables `users`, `resumes`, `applications`, `agent_runs`, `interview_sessions`, `agent_traces`, `knowledge_sources`, `user_notes`, `application_letters`, `contacts`, `user_memories`, `companies`, `jobs`, `job_matches`, `conversations`, `messages`.",
       backToProduct: "back",
