@@ -6910,6 +6910,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **294** The door spec — walked end to end in Playwright (2026-11-17).
+
+  (Epic 249 installed the shared-passphrase door without an auth wall on the
+  user's explicit ask. It never had a spec: only unit tests and a manual
+  browser pass confirmed it, leaving the largest public surface in the
+  product unverified. Two lessons now shipped in tests/admin-door.spec.ts:
+  (1) unlock on 123 — first attempt drops back to the gate, second attempt
+  opens to the ledger exactly as the install designed; (2) seed 3 synthetic
+  sessions, assert the ledger moved (`seeded > baseline`), wipe them, assert
+  the ledger is back at or below the seeded value, and leave the install
+  clean for whoever runs this next. Measured on this install: both specs
+  green in 9.7 s; census unchanged at 214 (specs are not browser sources);
+  the e2e suite now reports **76 passed**, all wire-bound.)
+
 - [x] **293** The overseer notices the softer signal — attention-soften and attention-collapse fire on the weekly pulse (2026-11-17).
 
   (`deriveCounsel` could see the attention 30-day ring but only as a signal;
