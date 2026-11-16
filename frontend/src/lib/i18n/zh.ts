@@ -2082,6 +2082,10 @@ export const zh = {
       beat_ceremony_title: "签了字，读那封信",
       beat_ceremony_body: "当你签字的那一刻，收官仪式自动发生：你自己的数字刻上去、还有一封看着你走过来的工具写给你的信。",
       beat_ceremony_time: "签名的那天",
+      beat_afterward_title: "散场之后——你带走什么",
+      beat_afterward_body:
+        "最后一页不鼓掌；它只是记下这些数——敲过的门、打完的场、上场的天数——然后直说，这一切是你的。你带走的那封信，不是这一圈的全部记录。",
+      beat_afterward_time: "一分钟",
       closingTitle: "十分钟入门，一眼全清",
       closingBody:
         "你还没绑卡，也没有人在看。准备好了的时候，整条路只有一步之遥——就是把你从这里带出来的那一步。",

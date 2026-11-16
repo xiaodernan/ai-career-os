@@ -2288,6 +2288,10 @@ export const en = {
       beat_ceremony_title: "Sign, and read the letter",
       beat_ceremony_body: "When you sign, the ceremony happens: your counts and a letter from the tool that watched you do it.",
       beat_ceremony_time: "the day it happens",
+      beat_afterward_title: "Afterward — what you carry out",
+      beat_afterward_body:
+        "The final page doesn't applaud; it notes the numbers — applications sent, interviews finished, days shown up — and says plainly: you did this. The letter you keep is not the only record of it.",
+      beat_afterward_time: "a minute",
       closingTitle: "Your first ten minutes, at a glance",
       closingBody:
         "No commitment yet, no card on file, and nobody watching. And when you're ready, the loop is one click away — the same loop that got you here.",

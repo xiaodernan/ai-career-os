@@ -6910,6 +6910,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **277** The tour opens the afterward door (2026-11-16).
+
+  (The public ten-minute walkthrough — the front door into the product we
+  build for people who haven't yet decided to sign up — used to end on a
+  single beat: the closing ceremony. Epic 277 adds the ninth beat, after the
+  ceremony: "Afterward — what you carry out / 散场之后——你带走什么", with a
+  one-minute introduction and the same compact treatment every other beat
+  uses. A first-time reader now sees the bookend of the road before they
+  know where it starts; they walk in already haunted by the right shape:
+  the numbers you knock out are numbers you keep, not scoreboard scores.
+  Measured: vitest **1509/1509** in the page tests; new keys `tour.beat_afterward_*`
+  in both languages; copy census unchanged at 213; no new route, no new
+  layout work; tsc clean.)
+
 - [x] **276** Afterward — the weight you carry out (2026-11-16).
 
   (The closing ceremony used to end where it stabilized: the letter, the

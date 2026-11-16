@@ -11,6 +11,7 @@ import {
   Gauge,
   MessageSquare,
   MoveRight,
+  BookOpen,
   Sparkles,
   Target,
   TrendingUp,
@@ -39,6 +40,7 @@ const BEATS = [
   { icon: Users, key: "rehearse" },
   { icon: MessageSquare, key: "track" },
   { icon: MoveRight, key: "ceremony" },
+  { icon: BookOpen, key: "afterward" },
 ] as const;
 
 export default function TourPage() {
@@ -94,8 +96,8 @@ export default function TourPage() {
           </figcaption>
         </figure>
 
-        {/* The eight beats */}
-        <ol className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* The nine beats */}
+        <ol className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {BEATS.map((beat, index) => {
             const Icon = beat.icon;
             return (
