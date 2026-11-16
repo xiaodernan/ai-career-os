@@ -3935,6 +3935,12 @@ export const zh = {
       counselFunnelTitle: "交接处正在出血",
       counselFunnelBody:
         "{from} → {to} 是这台实例自己漏斗里最陡的一段——{fromCount} 人到 {toCount} 人（单一步流失 {dropPct}%）。先修这一步，再动它上游的任何东西。",
+      counselAttentionSoftenTitle: "门越开越空了",
+      counselAttentionSoftenBody:
+        "后四周平均每周 {recent} 位落地，之前那个窗口还有 {base}。实例悄无声息地仄下去了——没有警报，没有指示灯，只是来的人越来越少。检查的是第一个询问：是某条路径上的第一步，不再值得停一次了。",
+      counselAttentionCollapseTitle: "门不敲了",
+      counselAttentionCollapseBody:
+        "最近一周只有 {last} 次落地——不足之前均值 {base} 的三分之一。目光并不守恒：当最新一周停了拉力，入口第一步的地方就等于不存在。随便调一次最新的部署、最新的那次改动——这个章节里第一个询问的地方，可能有一扇你关不见了的门。",
       counselCohortTitle: "首次会话的悬崖",
       counselCohortBody:
         "最近 {weeks} 周注册的读者，只有 {retentionPct}% 回来过（{registered} 人里 {active} 人）。悬崖在哪里开始，就在哪里最便宜——盯住注册之后前十分钟里发生的一切。",

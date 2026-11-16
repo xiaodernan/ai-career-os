@@ -29,7 +29,12 @@ const FULL = {
   },
   trends: {
     weeks: ["2026-01-01", "2026-01-08", "2026-01-15", "2026-01-22", "2026-01-29", "2026-02-05", "2026-02-12", "2026-02-19"],
-    series: { applications: [9, 8, 8, 6, 5, 4, 2, 1] },
+    series: {
+      applications: [9, 8, 8, 6, 5, 4, 2, 1],
+      // The quiet drip: the front door knocked 11 times/wk in the first half, 1/wk now.
+      attentionLands: [11, 12, 10, 9, 8, 3, 1, 0],
+      attentionDwells: [2, 1, 1, 1, 0, 0, 0, 0],
+    },
   },
 };
 
@@ -42,6 +47,8 @@ describe("deriveCounsel", () => {
       "act-rate-zero",
       "dwell-rare",
       "all-anonymous",
+      "attention-collapse",
+      "attention-soften",
       "trend-falling",
     ]);
   });
@@ -62,6 +69,55 @@ describe("deriveCounsel", () => {
     expect(dwell.vars.dwells).toBe(10);
     const anon = items.find((i) => i.id === "all-anonymous")!;
     expect(anon.vars.landings).toBe(200);
+  });
+
+  it("carries the collapse and the soften pair when the front door falls off", () => {
+    const items = deriveCounsel({
+      trends: {
+        weeks: ["w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8"],
+        series: {
+          // first half avg 10.25, second half avg 2.25 — collapse and soften both fire
+          attentionLands: [12, 11, 9, 9, 4, 2, 1, 0],
+        },
+      },
+    });
+    expect(items.map((i) => i.id)).toEqual(["attention-collapse", "attention-soften"]);
+    const collapse = items.find((i) => i.id === "attention-collapse")!;
+    expect(collapse.vars.last).toBe(0);
+    // preceding mean = (12+11+9+9+4+2+1)/7 = 48/7 = 6.857 -> rounds to 7
+    expect(collapse.vars.base).toBe(7);
+    const soften = items.find((i) => i.id === "attention-soften")!;
+    expect(soften.vars.recent).toBe(2);
+    // first half = [12,11,9,9] avg = 10.25 -> rounds to 10
+    expect(soften.vars.base).toBe(10);
+  });
+
+  it("stays silent while the window is flat-zero or too short", () => {
+    const quiet = deriveCounsel({
+      trends: {
+        weeks: ["w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8"],
+        series: { attentionLands: [0, 0, 0, 0, 0, 0, 0, 0] },
+      },
+    });
+    expect(quiet.find((i) => i.id === "attention-collapse")).toBeUndefined();
+    expect(quiet.find((i) => i.id === "attention-soften")).toBeUndefined();
+
+    const short = deriveCounsel({
+      trends: { weeks: ["w1", "w2", "w3"], series: { attentionLands: [9, 1, 0] } },
+    });
+    expect(short.find((i) => i.id === "attention-collapse")).toBeUndefined();
+    expect(short.find((i) => i.id === "attention-soften")).toBeUndefined();
+  });
+
+  it("collapses only when the latest reading is below 30% of the preceding mean", () => {
+    const items = deriveCounsel({
+      trends: {
+        weeks: ["w1", "w2", "w3", "w4", "w5", "w6", "w7", "w8"],
+        // newest = 6 vs mean-of-others = (12+13+15+17+19+18+4)/7 = 98/7 = 14.0 — above the 30% floor
+        series: { attentionLands: [12, 13, 15, 17, 19, 18, 4, 6] },
+      },
+    });
+    expect(items.find((i) => i.id === "attention-collapse")).toBeUndefined();
   });
 
   it("stays silent where the wires have nothing to say", () => {

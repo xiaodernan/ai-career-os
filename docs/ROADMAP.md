@@ -6910,6 +6910,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **293** The overseer notices the softer signal — attention-soften and attention-collapse fire on the weekly pulse (2026-11-17).
+
+  (`deriveCounsel` could see the attention 30-day ring but only as a signal;
+  the weekly slope across the trailing twelve ISO weeks is what writes into
+  the budget. Two new rules read the `attentionLands` series directly from
+  the /admin/trends wire: **attention-soften** fires when the trailing half
+  halves out in landing count vs the earlier half (sub-60%), and
+  **attention-collapse** fires when the newest week reads below 30% of the
+  preceding mean — the page-is-still-up-but-nobody-cares-anymore case.
+  Both rules stay silent on flat-zero (a quiet window is not a softer
+  window) and on windows shy of 8 readings — nothing made up, no noise
+  dressed as insight. Mounted into the existing /admin counsel section
+  right above the stale `trend-falling` (applications) item; urgency is
+  ordered collapse → soften → fall. i18n keys in both languages; 4 new
+  counsel tests.)
+
 - [x] **292b** The gateway breaker fired for real, and the edge learned from it (2026-11-17).
 
   (A burst test of the newly-instrumented gateway route during a mid-operation

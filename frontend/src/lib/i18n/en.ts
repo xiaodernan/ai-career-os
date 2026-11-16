@@ -4225,6 +4225,12 @@ export const en = {
       counselFunnelTitle: "The hand-off is bleeding",
       counselFunnelBody:
         "{from} \u2192 {to} is the steepest drop on this install's own funnel — {fromCount} to {toCount} readers ({dropPct}% lost in one step). Open that exact screen and repair the ask before you touch anything upstream of it.",
+      counselAttentionSoftenTitle: "The door went quietly half-empty",
+      counselAttentionSoftenBody:
+        "The trailing-four-week mean landed at {recent} per week, the prior window reached {base}. The install went quiet before anyone noticed — no alarm, no ticker, just fewer strangers at the door. Check the first ask, not the last screen: something on the path before the first action stopped earning attention.",
+      counselAttentionCollapseTitle: "The door stopped knocking",
+      counselAttentionCollapseBody:
+        "The newest week saw {last} landings — below one third of the trailing mean of {base}. Zero gravity exists for attention; when the newest week stops pulling, the first ask is invisible. Open the last deploy, the last edit; something made the entry path empty.",
       counselCohortTitle: "The first-session cliff",
       counselCohortBody:
         "Only {retentionPct}% of readers across the last {weeks} weeks ever came back ({active} of {registered}). The cliff is cheapest to repair where it starts — watch everything that happens in the first ten minutes after signup.",

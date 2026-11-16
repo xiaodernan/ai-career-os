@@ -205,6 +205,44 @@ function stuckJourney(stats: CounselStats | null | undefined): CounselItem | nul
   return null;
 }
 
+function seriesMean(values: number[]): number {
+  return values.reduce((sum, v) => sum + v, 0) / Math.max(values.length, 1);
+}
+
+function attentionSoften(trends: CounselTrends | null | undefined): CounselItem | null {
+  const lands = trends?.series?.attentionLands;
+  if (!lands || lands.length < 8) return null;
+  const half = Math.floor(lands.length / 2);
+  const firstHalf = lands.slice(0, half);
+  const secondHalf = lands.slice(half);
+  const firstMean = seriesMean(firstHalf);
+  const secondMean = seriesMean(secondHalf);
+  if (firstMean < 1) return null; // a quiet window is not a softer one
+  if (secondMean >= 0.6 * firstMean) return null;
+  return {
+    id: "attention-soften",
+    titleKey: "admin.counselAttentionSoftenTitle",
+    bodyKey: "admin.counselAttentionSoftenBody",
+    vars: { recent: Math.round(secondMean), base: Math.round(firstMean) },
+  };
+}
+
+function attentionCollapse(trends: CounselTrends | null | undefined): CounselItem | null {
+  const lands = trends?.series?.attentionLands;
+  if (!lands || lands.length < 4) return null;
+  const last = lands[lands.length - 1];
+  const prior = lands.slice(0, lands.length - 1);
+  const priorMean = seriesMean(prior);
+  if (priorMean < 1) return null;
+  if (last >= 0.3 * priorMean) return null;
+  return {
+    id: "attention-collapse",
+    titleKey: "admin.counselAttentionCollapseTitle",
+    bodyKey: "admin.counselAttentionCollapseBody",
+    vars: { last, base: Math.round(priorMean) },
+  };
+}
+
 /**
  * Every counsel item the wires can honestly produce, most urgent first.
  * Wires that failed or have nothing to say are silent by construction.
@@ -216,6 +254,10 @@ export function deriveCounsel(input: CounselInput, options: CounselOptions = {})
   const cohort = cohortCliff(input.cohort);
   if (cohort) out.push(cohort);
   out.push(...attentionSignals(input.attention));
+  const collapse = attentionCollapse(input.trends);
+  if (collapse) out.push(collapse);
+  const soften = attentionSoften(input.trends);
+  if (soften) out.push(soften);
   const trend = trendFalling(input.trends);
   if (trend) out.push(trend);
   const stuck = stuckJourney(input.stats);
