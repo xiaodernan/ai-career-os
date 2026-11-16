@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T15:46:18.946613Z",
+  "generated_at": "2026-11-16T15:52:42.024635Z",
   "branch": "main",
-  "head": "f8119df",
-  "total_commits": 1482,
+  "head": "7aa6d71",
+  "total_commits": 1,
   "milestone": "Epic 291",
   "milestone_full": "the ledger of done epics (through 443 items), closed at Epic 291 — The playbook's seventeenth chapter",
   "pushed_at": "2026-11-16",
