@@ -6919,10 +6919,10 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   cohort, attention). Seven rules, each plain arithmetic, each silent
   where its input cannot be seen; bodies carry the measured numbers via
   locale-table vars, in both languages. On this install's live numbers
-  the section reads: funnel-cliff at registered→uploaded (7,122 → 1,638,
-  77% lost at one step), cohort-cliff (30.5% of the newest four weeks came
+  the section reads: funnel-cliff at interviewed→offered (359 → 24,
+  93% lost at one step — the max drop among the funnel's consecutive pairs, which is what the rule picks), cohort-cliff (30.5% of the newest four weeks came
   back, 903 of 2,957), act-rate-zero (851 landings, 0 taps in 30 days),
-  dwell-rare (5.0% of landings dwell-read, 53 of 851), all-anonymous (every
+  dwell-rare (6.2% of landings dwell-read, 53 of 851), all-anonymous (every
   one of the 851 landing readers anonymous). `trend-falling` stays silent
   — applications slope is +18/week across the 12-week window (0,0,0,18,
   16,20,6,299,5,57,414,23) — and `stuck-journey` is silent because the
