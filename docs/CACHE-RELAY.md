@@ -118,3 +118,68 @@ suite against the documented mock harness (`LLM_PROVIDER=mock`
 live relay separately. The suite cannot be kept green on a shared key that
 rate-limits mid-burst; that is the relay's behavior, by design of its quota,
 not a defect in either the product or the suite.
+
+## Addendum — the new relay (api.aizzz.xyz, 2026-11-16)
+
+The user switched the LLM endpoint to `https://api.aizzz.xyz/v1`, model
+`gpt-6.1-terra`, at mid-session on 2026-11-16. Same discipline: measured, not
+asserted. The measurements below were taken from the dev machine (through
+Clash VEG proxy on `127.0.0.1:7897` — this host's direct network to the relay
+is blocked; the ar-link was refused until the proxy was used) and, separately,
+through the containerised ai-service (`careeros-ai`), which reaches the relay
+through the Docker bridge without a proxy.
+
+### How the relay reports, by call shape, with a ~19.7k-token stable prefix
+
+| Calls | prompt_tokens | cached_tokens | shape |
+|---|---|---|---|
+| non-stream A | 19742 | None | streaming unset — the relay declined to report |
+| non-stream B | 19742 | None | same |
+| non-stream C | 19742 | None | same |
+| stream 1 | 19742 | 18597 (94.1%) | stream_options include_usage=True |
+| stream 2 | 19742 | 18597 | same |
+| stream 3 | 19742 | None | relay blinked |
+| stream 4 | 19742 | None | relay blinked |
+| stream 5 | 19742 | 18597 | same |
+| stream 6 | 19742 | 18597 | same |
+
+The two findings the old relay shared with this one:
+
+1. **The prefix cache works natively and hard.** 18597 of 19742 prefix tokens
+   served from cache — roughly 94.1% — on identical prefixes, when the relay
+   reports the details at all. On both shapes the cache fires on the byte-
+   identical prefix; `prompt_cache_key` is an additional hint the shard-local
+   router uses, and adds no measurable delta on top of being prefix-stable.
+   The single biggest influence on token economics is owning the byte-
+   identical prefix — unchanged from the wkapi relay era.
+2. **The relay decides whether to report `cached_tokens` at random.** In the
+   one three-call non-stream sample all three blissful reports were absent; in
+   the six-call stream sample four of six carried the details. The pattern is
+   the relay's choice, not the client's — per-shape sample sizes are too small
+   to make a law out of either rate.
+
+The unrelatable observation behind the user's earlier "streaming seems to
+work better": on BOTH relays the same calls that carry the details tend to
+land in the streaming half of a small sample. The relay reports them with
+nothing to do with the call shape.
+
+### What the product does
+
+- The ai-service still asks for `stream_options.include_usage = True` on every
+  streamed turn (already landed in Epic 174) — the one client-side lever that
+  makes totals visible.
+- The client still reads `prompt_tokens_details.cached_tokens` when present
+  and records absent otherwise — never infers a hit where the relay was
+  silent, never rounds toward a prettier average.
+- The ledger's own aggregate over 710 recorded calls (before this switch):
+  **53.6% of input tokens served from cache** (1,259,285 of 2,349,460).
+  Real enough to ship a number with, honest enough not to ship it as a win.
+
+### Proxy note
+
+The relay is not directly reachable from this dev machine; the host has a
+Clash Verge proxy (mixed port **7897**, mihomo). HTTP clients outside the
+compose network must be pointed at `http://127.0.0.1:7897` explicitly — the
+proxy is not system-wide on this host. The containerised ai-service reaches
+the relay through the Docker bridge without a proxy (verified: POST via
+urllib inside `careeros-ai` returned `200`).

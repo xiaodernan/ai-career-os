@@ -3795,6 +3795,12 @@ export const zh = {
       attentionTopActRate: "动作率",
       attentionFootnote:
         "浏览器的钟，最近三十天；已写入的行就存在。数字是测出来的，不是猜出来的——这台机器能看到的，它就说出来；看不到的，它就不说。",
+      attentionWeakest: "信号最弱的三个",
+      attentionWeakestLede:
+        "陆点数最多的这十二条路径里，这三条的读者把手最不肯伸出去——这是下一步重做最该动的地方。",
+      attentionWeakestNoneLede:
+        "还没有路径有三次陆点——等读者够了，再下结论。",
+
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
       journeyTitle: "黄金旅程，逐站验收",

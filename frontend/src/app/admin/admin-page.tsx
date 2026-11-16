@@ -417,6 +417,30 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+        {(() => {
+          const rows = (attention?.topLandings ?? []).filter((r) => r.landings >= 3);
+          const weakest = [...rows]
+            .sort((a, b) => (a.acts / a.landings) - (b.acts / b.landings))
+            .slice(0, 3);
+          return (
+            <div className="mt-5 rounded-2xl border border-warning/20 bg-warning/5 p-4">
+              <p className="text-2xs font-semibold uppercase tracking-widest text-warning">{t("admin.attentionWeakest")}</p>
+              <p className="mt-1.5 text-2xs leading-relaxed text-muted-foreground">{t("admin.attentionWeakestLede")}</p>
+              {weakest.length === 0 ? (
+                <p className="mt-2 text-2xs italic text-muted-foreground">{t("admin.attentionWeakestNoneLede")}</p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {weakest.map((row) => (
+                    <li key={row.path} className="flex items-center justify-between gap-3 font-mono text-2xs tabular-nums text-muted-foreground">
+                      <span className="truncate">{row.path}</span>
+                      <span>{formatNumber(row.landings)} → {formatNumber(row.acts)} act{row.acts === 1 ? "" : "s"} · {Math.round((row.acts / row.landings) * 100)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })()}
         <h3 className="mt-5 font-serif text-base font-semibold tracking-tight">{t("admin.attentionTopTitle")}</h3>
         <div className="mt-3 overflow-hidden rounded-2xl border border-border/60">
           <table className="w-full text-sm">

@@ -4085,6 +4085,12 @@ export const en = {
       attentionTopActRate: "Act rate",
       attentionFootnote:
         "Browser clocks, the trailing 30 days; committed means the row exists. Measured, never inferred — a signal here says nothing about what happens next week.",
+      attentionWeakest: "The weakest signal",
+      attentionWeakestLede:
+        "Of the twelve most-landed paths, these are the three where the fewest landings became an act — where a redesign earns its keep next.",
+      attentionWeakestNoneLede:
+        "No path has three landings yet — a finding needs enough reader before it earns one.",
+
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
       journeyTitle: "The golden journey, station by station",
