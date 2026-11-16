@@ -6910,6 +6910,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **287** The second loop rides the graph — cover letters stop hallucinating (2026-11-16).
+
+  (Every claim in a job-application letter is an audit surface: the model
+  invents employers, doubles the years, puts 47% back without asking.
+  `features/cover_letter` was a single unaudited `ask()` since the first
+  week. Restructured the same way as the resume tailor: retrieve → draft
+  → verify → render, `max_steps=6`, `graph_node` ledger rows, the veto
+  deterministic — every skill named in the letter must appear in the
+  sources (resume text, structured resume, JD, company facts, goal), every
+  number likewise. On rejection the draft gets one retry with the reason
+  injected ("VERIFIER REJECTION — rejected claims must not reappear", the
+  tailor's own pattern); a letter that still fails renders, never
+  silently — the verdict rides the trace ledger. The wire answer is
+  byte-identical to before (`{letter, sources, mode, model}`); the wire
+  census fired the moment a `verification` key was tried and was
+  corrected against, per the gate's own law. 10 new tests pin the
+  verifier (invented skill, invented number, retry-success,
+  double-fail-falls-through, sources unchanged, baseline); offline suite
+  **2820/2820**. `docs/STATEGRAPH.md` names both loops.)
+
 - [x] **286** The NO_PROXY interpolation trap — the ingest fleet was riding Clash Verge (2026-11-16).
 
   (The e2e run flagged it: two ingest specs never reached ready. The route

@@ -1,6 +1,10 @@
 """Cover letter generation + variants (PRD §12)."""
 
+import re
+
+from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask, stable_messages, wrap_untrusted
+from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
 from app.rag.pipeline import retrieve
 
@@ -43,23 +47,103 @@ def style_directives(tone: str, length: str) -> list[str]:
     return out
 
 
+_MAX_DRAFTS = 2
+
+
+def _numbers_in(s: str) -> set[str]:
+    return set(re.findall(r"\d+(?:[.,]\d+)?%?", s if isinstance(s, str) else ""))
+
+
+def verify_no_fabrication(source_text: str, letter: str) -> str | None:
+    """Return a rejection reason if `letter` introduces facts absent from the sources.
+
+    Deterministic, parse-only, offline. The verifier never rewrites and never grades
+    style — it only asks whether the numbers and the skills the letter names appear
+    anywhere in the resume, JD, company facts, or the reader's stated goal. A miss is
+    a reason, and the draft node retries with it. A letter that still fails renders
+    with the rejection recorded instead of silently passing.
+    """
+    source_text = source_text if isinstance(source_text, str) else ""
+    letter = letter if isinstance(letter, str) else ""
+    src_skills = {normalize(s) for s in extract_skills(source_text)}
+    letter_skills = {normalize(s) for s in extract_skills(letter)}
+    invented = letter_skills - src_skills
+    if invented:
+        return f"invented skills: {sorted(invented)}"
+    new_nums = _numbers_in(letter) - _numbers_in(source_text)
+    if new_nums:
+        return f"invented numbers: {sorted(new_nums)}"
+    return None
+
+
+def _source_text(resume_structured: object, resume_text: str, jd: object,
+                 company: object, goal: str) -> str:
+    return " ".join([str(resume_structured or {}), str(resume_text or ""),
+                     str(jd or {}), str(company or {}), str(goal or "")])
+
+
 async def generate(resume_structured: dict, resume_text: str, jd: dict,
                    company: dict | None, goal: str, *, user_id: str,
                    mode: str = "generate", previous: str = "",
                    tone: str = "", length: str = "",
                    run_id: str | None = None) -> dict:
+    jd = jd if isinstance(jd, dict) else {}
     query = " ".join([s.get("name", "") for s in (jd.get("requiredSkills") or [])
                       if isinstance(s, dict)][:10])
-    r = await retrieve(query or jd.get("title", "top achievements"), user_id=user_id,
-                       run_id=run_id, top_k=6, kinds=["resume", "project", "goal"])
-    prompt = _build_prompt(resume_structured, jd, company, goal,
-                           r.get("context_block", ""), tone, length, mode, previous)
-    resp = await ask(LLMRequest(
-        messages=stable_messages(BASE_SYSTEM, LLMMessage("user", prompt)),
-        temperature=0.6 if mode in ("regenerate",) else 0.4, max_tokens=900),
-        user_id=user_id, run_id=run_id, agent="resume", kind="cover_letter")
-    return {"letter": resp.text, "sources": r["evidence"], "mode": mode,
-            "model": resp.model}
+    source_text = _source_text(resume_structured, resume_text, jd, company, goal)
+
+    async def retrieve_node(state):
+        r = await retrieve(query or jd.get("title", "top achievements"), user_id=user_id,
+                           run_id=run_id, top_k=6, kinds=["resume", "project", "goal"])
+        prompt = _build_prompt(resume_structured, jd, company, goal,
+                               r.get("context_block", ""), tone, length, mode, previous)
+        return NodeResult(state={"context": prompt, "evidence": r["evidence"]},
+                          goto="draft",
+                          trace={"context_chars": len(prompt)})
+
+    async def draft_node(state):
+        prompt = state["context"]
+        if state.get("verifier_feedback"):
+            prompt += ("\n\nVERIFIER REJECTION (rewrite with the rejected claims REMOVED, "
+                       f"not reworded; everything it rejected must not reappear): "
+                       f"{state['verifier_feedback']}")
+        resp = await ask(LLMRequest(
+            messages=stable_messages(BASE_SYSTEM, LLMMessage("user", prompt)),
+            temperature=0.6 if mode in ("regenerate",) else 0.4, max_tokens=900),
+            user_id=user_id, run_id=run_id, agent="resume", kind="cover_letter")
+        return NodeResult(state={"letter": resp.text, "model": resp.model,
+                                 "attempts": state["attempts"] + 1},
+                          goto="verify",
+                          trace={"attempt": state["attempts"] + 1})
+
+    async def verify_node(state):
+        reason = verify_no_fabrication(source_text, state["letter"])
+        if reason and state["attempts"] < _MAX_DRAFTS:
+            return NodeResult(state={"rejected": [reason], "verifier_feedback": reason},
+                              goto="draft",
+                              trace={"reject": reason})
+        return NodeResult(state={"rejected": [reason] if reason else []},
+                          goto="render",
+                          trace={"routing": "render", "rejected": bool(reason)})
+
+    async def render_node(state):
+        # The veto decision rides the trace ledger (graph_node rows), the same channel
+        # the resume tailor's verify verdicts already ride. The answer frame stays
+        # exactly {letter, sources, mode, model} — the browser census pins that row.
+        return NodeResult(
+            state={"letter": state["letter"], "sources": state["evidence"],
+                   "mode": mode, "model": state["model"]},
+            goto=None,
+            trace={"rejected_count": len(state.get("rejected", []))})
+
+    graph = StateGraph("retrieve",
+                       {"retrieve": retrieve_node, "draft": draft_node,
+                        "verify": verify_node, "render": render_node},
+                       max_steps=6)
+    final = await graph.run({"attempts": 0}, run_id=run_id, agent="resume")
+    # the graph's shallow merge accumulates state; the wire keeps exactly the documented row
+    return {"letter": final["letter"], "sources": final["sources"],
+            "mode": final["mode"], "model": final["model"]}
 
 
 def _build_prompt(resume_structured: dict, jd: dict, company: dict | None, goal: str,

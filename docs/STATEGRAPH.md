@@ -41,6 +41,13 @@ Nodes: `retrieve` (RAG over the candidate's own material), `draft` (LLM), `verif
 (deterministic — skills and numbers only; the LLM earns its second attempt or the
 original wording ships), `render` (apply accepted edits, build the diff).
 
+`features/cover_letter` — the cover letter generator — was the second, restructured the
+same way (Epic 287): `retrieve` (RAG over the candidate + JD + company), `draft` (LLM,
+plain letter), `verify` (deterministic — every skill and number in the letter must appear
+in the sources, same posture as the tailor verifier), `render` (the documented answer
+frame). The veto verdict rides the same `graph_node` ledger rows; the wire answer is
+unchanged: {letter, sources, mode, model}.
+
 Verifier feedback is injected into the second draft's prompt ("VERIFIER REJECTION
 (rewrite only the offending bullets…)"), budget is exactly two drafts, the whole
 verifier history is retained in the emitted `diff.rejected` (an invented bullet
