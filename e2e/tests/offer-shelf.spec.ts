@@ -21,14 +21,14 @@ test("the shelf ranks the reader's offers and answers every write", async ({ aut
   await page.getByRole("textbox", { name: "Bonus", exact: true }).fill("15000");
   await page.getByRole("textbox", { name: "Equity / yr", exact: true }).fill("30000");
   await page.getByRole("button", { name: "Add offer" }).click();
-  await expect(page.getByText("Acme — Senior Backend")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("li", { hasText: "Acme" }).getByText("Acme — Senior Backend")).toBeVisible({ timeout: 20_000 });
 
   // Offer B — the cheaper one with equity but no bonus.
   await page.getByRole("textbox", { name: "Offer", exact: true }).fill("Globex — Platform");
   await page.getByRole("textbox", { name: "Base salary", exact: true }).fill("195000");
   await page.getByRole("textbox", { name: "Equity / yr", exact: true }).fill("10000");
   await page.getByRole("button", { name: "Add offer" }).click();
-  await expect(page.getByText("Globex — Platform")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("li", { hasText: "Globex" }).getByText("Globex — Platform")).toBeVisible({ timeout: 20_000 });
 
   // The shelf lists newest first; scope to Globex's row so the order assumption
   // can never silently point the edit at the wrong offer.
@@ -53,7 +53,7 @@ test("the shelf ranks the reader's offers and answers every write", async ({ aut
   // Remove it: the shelf is back to one row, and the trophy is suppressed on a
   // single-offer shelf (the badge only competes one offer against another).
   await globexRow.getByLabel("Remove this offer").click();
-  await expect(page.getByText("Globex — Platform")).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.locator("li", { hasText: "Globex" }).getByText("Globex — Platform")).toHaveCount(0, { timeout: 20_000 });
   await expect(acmeRow.getByText("Best total comp")).toHaveCount(0);
 
   // The decision strip is the endgame: default to On hold, flip to Taking it, and
