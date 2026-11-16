@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T07:46:23.532107Z",
+  "generated_at": "2026-11-16T07:47:45.432474Z",
   "branch": "main",
-  "head": "b549489",
-  "total_commits": 1439,
+  "head": "27cf2bc",
+  "total_commits": 1,
   "milestone": "Epic 275",
   "milestone_full": "the ledger of done epics (through 427 items), closed at Epic 275 — The evidence table",
   "pushed_at": "2026-11-16",
