@@ -3194,6 +3194,13 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("ai-service/app/core/config.py", 87),
         ("ai-service/app/core/workqueue.py", 569),
         ("ai-service/app/ops/embed_workers.py", 314),
+        # Epic 279's attention-pulse rows: the admin trends javadoc names the
+        # attention ledger's own heartbeat, the SERIES comment beside the
+        # constant filter states it again, and the admin page's trend-series
+        # comment names the pair weekly. All three state no interval --
+        # each is noun vocabulary for the attention clock, not a keep-alive.
+        ("backend/src/main/java/com/careeros/admin/AdminTrendsService.java", 11),
+        ("backend/src/main/java/com/careeros/admin/AdminTrendsService.java", 33),
         # The other clocks that share the word -- 22.3's signal mail, 22.4's Monday letter and
         # 28.2's retention sweep each call their pass marker a heartbeat, so their comments name
         # the word and state no interval. They are not run-stream claims, but the noun census is
@@ -3227,6 +3234,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 14),
+        # Epic 279's admin trend card names the attention ledger's heartbeat in
+        # its series comment -- noun vocabulary, no interval beside the word.
+        ("frontend/src/app/admin/admin-page.tsx", 118),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.

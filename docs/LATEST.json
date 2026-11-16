@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T10:56:24.408236Z",
+  "generated_at": "2026-11-16T11:14:05.728225Z",
   "branch": "main",
-  "head": "4fb15c3",
-  "total_commits": 1,
+  "head": "48aa5de",
+  "total_commits": 1454,
   "milestone": "Epic 280",
   "milestone_full": "the ledger of done epics (through 432 items), closed at Epic 280 — The counsel that reads its own numbers (2026-11-16)",
   "pushed_at": "2026-11-16",
@@ -16,7 +16,7 @@
   "epics": 146,
   "feature_surface": [
     "Epic 280 — The counsel that reads its own numbers (2026-11-16)",
-    "Epic 279 — The attention heartbeat, week over week (2026-11-16)",
+    "Epic 279 — The attention pulse, week over week (2026-11-16)",
     "Epic 278 — The engine, made visible",
     "Epic 277 — The tour opens the afterward door (2026-11-16)",
     "Epic 276 — Afterward",
