@@ -6910,6 +6910,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **288** The ledger row the graph writes is pinned in the timeline (2026-11-16).
+
+  (The whole point of the `graph_node` trace kind is that the reader sees the
+  machine's own handwriting in AI Activity — rows named retrieve, draft,
+  verify, render, durations beside them, one tap into the verifier's
+  verdict. The timeline component already rendered the kind with a Workflow
+  icon and one expandable payload; nothing pinned it. Two new specs pin the
+  order (retrieve → draft → verify → render) and the expandable verdict
+  payload (closed rows show no payload keys; expanded rows show `routing`
+  and `changes_applied`). The `activity-trace` mapping already tested
+  inclusion; this closes the component-level half.) Measured: frontend suites **1530/1530** (+2), tsc clean, census unchanged at 214, bundle
+  unchanged at 355.)
+
 - [x] **287** The second loop rides the graph — cover letters stop hallucinating (2026-11-16).
 
   (Every claim in a job-application letter is an audit surface: the model

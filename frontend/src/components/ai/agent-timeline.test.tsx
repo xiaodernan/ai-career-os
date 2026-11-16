@@ -77,3 +77,36 @@ describe("AgentTimeline — the llm_call row says its transport", () => {
     expect(markup).not.toContain(">complete<");
   });
 });
+
+
+describe("AgentTimeline — the graph_node rows the engine writes", () => {
+  const braid = [
+    { id: "g1", kind: "graph_node" as const, label: "retrieve", durationMs: 61,
+      payload: { node: "retrieve", goto: "draft", latency_ms: 61 } },
+    { id: "g2", kind: "graph_node" as const, label: "draft", durationMs: 1240, status: "ok" as const,
+      payload: { node: "draft", goto: "verify", latency_ms: 1240, attempt: 1 } },
+    { id: "g3", kind: "graph_node" as const, label: "verify", durationMs: 12, status: "ok" as const,
+      payload: { node: "verify", goto: "draft", accepted: 4, rejected: 1, routing: "draft" } },
+    { id: "g4", kind: "graph_node" as const, label: "verify", durationMs: 9, status: "ok" as const,
+      payload: { node: "verify", goto: "render", accepted: 4, rejected: 1, routing: "render" } },
+    { id: "g5", kind: "graph_node" as const, label: "render", durationMs: 30, status: "ok" as const,
+      payload: { node: "render", goto: null, changes_applied: 4 } },
+  ];
+
+  it("renders the braid in order, each row named by its node", () => {
+    const markup = renderToStaticMarkup(<AgentTimeline events={braid as never} />);
+    const at = ["retrieve", "draft", "verify", "render"].map((n) => markup.indexOf(`>${n}<`));
+    for (const i of at) expect(i).toBeGreaterThanOrEqual(0);
+    expect(at[0]).toBeLessThan(at[1]);
+    expect(at[1]).toBeLessThan(at[2]);
+    expect(at[2]).toBeLessThan(at[3]);
+  });
+
+  it("keeps the payload expandable — the verifier's verdict is one tap away", () => {
+    const closed = renderToStaticMarkup(<AgentTimeline events={braid as never} />);
+    const open = renderToStaticMarkup(<AgentTimeline events={braid as never} defaultExpanded />);
+    expect(closed).not.toContain("routing");
+    expect(open).toContain("routing");
+    expect(open).toContain("changes_applied");
+  });
+});
