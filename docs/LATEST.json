@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T10:01:10.381626Z",
+  "generated_at": "2026-11-16T10:08:17.692497Z",
   "branch": "main",
-  "head": "18cc37b",
-  "total_commits": 1446,
+  "head": "85b7c1b",
+  "total_commits": 1,
   "milestone": "Epic 278",
   "milestone_full": "the ledger of done epics (through 430 items), closed at Epic 278 — The engine, made visible",
   "pushed_at": "2026-11-16",
