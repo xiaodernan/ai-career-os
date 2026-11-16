@@ -6910,6 +6910,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **292b** The gateway breaker fired for real, and the edge learned from it (2026-11-17).
+
+  (A burst test of the newly-instrumented gateway route during a mid-operation
+  Docker Desktop crash opened its backend circuit at the exact moment the
+  user needed it most. The cascade, as read from `/actuator/circuitbreakerevents`:
+  at `16:12:26Z` five of the last ten backend probes failed against a pod restarting
+  after Docker Desktop's watchdog cycled the container — the breaker crossed the
+  50% failure-rate threshold at `16:12:27Z`, transitioned to OPEN, and the edge
+  answered every route with the static fallback `{"error":"BACKEND_UNAVAILABLE"}`.
+  Tracing from the user side showed 96% 503 failures at sub-30 ms median latency,
+  which reads as a dead service but was in fact the edge doing its job — shielding
+  the user from a dying upstream until the workspace came back. The 30-second
+  wait window tripped at ~`16:12:57Z`; the first probe clattered the circuit into
+  HALF_OPEN; three real successes closed it by `16:13:47Z`. Nothing required a
+  reboot. RUNBOOK.md gains the section naming this exactly, with the full
+  state-machine walkthrough so the next provider trace understands read-out
+  tension: 503 with sub-30 ms latency and `failureRate=-1.0` is a bouncing breaker,
+  never a real service failure, and certainly not a silent outage.)
+
 - [x] **292** The siege, widened — the new overseer endpoint family joins the load table (2026-11-17).
 
   (`scripts/siege-e292.js` extends the Epic 256 siege with the two routes that matter for the

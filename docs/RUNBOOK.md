@@ -166,6 +166,31 @@ suite; the step names say which.
 
 **What to read.** Docker Compose's health gate. The backend's `start_period` is generous (~120 s for a cold boot); if k6 starts before the health check passes it sees an EOF for every request. It is Compose, not the code. Confirm with `docker compose ps` (`careeros-backend | Up (healthy)`) and a single `curl http://127.0.0.1:8080/api/v1/health` — when that's 200, rerun the siege.
 
+## The edge returned BACKEND_UNAVAILABLE during mid-operation maintenance
+
+**What the alert looks like.** The gateway's `backend` circuit breaker is OPEN on the
+`/actuator/circuitbreakers` readout; every route in the edge returns the static fallback body
+`{"error":"BACKEND_UNAVAILABLE"}` while the backend itself routes fine via 8080.
+
+**What it means.** The edge's Resilience4j breaker protects the user from a dying upstream —
+pulling the cord so callers do not hang on a broken connection. The state machine is:
+
+`CLOSED` → sliding-window of 10 calls, 50% failures → `OPEN` (waits 30 s, permits 3 probes) → `HALF_OPEN` → 3 successful probes → `CLOSED`.
+
+The events feed (`/actuator/circuitbreakerevents/backend`) records every transition, so the
+evidence-bearing sequence can be read: at `16:12:26Z` the probe failure rate crossed 50% — five
+of ten calls against the backend failed because Docker Desktop crashed and the backend restarted
+during the burst — the breaker opened at `16:12:27Z`; from the outside that looked like a total
+loss of access across the edge. After the wait window closed at ~16:12:57Z, the first real traffic
+re-entered as HALF_OPEN; three successes closed it at 16:13:47Z. Nothing in the backend or the gateway
+required rebooting — only the operator's test harness required patience.
+
+Note for next time: triggering the breaker yourself from a burst test creates exactly the
+intervention you would correctly see as the alarm of a dying backend — except next time the alarm
+will have been raised against a healthy upstream. Burst test through the gateway free-runs
+(http_reqs at 10 VUs saw 96% 503s with sub-30 ms latency, which is the edge answering its own
+fallback body before even attempting the backend); ATP for this edge is meters-scale.
+
 ## The AI relay answers 502 from inside compose though the host reaches it fine
 
 **What the alert looks like.** Every AI call inside the stack fails fast:
