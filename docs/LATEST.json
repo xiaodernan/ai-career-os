@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T16:16:25.452908Z",
+  "generated_at": "2026-11-16T16:21:38.507332Z",
   "branch": "main",
-  "head": "01d6378",
+  "head": "d040ec9",
   "total_commits": 1,
   "milestone": "Epic 292",
   "milestone_full": "the ledger of done epics (through 444 items), closed at Epic 292 — The siege, widened",
