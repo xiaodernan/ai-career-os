@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T13:38:51.836580Z",
+  "generated_at": "2026-11-16T13:50:05.471087Z",
   "branch": "main",
-  "head": "258908d",
-  "total_commits": 1472,
+  "head": "f84b056",
+  "total_commits": 1,
   "milestone": "Epic 288",
   "milestone_full": "the ledger of done epics (through 440 items), closed at Epic 288 — The ledger row the graph writes is pinned in the timeline (2026-11-16)",
   "pushed_at": "2026-11-16",
