@@ -4000,7 +4000,7 @@ export const en = {
       gateEyebrow: "THE GATE",
       gateTitle: "The whole arc, one page",
       gateIntro:
-        "Every chapter compressed to one sentence — the whole walk you are about to take. Eleven doors. Read it once before the first room, and once after the ceremony.",
+        "Eleven doors, each with a name. Walk once, and you will know where you stand. The product will keep count for you.",
       gateDoor01: "Hand the resume to the machine — let it read the lines you've been skimming past.",
       gateDoor02: "The only job here is the one you already wanted; the tool helps you go get it.",
       gateDoor03: "The score is an estimate, not a verdict — one of many.",
@@ -4013,7 +4013,19 @@ export const en = {
       gateDoor10: "The decision is yours — the tool ranks on paper, not on your behalf.",
       gateDoor11: "The signature is the ending and also the beginning — the loop opens again tomorrow.",
       gateClosing:
-        "Eleven doors, each with a name. Walk once, and you will know where you stand. The product will keep count for you.",
+        "Every chapter compressed to one sentence — the whole walk you are about to take. Eleven doors. Read it once before the first room, and once after the ceremony.",
+      edgeEyebrow: "The honest boundary",
+      edgeTitle: "Where the map ends — and you begin",
+      edgeIntro:
+        "The longest chapter this product can honestly contain is about what it refuses to do. Every door below opens inward, but the reader is the arc — this product is the instrument the arc is played on, not the arc itself.",
+      edgeNot01: "This product is not a career coach. It will not tell you which offer to take, which company to choose, or whether to stay. It hands you the evidence and a calculator; the reader does the arithmetic.",
+      edgeNot02: "This product is not a negotiator. It drafts cover letters, boils down JD signals and role-plays the hard questions — it will never sit across from an employer and speak for you.",
+      edgeNot03: "This product is not a lawyer, and this page is not legal advice. It will not tell you whether a non-compete binds you, whether your severance is fair, or whether the clause is enforceable.",
+      edgeNot04: "This product is not a therapist. It sees patterns and it remembers them — it is built to reflect, not to diagnose. If the search hurts, a friend, a mentor or a clinician will do far more than any dashboard here.",
+      edgeNot05: "This product is not a clairvoyant. The 'which role is right for you' question has no machine answer; the app gives you data, the data does not answer the question.",
+      edgeNot06: "This product is not a custodian of your secrets. The export and the erase paths are real: export is one click if you ever leave, erase is one click if you ever need to go. Your reputation, your data, your story — these are yours, and always have been.",
+      edgeClosing:
+        "Everything this product builds is on rails, but the journey between them is yours. Pick up the instrument. Build the career. The map is drawn; the map is not the territory.",
       printFromHere: "Print this manual",
     },
     admin: {

@@ -412,6 +412,31 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.gateClosing")}</p>
         </section>
 
+        {/* The edge of the map — where this product ends and you begin */}
+        <section id="edge" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.edgeEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">13</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.edgeTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.edgeIntro")}</p>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {[
+              t("playbook.edgeNot01"),
+              t("playbook.edgeNot02"),
+              t("playbook.edgeNot03"),
+              t("playbook.edgeNot04"),
+              t("playbook.edgeNot05"),
+              t("playbook.edgeNot06"),
+            ].map((line, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5 text-sm leading-relaxed text-foreground/90">
+                {line}
+              </li>
+            ))}
+          </ul>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.edgeClosing")}</p>
+        </section>
+
         {/* Colophon */}
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>

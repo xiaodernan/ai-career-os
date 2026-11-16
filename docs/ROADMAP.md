@@ -6878,6 +6878,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   clean, copy census re-pinned to **187 sources** (+2: page + layout shell), `routes.spec.ts` stays
   "offers" (200), `verify_gates 569/569`.)
 
+- [x] **273** The edge of the map — where the map ends and you begin (2026-11-16).
+
+  (A new chapter inside the manual teaches honesty as a feature: where this
+  product ends and the reader's own judgment begins. "The map is drawn; the
+  map is not the territory" — the product is rails, not the person on the
+  rails. All eight cards state, plainly and bilingually, what this product is
+  NOT — no career coach's substitute, no negotiation by proxy, no accidental
+  legal advice, no answer for the "which role is right for me" question, and
+  the two routes out that are real (export is one click; erase is one click).
+  Nothing invented; only truth the product already exposes. EN+ZH throughout.)
+  Measured: playbook suites **62/62**, i18n/census **62/62**, tsc clean,
+  verify_gates **569/569**. The map gained a rail entry (#edge, between
+  #gate and #about).)
+
 - [x] **271** The manual teaches the state graph (2026-11-16).
 
   (The manual now explains the product's spine, not just its doors: a new
