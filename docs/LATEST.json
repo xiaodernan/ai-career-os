@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T18:45:04.843560Z",
+  "generated_at": "2026-11-16T18:48:42.475094Z",
   "branch": "main",
-  "head": "2756137",
+  "head": "ae91767",
   "total_commits": 1,
   "milestone": "Epic 297",
   "milestone_full": "the ledger of done epics (through 449 items), closed at Epic 297 — The showcase goes live on GitHub Pages (2026-11-17)",
