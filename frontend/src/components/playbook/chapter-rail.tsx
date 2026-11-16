@@ -19,16 +19,17 @@ const CHAPTERS = [
   { href: "#keptgoing", titleKey: "playbook.keptGoingTitle" },
   { href: "#stategraph", titleKey: "playbook.stategraphTitle" },
   { href: "#gate", titleKey: "playbook.gateTitle" },
-  { href: "#edge", titleKey: "playbook.edgeTitle" },
   { href: "#inink", titleKey: "playbook.inInkTitle" },
+  { href: "#edge", titleKey: "playbook.edgeTitle" },
+  { href: "#ledger", titleKey: "playbook.ledgerTitle" },
   { href: "#about", titleKey: "playbook.colophonTitle" },
 ] as const;
 
 /**
  * The chapter rail (Epic 236) — the manual's own index.
  *
- * The playbook grew to ten chapters this week, and a reader shouldn't have
- * to skim-scroll a manual that knows what it holds. A compact horizontal
+ * The playbook grew to sixteen chapters; a reader shouldn't have to
+ * skim-scroll a manual that knows what it holds. A compact horizontal
  * rail under the cover: every chapter, one tap away, bilingual by the same
  * table every other surface reads. Static (never sticky), so it cannot
  * fight the page's sticky header; anchor-navigable and focusable.

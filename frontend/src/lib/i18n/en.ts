@@ -3966,6 +3966,34 @@ export const en = {
       firstweekReplay: "Walk it again",
       firstweekCta: "Finish it for real",
       tocEyebrow: "Jump to",
+      ledgerEyebrow: "The eye that watches back",
+      ledgerTitle: "The ledger watches back",
+      ledgerIntro:
+        "Every chapter of this book described what you can do. This one describes what the install itself does while you are not looking — and it is one of the shortest chapters in the book, because the instrument was deliberately built small: counts, always; names, never; rows, never; per-reader trails, never.",
+      ledgerLandTitle: "The landing",
+      ledgerLandBody:
+        "An arrival counts once, the moment your browser says hello. Nothing else about you is written down — not who you are, not where you came from, not what you typed.",
+      ledgerDwellTitle: "The dwell read",
+      ledgerDwellBody:
+        "If your eyes stayed, the tab's own clock records a dwell read — a number of milliseconds. Never a screenshot, never a scroll-path, never a paragraph log.",
+      ledgerActTitle: "The act (reserved, unwritten)",
+      ledgerActBody:
+        "The schema reserves a third verb — an act, a tap that meant something — and nothing writes it yet. The day something does, the same numbers learn to speak it.",
+      ledgerWireLand: "event = 'land'",
+      ledgerWireDwell: "event = 'dwell'",
+      ledgerWireAct: "event = 'act'",
+      ledgerPassphraseTitle: "The door everyone knows the word to",
+      ledgerPassphraseBody:
+        "The ledger opens with one word, and it is the word the operator chose for this install — 123 — precisely because everyone is meant to know it. It is a courtesy, not a wall. Behind it: the counter, straight off the tables. Counts only. No name, no content, no per-reader row ever crosses that door.",
+      ledgerWeeksTitle: "Seven Mondays on one wall",
+      ledgerWeeksBody:
+        "The wall reads week over week now — Monday-anchored, UTC, dense-filled. Five lines are instruments of use: signups, applications, rehearsals, agent runs, AI calls. Two are instruments of attention: landings and dwell reads — the same rows the thirty-day view counts, weekly. A quiet week reads as zero, not as a gap.",
+      ledgerCounselTitle: "The advice written by arithmetic",
+      ledgerCounselBody:
+        "Below the wall sits the counsel: seven rules reading the page's own wires at the moment you opened it — where the funnel bleeds most, how many signups came back, whether a single reader tapped anything, whether strangers ever stopped to read. Each rule names the number that fired it; a rule that cannot see its input stays silent; a rule that fires tells you the next single step, and nothing else.",
+      ledgerFootnote:
+        "None of this tolls for an individual; all of it asks one question in public: is this install doing what it was built to do? The ledger cannot answer for you. It can only say what the room recorded, back to the room.",
+      ledgerLink: "Open the overseer's ledger",
       colophonTitle: "The close",
       yearloopEyebrow: "THE YEAR LOOP",
       yearloopTitle: "The search never ended; it matured",

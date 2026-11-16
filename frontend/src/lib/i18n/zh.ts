@@ -3681,6 +3681,34 @@ export const zh = {
       firstweekReplay: "再走一遍",
       firstweekCta: "这次是真的做一遍",
       tocEyebrow: "直达章节",
+      ledgerEyebrow: "会回看的眼睛",
+      ledgerTitle: "这本账，也在看",
+      ledgerIntro:
+        "这本手册此前每一章都在讲「你可以做什么」。这一章讲的是这台实例在你不看的时候做什么——而且是最短的几章之一，因为这件乐器是刻意做小的：永远只是数，永远不留名字，永远不留行，永远不留任何读者级的轨迹。",
+      ledgerLandTitle: "落地",
+      ledgerLandBody:
+        "一次到达只算一次——你的浏览器打个招呼那一刻，就记了一笔。关于你的其他一切，不被写下：不是你是谁、不是你从哪来、也不是你打了什么。",
+      ledgerDwellTitle: "停留",
+      ledgerDwellBody:
+        "如果你的眼睛停了下来，标签页自己的钟会记下一次停留——一个毫秒数。永远不是截图、不是滚动轨迹、不是一段段落日志。",
+      ledgerActTitle: "动作（已预留，尚未有人写入）",
+      ledgerActBody:
+        "架构里预留了第三个动词——一个 act，一个真正意味着什么的点击——而目前还没有人写入它。哪天有人写入了，同一组数字就学会了说它。",
+      ledgerWireLand: "event = 'land'",
+      ledgerWireDwell: "event = 'dwell'",
+      ledgerWireAct: "event = 'act'",
+      ledgerPassphraseTitle: "一扇人人都知道暗号的门",
+      ledgerPassphraseBody:
+        "这本账只用一个词打开——这个词是这台实例的主人自己选的，就是 123——他选它恰恰因为希望每个人都知道。它不是一堵墙，是一种礼节。门后面：那个直接从表里读出来的计数器。只有数。没有名字、没有内容、没有任何读者级的行穿过这扇门。",
+      ledgerWeeksTitle: "七个周一的账面",
+      ledgerWeeksBody:
+        "这面墙现在按周读——周一起始、UTC、密集填充。五行是「使用的乐器」：注册、投递、实战场次、agent 运行、AI 调用。另两行是「注意力的乐器」：落地和停留读数——与那个三十天窗口数的是同一些行，只是按周记。安静的一周读作零，而不是一个空白。",
+      ledgerCounselTitle: "算术写出的建议",
+      ledgerCounselBody:
+        "墙面之下是 counsel 段落：七条规则在你打开这一页的同一刻，读这一页自己的数据——漏斗最深处流失在哪一步、最近四周注册的读者回来了多少、有没有哪个读者点过任何东西、陌生人有没有停下来读过。每条规则都指名道姓地说出让它开口的那个数；看不见输入的规则保持沉默；开口的一条只说「下一步，先做这一件事」，别无其他。",
+      ledgerFootnote:
+        "这一切不为任何个人计费；它只公开地问一个问题：这台实例有没有在做它被造出来时要做的事。这本账无法替你的寻职回答任何问题。它只能把房间记下的东西，读回给房间。",
+      ledgerLink: "打开主账簿",
       colophonTitle: "终章",
       yearloopEyebrow: "时间之环",
       yearloopTitle: "搜索从未终结——它只是长大了",

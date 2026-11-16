@@ -6910,6 +6910,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **281** The ledger watches back — the playbook's sixteenth chapter
+  (2026-11-16).
+
+  (Every chapter of the book taught the reader what they can do; the last
+  chapter teaches what the install does while nobody is looking. "The ledger
+  watches back / 这本账，也在看" renders the attention spine as a chapter the
+  reader can read as easily as any other: the three instruments — land
+  `event='land'`, dwell read `event='dwell'`, and the reserved-but-unwritten
+  act — the 123 passphrase door as a courtesy rather than a wall, the seven
+  Monday-anchored weekly lines (five of use, two of attention), and the
+  counsel: seven arithmetic rules that read this page's own wires at open,
+  each naming the number that fired it, silence where their input cannot be
+  seen. The colophon now flows after the chapter; the inink/edge section
+  numbering was normalized (13/14) so page order matches the rail, and the
+  rail numbers all sixteen chapters in rail order. Measured: vitest
+  **1525/1525** (playbook + i18n re-pinned for the new table slice), tsc
+  clean, census unchanged at 214, bundle budget raised 350 kB -> **355 kB**
+  with the reason written in the script header: Epics 280 and 281 grew the
+  shared bilingual table by ~1.5-2 kB gzip (counsel rule bodies, empty-state
+  copy, the sixteen-key chapter in both languages); the three fullest routes
+  crossed by 0.6-1.9 kB. Per-locale precompiled tables remain the named
+  architectural fix — Epic 265's debt, not another silent raise.)
+
 - [x] **280** The counsel that reads its own numbers (2026-11-16).
 
   (The admin opened with a section promising "each line traces to a number
