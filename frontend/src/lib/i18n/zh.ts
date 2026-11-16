@@ -3727,6 +3727,9 @@ export const zh = {
         "这一切不为任何个人计费；它只公开地问一个问题：这台实例有没有在做它被造出来时要做的事。这本账无法替你的寻职回答任何问题。它只能把房间记下的东西，读回给房间。",
       ledgerLink: "打开主账簿",
       colophonTitle: "终章",
+      codaLive:
+        "同一台实例有一张公开的卡片——每次推送都重新测量，数字有挪动才会更新——可以直接嵌进任意页面：",
+      codaLiveCta: "xiaodernan.github.io/ai-career-os/showcase.html",
       yearloopEyebrow: "时间之环",
       yearloopTitle: "搜索从未终结——它只是长大了",
       yearloopIntro:

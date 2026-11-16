@@ -4012,6 +4012,9 @@ export const en = {
         "None of this tolls for an individual; all of it asks one question in public: is this install doing what it was built to do? The ledger cannot answer for you. It can only say what the room recorded, back to the room.",
       ledgerLink: "Open the overseer's ledger",
       colophonTitle: "The close",
+      codaLive:
+        "The same loop keeps a public card, measured on every push and re-measured when the numbers move — an iframe you can drop anywhere:",
+      codaLiveCta: "xiaodernan.github.io/ai-career-os/showcase.html",
       yearloopEyebrow: "THE YEAR LOOP",
       yearloopTitle: "The search never ended; it matured",
       yearloopIntro:

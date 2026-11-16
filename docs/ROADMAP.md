@@ -6910,6 +6910,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **300** The book points at its card (2026-11-17).
+
+  Epic 297 made the live card exist; nothing inside the product sent the
+  reader there. The colophon now does — one line, one URL, one iframe the
+  reader can drop into a portfolio, a README, a message to a friend. Every
+  push that moves the numbers re-measures it; the book costs nothing to be
+  honest with it. codaLive keys added in both languages; print output is
+  untouched (the card is a screen object, not a paper one).
+
+  (frontend/src/app/playbook/playbook-page.tsx gains the colophon link;
+  i18n en/zh gain codaLive + codaLiveCta, two keys each.)
+
 - [x] **299** The cache, counted out loud (2026-11-17).
 
   The kept-going chapter grew a fourth beat: "The cache, counted". It is

@@ -553,6 +553,17 @@ export default function PlaybookPage() {
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/90">{t("playbook.codaBody")}</p>
           <p className="font-serif text-sm italic text-muted-foreground">{t("playbook.footerSignature")}</p>
+          <p className="print:hidden max-w-3xl text-sm text-muted-foreground">
+            {t("playbook.codaLive")}{" "}
+            <a
+              href="https://xiaodernan.github.io/ai-career-os/showcase.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+            >
+              {t("playbook.codaLiveCta")}
+            </a>
+          </p>
           <div className="print:hidden flex flex-wrap items-center gap-3 pt-2">
             <Button variant="outline" size="sm" onClick={print}>
               <Printer aria-hidden className="size-4" />
