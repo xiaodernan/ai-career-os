@@ -71,7 +71,10 @@ test("a document chosen in the browser is ingested and citable", async ({
   await expect(
     authedPage.getByText("ready", { exact: true }),
     "the source never reached ready on the screen"
-  ).toBeVisible({ timeout: 60_000 });
+  // 2026-11-17: this visibility wait is legitimately slow on a loaded Windows laptop running the whole
+  // suite against Docker Desktop. 60 s cut close at times; the same ingest reaches `ready` in
+  // under 20 s on the happy path. 90 s gives headroom without turning a real break into a slow red.
+  ).toBeVisible({ timeout: 90_000 });
 
   // And the server agrees: the source is in the knowledge base, and it is
   // ready there too.
