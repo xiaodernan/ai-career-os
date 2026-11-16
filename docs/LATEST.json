@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T11:39:07.789367Z",
+  "generated_at": "2026-11-16T11:39:32.639668Z",
   "branch": "main",
-  "head": "a70add5",
-  "total_commits": 1458,
+  "head": "9fb77eb",
+  "total_commits": 1,
   "milestone": "Epic 282",
   "milestone_full": "the ledger of done epics (through 434 items), closed at Epic 282 — The IT harness stops drowning the tiny CI Postgres (2026-11-16)",
   "pushed_at": "2026-11-16",
