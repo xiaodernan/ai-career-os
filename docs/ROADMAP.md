@@ -6910,6 +6910,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **298** The Afterward knows your way home (2026-11-17).
+
+  The closing chapter of the manual now points at the one place that still
+  matters when it closes: the dashboard. Two keys per language, one link,
+  in the same italic-edge voice the chapter already speaks. The reader who
+  got to the bottom of the book is not abandoned at the last line; it walks
+  them to the room where the loop is waiting.
+
+  (frontend/src/app/playbook/playbook-page.tsx — the afterward section
+  gains a "return visit" pointer to /dashboard, wired in both languages;
+  bundle budget unchanged at 355 kB gzip; 189 test files / 1534 tests green.)
+
 - [x] **297** The showcase goes live on GitHub Pages (2026-11-17).
 
   (`https://xiaodernan.github.io/ai-career-os/` is now a real URL. Before this,

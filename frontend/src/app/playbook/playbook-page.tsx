@@ -487,6 +487,15 @@ export default function PlaybookPage() {
           </div>
           <p className="max-w-4xl text-sm leading-relaxed text-foreground/90">{t("playbook.afterwardDaily")}</p>
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.afterwardCarry")}</p>
+          <p className="max-w-4xl text-sm leading-relaxed text-muted-foreground">
+            {t("playbook.afterwardReturn")}{" "}
+            <Link
+              href="/dashboard"
+              className="font-medium text-primary underline-offset-4 transition-colors hover:text-primary/80 hover:underline"
+            >
+              {t("playbook.afterwardReturnCta")}
+            </Link>
+          </p>
         </section>
 
         {/* Colophon */}

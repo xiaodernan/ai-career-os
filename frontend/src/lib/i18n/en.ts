@@ -3980,6 +3980,9 @@ export const en = {
         "You do not visit this install on a whim. Each time you open it you have paid for the privilege in honest hours — typing, thinking, breathing, walking the loops. The counter keeps every one. The difference between a ritual and a habit is that the habit turns up on the days it does not feel like it.",
       afterwardCarry:
         "Close the laptop. Walk out of the door. What the install recorded is it — the knock, the rehearsal, the humility to begin again on Monday. Bring that back next time you walk in here; it is the only thing the install will ever ask of you.",
+      afterwardReturn:
+        "When you come back — and you will — the install has kept your place:",
+      afterwardReturnCta: "the dashboard, where the loop is waiting",
       ledgerEyebrow: "The eye that watches back",
       ledgerTitle: "The ledger watches back",
       ledgerIntro:
