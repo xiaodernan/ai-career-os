@@ -6910,6 +6910,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **299** The cache, counted out loud (2026-11-17).
+
+  The kept-going chapter grew a fourth beat: "The cache, counted". It is
+  anchored to a measurement rather than a mood — the 2026-11-16 live relay
+  call, streamed back with usage reported (gpt-6.1-terra): 7,424 of 7,510
+  prompt tokens served from cache, the same prefix seen before. The beat is
+  careful with the sample it quotes: one call, not a promise about the next
+  one. The rule it illustrates is unconditional — what the model already
+  remembers is what the reader does not pay to explain again — and it is the
+  same posture the ledger and the bundle budget both already take: counts,
+  always; invented certainty, never.
+
+  (frontend/src/lib/i18n/{en,zh}.ts — keptGoingBeatFour* keys in both
+  languages; playbook-page.tsx adds the fourth tile to the kept-going grid,
+  re-tuned to two columns on small screens.)
+
 - [x] **298** The Afterward knows your way home (2026-11-17).
 
   The closing chapter of the manual now points at the one place that still

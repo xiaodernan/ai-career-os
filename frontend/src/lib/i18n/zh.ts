@@ -3765,6 +3765,9 @@ export const zh = {
       keptGoingBeatThreeTitle: "回来，平平无奇地",
       keptGoingBeatThreeBody:
         "第 100 天。你坚持了，为了无聊的理由——仪式奏效，数字一直看得见，信一直在进门。路尽头那块牌子不是奖杯——是你在听你自己说完那句话之后，才会信的那句话。",
+      keptGoingBeatFourTitle: "缓存，记账的那一笔",
+      keptGoingBeatFourBody:
+        "造这台实例的机器上一次真实的调用（2026-11-16，gpt-6.1-terra，流式返回用量）：7,510 个提示词 token 里有 7,424 个直接从缓存命中——同一个前缀，它之前见过。这只是一次样本，不是对你的承诺。无论样本多少，规矩是同一条：模型已经记住的，你不必再为解释一遍而付费。",
       keptGoingClosing: "这个工具从不问累不累。它只问今天接住了没有。这是这一圈唯一回答的问题。",
       stategraphEyebrow: "引擎之下",
       stategraphTitle: "引擎怎么想——状态图",

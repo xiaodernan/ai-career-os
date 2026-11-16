@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T19:25:09.784163Z",
+  "generated_at": "2026-11-16T19:28:31.688720Z",
   "branch": "main",
-  "head": "fde6dc8",
-  "total_commits": 1,
-  "milestone": "Epic 298",
-  "milestone_full": "the ledger of done epics (through 450 items), closed at Epic 298 — The Afterward knows your way home (2026-11-17)",
-  "pushed_at": "2026-11-16",
+  "head": "5d6aecc",
+  "total_commits": 1506,
+  "milestone": "Epic 299",
+  "milestone_full": "the ledger of done epics (through 451 items), closed at Epic 299 — The cache, counted out loud (2026-11-17)",
+  "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 450,
-  "epics": 164,
+  "work_items": 451,
+  "epics": 165,
   "feature_surface": [
+    "Epic 299 — The cache, counted out loud (2026-11-17)",
     "Epic 298 — The Afterward knows your way home (2026-11-17)",
     "Epic 297 — The showcase goes live on GitHub Pages (2026-11-17)",
     "Epic 296 — Capacity re-measure",
     "Epic 295 — The counsel doors",
-    "Epic 294 — The door spec",
-    "Epic 293 — The overseer notices the softer signal"
+    "Epic 294 — The door spec"
   ]
 }

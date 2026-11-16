@@ -4055,6 +4055,9 @@ export const en = {
       keptGoingBeatThreeTitle: "The return, ordinary",
       keptGoingBeatThreeBody:
         "Day 100. You kept going, for boring reasons: the ritual works, the counts stay visible, the letters keep landing. The sign at the end of the road isn't a trophy — it's the sentence you needed to hear.",
+      keptGoingBeatFourTitle: "The cache, counted",
+      keptGoingBeatFourBody:
+        "One live call on the machine that builds this, metered as it streamed (2026-11-16, gpt-6.1-terra): 7,424 of 7,510 prompt tokens were served from cache — the same prefix, seen before. A sample of one, not a promise about yours. The rule does not depend on the sample: what the model already remembers is what you do not pay to explain again.",
       keptGoingClosing: "The tool never asks if you're tired. It asks if you hit today. That is the only question the loop answers.",
       stategraphEyebrow: "Under the hood",
       stategraphTitle: "How the engine thinks — the state graph",

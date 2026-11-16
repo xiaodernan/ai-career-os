@@ -334,11 +334,12 @@ export default function PlaybookPage() {
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.keptGoingTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.keptGoingIntro")}</p>
-          <ol className="grid gap-3 sm:grid-cols-3">
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { title: t("playbook.keptGoingBeatOneTitle"), body: t("playbook.keptGoingBeatOneBody") },
               { title: t("playbook.keptGoingBeatTwoTitle"), body: t("playbook.keptGoingBeatTwoBody") },
               { title: t("playbook.keptGoingBeatThreeTitle"), body: t("playbook.keptGoingBeatThreeBody") },
+              { title: t("playbook.keptGoingBeatFourTitle"), body: t("playbook.keptGoingBeatFourBody") },
             ].map((beat, index) => (
               <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
