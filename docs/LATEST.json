@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T09:17:21.467661Z",
+  "generated_at": "2026-11-16T09:23:23.980696Z",
   "branch": "main",
-  "head": "f69ee62",
-  "total_commits": 1442,
+  "head": "6817f4d",
+  "total_commits": 1,
   "milestone": "Epic 277",
   "milestone_full": "the ledger of done epics (through 429 items), closed at Epic 277 — The tour opens the afterward door (2026-11-16)",
   "pushed_at": "2026-11-16",
