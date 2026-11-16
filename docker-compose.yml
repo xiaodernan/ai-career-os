@@ -150,7 +150,12 @@ services:
       # fleet off the proxy path entirely.
       HTTPS_PROXY: ${HTTPS_PROXY:-http://host.docker.internal:7897}
       HTTP_PROXY: ${HTTP_PROXY:-http://host.docker.internal:7897}
-      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,redis,postgres,minio,backend,gateway,discovery,config-server}
+      # NO_PROXY is deliberately NOT shell-extensible: the dev machine already exports
+      # NO_PROXY for its own processes (127.0.0.1,localhost,::1), and `${NO_PROXY:-...}`
+      # would silently drop the fleet hosts from the bypass, sending ai→backend/minio/
+      # redis over Clash Verge and failing every internal call with 502. Pin the fleet
+      # bypass; a deployment that needs a different door overrides both proxy knobs.
+      NO_PROXY: "localhost,127.0.0.1,::1,redis,postgres,minio,backend,gateway,discovery,config-server"
       # Cache (Epic 118). The service name, not the host's 16380: inside the compose
       # network Redis answers in microseconds, while the published port goes through
       # Docker Desktop's proxy. The backend is deliberately not a dependency -- a cache

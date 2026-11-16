@@ -6910,6 +6910,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **286** The NO_PROXY interpolation trap — the ingest fleet was riding Clash Verge (2026-11-16).
+
+  (The e2e run flagged it: two ingest specs never reached ready. The route
+  of discovery — register a smoke user, POST the document through the real
+  API, poll /knowledge/sources/{id}/status — answered status "failed" with
+  `Server error '502 Bad Gateway' for GET http://backend:8080/api/internal/
+  files/...`. Root cause, two moves: (1) the dev machine exports its own
+  NO_PROXY (127.0.0.1,localhost,::1), so compose's `${NO_PROXY:-default}`
+  silently DROPPED every fleet host from the bypass; (2) every internal
+  ai->backend/minio/redis call then rode the host's Clash Verge egress and
+  came back 502. The bypass is now pinned literally in docker-compose.yml
+  with a comment explaining why; .env.example already documented the proxy
+  (Epic 284/285 gate requirement). Verified: probe uploads show status
+  "ready" on the third try; the two failing e2e specs pass (74/74 restored
+  on this stack); RUNBOOK gains "The AI relay answers 502 from inside
+  compose though the host reaches it fine" with the exact diagnostic
+  one-liner.)
+
 - [x] **285** The relay's `gpt-6.1-terra` lane went dark — measured, mapped, and the live proof run anyway (2026-11-16).
 
   (The user's cache-hit question, re-taken end to end through the real

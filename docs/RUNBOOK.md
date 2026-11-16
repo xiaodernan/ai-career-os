@@ -160,6 +160,20 @@ SHA the run tested — and diff from there. The nightly job tests the whole stac
 so a red night can be the ai-service, the backend, the frontend build or the eval
 suite; the step names say which.
 
+## The AI relay answers 502 from inside compose though the host reaches it fine
+
+**What the alert looks like.** Every AI call inside the stack fails fast:
+ingestion never becomes ready, the copilot answers 500/502, the trace shows
+`httpx` connecting to the relay through a proxy nobody asked for, or every
+internal call (ai→backend, ai→minio, ai→postgres) answering 502.
+
+**What to read.** `docker compose exec ai-service python -c "import os; print(os.environ.get('NO_PROXY'))"`.
+If it does not contain the fleet hosts (`backend,redis,postgres,minio,...`),
+the shell's own `NO_PROXY` (the dev machine exports `127.0.0.1,localhost,::1`)
+interpolated into `${NO_PROXY:-…}` and deleted the fleet bypass. The compose
+file now pins the fleet bypass literally; an override wants both proxy knobs
+and never the `NO_PROXY` one.
+
 ## The nightly dies with 'too many clients already'
 
 **What the alert looks like.** The IT step reds with

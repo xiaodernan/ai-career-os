@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T12:33:35.773209Z",
+  "generated_at": "2026-11-16T13:14:57.724541Z",
   "branch": "main",
-  "head": "2713f90",
-  "total_commits": 1,
-  "milestone": "Epic 285",
-  "milestone_full": "the ledger of done epics (through 437 items), closed at Epic 285 — The relay's `gpt-6",
+  "head": "014d34d",
+  "total_commits": 1468,
+  "milestone": "Epic 286",
+  "milestone_full": "the ledger of done epics (through 438 items), closed at Epic 286 — The NO_PROXY interpolation trap",
   "pushed_at": "2026-11-16",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 437,
-  "epics": 151,
+  "work_items": 438,
+  "epics": 152,
   "feature_surface": [
+    "Epic 286 — The NO_PROXY interpolation trap",
     "Epic 285 — The relay's `gpt-6",
     "Epic 284 — The relay re-measured",
     "Epic 283 — The third verb, written",
     "Epic 282 — The IT harness stops drowning the tiny CI Postgres (2026-11-16)",
-    "Epic 281 — The ledger watches back",
-    "Epic 280 — The counsel that reads its own numbers (2026-11-16)"
+    "Epic 281 — The ledger watches back"
   ]
 }
