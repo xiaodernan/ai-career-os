@@ -218,3 +218,38 @@ frames)") was true of the earlier endpoint and false of this one. Concretely:
 `.workbuddy` holds the probe driver; the relay answer rows above are the wire
 values for the eight-and-eight, dated here so the next person re-measuring does not
 inherit a claim that no longer reproduces.
+---
+
+## Addendum 2 — 2026-11-16 (evening): the gpt-6.1-terra lane went dark; the live two-turn proof
+
+The morning's measurement (8 of 8 stream + 5 of 8 non-stream cached=8192 on
+`gpt-6.1-terra`) did not survive the day. As of the evening, every chat call
+to `gpt-6.1-terra` on this key answers:
+
+    404 {"error":{"message":"Model \"gpt-6.1-terra\" is not supported
+    by any configured account in this group","type":"model_not_found"}}
+
+`/v1/models` still lists `gpt-6.1-terra`; `gpt-6-sol`, `gpt-6-astra`,
+`gpt-5.6-terra`, `gpt-5.6-sol` and `codex-auto-review` all answer 200 with the
+same key. The group lane drained under the shared tenant's load, not because the
+client mis-asked. The local dev default was flipped to `LLM_MODEL=gpt-6-sol`
+so the live demo serves; flip back when the `gpt-6.1-terra` account group refills
+(or run on any documented sibling lane).
+
+Warm 16-call probe on `gpt-6-sol` (byte-stable ~8.2k-token prefix, Clash Verge
+proxy): non-stream cached=4224-8192 on every carried call (1 connect-timeout),
+stream cached=4224-8192 on all 8 probes. The relay family carries the cache hint
+preferentially on stream frames but reports on both lanes this evening.
+
+The first end-to-end proof through the real pipeline (backend -> ai-service ->
+relay, 2026-11-16T12:22Z), logged in the install's own `ai_usage_events`:
+
+| call | model | in | out | cached | cost | latency |
+|---|---|---|---|---|---|---|
+| step_1, cold | gpt-6-sol | 7510 | 9 | 0 | $0.003018 | 3075 ms |
+| memory_extract, cold | gpt-6-sol | 5935 | 12 | 0 | $0.002393 | 2258 ms |
+| step_1, warm | gpt-6-sol | 7510 | 9 | **7424** (98.8% of input) | $0.000791 | 2377 ms |
+| memory_extract, warm | gpt-6-sol | 5935 | 12 | **5935** (100% of input) | **$0.000000** (exact replay, 1 ms) | 1 ms |
+
+The warm `memory_extract` did not call the model at all — the deterministic
+replay path served it. The warm `step_1` paid for exactly 86 fresh input tokens.

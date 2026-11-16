@@ -141,6 +141,16 @@ services:
       #   LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash docker-compose --profile app up -d
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-}
+      # The relay is reachable from this host only through Clash Verge (host-side
+      # 127.0.0.1:7897). host.docker.internal is Docker Desktop's DNS for the host
+      # gateway, so the same egress door holds inside the container. Without these,
+      # every live relay call from inside compose is refused at the door -- the
+      # backend then serves a 500 that has nothing to do with the model.
+      # HTTP_PROXY of the dev stack is NOT set elsewhere; NO_PROXY keeps the internal
+      # fleet off the proxy path entirely.
+      HTTPS_PROXY: ${HTTPS_PROXY:-http://host.docker.internal:7897}
+      HTTP_PROXY: ${HTTP_PROXY:-http://host.docker.internal:7897}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,redis,postgres,minio,backend,gateway,discovery,config-server}
       # Cache (Epic 118). The service name, not the host's 16380: inside the compose
       # network Redis answers in microseconds, while the published port goes through
       # Docker Desktop's proxy. The backend is deliberately not a dependency -- a cache

@@ -6910,6 +6910,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **285** The relay's `gpt-6.1-terra` lane went dark — measured, mapped, and the live proof run anyway (2026-11-16).
+
+  (The user's cache-hit question, re-taken end to end through the real
+  stack. `/v1/models` lists `gpt-6.1-terra`; chat calls to it 404 as of
+  the evening with `model_not_found` (the account group serving that
+  model drained under the shared tenant mid-day — the morning's 8/8
+  stream measurement was the lane alive at 10:00Z). Sibling models all
+  answer 200 with the same key: `gpt-6-sol`, `gpt-6-astra`,
+  `gpt-5.6-terra`, `gpt-5.6-sol`, `codex-auto-review`. The local dev
+  default flipped to `LLM_MODEL=gpt-6-sol` so the live demo serves
+  (flip back when the group refills). The stack's live turns go through
+  the host's Clash Verge proxy — the ai-service container now carries
+  `HTTPS_PROXY=http://host.docker.internal:7897` (+ `NO_PROXY` for the
+  internal fleet), so relay calls from inside compose reach the same
+  egress door the host uses.
+  The first end-to-end proof through backend → ai-service → relay,
+  logged in the install's own `ai_usage_events` (2026-11-16T12:22Z):
+  two identical agent turns, step_1 cached **7,424 of 7,510** input
+  tokens on the warm turn ($0.003018 → $0.000791, 3075 → 2377 ms),
+  memory_extract replayed from the exact-match cache at **$0.000000 and
+  1 ms** (5,935 of 5,935 cached). Morning measurements kept dated: 8/8
+  stream cached=8192 on `gpt-6.1-terra`, 16-call warm probe on
+  `gpt-6-sol` reporting cached=4224-8192 on every carried call.)
+
 - [x] **284** The relay re-measured — streams report the cache, non-stream reports when it wants to (2026-11-16).
 
   (Eight identical non-stream and eight identical stream calls, one fixed
