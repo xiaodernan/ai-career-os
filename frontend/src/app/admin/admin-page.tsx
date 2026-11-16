@@ -140,6 +140,53 @@ export default function AdminPage() {
   const [funnel, setFunnel] = React.useState<AdminFunnel | null>(null);
   const [cohort, setCohort] = React.useState<AdminCohort | null>(null);
   const [attention, setAttention] = React.useState<AdminAttention | null>(null);
+  const [simulateBusy, setSimulateBusy] = React.useState(false);
+  const [simulateCount, setSimulateCount] = React.useState(25);
+  const [simulateNote, setSimulateNote] = React.useState<string | null>(null);
+
+  // The ledger refresh: attention + weekly trends drawn anew — shared by the unlock path and the simulator door.
+  const refreshLedger = React.useCallback(async () => {
+    try {
+      const [trendsData, attentionData] = await Promise.all([
+        api.get<AdminTrends>(endpoints.admin.trends, { weeks: 12 }),
+        api.get<AdminAttention>(endpoints.admin.attention),
+      ]);
+      setTrends(trendsData);
+      setAttention(attentionData);
+    } catch {
+      /* a stale ledger is a quiet one; nothing to announce */
+    }
+  }, []);
+
+  // The simulator doors: bounded synthetic sessions in, wiped out with the same one button shape.
+  const runSimulation = React.useCallback(async () => {
+    setSimulateBusy(true);
+    setSimulateNote(null);
+    try {
+      const count = Math.min(200, Math.max(1, Math.round(simulateCount) || 25));
+      const result = await api.create<{ recorded?: number }>(endpoints.admin.simulate, { sessions: count });
+      setSimulateNote(t("admin.simulateRecorded", { count: String(result?.recorded ?? count) }));
+      await refreshLedger();
+    } catch {
+      setSimulateNote(t("admin.simulateFailed"));
+    } finally {
+      setSimulateBusy(false);
+    }
+  }, [simulateCount, refreshLedger, t]);
+
+  const wipeSynthetic = React.useCallback(async () => {
+    setSimulateBusy(true);
+    setSimulateNote(null);
+    try {
+      await api.remove(endpoints.admin.simulate);
+      setSimulateNote(t("admin.simulateWiped"));
+      await refreshLedger();
+    } catch {
+      setSimulateNote(t("admin.simulateFailed"));
+    } finally {
+      setSimulateBusy(false);
+    }
+  }, [refreshLedger, t]);
 
   React.useEffect(() => {
     if (!unlocked) return;
@@ -479,6 +526,39 @@ export default function AdminPage() {
           </table>
         </div>
         <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{t("admin.attentionFootnote")}</p>
+      </section>
+
+      {/* The overseer's synthetic week (Epic 289): a bounded quiet week, seeded on demand. */}
+      <section aria-label={t("admin.simulateTitle")}>
+        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.simulateTitle")}</h2>
+        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.simulateLede")}</p>
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label htmlFor="simulate-count" className="block text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {t("admin.simulateCountLabel")}
+            </label>
+            <input
+              id="simulate-count"
+              type="number"
+              min={1}
+              max={200}
+              value={simulateCount}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                if (Number.isFinite(next)) setSimulateCount(Math.min(200, Math.max(1, next)));
+              }}
+              className="mt-1.5 w-28 rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums"
+            />
+          </div>
+          <Button onClick={() => void runSimulation()} disabled={simulateBusy} size="sm">
+            {t("admin.simulateRun")}
+          </Button>
+          <Button variant="outline" onClick={() => void wipeSynthetic()} disabled={simulateBusy} size="sm">
+            {t("admin.simulateWipe")}
+          </Button>
+        </div>
+        {simulateNote && <p className="mt-3 text-2xs leading-relaxed text-muted-foreground">{simulateNote}</p>}
+        <p className="mt-3 max-w-3xl text-2xs italic leading-relaxed text-muted-foreground">{t("admin.simulateProvenance")}</p>
       </section>
 
       <section>

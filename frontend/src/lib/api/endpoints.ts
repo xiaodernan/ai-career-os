@@ -55,6 +55,8 @@ export const endpoints = {
     cohort: "/admin/cohort",
     /* The eye of the install — landings, dwells, acts and top paths (Epic 267). */
     attention: "/admin/attention",
+    /* The overseer's synthetic week (Epic 289): bounded synthetic visitors. */
+    simulate: "/admin/simulate",
   },
 
   /* ---------------- The attention spine ------ */

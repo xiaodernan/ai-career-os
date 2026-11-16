@@ -4133,6 +4133,17 @@ export const en = {
         "Seven series counted straight off the tables at the moment you opened this page — Monday-anchored ISO weeks in UTC. A quiet week reads as zero, not as a missing key; each total covers the trailing twelve-week window. The last two are the attention ledger's heartbeat: lands are every route the browser reported an arrival on, dwells are the reads the clock saw out.",
       trendAcrossWeeks: "across {count} weeks",
       trendPeak: "peak {count}",
+      simulateTitle: "The overseer's week, rehearsed",
+      simulateLede:
+        "Real visitors are rare on a fresh install — nobody rehearses for this door. This button writes a bounded week of synthetic sessions: same three row kinds the browser records (land, dwell, act), same anonymous clocks, tagged so nothing here mistakes them for readers. The numbers move; the ledger stays honest.",
+      simulateRun: "Seed synthetic visitors",
+      simulateWipe: "Wipe synthetic rows",
+      simulateCountLabel: "sessions",
+      simulateRecorded: "{count} synthetic sessions written. Watch the ledger breathe.",
+      simulateWiped: "Synthetic rows wiped. The ledger is clean.",
+      simulateFailed: "The door refused — check the backend log and try again.",
+      simulateProvenance:
+        "Every synthetic row carries journey = synthetic and never whispers a user. Wipe whenever you like; the door never reports anyone else's reader as synthetic.",
       aiEventsLabel: "AI calls",
       attentionLandsLabel: "Attention landings",
       attentionDwellsLabel: "Dwell reads",

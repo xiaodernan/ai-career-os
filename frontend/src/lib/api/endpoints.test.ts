@@ -950,6 +950,7 @@ describe("endpoints ↔ backend route parity", () => {
     "PATCH /contacts/{}": "the registry form posts its current values through contactBody(), which builds the record key by key — blanks stay absent",
     "PATCH /users/me": "forwards the account form's `patch`",
     "POST /resumes/upload": "a FormData part list, not a JSON body — Spring binds it through @RequestPart, so no record names these keys",
+    "POST /admin/simulate": "the Map-bound `sessions` door: the handler reads an r.untyped `Map<String,Object>`, and the `sessions` knob the admin page sends (`{sessions: n}`) is the record the map refuses to name",
   };
 
   function unreadableKeys(): string[] {
@@ -1156,7 +1157,11 @@ describe("endpoints ↔ backend route parity", () => {
     // is answered by both the ⌘K palette and the global-search hook, so a fold that merged the two
     // would still satisfy the rule with one caller's parameters while the other got a 400.
     const routes = rows.map((r) => `${r.site.verb} ${r.pattern}`);
+    // 289 moved /admin/trends onto this list: the overseer's unlock asks for the same trailing
+    // window twice now — once when the door opens and once when the simulator pushes "Seed a quiet
+    // week", and the shared ledger drawn by the two is one wire, not two.
     expect([...new Set(routes.filter((k, i) => routes.indexOf(k) !== i))].sort()).toEqual([
+      "GET /admin/trends",
       "GET /search",
     ]);
     // one handler walk answers both gates, so a route cannot exist for one rule and not the other

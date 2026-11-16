@@ -6910,6 +6910,31 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **289** The overseer's synthetic week — the simulator door (2026-11-16).
+
+  (The attention spine accepted only real arrivals: on a fresh install the
+  overseer's instruments sat mute — nobody to watch, nothing drifting.
+  `POST /admin/simulate` now seeds a bounded week of synthetic visitors:
+  same three row shapes the browser writes (land / dwell / act), the same
+  anonymous clocks, `journey="synthetic"` on every row, never a signed
+  user, capped at 200 sessions per call so the door stays a knob and never
+  a flood. The distribution is the install's own front-door weighting
+  ("/" heavily weighted, the pantry lightly, the offer aisle barely).
+  `DELETE /admin/simulate` wipes only rows tagged synthetic — anonymous
+  real readers are untouchable by this door. The admin page grows the
+  section: a count knob, both buttons, the provenance note in both
+  languages, and the same shared `refreshLedger` as the unlock fetch (so
+  the attention tiles and weekly trends move when synthetic visitors
+  arrive). Measured on this install: 30 sessions → **155 rows**, land
+  gauge 1,176 → **1,222**, dwells 78 → **150**, acts 0 → **37**; the wipe
+  returned the ledger to exactly 1,176 / 78 / 0. Contract gates: the
+  parity census re-walked with two written-down rows (the Map-bound body,
+  and /admin/trends joining the multi-caller set), 16/16; the Java side
+  gained the simulator test (journey tag, cap, determinism per seed) and
+  the wipe route now rides `@Transactional` — the first probe surfaced the
+  TransactionRequiredException on `deleteByJourney`, fixed and re-verified
+  live: **wiped 155** and the gauges returned home exactly.)
+
 - [x] **288** The ledger row the graph writes is pinned in the timeline (2026-11-16).
 
   (The whole point of the `graph_node` trace kind is that the reader sees the

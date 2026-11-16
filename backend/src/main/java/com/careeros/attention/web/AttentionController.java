@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
  * cross the wire. The write side intentionally has no auth wall: an unauthenticated
  * landing on the landing page still matters (someone who never registered), and the
  * value is the path — never the user's content.
+ *
+ * <p>Epic 289 adds POST/DELETE /admin/simulate — the overseer's synthetic week: a
+ * bounded, tagged generator of the same three row shapes the browser writes, journey
+ * always "synthetic", never a signed user, always wipeable.
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -81,5 +86,21 @@ public class AttentionController {
     @GetMapping("/admin/attention")
     public Map<String, Object> attention() {
         return admin.summary();
+    }
+
+    /** POST /api/v1/admin/simulate — seed a bounded synthetic week; the overseer's rig, not a visitor. */
+    @PostMapping("/admin/simulate")
+    public Map<String, Object> simulate(@RequestBody(required = false) Map<String, Object> body) {
+        int sessions = 25;
+        if (body != null && body.get("sessions") instanceof Number n) {
+            sessions = n.intValue();
+        }
+        return admin.simulate(sessions);
+    }
+
+    /** DELETE /api/v1/admin/simulate — wipe every synthetic row; the ledger never keeps the rig's notes. */
+    @DeleteMapping("/admin/simulate")
+    public Map<String, Object> wipeSimulated() {
+        return admin.wipeSimulated();
     }
 }

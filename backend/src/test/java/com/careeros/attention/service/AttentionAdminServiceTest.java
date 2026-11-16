@@ -16,13 +16,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 class AttentionAdminServiceTest {
 
+    private static AttentionAdminService newService(JdbcTemplate jdbc) {
+        return new AttentionAdminService(jdbc, mock(com.careeros.attention.repository.AttentionRepository.class));
+    }
+
     @Test
     void answersEveryCounterWithAZeroWhenTheTablesAreEmpty() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), org.mockito.ArgumentMatchers.<Class<Long>>any())).thenReturn(0L);
         when(jdbc.queryForList(anyString())).thenReturn(List.of());
 
-        AttentionAdminService service = new AttentionAdminService(jdbc);
+        AttentionAdminService service = newService(jdbc);
         var summary = service.summary();
 
         assertThat(summary).containsEntry("landings", 0L);
@@ -42,7 +46,7 @@ class AttentionAdminServiceTest {
         when(jdbc.queryForList(anyString())).thenReturn(List.of(
                 Map.of("path", "/dashboard", "landings", 100L, "dwells", 85L, "acts", 20L)));
 
-        AttentionAdminService service = new AttentionAdminService(jdbc);
+        AttentionAdminService service = newService(jdbc);
         var summary = service.summary();
 
         assertThat(summary).containsEntry("landings", 42L);

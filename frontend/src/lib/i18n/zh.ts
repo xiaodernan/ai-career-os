@@ -3843,6 +3843,17 @@ export const zh = {
         "七个序列，都是你打开页面这一刻从表里现拉数的——按 ISO 周（周一起始、UTC）。安静的一周读作零，不会变成缺失的键；合计覆盖最近十二周窗口。最后两个是注意力台账的心跳：落点是浏览器报到过的每个路径，停留是浏览器的钟量到的每一次读完。",
       trendAcrossWeeks: "共 {count} 周",
       trendPeak: "峰值 {count}",
+      simulateTitle: "这间实例，先让副官排一次戏",
+      simulateLede:
+        "新实例真实读者稀少——没人在这扇门面前练过兵。这个按钮写入一段有界的合成访客记录：与浏览器记录的三种字面行为（land、dwell、act）一致、同样的匿名钟表计数、打上标记——绝不会把它们当成真的读者。数字会动，账面仍然是诚实的。",
+      simulateRun: "注入合成访客",
+      simulateWipe: "抹除合成记录",
+      simulateCountLabel: "个会话",
+      simulateRecorded: "已写入 {count} 组合成会话。盯着账本动一动。",
+      simulateWiped: "合成记录已抹去。账面干净。",
+      simulateFailed: "门拒绝了——看后端日志，再试一次。",
+      simulateProvenance:
+        "每条合成记录都带 journey=synthetic，并且永远不会泄露任何用户。想擦就擦；这扇门绝不会把任何真实读者记成合成。",
       aiEventsLabel: "AI 调用",
       attentionLandsLabel: "注意力落点",
       attentionDwellsLabel: "停留读数",
