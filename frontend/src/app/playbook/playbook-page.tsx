@@ -412,6 +412,32 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.gateClosing")}</p>
         </section>
 
+        {/* The evidence table — this product owns its own numbers (Epic 274) */}
+        <section id="inink" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.inInkEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">14</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.inInkTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.inInkIntro")}</p>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {[
+              { num: t("playbook.inInkK1Label"), text: t("playbook.inInkK1Text") },
+              { num: t("playbook.inInkK2Label"), text: t("playbook.inInkK2Text") },
+              { num: t("playbook.inInkK3Label"), text: t("playbook.inInkK3Text") },
+              { num: t("playbook.inInkK4Label"), text: t("playbook.inInkK4Text") },
+              { num: t("playbook.inInkK5Label"), text: t("playbook.inInkK5Text") },
+              { num: t("playbook.inInkK6Label"), text: t("playbook.inInkK6Text") },
+            ].map((row, index) => (
+              <li key={index} className="flex items-baseline gap-4 rounded-2xl border border-border/60 bg-card/60 p-5">
+                <span className="shrink-0 font-serif text-3xl font-semibold tabular-nums text-primary">{row.num}</span>
+                <span className="text-sm leading-relaxed text-foreground/90">{row.text}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="max-w-4xl text-2xs leading-relaxed text-muted-foreground">{t("playbook.inInkFootnote")}</p>
+        </section>
+
         {/* The edge of the map — where this product ends and you begin */}
         <section id="edge" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">

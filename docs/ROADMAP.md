@@ -6910,6 +6910,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **275** The evidence table — the install audits its own claims on the page itself (2026-11-16).
+
+  (A new chapter lands inside the manual: "In ink" / "白纸黑字" — the numbers the
+  rest of this book keeps asserting, now written in ink on the page. 74/74 golden
+  journey cases. 53.6% of prompt tokens served from cache. 665 attention events
+  recorded since the spine went live. 218 named epics merged before this page shipped,
+  including the ones retired as wrong. 0 fabricated output tokens, ever. 1 install,
+  owned entirely by the reader. All values are measured on this install as-of this
+  commit (commit 6b092a3 on 2026-11-16); the chapter says explicitly: these are not
+  a contract for any other install. EN+ZH throughout. Placed before the colophon;
+  chapter-rail updated.) Measured: playbook suites **62/62**, i18n/census **62/62**,
+  tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
+  rotas kept their long-time behaviour).)
+
 - [x] **273** The edge of the map — where the map ends and you begin (2026-11-16).
 
   (A new chapter inside the manual teaches honesty as a feature: where this

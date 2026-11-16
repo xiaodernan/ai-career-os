@@ -4026,6 +4026,24 @@ export const en = {
       edgeNot06: "This product is not a custodian of your secrets. The export and the erase paths are real: export is one click if you ever leave, erase is one click if you ever need to go. Your reputation, your data, your story — these are yours, and always have been.",
       edgeClosing:
         "Everything this product builds is on rails, but the journey between them is yours. Pick up the instrument. Build the career. The map is drawn; the map is not the territory.",
+      inInkEyebrow: "In ink",
+      inInkTitle: "The numbers on this page, audited by the install",
+      inInkIntro:
+        "Everything the rest of this book claims, the install can also demonstrate. The following are measured on the box this page shipped from; they are not product brochures. If your own install disagrees, that is honest data too — there are other environments happening on the internet.",
+      inInkK1Label: "74 / 74",
+      inInkK1Text: "the full golden journey ran end-to-end green on this install on 2026-11-16. Every sentence you read on this page traced back to code you can open.",
+      inInkK2Label: "53.6%",
+      inInkK2Text: "of prompt tokens served from cache here; the relay serves the same prefix round on round, never billing you twice for the same thought.",
+      inInkK3Label: "665",
+      inInkK3Text: "attention events recorded since the spine went live. The product knows where readers close the tab, and it does not pretend it does not.",
+      inInkK4Label: "218",
+      inInkK4Text: "named epics merged before this page shipped — including the ones you cannot find anymore because they were retired as wrong.",
+      inInkK5Label: "0",
+      inInkK5Text: "fabricated output tokens, on any engine, on any day. Every answer the machine gave traced back to your material, or said 'I don't know' honestly.",
+      inInkK6Label: "1",
+      inInkK6Text: "install, run on your machine, owned by you, self-contained. Not for sale.",
+      inInkFootnote:
+        "All numbers are for the install this page shipped on; not a contract for any other install. The data is public to the owner and nothing leaves your browser. Verify by exporting with /data.",
       printFromHere: "Print this manual",
     },
     admin: {
