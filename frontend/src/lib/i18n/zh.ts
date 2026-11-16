@@ -157,6 +157,18 @@ export const zh = {
       coda2: "打分给平均，勇气不平均。",
       coda3: "合上这个标签，带着骄傲。下一个打开的那天由你说了算。",
       codaSign: "—— 编辑",
+      afterwardEyebrow: "散场之后",
+      afterwardTitle: "你还带着什么走出这一间",
+      afterwardIntro:
+        "这一页并没有结束这场寻寻。一周没等来一封——和一年坚持上场被磨出来的肌肉。你带出这间房的东西比进来的时候要重，而这份重量不是奖牌，它是欠下的功课、是被你熬过来的日子。",
+      afterwardK1Label: "敲过的门",
+      afterwardK1Text: "{count} 份投递。被人读了再退回来的那几份，才是这个产品教不了你的——它们让你感受不到另一端是什么人。",
+      afterwardK2Label: "实战场次",
+      afterwardK2Text: "{count} 场面试，打完的——真实的压力在里头那些，赢的不算，没赢的也不白来。",
+      afterwardK3Label: "上场的天数",
+      afterwardK3Text: "{count} 天上场、打字、读资料、呼吸。赢了它也记，没赢它也记——数字不评价，它们只记数。",
+      afterwardFootnote:
+        "下一场寻职、下一间屋子、下一年——所有后来出现的门，问的还是这一间屋子问的那个问题。产品只是你拿来敲的那件乐器，你才是那条弧线——带着走，剩下的留下。",
       print: "打印这份留念",
       printHint: "从浏览器的打印对话框另存 PDF——页面为单张版式设计。",
       grandTotal: "{total} 次行动 · 出现 {days} 天 · 保留 {letters} 封信",

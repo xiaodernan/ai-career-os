@@ -174,6 +174,18 @@ export const en = {
       coda2: "The score is an average; the courage was not.",
       coda3: "Close this tab proud. The next one opens when you say so.",
       codaSign: "— The editor",
+      afterwardEyebrow: "After the rest",
+      afterwardTitle: "What you still carry",
+      afterwardIntro:
+        "One page didn't end the search. A week of not getting one letter in every form — and a year of showing up to practice anyway. What you carry out of this room is heavier than you walk in with, and you didn't earn it by winning.",
+      afterwardK1Label: "Doors knocked",
+      afterwardK1Text: "{count} applications. The ones that came back teach you what this product never will: what it feels like on the other side of sent.",
+      afterwardK2Label: "Times rehearsed",
+      afterwardK2Text: "{count} interviews, finished — the live ones, at least, the ones that carried pressure. The bad ones were not wasted; the good ones were not won.",
+      afterwardK3Label: "Days showed up",
+      afterwardK3Text: "{count} days of practice, typing, reading, breathing. The counter runs either way — the win or the not-yet.",
+      afterwardFootnote:
+        "The next search, the next room, the next decade — they all ask the same question this room did. The product was the instrument; you were the arc. Bring that back. Leave the rest.",
       print: "Print the keepsake",
       printHint: "Save as PDF from the browser's print dialog — the page is tuned for one sheet.",
       grandTotal: "{total} actions · {days} days showed up · {letters} letters kept",

@@ -6910,6 +6910,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **276** Afterward — the weight you carry out (2026-11-16).
+
+  (The closing ceremony used to end where it stabilized: the letter, the
+  number, the print button. The reader's resume came full circle here, but
+  the tool hadn't said the quiet part — none of what happened was theatre for
+  a scoreboard; you knocked on doors and you left carrying the scars.)
+  The card sits beneath the year-in-review on /ceremony: three honest
+  numbers bound to the account row — doors knocked (total applications),
+  times rehearsed (total interviews), days showed (active days on the
+  heatmap). No applause, no applause-light; the only framing is the one the
+  install earns honestly — the counter runs whether you win or you don't,
+  and that is the point. Renders nothing on a fresh account; nothing here
+  fakes a journey nobody took.) Measured: vitest **1512/1512** (+1 file,
+  +3 tests), tsc clean, bundle budget OK at 350, copy census **213
+  sources** (+1, the new component), budget gate 100%, census gate 62/62.)
+
 - [x] **275** The evidence table — the install audits its own claims on the page itself (2026-11-16).
 
   (A new chapter lands inside the manual: "In ink" / "白纸黑字" — the numbers the

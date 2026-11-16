@@ -13,6 +13,7 @@ import {
 } from "@/lib/hooks/resources";
 import { useLetters } from "@/lib/hooks/letters";
 import { YearInReviewCard } from "@/components/ceremony/year-in-review-card";
+import { AfterwardCard } from "@/components/ceremony/afterward-card";
 import { useActivityHeatmap } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateOnly } from "@/lib/format";
@@ -226,6 +227,9 @@ export default function CeremonyPage() {
 
       {/* The year in review (Epic 224): the record that travels. */}
       <YearInReviewCard numbers={reviewNumbers} />
+
+      {/* Afterward (Epic 276): what the reader still carries away, and why it is heavier. */}
+      <AfterwardCard />
     </div>
   );
 }
