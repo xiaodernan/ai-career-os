@@ -41,7 +41,13 @@ import org.springframework.test.web.servlet.MockMvc;
         // shared proxy (observed: RateLimitIT failing open on AI-bucket calls at 500ms
         // while JobQueueIT needed 5s). Two seconds for every IT class on this harness;
         // production's REDIS_TIMEOUT stays 500ms, untouched.
-        "spring.data.redis.timeout=2s"
+        "spring.data.redis.timeout=2s",
+        // One pool apartment per suite, not per apartment building: the CI nightly's
+        // Postgres (max_connections) is shared by every IT class's context, and 20
+        // connections per context exhausted it mid-suite ("too many clients already",
+        // FleetWiringIT, 2026-11-16). Two is enough for one MockMvc call at a time;
+        // production's pool stays 20, untouched.
+        "spring.datasource.hikari.maximum-pool-size=2"
 })
 public abstract class AbstractIntegrationTest {
 

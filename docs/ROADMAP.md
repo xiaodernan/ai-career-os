@@ -6910,6 +6910,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **282** The IT harness stops drowning the tiny CI Postgres (2026-11-16).
+
+  (The scheduled nightly (`schedule`/`workflow_dispatch`, not a push gate)
+  went red against the tip: `FATAL: sorry, too many clients already` from
+  Postgres at `FleetWiringIT`, `entityManagerFactory`/`flywayInitializer`,
+  11:29Z. This is a load-shaped failure, not a code one: the IT harness
+  booted one Spring context per IT class against the CI Postgres with the
+  production pool size (20) each, and the sum pasted the server's default
+  `max_connections` mid-suite. The harness already stands where tests stand
+  — it widens the Redis command window for the shared Docker Desktop this
+  way. One property in the same posture: `spring.datasource.hikari
+  .maximum-pool-size=2` on `AbstractIntegrationTest` (production stays
+  20). Runbook gains the section: what the alarm looks like, what to read,
+  what it means (do not widen the cap to dodge a load-shaped failure).
+  Verified on the two classes the failure first surfaced at; unit suite
+  untouched (1376 *Test already green).)
+
 - [x] **281** The ledger watches back — the playbook's sixteenth chapter
   (2026-11-16).
 

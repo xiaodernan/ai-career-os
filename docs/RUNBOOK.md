@@ -160,6 +160,26 @@ SHA the run tested — and diff from there. The nightly job tests the whole stac
 so a red night can be the ai-service, the backend, the frontend build or the eval
 suite; the step names say which.
 
+## The nightly dies with 'too many clients already'
+
+**What the alert looks like.** The IT step reds with
+`FATAL: sorry, too many clients already` from Postgres, usually first at the
+`entityManagerFactory`/`flywayInitializer` beans (`FleetWiringIT`,
+2026-11-16). The nightly boots one application context per IT class against
+the shared CI Postgres with its default `max_connections`; the harness used
+to ask for the production pool size (20) per context, and the contexts sum
+pasted the ceiling mid-suite.
+
+**What to read.** The failing step's log, search `too many clients`. The
+diff is never in the migration: the pool the ITs ask for is the lever.
+
+**What it means, and the fix.** `AbstractIntegrationTest` caps every IT's
+pool at 2 connections (production stays 20). That was the red on the night of
+2026-11-16; the cap landed in the same tree. If the nightly goes ever red on
+this line again, the cap was undone or a new IT class asks for more itself —
+raise `max_connections` in the infra job and keep the cap; do not widen the
+cap to dodge a load-shaped failure.
+
 ## Backups
 
 **What a backup is.** One set, written by `scripts/backup.sh`, named after a UTC stamp:
