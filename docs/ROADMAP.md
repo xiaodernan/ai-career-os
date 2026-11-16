@@ -6910,6 +6910,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **297** The showcase goes live on GitHub Pages (2026-11-17).
+
+  (`https://xiaodernan.github.io/ai-career-os/` is now a real URL. Before this,
+  `gh-pages` was missing — GitHub Pages had been configured for the repo but had
+  never received a source tree, so the default URL returned the same 404 as any other
+  page here. A dedicated `gh-pages` branch was pushed with exactly three files at its
+  root: `showcase.html`, `index.html` (the same bytes), and `.nojekyll`. The legacy
+  Pages build (status=built) picked it up in seconds. The CI `showcase` job now
+  clones that branch, copies the freshly-regenerated card into it, and commits only
+  when the numbers moved — so every main push that materially improves the install
+  refreshes the public page automatically, on a stable one-URL contract.
+  docs/SYNC_TO_PORTFOLIO.md gains the iframe URL to paste into the portfolio.)
+
 - [x] **296** Capacity re-measure — 200 VU round-robin, six routes, zero failures (2026-11-17).
 
   (The siege's capacity phase from Epic 292 was re-run after Epics 291–295 and

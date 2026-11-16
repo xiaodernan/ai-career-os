@@ -49,6 +49,20 @@ You never have to since Epic 216 — but only when the numbers move, never on a 
 The card is excluded from time-based churn precisely so a portfolio reader is never
 shown a diff that says nothing.
 
+## Live as of 2026-11-17 (Epic 297)
+
+Pages is deployed from the `gh-pages` branch — a single static card, no build,
+no runtime, no first-party listeners. CI re-mirrors that card on every main push
+whenever the numbers moved, so the iframe below always reflects the current
+commit graph without the user doing anything. The embedded URL is the contract;
+nothing else is part of the interface.
+
+```html
+<iframe src="https://xiaodernan.github.io/ai-career-os/showcase.html"
+        width="100%" height="520" frameborder="0"
+        title="AI Career OS — the personal job-search operating system"></iframe>
+```
+
 ## How to embed it in your portfolio
 
 **Option A — link to it (simplest):**

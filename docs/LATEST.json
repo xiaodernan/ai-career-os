@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T18:20:45.993917Z",
+  "generated_at": "2026-11-16T18:44:42.648103Z",
   "branch": "main",
-  "head": "b0442d2",
-  "total_commits": 1,
-  "milestone": "Epic 296",
-  "milestone_full": "the ledger of done epics (through 448 items), closed at Epic 296 — Capacity re-measure",
-  "pushed_at": "2026-11-16",
+  "head": "01f9cab",
+  "total_commits": 1498,
+  "milestone": "Epic 297",
+  "milestone_full": "the ledger of done epics (through 449 items), closed at Epic 297 — The showcase goes live on GitHub Pages (2026-11-17)",
+  "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1380+",
   "test_files": 189,
-  "work_items": 448,
-  "epics": 162,
+  "work_items": 449,
+  "epics": 163,
   "feature_surface": [
+    "Epic 297 — The showcase goes live on GitHub Pages (2026-11-17)",
     "Epic 296 — Capacity re-measure",
     "Epic 295 — The counsel doors",
     "Epic 294 — The door spec",
     "Epic 293 — The overseer notices the softer signal",
-    "Epic 292 — The siege, widened",
-    "Epic 291 — The playbook's seventeenth chapter"
+    "Epic 292 — The siege, widened"
   ]
 }
