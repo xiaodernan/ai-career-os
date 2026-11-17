@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T14:25:51.786343Z",
+  "generated_at": "2026-11-17T14:26:09.705508Z",
   "branch": "main",
-  "head": "da734b4",
-  "total_commits": 1537,
+  "head": "680b3df",
+  "total_commits": 1,
   "milestone": "Epic 310",
   "milestone_full": "the ledger of done epics (through 462 items), closed at Epic 310 — The installer knows your own career today (2026-11-17)",
   "pushed_at": "2026-11-17",
