@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T09:41:30.517846Z",
+  "generated_at": "2026-11-17T09:41:43.850999Z",
   "branch": "main",
-  "head": "2f9466b",
-  "total_commits": 1514,
+  "head": "d619374",
+  "total_commits": 1,
   "milestone": "Epic 301",
   "milestone_full": "the ledger of done epics (through 453 items), closed at Epic 301 — The afterward's pointer, proven end to end (2026-11-17)",
   "pushed_at": "2026-11-17",
