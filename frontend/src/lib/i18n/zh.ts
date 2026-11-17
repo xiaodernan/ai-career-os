@@ -3866,6 +3866,7 @@ export const zh = {
     admin: {
       adminEyebrow: "掌管全局的人的账簿",
       adminTitle: "掌管全局的人的账簿",
+      title: "掌管全局的人的账簿",
       loreLede:
         "产品里唯一一个不属于用户、而属于运营者的门。这里的数字都是这个实例自己记账的，不认识任何名字，也不打听任何人。",
       intro:
@@ -3903,6 +3904,15 @@ export const zh = {
       attentionDwellsLabel: "停留读数",
       weeklyDigestsLabel: "信件组合数",
       weeklyDigestsDeliveredLabel: "信件送达数",
+      cacheEconomyTitle: "缓存经济账本 · 七日",
+      cacheEconomyNote:
+        "每一次模型调用都留了 token 到账本。这里量的是温热而不是量——每个 kind 的 input token 里有多少是缓存送的。一次性的功能（jd_analyze、tailor……）每次读的是新文件，天然冷；同一段对话第二次起才温。数字从表直接加出来，从来不拿平均骗人。",
+      cacheEconomyTotalHitLabel: "七日总命中",
+      cacheEconomyKindLabel: "种类",
+      cacheEconomyCallsLabel: "调用次数",
+      cacheEconomyHitLabel: "命中率",
+      cacheEconomyBarLabel: "比例",
+      cacheEconomyEmpty: "最近七天没有模型调用",
       trendProjection:
         "每条线的虚线段是一条穿过最近十二周的直线——最小二乘，仅此而已。下降的窗口向零投影并在此处截断；平坦的窗口投影出平坦。这不是预测，也不是行情。",
       flowTitle: "最新一行，现拉现查",

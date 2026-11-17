@@ -4156,6 +4156,7 @@ export const en = {
     admin: {
       adminEyebrow: "THE OVERSEER'S LEDGER",
       adminTitle: "The overseer's ledger",
+      title: "The overseer's ledger",
       loreLede:
         "One door in this product doesn't have a user on the other side; it has the operator, looking back at the whole thing. Counts, latencies and the next hand-wave you should do — pinned to this install, not to anyone's résumé.",
       intro:
@@ -4193,6 +4194,15 @@ export const en = {
       attentionDwellsLabel: "Dwell reads",
       weeklyDigestsLabel: "Letters composed",
       weeklyDigestsDeliveredLabel: "Letters delivered",
+      cacheEconomyTitle: "The cache ledger · seven days",
+      cacheEconomyNote:
+        "Every model call leaves its tokens in the ledger. This panel measures warmth, not volume — the share of tokens served from cache per call kind. One-shot features (jd_analyze, tailor, …) read a fresh document every time, so they are cold by design; the warm lane lives in the repeated turns of a conversation. Sums straight off the table, never a per-row average.",
+      cacheEconomyTotalHitLabel: "7-day hit rate",
+      cacheEconomyKindLabel: "Kind",
+      cacheEconomyCallsLabel: "Calls",
+      cacheEconomyHitLabel: "Hit rate",
+      cacheEconomyBarLabel: "Share",
+      cacheEconomyEmpty: "No model calls in the last seven days",
       trendProjection:
         "The dashed half of each line is a straight line through the trailing twelve weeks — least squares, nothing more. A falling window projects softer than zero and clamps there; a flat window projects flat. Not a forecast, not a market move.",
       flowTitle: "Newest rows, straight off the tables",

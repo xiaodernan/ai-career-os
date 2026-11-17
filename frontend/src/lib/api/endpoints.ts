@@ -45,6 +45,7 @@ export const endpoints = {
   admin: {
     /* The install's own counter: counts only, never a per-reader row (Epic 250). */
     stats: "/admin/stats",
+    cacheEconomy: "/admin/cache-economy",
     /* The same counter drawn as five weekly lines, Monday-anchored in UTC (Epic 251). */
     trends: "/admin/trends",
     /* The eight "newest row" reads — instants only, never rows (Epic 254). */

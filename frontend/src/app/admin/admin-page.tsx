@@ -78,6 +78,25 @@ interface AdminAttentionItem {
   acts: number;
 }
 
+interface AdminCacheEconomyKind {
+  kind: string;
+  calls: number;
+  input_tokens: number;
+  cached_tokens: number;
+  hit_pct: number | null;
+}
+
+interface AdminCacheEconomy {
+  windowDays?: number;
+  totals?: {
+    calls?: number;
+    input_tokens?: number;
+    cached_tokens?: number;
+    hit_pct?: number | null;
+  };
+  byKind?: AdminCacheEconomyKind[];
+}
+
 interface AdminAttention {
   days?: number;
   landings?: number;
@@ -143,6 +162,7 @@ export default function AdminPage() {
   const [phrase, setPhrase] = React.useState("");
   const [wrong, setWrong] = React.useState(false);
   const [stats, setStats] = React.useState<AdminStats | null>(null);
+  const [cacheEconomy, setCacheEconomy] = React.useState<AdminCacheEconomy | null>(null);
   const [trends, setTrends] = React.useState<AdminTrends | null>(null);
   const [freshness, setFreshness] = React.useState<AdminFreshness | null>(null);
   const [funnel, setFunnel] = React.useState<AdminFunnel | null>(null);
@@ -204,6 +224,9 @@ export default function AdminPage() {
     api.get<AdminStats>(endpoints.admin.stats)
       .then((data) => { if (!cancelled) setStats(data); })
       .catch(() => { /* the gate is happy without the database — the operator can probe HTTP by hand if the door flakes */ });
+    api.get<AdminCacheEconomy>(endpoints.admin.cacheEconomy)
+      .then((data) => { if (!cancelled) setCacheEconomy(data); })
+      .catch(() => { /* the ledger is courtesy, never a blocker */ });
     api.get<AdminTrends>(endpoints.admin.trends, { weeks: 12 })
       .then((data) => { if (!cancelled) setTrends(data); })
       .catch(() => { /* as above */ });
@@ -339,6 +362,54 @@ export default function AdminPage() {
             </div>
           );
         })}
+      </section>
+
+      <section className="space-y-3" aria-label={t("admin.cacheEconomyTitle")}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-2xl">
+            <h2 className="font-serif text-xl font-semibold">{t("admin.cacheEconomyTitle")}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t("admin.cacheEconomyNote")}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-serif text-4xl font-semibold tabular-nums">{cacheEconomy?.totals?.hit_pct ?? "—"}%</p>
+            <p className="text-2xs uppercase tracking-widest text-muted-foreground">{t("admin.cacheEconomyTotalHitLabel")}</p>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-border/60">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-2xs uppercase tracking-widest text-muted-foreground">
+              <tr>
+                <th scope="col" className="px-4 py-2 text-left font-semibold">{t("admin.cacheEconomyKindLabel")}</th>
+                <th scope="col" className="px-4 py-2 text-right font-semibold">{t("admin.cacheEconomyCallsLabel")}</th>
+                <th scope="col" className="px-4 py-2 text-right font-semibold">{t("admin.cacheEconomyHitLabel")}</th>
+                <th scope="col" className="w-2/5 px-4 py-2 text-left font-semibold">{t("admin.cacheEconomyBarLabel")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(cacheEconomy?.byKind ?? []).map((row) => {
+                const pct = Number(row.hit_pct ?? 0);
+                const width = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+                return (
+                  <tr key={row.kind} className="border-t border-border/60">
+                    <td className="px-4 py-2 font-mono text-xs">{row.kind}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{row.calls}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{row.hit_pct ?? "—"}%</td>
+                    <td className="px-4 py-2">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+                        <div className="h-full rounded-full bg-primary/70" style={{ width: `${width}%` }} />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {(cacheEconomy?.byKind ?? []).length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">{t("admin.cacheEconomyEmpty")}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section aria-label={t("admin.flowTitle")}>
