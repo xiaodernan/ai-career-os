@@ -11,6 +11,7 @@ from app.core import db
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.db import domain, observability
 from app.providers.base import LLMMessage, LLMRequest
+from app.agents.stategraph import NodeResult, StateGraph
 
 log = logging.getLogger("agents.memory")
 
@@ -149,32 +150,61 @@ async def extract_and_store(user_id: str, user_text: str, answer: str,
     """Distill long-term memories from a completed turn; best-effort, never raises."""
     prompt = (f"User message:\n{wrap_untrusted('USER_MESSAGE', user_text[:3000])}\n\n"
               f"Assistant reply:\n{answer[:2000]}")
-    try:
-        data = await ask_json(
-            LLMRequest(messages=stable_messages(EXTRACT_SYSTEM, LLMMessage("user", prompt)),
-                       temperature=0.0, max_tokens=800),
-            user_id=user_id, run_id=run_id, agent="career", kind="memory_extract")
-    except Exception:
-        log.warning("memory extraction failed", exc_info=True)
-        return 0
-    saved = 0
-    for m in (data.get("memories") or [])[:4]:
-        kind = m.get("kind")
-        content = (m.get("content") or "").strip()
-        if kind not in MEMORY_KINDS or len(content) < 8:
-            continue
-        key = (m.get("key") or "").strip() or content[:40]
+
+    async def _extract(state: dict) -> NodeResult:
         try:
-            importance = max(0.0, min(1.0, float(m.get("importance", 0.6))))
-        except (TypeError, ValueError):
-            importance = 0.6
-        await domain.upsert_memory(user_id, kind, key, content, source="chat",
-                                   importance=importance)
-        saved += 1
-    if saved:
-        await observability.trace(run_id, "step_start", "career",
-                                  {"stage": "memory_extract", "saved": saved})
-    return saved
+            data = await ask_json(
+                LLMRequest(messages=stable_messages(EXTRACT_SYSTEM, LLMMessage("user", prompt)),
+                           temperature=0.0, max_tokens=800),
+                user_id=user_id, run_id=run_id, agent="career", kind="memory_extract")
+        except Exception:
+            log.warning("memory extraction failed", exc_info=True)
+            return NodeResult({"memories": [], "failed": True}, None, trace={"error": True})
+        if not isinstance(data, dict):
+            data = {}
+        return NodeResult({"memories": data.get("memories") or [], "failed": False},
+                           "verify", trace={"raw": len(data.get("memories") or [])})
+
+    async def _verify(state: dict) -> NodeResult:
+        kept: list[dict] = []
+        drops = 0
+        for m in (state.get("memories") or [])[:4]:
+            if not isinstance(m, dict):
+                drops += 1
+                continue
+            kind = m.get("kind")
+            content = (m.get("content") or "").strip()
+            if kind not in MEMORY_KINDS or len(content) < 8:
+                drops += 1
+                continue
+            key = (m.get("key") or "").strip() or content[:40]
+            try:
+                importance = max(0.0, min(1.0, float(m.get("importance", 0.6))))
+            except (TypeError, ValueError):
+                importance = 0.6
+            kept.append({"kind": kind, "key": key, "content": content,
+                         "importance": importance})
+        return NodeResult({"kept": kept, "dropped": drops}, "render",
+                           trace={"dropped": drops, "kept": len(kept)})
+
+    async def _render(state: dict) -> NodeResult:
+        saved = 0
+        for m in state.get("kept") or []:
+            await domain.upsert_memory(user_id, m["kind"], m["key"], m["content"],
+                                        source="chat", importance=m["importance"])
+            saved += 1
+        if saved:
+            await observability.trace(run_id, "step_start", "career",
+                                      {"stage": "memory_extract", "saved": saved})
+        return NodeResult({"saved": saved, "failed": state.get("failed")}, None,
+                          trace={"saved": saved})
+
+    graph = StateGraph("extract", {"extract": _extract, "verify": _verify,
+                                    "render": _render},
+                       max_steps=4)
+    final = await graph.run({"user_text": user_text, "answer": answer},
+                            run_id=run_id, agent="career")
+    return final["saved"]
 
 
 async def record_interview_outcome(user_id: str, session_id: str, evaluation: dict,

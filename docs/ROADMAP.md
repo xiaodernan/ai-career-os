@@ -6918,6 +6918,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **311** Every memory the wire writes passes the StateGraph verify node (2026-11-17).
+
+  `extract_and_store` — the call that runs on every conversation turn — rode a bare
+  `ask_json` with no verify. The StateGraph spine now runs extract → verify → render:
+  verify clamps importance to [0, 1], rejects non-whitelisted kinds, drops overlong
+  payloads, and the render persists. Same discipline everywhere on the hot path;
+  now the remembracing white-glove persists too.
+
+  (memory.py:extract_and_store migrated to bounded StateGraph; AGENTS.md §3 pinned
+  test moved to point at the verify node; representative gates green.)
+
 - [x] **310** The installer knows your own career today (2026-11-17).
 
   The copilot used to greet every cold turn with one tool: a path to the outside world.

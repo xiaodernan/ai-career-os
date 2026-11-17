@@ -233,8 +233,8 @@ def test_the_memory_numbers_the_doc_states_are_the_ones_the_code_uses():
     assert re.search(r"get_memories\(user_id,\s*limit=40\)", text), (
         "memory.py no longer reads up to 40 memories, which AGENTS.md §3 states"
     )
-    assert re.search(r'for m in \(data\.get\("memories"\) or \[\]\)\[:4\]', text), (
-        "memory.py no longer caps extraction at 4 facts, which AGENTS.md §3 states"
+    assert re.search(r'\(state\.get\("memories"\) or \[\]\)\[:4\]', text), (
+        "memory.py no longer caps extraction at 4 facts (StateGraph-verified verify node), which AGENTS.md §3 states"
     )
     assert re.search(r"len\(content\) < 8", text), (
         "memory.py no longer rejects content shorter than 8 characters, which AGENTS.md "
