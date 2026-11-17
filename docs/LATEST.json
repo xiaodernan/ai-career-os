@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T10:25:18.159339Z",
+  "generated_at": "2026-11-17T10:28:45.015405Z",
   "branch": "main",
-  "head": "944cbef",
-  "total_commits": 1521,
+  "head": "2f528b3",
+  "total_commits": 1,
   "milestone": "Epic 304",
   "milestone_full": "the ledger of done epics (through 456 items), closed at Epic 304 — The copilot's hot loop is a StateGraph now (2026-11-17)",
   "pushed_at": "2026-11-17",
