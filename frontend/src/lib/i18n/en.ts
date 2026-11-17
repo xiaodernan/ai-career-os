@@ -4263,6 +4263,11 @@ export const en = {
       journeyP50: "p50 (ms)",
       journeyP95: "p95 (ms)",
       optimizationsTitle: "What to do next on this install",
+      analysisButton: "Generate deep analysis",
+      analysisThinking: "Analyzing…",
+      analysisActions: "What to do",
+      analysisRisks: "What to watch",
+      analysisEmpty: "The analyst returned nothing worth listing — not encouragement, the plain fact that the install is not in trouble right now.",
       optimizationsLede:
         "These aren't invented ideas — they're rules reading this page's own wires at the moment you opened it. A rule that cannot see its input stays silent; pick the top item that smells hardest and start there.",
       counselFunnelTitle: "The hand-off is bleeding",

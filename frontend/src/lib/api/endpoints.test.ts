@@ -955,6 +955,7 @@ describe("endpoints ↔ backend route parity", () => {
     "PATCH /users/me": "forwards the account form's `patch`",
     "POST /resumes/upload": "a FormData part list, not a JSON body — Spring binds it through @RequestPart, so no record names these keys",
     "POST /admin/simulate": "the Map-bound `sessions` door: the handler reads an r.untyped `Map<String,Object>`, and the `sessions` knob the admin page sends (`{sessions: n}`) is the record the map refuses to name",
+    "POST /admin/counsel-llm": "forwards the snapshot record the admin page built from its own already-fetched state; the handler reads a `Map<String, Object>`, not a record, so the snapshot's key set lives in the frontend's assembling code",
   };
 
   function unreadableKeys(): string[] {

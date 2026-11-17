@@ -3973,6 +3973,11 @@ export const zh = {
       journeyP50: "p50 (ms)",
       journeyP95: "p95 (ms)",
       optimizationsTitle: "这个实例下一步该做什么",
+      analysisButton: "生成深度分析",
+      analysisThinking: "分析中……",
+      analysisActions: "该做的事",
+      analysisRisks: "警报",
+      analysisEmpty: "分析器没有返回什么值得列出来的——这不是鼓励，这就是直说：事情现在不是一片糟。",
       optimizationsLede:
         "这些不是编出来的建议——它们是这一页自己的数据线在你打开它那一刻跑出来的规则。看不到输入的规则保持沉默；从最难闻的那一条开工。",
       counselFunnelTitle: "交接处正在出血",

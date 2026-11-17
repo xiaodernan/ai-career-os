@@ -7,6 +7,7 @@ from app.core.deps import Ctx, require_internal
 from ..core.errors import EXPORT_SEND_ONE, RefusalError
 from app.db import domain, observability
 from app.features import company as company_mod
+from app.features import counsel as counsel_mod
 from app.features import export as export_mod
 from app.features import export_render as export_render_mod
 from app.features import gap_analysis as gap_mod
@@ -751,6 +752,30 @@ async def parse_feed_ep(req: ParseFeedReq, ctx: Ctx = Depends(require_internal))
 class FollowUpsReq(BaseModel):
     include_fresh: bool = False
     limit: int = Field(default=15, ge=1, le=50)
+
+
+class CounselReq(BaseModel):
+    """The install's own aggregates, as the operator who reads the admin page sees them.
+
+    No rows, no names -- the same counts the admin ledger already renders: the totals
+    across all kinds, the by-kind cache table, the weekly trends series, the user
+    attention halves. Anything the admin page is allowed to show may ride across.
+    """
+    snapshot: dict
+
+
+@router.post("/counsel")
+async def counsel_ep(req: CounselReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 320 -- the overseer's analyst: an LLM reading over the install's own aggregates.
+
+    This call writes no run row and no ai_usage_events row: an admin dashboard turning on
+    an LLM analysis must not make the install bill itself for its own reflection. The
+    snapshot exists so the answer cannot reach for data this install does not have;
+    the verifier keeps only items that cite a number already in the snapshot, and the
+    honest fallback on any failure is silence, not a coat of plausibility.
+    """
+    snapshot = req.snapshot if isinstance(req.snapshot, dict) else {}
+    return await counsel_mod.recommend(snapshot, user_id=None, run_id=None)
 
 
 @router.post("/follow-ups")

@@ -295,6 +295,13 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> counsel(Map<String, Object> snapshot, UUID userId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("snapshot", snapshot == null ? Map.of() : snapshot);
+        return post("/internal/features/counsel", userId, body);
+    }
+
+    @Override
     public Map<String, Object> interviewOpening(UUID sessionId, UUID userId) {
         return post("/internal/interview/opening", userId, Map.of("session_id", sessionId.toString()));
     }

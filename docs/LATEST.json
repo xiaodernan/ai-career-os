@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T22:49:13.780707Z",
+  "generated_at": "2026-11-17T22:50:50.902222Z",
   "branch": "main",
-  "head": "a32e03a",
-  "total_commits": 1576,
-  "milestone": "Epic 319",
-  "milestone_full": "the ledger of done epics (through 471 items), closed at Epic 319 — The weekly trend carries the cache economy too (2026-11-17)",
+  "head": "12d24bb",
+  "total_commits": 1577,
+  "milestone": "Epic 320",
+  "milestone_full": "the ledger of done epics (through 472 items), closed at Epic 320 — The overseer gets a second voice",
   "pushed_at": "2026-11-18",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 471,
-  "epics": 185,
+  "work_items": 472,
+  "epics": 186,
   "feature_surface": [
+    "Epic 320 — The overseer gets a second voice",
     "Epic 319 — The weekly trend carries the cache economy too (2026-11-17)",
     "Epic 318 — The cache economy, measured and shown honestly (2026-11-17)",
     "Epic 317 — The interviewer finally hears the candidate's own history (2026-11-17)",
     "Epic 316 — The match narrative rides the spine",
-    "Epic 315 — The dossier never vanishes, and the count is true (2026-11-18)",
-    "Epic 314 — The health line learns what it can afford (2026-11-18)"
+    "Epic 315 — The dossier never vanishes, and the count is true (2026-11-18)"
   ]
 }

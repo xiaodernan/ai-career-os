@@ -87,7 +87,7 @@ def unwrap_text_envelope(text: str) -> str:
     """Unwrap a JSON envelope some models emit despite a plain-text prompt.
 
     The opening question is prompted as prose ("one short greeting ... the FIRST
-    question only"), and the real relay (gpt-6-sol via wkapi.pro) answered it with
+    question only"), and the real relay (gpt-6.1-terra via the current relay) answered it with
     `{"message": "Hi, thanks for joining today. ..."}` -- the turn stored the whole
     envelope as the question text, and the runner rendered raw JSON to the reader.
     A plain-text caller wants the words, not the wrapping. Anything that is not a

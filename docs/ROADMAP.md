@@ -6918,6 +6918,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **320** The overseer gets a second voice — an LLM analyst grounded in this install's aggregates (2026-11-17).
+
+  The deterministic counsel stays — it is honest, free, always available. What was absent
+  was the voice with opinions: the read over the numbers that only passes if it names them.
+  `app/features/counsel.py` hands the install's own snapshot to the model (no user rows, no
+  PII — only the aggregates the admin page already renders), and the bounded StateGraph
+  keeps only items that cite a number already in the snapshot; anything else is dropped
+  instead of dressed up as advice. Silence is the failure mode, not a guess. The backend
+  forwards the call with a system user id; the ai-service deliberately mints no run row and
+  writes no ai_usage_events row (an admin reading its own ledger must not bill the install
+  for it). The frontend renders the answer in the same counsel section — a single
+  "Generate deep analysis" button, disabled while thinking, gone when empty. Through the
+  live relay (`gpt-6.1-terra` via the aizzz.xyz gateway, through Clash Verge) the answer
+  names the funnel landing-to-action math from the snapshot itself (2,641 landings ->
+  11 actions, 7,889 registered -> 934 applied) — a real analyst, not a coat of plausibility.
+
 - [x] **319** The weekly trend carries the cache economy too (2026-11-17).
 
   The 7-day ledger panel proved the warm-vs-cold picture; this round the weekly trends card does the

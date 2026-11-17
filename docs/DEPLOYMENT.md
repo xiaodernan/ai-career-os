@@ -790,7 +790,7 @@ ai-service reads the provider selection from env:
   (defaults to the LLM base) with `VOICE_API_KEY` (defaults to the LLM key). `mock`
   is refused when `APP_ENV=prod`, exactly like the LLM mock.
 
-### A real-model round trip, verified on this stack (2026-11-12)
+### A real-model round trip, verified on this stack (2026-11-12, re-verified 2026-11-17)
 
 A live round trip was run against a real OpenAI-compatible provider through the normal door.
 Requirements: a base URL that speaks the OpenAI chat-completions protocol, a key, and the
@@ -799,10 +799,16 @@ not necessarily the same as the marketing name). The env then carries:
 
 ```env
 LLM_PROVIDER=openai_compat
-LLM_BASE_URL=https://wkapi.pro/v1      # any OpenAI-compatible gateway
-LLM_MODEL=gpt-6-sol                    # discovered via GET /v1/models
-LLM_API_KEY=<yours>                    # .env is gitignored; never in any tracked file
+LLM_BASE_URL=https://api.aizzz.xyz/v1   # any OpenAI-compatible gateway; ours is aizzz.xyz
+LLM_MODEL=gpt-6.1-terra                 # discovered via GET /v1/models
+LLM_API_KEY=<yours>                     # .env is gitignored; never in any tracked file
 ```
+
+Outbound HTTP from the host and from inside the compose network both goes through
+Clash Verge (`127.0.0.1:7897` for the host; `host.docker.internal:7897` for the compose
+network). The relay enforces a jurisdiction filter — from a Hong Kong IP it returns
+country-blocked 403s, from a Japan one it answers; the Clash Verge tunnel is what makes
+this stack reach the relay at all from this machine.
 
 Measured, end-to-end, same door the UI uses: `POST /api/v1/copilot/chat` answered with the
 provider-selected model in ~8.8 seconds. The answer carried the full envelope

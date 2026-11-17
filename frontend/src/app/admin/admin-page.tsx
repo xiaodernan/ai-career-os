@@ -175,6 +175,58 @@ export default function AdminPage() {
   const [simulateBusy, setSimulateBusy] = React.useState(false);
   const [simulateCount, setSimulateCount] = React.useState(25);
   const [simulateNote, setSimulateNote] = React.useState<string | null>(null);
+  const [analystState, setAnalystState] = React.useState<
+    | { status: "idle" }
+    | { status: "thinking" }
+    | { status: "done"; summary: string; actions: string[]; risks: string[] }
+    | { status: "empty" }
+  >({ status: "idle" });
+
+  // The snapshot the analyst sees: the same aggregates the page already draws, in one shape.
+  const analystSnapshot = React.useCallback(() => ({
+    cache: cacheEconomy ? {
+      calls: cacheEconomy.totals?.calls ?? 0,
+      input_tokens: cacheEconomy.totals?.input_tokens ?? 0,
+      cached_tokens: cacheEconomy.totals?.cached_tokens ?? 0,
+      hit_pct: cacheEconomy.totals?.hit_pct ?? null,
+      by_kind: Object.fromEntries((cacheEconomy.byKind ?? []).map((k) => [
+        k.kind, { calls: k.calls, input_tokens: k.input_tokens, hit_pct: k.hit_pct },
+      ])),
+    } : undefined,
+    weekly: trends?.series ? {
+      weeks: trends.weeks,
+      ...Object.fromEntries(Object.entries(trends.series).map(([k, v]) => [k, v ?? []])),
+    } : undefined,
+    attention: attention ? {
+      landings: attention.landings, dwells: attention.dwells, acts: attention.acts,
+      signedLandings: attention.signedLandings, anonymousLandings: attention.anonymousLandings,
+      dwellPerLandingMs: attention.dwellPerLandingMs,
+    } : undefined,
+    funnel: funnel?.stages ?? undefined,
+  }), [cacheEconomy, trends, attention, funnel]);
+
+  // Epic 320 — the overseer presses this and the ai-service reads one more pass over the aggregates.
+  const runAnalyst = React.useCallback(async () => {
+    setAnalystState({ status: "thinking" });
+    try {
+      const data = await api.create<{
+        summary?: string; actions?: string[]; risks?: string[]; empty?: boolean;
+      }>(endpoints.admin.counselLlm, { snapshot: analystSnapshot() });
+      const hasContent = Boolean(data.summary && data.summary.trim()) || (data.actions?.length ?? 0) > 0;
+      if (!hasContent) {
+        setAnalystState({ status: "empty" });
+        return;
+      }
+      setAnalystState({
+        status: "done",
+        summary: data.summary ?? "",
+        actions: data.actions ?? [],
+        risks: data.risks ?? [],
+      });
+    } catch {
+      setAnalystState({ status: "empty" });
+    }
+  }, [analystSnapshot]);
 
   // The ledger refresh: attention + weekly trends drawn anew — shared by the unlock path and the simulator door.
   const refreshLedger = React.useCallback(async () => {
@@ -727,8 +779,59 @@ export default function AdminPage() {
       </section>
 
       <section>
-        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.optimizationsTitle")}</h2>
-        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.optimizationsLede")}</p>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-3xl">
+            <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.optimizationsTitle")}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{t("admin.optimizationsLede")}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={analystState.status === "thinking"}
+            onClick={() => void runAnalyst()}
+            className="gap-2"
+          >
+            <Sparkles aria-hidden className="size-4" />
+            {analystState.status === "thinking" ? t("admin.analysisThinking") : t("admin.analysisButton")}
+          </Button>
+        </div>
+
+        {analystState.status === "done" && (
+          <div className="mt-4 grid gap-3 rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
+            {analystState.summary && (
+              <p className="text-sm leading-relaxed text-foreground/90">{analystState.summary}</p>
+            )}
+            {analystState.actions.length > 0 && (
+              <div>
+                <p className="text-2xs uppercase tracking-widest text-primary">{t("admin.analysisActions")}</p>
+                <ul className="mt-2 grid gap-1.5">
+                  {analystState.actions.map((a, i) => (
+                    <li key={i} className="flex gap-2 text-sm leading-relaxed text-foreground/85">
+                      <span className="tabular-nums text-primary">{String(i + 1).padStart(2, "0")}.</span>
+                      <span>{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {analystState.risks.length > 0 && (
+              <div>
+                <p className="text-2xs uppercase tracking-widest text-warning">{t("admin.analysisRisks")}</p>
+                <ul className="mt-2 grid gap-1.5">
+                  {analystState.risks.map((r, i) => (
+                    <li key={i} className="flex gap-2 text-sm leading-relaxed text-foreground/85">
+                      <span className="tabular-nums text-warning">—</span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        {analystState.status === "empty" && (
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("admin.analysisEmpty")}</p>
+        )}
         {counsel.length > 0 ? (
           <ol className="mt-4 grid gap-2">
             {counsel.map((item, index) => (

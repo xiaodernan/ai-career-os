@@ -88,6 +88,17 @@ public interface AiServiceClient {
 
     Map<String, Object> jdSuggestions(UUID resumeVersionId, String jdRaw, UUID userId);
 
+    /**
+     * Epic 320 — the overseer's analyst: an LLM pass over the install's own aggregates.
+     * The snapshot carries no user rows: only the counts the admin ledger already renders.
+     * The ai-service keeps the same honesty contract everywhere else — anything the model
+     * invents that is not a number already in the snapshot is dropped before it reaches the
+     * operator, and silence is the failure mode rather than a guess.
+     */
+    default Map<String, Object> counsel(Map<String, Object> snapshot, UUID userId) {
+        return Map.of();
+    }
+
     Map<String, Object> interviewOpening(UUID sessionId, UUID userId);
 
     Map<String, Object> interviewAnswer(UUID sessionId, String answer, String question,
