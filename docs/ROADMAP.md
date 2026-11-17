@@ -6910,6 +6910,14 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **303** The book tells the truth about its spine (2026-11-17).
+
+  The stategraph chapter now names the three rooms the machine actually
+  powers: the tailor loop, the cover letter, and (Epic 302) the interview
+  report — whose dimension scores are clamped into the band the prompt
+  promised, or dropped. One sub-section added to the chapter, two keys in
+  both languages, the existing section structure untouched.
+
 - [x] **302** The interview report rides the StateGraph (2026-11-17).
 
   `finalize` was a single blind LLM call wearing setdefaults — every score the

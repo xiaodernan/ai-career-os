@@ -375,6 +375,10 @@ export default function PlaybookPage() {
               </li>
             ))}
           </ol>
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-5">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.stategraphRidersTitle")}</p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.stategraphRidersBody")}</p>
+          </div>
           <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-5">
             <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("playbook.stategraphLedgerTitle")}</p>
             <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.stategraphLedgerBody")}</p>

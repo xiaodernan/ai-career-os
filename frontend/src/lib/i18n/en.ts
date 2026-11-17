@@ -4063,6 +4063,9 @@ export const en = {
         "One live call on the machine that builds this, metered as it streamed (2026-11-16, gpt-6.1-terra): 7,424 of 7,510 prompt tokens were served from cache — the same prefix, seen before. A sample of one, not a promise about yours. The rule does not depend on the sample: what the model already remembers is what you do not pay to explain again.",
       keptGoingClosing: "The tool never asks if you're tired. It asks if you hit today. That is the only question the loop answers.",
       stategraphEyebrow: "Under the hood",
+      stategraphRidersTitle: "One spine, three rooms",
+      stategraphRidersBody:
+        "Not a demo: the tailor rewrites your resume through retrieve → draft → verify → render; the cover letter rides the identical flow; and the interview report — after the machine writes your eight dimension scores — clamps every one of them into the band the prompt promised, or drops it if it isn't a number at all. Three rooms, one bounded machine; the same cap refuses a runaway in each.",
       stategraphTitle: "How the engine thinks — the state graph",
       stategraphIntro:
         "The product's most important passes are drawn as explicit graphs of named nodes, not a smarter prompt. The tailor pipeline — the path that rewrites your resume for a posting — runs retrieve, draft, verify, render as one flow. Each node knows where it is; each writes its own line into the ledger; the graph cannot loop forever — it is capped, and the cap refuses a runaway instead of spinning one.",

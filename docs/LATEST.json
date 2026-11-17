@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T10:07:44.836418Z",
+  "generated_at": "2026-11-17T10:08:40.848431Z",
   "branch": "main",
-  "head": "f208ef1",
-  "total_commits": 1518,
-  "milestone": "Epic 302",
-  "milestone_full": "the ledger of done epics (through 454 items), closed at Epic 302 — The interview report rides the StateGraph (2026-11-17)",
+  "head": "264f833",
+  "total_commits": 1519,
+  "milestone": "Epic 303",
+  "milestone_full": "the ledger of done epics (through 455 items), closed at Epic 303 — The book tells the truth about its spine (2026-11-17)",
   "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 454,
-  "epics": 168,
+  "work_items": 455,
+  "epics": 169,
   "feature_surface": [
+    "Epic 303 — The book tells the truth about its spine (2026-11-17)",
     "Epic 302 — The interview report rides the StateGraph (2026-11-17)",
     "Epic 301 — The afterward's pointer, proven end to end (2026-11-17)",
     "Epic 300 — The book points at its card (2026-11-17)",
     "Epic 299 — The cache, counted out loud (2026-11-17)",
-    "Epic 298 — The Afterward knows your way home (2026-11-17)",
-    "Epic 297 — The showcase goes live on GitHub Pages (2026-11-17)"
+    "Epic 298 — The Afterward knows your way home (2026-11-17)"
   ]
 }
