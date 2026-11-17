@@ -6918,6 +6918,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **308** The negotiator's numbers are whitelisted (2026-11-17).
+
+  The counter-offer drafter rides the StateGraph: reason → ask → draft → verify
+  → render. The verify node is deterministic and deliberately tight -- the
+  candidate's letter may only mention the numbers the prompt gave them: the
+  benchmark's floor/ceiling, the count of credible samples, the offer, the
+  ask, the increase point. Anything else is invented and the letter refuses
+  itself in the place of an "okay, ship it".
+
+  Same StateGraph discipline the tailor (269), cover letter (287), interview
+  report (302), jd_analyze (307), outreach (307) and CoP hot loop (304) run.
+  Now the negotiator -- the one letter where inventing a number would have
+  real consequences -- shares the machinery.
+
 - [x] **307** The bookkeeper learns the ask is a step, not a monologue (2026-11-17).
 
   Three more front-line read paths gain the StateGraph discipline, all bounded,

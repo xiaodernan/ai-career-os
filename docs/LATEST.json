@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T13:06:12.422296Z",
+  "generated_at": "2026-11-17T13:20:34.596997Z",
   "branch": "main",
-  "head": "7376685",
-  "total_commits": 1,
-  "milestone": "Epic 307",
-  "milestone_full": "the ledger of done epics (through 459 items), closed at Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)",
+  "head": "57f0c58",
+  "total_commits": 1533,
+  "milestone": "Epic 308",
+  "milestone_full": "the ledger of done epics (through 460 items), closed at Epic 308 — The negotiator's numbers are whitelisted (2026-11-17)",
   "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 459,
-  "epics": 173,
+  "work_items": 460,
+  "epics": 174,
   "feature_surface": [
+    "Epic 308 — The negotiator's numbers are whitelisted (2026-11-17)",
     "Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)",
     "Epic 306 — The veto chapter lands in the book (2026-11-17)",
     "Epic 305 — The admin trends read the Monday letter's real pulse (2026-11-17)",
     "Epic 304 — The copilot's hot loop is a StateGraph now (2026-11-17)",
-    "Epic 303 — The book tells the truth about its spine (2026-11-17)",
-    "Epic 302 — The interview report rides the StateGraph (2026-11-17)"
+    "Epic 303 — The book tells the truth about its spine (2026-11-17)"
   ]
 }
