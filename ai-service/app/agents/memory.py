@@ -75,15 +75,67 @@ def _trim(text: str | None, limit: int) -> str:
     return text[:limit]
 
 
+def _order_distinct_apps(rows: list[dict], *, cap: int) -> list[dict]:
+    """Collapse floods of identical (title, company, status) rows into single lines.
+
+    The wire's e2e accounts apply to the same posting sixty-one times; listing the
+    triple sixty-one times floods the prefix cache with bytes that say nothing and
+    tells the model a lie about variety. The honest count costs one line and never
+    hides the material: ``×N`` is the true row count, unbounded. ``cap`` bounds how
+    many distinct triples are rendered.
+    """
+    counts: dict[tuple[str, str, str], int] = {}
+    for r in rows:
+        key = (_trim(r.get("title"), 64),
+               _trim(r.get("company"), 48),
+               _trim(r.get("status"), 12))
+        if not any(key):
+            continue
+        counts[key] = counts.get(key, 0) + 1
+    emitted: set[tuple[str, str, str]] = set()
+    out: list[dict] = []
+    for r in rows:
+        key = (_trim(r.get("title"), 64),
+               _trim(r.get("company"), 48),
+               _trim(r.get("status"), 12))
+        if not any(key) or key in emitted:
+            continue
+        emitted.add(key)
+        out.append({**r, "_count": counts[key]})
+        if len(out) >= cap:
+            break
+    return out
+
+
 async def build_dossier_context(user_id: str) -> str:
     """A rich, byte-stable dossier of the user's own material, for the prefix cache.
 
-    What the copilot saw arrive here is the user's actual career, every byte-identical
-    turn after a change: the latest resume plaintext, the last ten applications
-    (recency order), the last ten triggers to act, and the skills the wire has recorded.
-    No LLM call inside this function — the compiler builds it out of rows.
+    The dossier the copilot walks in with, built by the compiler from rows: the latest
+    resume plaintext (up to 10 k chars, verbatim), the 25 most recent distinct
+    applications with repeated rows shown as ``×N`` (bounds the synthetic-flood case
+    without inventing variety), the 15 best-scored matches with their technical and
+    missing-skill detail, the 10 most recent interview memories (the interviewer's own
+    notes on this candidate), the 14 goals the wire recorded (ambition is the
+    highest-signal memory class), and every named skill. Nothing here is invented; the
+    only writes are counts the wire already knows. Sections render in a fixed order,
+    every ORDER BY in the SQL carries an ``id`` tiebreak, and no timestamps enter —
+    the provider-side cache can serve every call after the first for the exact bytes.
     """
     out: list[str] = ["## Candidate dossier"]
+
+    digest_apps: int | None = None
+    digest_interviews: int | None = None
+    try:
+        totals = await db.fetch(
+            """SELECT (SELECT count(*) FROM applications WHERE user_id = $1::uuid) AS apps,
+                      (SELECT count(*) FROM user_memories
+                         WHERE user_id = $1::uuid AND kind = 'interview') AS interviews""",
+            user_id)
+        if totals:
+            digest_apps = totals[0].get("apps")
+            digest_interviews = totals[0].get("interviews")
+    except Exception as e:
+        log.warning("dossier: digest counters unavailable, continuing: %s", e)
 
     try:
         rv = await domain.get_current_resume_version(user_id)
@@ -91,31 +143,20 @@ async def build_dossier_context(user_id: str) -> str:
         log.warning("dossier: resume fetch failed, continuing: %s", e)
         rv = None
     if rv:
-        plain = _trim(rv.get("plaintext"), 3000)
+        plain = _trim(rv.get("plaintext"), 10000)
         label = _trim(rv.get("label"), 48) or "resume"
         out.append(f"### resume ({label})\n{plain}" if plain else f"### resume ({label})\n(plaintext not stored)")
 
     try:
         rows = await db.fetch(
-            """SELECT title, COALESCE(company_name, '') AS company, status, updated_at
+            """SELECT title, COALESCE(company_name, '') AS company, status, updated_at, id
                FROM applications
                WHERE user_id = $1::uuid
-               ORDER BY updated_at DESC NULLS LAST, created_at DESC
+               ORDER BY updated_at DESC NULLS LAST, created_at DESC, id DESC
                LIMIT 40""",
             user_id,
         )
-        seen: set[tuple[str, str, str]] = set()
-        apps = []
-        for r in rows:
-            key = (_trim(r.get("title"), 64),
-                   _trim(r.get("company"), 48),
-                   _trim(r.get("status"), 12))
-            if key in seen:
-                continue
-            seen.add(key)
-            apps.append(r)
-            if len(apps) >= 10:
-                break
+        apps = _order_distinct_apps(rows, cap=25)
     except Exception as e:
         log.warning("dossier: applications fetch failed, continuing: %s", e)
         apps = []
@@ -123,16 +164,18 @@ async def build_dossier_context(user_id: str) -> str:
         company = _trim(app.get("company"), 48)
         title = _trim(app.get("title"), 64)
         status = _trim(app.get("status"), 12)
-        out.append(f"- [app] {title} @{company} — {status}")
+        repeat = app.get("_count") if isinstance(app, dict) else None
+        suffix = f" ×{repeat}" if isinstance(repeat, int) and repeat > 1 else ""
+        out.append(f"- [app] {title} @{company} — {status}{suffix}")
 
     try:
         matches = await db.fetch(
-            """SELECT j.title, jm.overall, jm.technical, jm.missing_skills
+            """SELECT j.title, jm.overall, jm.technical, jm.missing_skills, jm.id
                FROM job_matches jm
                JOIN jobs j ON j.id = jm.job_id
                WHERE jm.user_id = $1::uuid
-               ORDER BY jm.created_at DESC NULLS LAST
-               LIMIT 10""",
+               ORDER BY jm.created_at DESC NULLS LAST, jm.id DESC
+               LIMIT 15""",
             user_id,
         )
     except Exception as e:
@@ -141,27 +184,37 @@ async def build_dossier_context(user_id: str) -> str:
     for m in matches:
         title = _trim(m.get("title"), 64)
         overall = m.get("overall")
+        technical = m.get("technical")
         overall = overall if isinstance(overall, (int, float)) else 0
-        missing = _trim(", ".join([str(s) for s in (m.get("missing_skills") or []) if isinstance(s, str)]), 80)
-        out.append(f"- [match {round(overall):.0%}] {title} — missing: {missing}")
+        technical = technical if isinstance(technical, (int, float)) else None
+        missing = _trim(", ".join([str(s) for s in (m.get("missing_skills") or []) if isinstance(s, str)]), 100)
+        tech = f", tech {round(technical):.0%}" if technical is not None else ""
+        out.append(f"- [match {round(overall):.0%}{tech}] {title} — missing: {missing}")
 
-    # The interview history is the wire's second-richest material after the resume.
-    # The interview_agent has been writing `kind=interview` rows for weeks; carrying
-    # the 5 most recent into the dossier gives the copilot the trajectory it actually
-    # trains on.
     try:
-        interviews = await domain.get_memories(user_id, kinds=["interview"], limit=5)
+        interviews = await domain.get_memories(user_id, kinds=["interview"], limit=10)
     except Exception as e:
         log.warning("dossier: interviews fetch failed, continuing: %s", e)
         interviews = []
     if interviews:
-        out.append("### interview memory")
+        out.append("### interview memory (the wire's notes on this candidate)")
         for iv in interviews:
-            content = _trim(iv.get("content") if isinstance(iv, dict) else None, 220)
+            content = _trim(iv.get("content") if isinstance(iv, dict) else None, 400)
             if content:
                 out.append(f"- {content}")
 
-    # The user's named skills. The wire already knows them; the dossier finally says them.
+    try:
+        goals = await domain.get_memories(user_id, kinds=["goal"], limit=14)
+    except Exception as e:
+        log.warning("dossier: goals fetch failed, continuing: %s", e)
+        goals = []
+    if goals:
+        out.append("### goals (the candidate's stated ambitions)")
+        for g in goals:
+            content = _trim(g.get("content") if isinstance(g, dict) else None, 400)
+            if content:
+                out.append(f"- {content}")
+
     try:
         profile = await domain.get_profile(user_id)
     except Exception as e:
@@ -174,9 +227,15 @@ async def build_dossier_context(user_id: str) -> str:
                                 if isinstance(s, (str, dict))} - {""})
             if canonical:
                 out.append(f"### dossier: skills ({len(canonical)} named)\n" +
-                           ", ".join(canonical[:30]))
+                           ", ".join(canonical[:60]))
 
-    return "\n".join(out) if len(out) > 2 else ""
+    if digest_apps is not None or digest_interviews is not None:
+        out.append(
+            f"### the wire at a glance\n"
+            f"- applications on file: {digest_apps if digest_apps is not None else 'unknown'}\n"
+            f"- mock-interview sessions practiced: {digest_interviews if digest_interviews is not None else 'unknown'}")
+
+    return "\n".join(out) if len(out) > 1 else ""
 
 
 EXTRACT_SYSTEM = """You maintain long-term memory for a career assistant.

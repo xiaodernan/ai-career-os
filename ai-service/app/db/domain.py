@@ -68,7 +68,7 @@ async def get_memories(user_id: str, kinds: list[str] | None = None, limit: int 
     rows = await db.fetch(
         """SELECT kind, key, content, importance FROM user_memories
            WHERE user_id=$1::uuid AND ($2::text[] IS NULL OR kind = ANY($2))
-           ORDER BY importance DESC, updated_at DESC LIMIT $3""",
+           ORDER BY importance DESC, updated_at DESC, id DESC LIMIT $3""",
         user_id, kinds, limit)
     return [dict(r) for r in rows]
 

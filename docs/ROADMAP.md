@@ -6918,6 +6918,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **315** The dossier never vanishes, and the count is true (2026-11-18).
+
+  The Epic 312 flood-guard collapsed sixty-one identical rows into one and the
+  `len(out) > 2` floor then returned the EMPTY dossier for a user with 61 applications
+  on file -- the copilot walked in knowing nothing and nobody noticed. The floor is
+  now `len(out) > 1` (heading + any material line), identical triples collapse into
+  one line carrying the **true** unbounded ``×N`` count, the digest says the real
+  totals (applications on file, mock-interviews practiced), the resume bound rises to
+  10 k chars, the matches gain their technical scores, goals are pulled out as their
+  own block (ambition is the highest-signal memory class), ordering tiebreaks every
+  ORDER BY by id, and interview/goal reads walk in deterministic id order. The flood
+  case and the lone-resume case are both pinned (`test_dossier_never_vanishes.py`,
+  5 tests); 8/8 dossier tests green. The dossier is byte-identical across two reads of
+  the same DB state; the provider-side cache serves every call after the first for the
+  prefix it can actually match, and the wire finally walks in knowing the count.
+
 - [x] **314** The health line learns what it can afford (2026-11-18).
 
   `scripts/load_probe.py` measured the live install under a 1/10/25/50/100-way read-health
