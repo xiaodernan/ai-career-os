@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T22:51:22.451505Z",
+  "generated_at": "2026-11-17T22:59:36.214722Z",
   "branch": "main",
-  "head": "4e94356",
-  "total_commits": 1578,
+  "head": "32d06ee",
+  "total_commits": 1580,
   "milestone": "Epic 320",
   "milestone_full": "the ledger of done epics (through 472 items), closed at Epic 320 — The overseer gets a second voice",
   "pushed_at": "2026-11-17",
