@@ -346,7 +346,14 @@ async def advance(*, mode: str, turns: list[dict], difficulty: float, qnum: int,
     graph = StateGraph("draft", {"draft": _draft, "verify": _verify, "render": _render},
                        max_steps=3)
     final = await graph.run({}, run_id=run_id, agent="interview")
-    return final["result"]
+    out = final["result"]
+    # Rebuild the wire shape explicitly so the response-shape contract gate can read
+    # the hop through `advance` and see its nested keys without guessing.
+    return {"action": out["action"],
+            "question": out["question"],
+            "topic": out["topic"],
+            "difficulty": out["difficulty"],
+            "reasoning": out["reasoning"]}
 
 
 FINALIZE_SYSTEM = f"""You produce the interview report. JSON only:
