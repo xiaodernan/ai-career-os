@@ -18,6 +18,7 @@ const CHAPTERS = [
   { href: "#manual", titleKey: "playbook.manualInAppTitle" },
   { href: "#keptgoing", titleKey: "playbook.keptGoingTitle" },
   { href: "#stategraph", titleKey: "playbook.stategraphTitle" },
+  { href: "#veto", titleKey: "playbook.vetoTitle" },
   { href: "#gate", titleKey: "playbook.gateTitle" },
   { href: "#inink", titleKey: "playbook.inInkTitle" },
   { href: "#edge", titleKey: "playbook.edgeTitle" },

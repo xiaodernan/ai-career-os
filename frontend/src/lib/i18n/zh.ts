@@ -3791,6 +3791,24 @@ export const zh = {
       stategraphRenderTitle: "render——决定落笔之前，你看到的是一张清单",
       stategraphRenderBody:
         "通过校验的修改落在你的结构化简历副本上，面板按块给你看差异，每个改动都标注：用了、还是打回来并附上具体理由。没有静默改动；没有编造混进去。同一个形状——写、按你的材料校验、渲染落笔——是全产品所有引擎的一样形状。",
+      vetoEyebrow: "求职信背后的那扇门",
+      vetoTitle: "拒绝的门",
+      vetoIntro:
+        "最新的两个房间都按同一外形运转：模型可以短暂地、优雅地编造——然后有一扇门说“不”。发明的技能、发明的数字——这道门没有 LLM，因为它的决定不依赖任何模型，你亲眼就能核对。",
+      vetoMindTitle: "发明的技能最响亮",
+      vetoMindBody:
+        "信件里说“Kafka”，但你的简历从未出现、岗位清单里没有、公司简介里没有——那就是虚构。校验器从两边各取技能词标，差集就是发明。这扇门专为信件设计——每扇门守的字典不同。",
+      vetoDraftTitle: "理由被原样带回",
+      vetoDraftBody:
+        "每一次被拒，结论都被完整带回模型重写：“VERIFIER REJECTION——把被拒绝的声明删除而不是改写，一切被它拒绝的不能再出现。”模型得到一次诚实的重写机会——直到通过为止。",
+      vetoRenderTitle: "还是通不过？照常渲染，并标记",
+      vetoRenderBody:
+        "重写用尽仍失败，信仍然会渲染——但拒绝标记不会被丢弃。渲染端保住 {letter, sources, mode, model} 应有的字段，trace 行上 rejected_count 会把失败钉在账本上——不会被伪装成“一切正常”。",
+      vetoYoursTitle: "每扇门你都能亲自审计",
+      vetoYoursBody:
+        "校验器是一个单文件 Python 函数：取词 tokens、求差集、完成。没有玄学、没有梯度追逐。下一次有人告诉你这封求职信是 AI 写的，你可以诚实地调用同一个函数：这个检查看一眼就能审。",
+      vetoClosing:
+        "解决幻觉不是更大的模型，而是在循环里放一个小而无聊、可以被你亲眼看见的门，以及把被标记的失败而不是沉默的“通过”交付给读者的勇气。",
       stategraphLedgerTitle: "你在哪里看到它——账本，不是魔法",
       stategraphLedgerBody:
         "每个节点都记在这次运行的图中：AI Activity 里可以看到 retrieve、draft、verify、render 四个节点按顺序排好的行，旁边是时长——机器自己写的字，不是只有工程师才能看懂的反馈。",

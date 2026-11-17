@@ -6918,6 +6918,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **306** The veto chapter lands in the book (2026-11-17).
+
+  The bounded-StateGraph mechanics are no longer only prose about the
+  tailor: the book grew a chapter for the door the letter and the report
+  meet — the deterministic veto. Skills and numbers are extracted from the
+  source text, set-differenced against the generated content; anything the
+  letter invents comes back as the reason the model must honor on retry,
+  and if the retry still fails, the render ships marked, never silent.
+
+  Two new keys per language in playbook's table; the two oldest route
+  consts in the book extended by one (veto slot inserted at 13; gate 12,
+  inink 14, edge 15, ledger 16, afterward 17); chapter-rail gains the veto
+  link; bundle budget 355 -> 358 with the reason recorded in the header —
+  the veto chapter plus the renumbered inink/edge/ledger/afterward tiles
+  cost the fullest routes ~2-3 kB of shared-table gzip.
+
 - [x] **305** The admin trends read the Monday letter's real pulse (2026-11-17).
 
   The overseer's weekly grid grew two tiles a single JVM could never see honestly:

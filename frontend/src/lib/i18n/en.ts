@@ -4081,6 +4081,24 @@ export const en = {
       stategraphRenderTitle: "render — the version you can read, before it ships",
       stategraphRenderBody:
         "The accepted changes apply onto a copy of your structured resume, and the panel shows you the diff with each hunk tagged: accepted, or rejected with the exact reason printed beside it. Nothing silently changes; nothing invented reaches the file. The same shape — write, verify against what's yours, render — carries every engine in the product.",
+      vetoEyebrow: "THE COVER LETTER'S DOOR",
+      vetoTitle: "The veto",
+      vetoIntro:
+        "The two newest rooms run on the same shape the tailor does: the model may invent — briefly, beautifully — and then a door says no to everything it made up. Invented skills, invented numbers — with no LLM anywhere in the decision, because the decision must be checkable without running a model.",
+      vetoMindTitle: "Invented skills speak louder",
+      vetoMindBody:
+        "A letter that says \"Kafka\" when your resume never named Kafka, a JD that demands it, or a company brief that mentions it is treated as fiction — the verifier extract_skills pulls tokens out of both sides, difference means invention. The tailor has its own door for the same promise. This one is for letters.",
+      vetoDraftTitle: "The reason rides back",
+      vetoDraftBody:
+        "A rejection is never thrown away. The letter loops back into draft mode carrying the reason as a binding clause: \"VERIFIER REJECTION — rewrite with the rejected claims REMOVED, not reworded; everything it rejected must not reappear.\" The model gets one honest retry.",
+      vetoRenderTitle: "Still failing? Ships, marked",
+      vetoRenderBody:
+        "If it fails again, the letter still renders. But the rejection stays attached to the artifact — never a silent pass. The answer frame keeps exactly `{letter, sources, mode, model}`, and the trace row carries rejected_count so the ledger refuses to pretend everything's fine.",
+      vetoYoursTitle: "You can audit every door",
+      vetoYoursBody:
+        "The verifier is a single-file Python function: extract tokens, set difference, done. No mystery, no gradient chase. Next time someone tells you an AI wrote your cover letter, you can honestly call on the same function — the check is shorter than the letter it guards.",
+      vetoClosing:
+        "The answer to hallucination is not a bigger model. It is a small, boring, auditable gate in the loop — and the honesty to ship a marked failure over a silent one.",
       stategraphLedgerTitle: "How you see it — the ledger, not the magic",
       stategraphLedgerBody:
         "Every node is recorded as a graph_node trace on the run: in AI Activity you will see rows named retrieve, draft, verify, render for a tailor turn, in order, with durations beside them — the machine's own handwriting, not a summary only an engineer could read.",

@@ -417,11 +417,37 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.gateClosing")}</p>
         </section>
 
+        {/* The Veto — the letter's door that refuses invention (Epic 306) */}
+        <section id="veto" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.vetoEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">13</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.vetoTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.vetoIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {[
+              { title: t("playbook.vetoMindTitle"), body: t("playbook.vetoMindBody") },
+              { title: t("playbook.vetoDraftTitle"), body: t("playbook.vetoDraftBody") },
+              { title: t("playbook.vetoRenderTitle"), body: t("playbook.vetoRenderBody") },
+              { title: t("playbook.vetoYoursTitle"), body: t("playbook.vetoYoursBody") },
+            ].map((node, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {node.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{node.body}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.vetoClosing")}</p>
+        </section>
+
         {/* The evidence table — this product owns its own numbers (Epic 274) */}
         <section id="inink" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.inInkEyebrow")}</p>
-            <span className="text-2xs tabular-nums text-muted-foreground">13</span>
+            <span className="text-2xs tabular-nums text-muted-foreground">14</span>
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.inInkTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.inInkIntro")}</p>
@@ -447,7 +473,7 @@ export default function PlaybookPage() {
         <section id="edge" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.edgeEyebrow")}</p>
-            <span className="text-2xs tabular-nums text-muted-foreground">14</span>
+            <span className="text-2xs tabular-nums text-muted-foreground">15</span>
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.edgeTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.edgeIntro")}</p>
@@ -473,7 +499,7 @@ export default function PlaybookPage() {
         <section id="afterward" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.afterwardEyebrow")}</p>
-            <span className="text-2xs tabular-nums text-muted-foreground">16</span>
+            <span className="text-2xs tabular-nums text-muted-foreground">17</span>
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.afterwardTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.afterwardIntro")}</p>
@@ -509,7 +535,7 @@ export default function PlaybookPage() {
         <section id="ledger" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.ledgerEyebrow")}</p>
-            <span className="text-2xs tabular-nums text-muted-foreground">15</span>
+            <span className="text-2xs tabular-nums text-muted-foreground">16</span>
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.ledgerTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.ledgerIntro")}</p>
