@@ -33,6 +33,8 @@ FRONTEND_ROOTS = [REPO / "frontend" / "src" / "app",
 # is UI-less. The frontend's NEVER_REFERENCED ledger is the source of this record; the
 # two gates disagree only when one of them drifted, which is the point of running both.
 UI_LESS_ROUTES = {
+    "GET /health/live":
+      "Epic 314's zero-probe liveness line; container restart loops and cheap gating probe it, the browser deliberately never does -- it is a probe, not a surface",
     "GET /calendar.ics": "the feed address is pasted into a calendar client; the settings card copies the URL the backend already signed",
     "GET /me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "PATCH /me": "MeController's alias; the app PATCHes /users/me/profile instead",

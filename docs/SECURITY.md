@@ -62,6 +62,8 @@ reachable from a browser.
   — the operator-assisted path the runbook spells out — so the accounts return to
   password-only sign-in and can enroll again.
 - Public (unauthenticated) routes: `/api/v1/auth/**`, `/api/v1/health`,
+  `/api/v1/health/live` (Epic 314's zero-probe liveness line — the deep report
+  above answers readiness, liveness asks nothing; restart loops hit this one),
   OpenAPI/Swagger (`/api-docs/**`, `/v3/api-docs/**`, `/swagger-ui/**`,
   `/swagger-ui.html` — `application.yml` serves them at `/api-docs` and
   `/api-docs/ui`, and the filter admits both spellings), CORS preflight

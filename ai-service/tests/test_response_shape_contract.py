@@ -1115,8 +1115,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 227 with Epic 267's `AttentionRequest` (the {journey?, path, event, value?} body the
     # browser posts to its own row-writer; it crosses no service seam and owns no storage,
     # but it is a wire contract — the shared opener reads it, the wire carries it).
-    assert len(declared) == 227, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 227 measured"
+    # 228 with Epic 314's `CachedReport` (the {report, expiresAtNanos} pair HealthService
+    # keeps in its two-second burst cache; private to the module, reaches no route, held
+    # to the opener for the same reason as Flow/Series/Pending).
+    assert len(declared) == 228, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 228 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
