@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T12:56:42.135190Z",
+  "generated_at": "2026-11-17T13:06:12.422296Z",
   "branch": "main",
-  "head": "d3a0327",
-  "total_commits": 1531,
+  "head": "7376685",
+  "total_commits": 1,
   "milestone": "Epic 307",
   "milestone_full": "the ledger of done epics (through 459 items), closed at Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)",
   "pushed_at": "2026-11-17",
