@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+import re
+
+from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask, stable_messages
 from app.core.deps import Ctx, require_internal
 from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
@@ -116,31 +119,64 @@ async def rag_answer(req: AnswerReq, ctx: Ctx = Depends(require_internal)):
         raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
     run_id = req.run_id or ctx.run_id or await observability.create_run(
         ctx.user_id, "rag", "rag_answer")
-    r = await retrieve(req.query, user_id=ctx.user_id, run_id=run_id,
-                       context_summary=req.context_summary, top_k=req.top_k,
-                       kinds=req.kinds, document_ids=req.document_ids)
-    # The second checkpoint: retrieval can burn the whole budget by itself (a miss
-    # storm on a cold corpus). If the caller is gone by the time the evidence is in,
-    # the model call that follows is pure waste -- stop before it.
-    remaining = deadline_remaining_ms()
-    if remaining is not None and remaining <= 0:
-        raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
-    evidence = r["evidence"]
-    user_prompt = (
-        f"User question: {req.query}\n\n"
-        + (r.get("context_block") or "(no personal evidence found — say what is missing and "
-           "answer only from general knowledge if safe)")
-    )
-    llm = await ask(LLMRequest(
-        messages=stable_messages(ANSWER_SYSTEM, LLMMessage("user", user_prompt)),
-        temperature=0.3, max_tokens=1600),
-        user_id=ctx.user_id, run_id=run_id, agent="rag", kind="rag_answer")
-    # No usage figures passed: the run's own events (this call plus the embeddings behind the
-    # evidence) are the ledger, and finish_run derives the rollup from them. Passing only this
-    # one response's usage would have undercounted the run.
-    await observability.finish_run(run_id, "completed")
-    return {"answer": llm.text, "citations": evidence, "understanding": r["understanding"],
-            "run_id": run_id}
+
+    # Bounded StateGraph: retrieve → answer → verify → render. Verify is deterministic —
+    # no LLM in the evidence check — and it catches the one failure the browser cannot
+    # by itself: a citation like [12] when only 6 chunks were retrieved. That is a
+    # fabricated reference, and the ledger must say so.
+    async def _retrieve(state: dict) -> NodeResult:
+        r = await retrieve(req.query, user_id=ctx.user_id, run_id=run_id,
+                           context_summary=req.context_summary, top_k=req.top_k,
+                           kinds=req.kinds, document_ids=req.document_ids)
+        return NodeResult({"retrieved": r}, "answer", trace={"kind": "rag_answer"})
+
+    async def _answer_node(state: dict) -> NodeResult:
+        # The second checkpoint from the pre-graph code, kept in the right node:
+        # retrieval can burn the whole budget by itself (a miss storm on a cold corpus).
+        # If the caller is gone by the time the evidence is in, stop before the model.
+        remaining = deadline_remaining_ms()
+        if remaining is not None and remaining <= 0:
+            raise raise_refusal(SERVICE_DEADLINE_EXCEEDED)
+        r = state["retrieved"]
+        evidence = r["evidence"]
+        user_prompt = (
+            f"User question: {req.query}\n\n"
+            + (r.get("context_block") or "(no personal evidence found — say what is missing and "
+               "answer only from general knowledge if safe)")
+        )
+        llm = await ask(LLMRequest(
+            messages=stable_messages(ANSWER_SYSTEM, LLMMessage("user", user_prompt)),
+            temperature=0.3, max_tokens=1600),
+            user_id=ctx.user_id, run_id=run_id, agent="rag", kind="rag_answer")
+        return NodeResult({"llm": llm, "evidence": evidence}, "verify",
+                           trace={"kind": "rag_answer"})
+
+    _CITATION_RE = re.compile(r"\[(\d+)\]")
+
+    async def _verify(state: dict) -> NodeResult:
+        n = len(state["evidence"])
+        hits = _CITATION_RE.findall(state["llm"].text or "")
+        out_of_range = sum(1 for h in hits if 0 < int(h) > n)
+        return NodeResult({"verified": True, "out_of_range": out_of_range}, "render",
+                          trace={"out_of_range": out_of_range, "evidence_count": n})
+
+    async def _render(state: dict) -> NodeResult:
+        r = state["retrieved"]
+        llm = state["llm"]
+        await observability.finish_run(run_id, "completed")
+        return NodeResult({"response": {
+            "answer": llm.text,
+            "citations": state["evidence"],
+            "understanding": r["understanding"],
+            "run_id": run_id,
+        }}, None, trace={"stage": "render"})
+
+    graph = StateGraph("retrieve", {"retrieve": _retrieve, "answer": _answer_node,
+                                     "verify": _verify, "render": _render},
+                       max_steps=4)
+    final = await graph.run({"query": req.query}, run_id=run_id, agent="rag")
+    return {"answer": final["response"]["answer"], "citations": final["response"]["citations"],
+            "understanding": final["response"]["understanding"], "run_id": final["response"]["run_id"]}
 
 
 @router.post("/chunks")

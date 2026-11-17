@@ -6918,6 +6918,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **309** The thirty-thousand-line graph audit is now mechanical (2026-11-17).
+
+  The StateGraph discipline was ratified in this installation: every LLM call
+  in the production engine rides a bounded StateGraph with a deterministic
+  verify node. The gate is now mechanical: `test_every_llm_call_rides_the_stategraph.py`
+  walks `app/` and fails the lane if any file calls `ask_json`, `ask`, or
+  `ask_stream` without either a `StateGraph` import or an explicit approved
+  one-shot reason. No exceptions that aren't in writing.
+
+  Same pass covered the three remaining prod-active LLM sites that were
+  not yet on the spine:
+
+  - **`resume_parse`**: extract → verify → render. Every provenance field
+    (school / company / project name) is checked deterministically against
+    the raw resume text; a fabricated school, company or project row is
+    dropped, never surfaced.
+  - **`api/rag.py`**: retrieve → answer → verify → render. The answer step
+    catches citation markers like [12] when only 6 chunks were retrieved —
+    a fabricated reference the ledger must record.
+  - **`test_every_llm_call_rides_the_stategraph`**: the regression gate;
+    adding an approved-but-direct path means committing your reason to the
+    test file where anyone auditing the engine can read it.
+
 - [x] **308** The negotiator's numbers are whitelisted (2026-11-17).
 
   The counter-offer drafter rides the StateGraph: reason → ask → draft → verify

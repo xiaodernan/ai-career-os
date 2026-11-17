@@ -1,11 +1,11 @@
 """Resume parsing: raw text -> canonical ResumeParseResult (PRD §3)."""
 
 
-from app.core.ai import stable_messages, wrap_untrusted
+from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import category, extract_skills, normalize
 from app.features.schemas import ResumeParseResult
 from app.providers.base import LLMMessage, LLMRequest
-from app.core.ai import ask_json
+from app.agents.stategraph import NodeResult, StateGraph
 
 SYSTEM = """You extract structured data from a resume. JSON only, matching this schema:
 {
@@ -29,33 +29,85 @@ Rules:
 
 
 async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
+    """Bounded StateGraph: extract → verify → render.
+
+    The verifier is deterministic — no LLM in the evidence check. For every
+    school/company/project row the model emitted, each token of its primary name must
+    appear somewhere in the raw resume text. A fabricated school, company or project
+    name is dropped; the section is recorded in `missingSections` exactly like the
+    existing contract guarantees it.
+    """
     text = text if isinstance(text, str) else ""
-    req = LLMRequest(
-        messages=stable_messages(
-            SYSTEM,
-            LLMMessage("user", wrap_untrusted("RESUME", text[:24000])),
-        ),
-        temperature=0.0, max_tokens=4000)
-    raw = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume",
-                         kind="resume_parse")
-    prof = raw.get("profile") or {}
-    raw["profile"] = prof
-    # normalization passes that do NOT depend on the LLM being perfect:
-    text_skills = extract_skills(text)
-    llm_skills = [s for s in raw.get("skills") or [] if isinstance(s, dict) and s.get("name")]
-    raw["skills"] = _merge_skills(llm_skills, text_skills)
-    raw["missingSections"] = raw.get("missingSections") or []
-    raw["warnings"] = raw.get("warnings") or []
-    for section, key in (("experience", "experience"), ("projects", "projects"),
-                         ("education", "education"), ("skills", "skills")):
-        if not raw.get(key) and section not in raw["missingSections"]:
-            raw["missingSections"].append(section)
-    try:  # validate shape; keep raw dict (extra keys tolerated)
-        ResumeParseResult(**{k: v for k, v in raw.items()
-                             if k in ResumeParseResult.model_fields})
-    except Exception as e:  # noqa: BLE001
-        raw["warnings"].append(f"schema_repair_needed: {e}")
-    return raw
+    corpus = " ".join(str(text).lower().split())
+
+    async def _extract(state: dict) -> NodeResult:
+        req = LLMRequest(
+            messages=stable_messages(
+                SYSTEM,
+                LLMMessage("user", wrap_untrusted("RESUME", text[:24000])),
+            ),
+            temperature=0.0, max_tokens=4000)
+        raw = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume",
+                             kind="resume_parse")
+        if not isinstance(raw, dict):
+            raw = {}
+        return NodeResult({"model": raw}, "verify", trace={"kind": "resume_parse"})
+
+    _PROVENANCE_KEYS = (
+        ("experience", "company"),
+        ("education", "school"),
+        ("projects", "name"),
+    )
+
+    async def _verify(state: dict) -> NodeResult:
+        raw = dict(state.get("model") or {})
+        dropped = 0
+        for section, key in _PROVENANCE_KEYS:
+            rows = raw.get(section)
+            if not isinstance(rows, list):
+                continue
+            clean = []
+            for item in rows:
+                if not isinstance(item, dict):
+                    dropped += 1
+                    continue
+                value = item.get(key)
+                tokens = " ".join(str(value or "").lower().split()).split()
+                if tokens and all(tok in corpus for tok in tokens):
+                    clean.append(item)
+                else:
+                    dropped += 1
+            raw[section] = clean
+        return NodeResult({"verified": raw, "dropped": dropped}, "render",
+                           trace={"dropped": dropped})
+
+    async def _render(state: dict) -> NodeResult:
+        raw = dict(state.get("verified") or {})
+        prof = raw.get("profile") or {}
+        raw["profile"] = prof if isinstance(prof, dict) else {}
+        # normalization passes that do NOT depend on the LLM being perfect:
+        text_skills = extract_skills(text)
+        llm_skills = [s for s in raw.get("skills") or [] if isinstance(s, dict) and s.get("name")]
+        raw["skills"] = _merge_skills(llm_skills, text_skills)
+        missing = raw.get("missingSections")
+        raw["missingSections"] = missing if isinstance(missing, list) else []
+        warnings = raw.get("warnings")
+        raw["warnings"] = warnings if isinstance(warnings, list) else []
+        for section, key in (("experience", "experience"), ("projects", "projects"),
+                             ("education", "education"), ("skills", "skills")):
+            if not raw.get(key) and section not in raw["missingSections"]:
+                raw["missingSections"].append(section)
+        try:  # validate shape; keep raw dict (extra keys tolerated)
+            ResumeParseResult(**{k: v for k, v in raw.items()
+                                 if k in ResumeParseResult.model_fields})
+        except Exception as e:  # noqa: BLE001
+            raw["warnings"].append(f"schema_repair_needed: {e}")
+        return NodeResult({"result": raw}, None, trace={"stage": "render"})
+
+    graph = StateGraph("extract", {"extract": _extract, "verify": _verify, "render": _render},
+                       max_steps=4)
+    final = await graph.run({"text": text}, run_id=run_id, agent="resume")
+    return final["result"]
 
 
 def _merge_skills(llm_skills: list[dict], text_skills: list[str]) -> list[dict]:
