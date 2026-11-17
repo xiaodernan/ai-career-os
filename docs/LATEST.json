@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T12:38:58.042275Z",
+  "generated_at": "2026-11-17T12:39:17.122059Z",
   "branch": "main",
-  "head": "befd27a",
-  "total_commits": 1529,
+  "head": "b818b7a",
+  "total_commits": 1,
   "milestone": "Epic 306",
   "milestone_full": "the ledger of done epics (through 458 items), closed at Epic 306 — The veto chapter lands in the book (2026-11-17)",
   "pushed_at": "2026-11-17",
