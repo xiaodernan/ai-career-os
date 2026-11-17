@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T15:40:48.935838Z",
+  "generated_at": "2026-11-17T15:42:27.222607Z",
   "branch": "main",
-  "head": "81d7360",
-  "total_commits": 1545,
+  "head": "6c49291",
+  "total_commits": 1546,
   "milestone": "Epic 313",
   "milestone_full": "the ledger of done epics (through 465 items), closed at Epic 313 — The interview's three decision calls ride the bounded StateGraph (2026-11-17)",
   "pushed_at": "2026-11-17",
