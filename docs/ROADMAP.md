@@ -6910,6 +6910,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **302** The interview report rides the StateGraph (2026-11-17).
+
+  `finalize` was a single blind LLM call wearing setdefaults — every score the
+  reader saw was whatever the model chose to emit, bounded by nothing. It now
+  rides the same bounded StateGraph the tailor and cover-letter paths run:
+  draft (the model, with the existing FINALIZE_SYSTEM prompt unchanged),
+  verify (deterministic: every dimension coerced to a real number, clamped
+  into [0, 1] or dropped; overall kept when legally bounded, clamped when it
+  is not), render (trajectory_detail rebuilt from the rows, as before).
+
+  The report's failure mode is no longer "the model had ideas about what
+  1.0 means". 88.0 clamps to 1.0. "high" is not a score and never reaches the
+  UI. NaN is not a report. The prompt promised dims in [0, 1]; the graph
+  enforces it.
+
+  Existing contract gates are untouched: `inspect.getsource(interview.finalize)`
+  still finds every declared writer because the nodes are nested closures, and
+  the FINALIZE_FIELDS / STUDY_ITEM_FIELDS prompt-injection guards are
+  unchanged. tests/test_finalize_stategraph.py pins the hardening class with
+  hostile model output (88.0, "−3", "high", True, NaN, inf); the full
+  interview/finalize selection passes 115/115.
+
 - [x] **301** The afterward's pointer, proven end to end (2026-11-17).
 
   The pointer Epic 298 added got its browser-side proof: a fresh account

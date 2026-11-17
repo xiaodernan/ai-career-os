@@ -8,6 +8,7 @@ up. Difficulty adapts to answer quality; the question/answer tree becomes the
 
 import json
 
+from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask, ask_json, stable_messages, wrap_untrusted
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -247,18 +248,72 @@ async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
     ctx = resume_ctx if isinstance(resume_ctx, str) else ""
     prompt = (f"Mode {mode}. Candidate context (untrusted):\n"
               f"{wrap_untrusted('CTX', ctx[:1500])}\n\nTRANSCRIPT:\n{convo}")
-    try:
-        out = await ask_json(LLMRequest(
-            messages=stable_messages(FINALIZE_SYSTEM, LLMMessage("user", prompt)),
-            temperature=0.2, max_tokens=1600),
-            user_id=user_id, run_id=run_id, agent="interview", kind="interview_finalize")
-    except Exception:
-        out = {}
-    out = out if isinstance(out, dict) else {}
-    out["trajectory_detail"] = _trajectory_detail(turns)
-    out.setdefault("dims", {})
-    out.setdefault("overall", 0.5)
-    return out
+
+    # The report rides the bounded StateGraph (Epic 302) — retrieve-shaped: the model drafts,
+    # the graph bounds, the renderer lands. Verify is deterministic by design: everything the
+    # reader sees must hold promises the prompt gave, and no promise else.
+    async def _draft(state: dict) -> NodeResult:
+        try:
+            out = await ask_json(LLMRequest(
+                messages=stable_messages(FINALIZE_SYSTEM, LLMMessage("user", prompt)),
+                temperature=0.2, max_tokens=1600),
+                user_id=user_id, run_id=run_id, agent="interview",
+                kind="interview_finalize")
+        except Exception:
+            out = {}
+        if not isinstance(out, dict):
+            out = {}
+        return NodeResult({"draft": out}, "verify", trace={"modelReturnedDims": bool(out.get("dims"))})
+
+    async def _verify(state: dict) -> NodeResult:
+        draft = state.get("draft") or {}
+        dims = draft.get("dims") if isinstance(draft.get("dims"), dict) else {}
+        # The reader promises scores in [0, 1] for every dimension; the model did not always
+        # hold that (88.0 reads like a report and is a bug). Every dimension is coerced, kept
+        # only when it is a real number, clamped otherwise — never dropped into the UI.
+        clean: dict[str, float] = {}
+        dropped = 0
+        for key, value in dims.items():
+            if not isinstance(key, str) or not key:
+                dropped += 1
+                continue
+            try:
+                f = float(value)
+            except (TypeError, ValueError):
+                dropped += 1
+                continue
+            if f != f or f == float("inf") or f == float("-inf"):
+                dropped += 1
+                continue
+            clean[key[:64]] = max(0.0, min(1.0, f))
+        # Overall follows the same rule: keep the model's number when it is legally bounded,
+        # clamp it into the band when it is not — never invent one from thin air.
+        overall = draft.get("overall")
+        try:
+            overall_f = float(overall) if overall is not None else None
+        except (TypeError, ValueError):
+            overall_f = None
+        if overall_f is None or overall_f != overall_f:
+            overall_f = 0.5
+        overall_f = max(0.0, min(1.0, overall_f))
+        return NodeResult(
+            {"verified": {**draft, "dims": clean, "overall": overall_f}},
+            "render",
+            trace={"droppedDimensions": dropped},
+        )
+
+    async def _render(state: dict) -> NodeResult:
+        out = dict(state.get("verified") or {})
+        out["dims"] = out.get("dims") or {}
+        out["overall"] = out.get("overall") if out.get("overall") is not None else 0.5
+        out["trajectory_detail"] = _trajectory_detail(turns)
+        return NodeResult({"result": out}, None, trace={})
+
+    graph = StateGraph("draft", {"draft": _draft, "verify": _verify, "render": _render},
+                       max_steps=4)
+    final = await graph.run({"mode": mode, "turns": rows, "convo": convo, "resume_ctx": ctx},
+                            run_id=run_id, agent="interview")
+    return final["result"]
 
 
 def _trajectory_detail(turns: list[dict]) -> list[dict]:
