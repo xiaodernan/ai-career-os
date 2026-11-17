@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T14:53:01.572554Z",
+  "generated_at": "2026-11-17T14:55:06.811207Z",
   "branch": "main",
-  "head": "7ff3598",
-  "total_commits": 1541,
+  "head": "3f8acff",
+  "total_commits": 1542,
   "milestone": "Epic 311",
   "milestone_full": "the ledger of done epics (through 463 items), closed at Epic 311 — Every memory the wire writes passes the StateGraph verify node (2026-11-17)",
   "pushed_at": "2026-11-17",
