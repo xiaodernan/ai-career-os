@@ -31,7 +31,6 @@ APP = Path(__file__).resolve().parent.parent / "app"
 APPROVED_DIRECT_PATHS: dict[str, str] = {
     "rag/rewrite.py": "Query understanding — one-shot helper, no fabrication room (rewrites a user's query, never invents)",
     "rag/rerank.py": "Rerank — one-shot helper, capped at judge-max-8-candidates, no fabrication room",
-    "features/match.py": "Match narrative — one-shot prose generation over 100% deterministic computed facts; the numbers are the guard",
     "features/reply_classify.py": "Reply classify — cue-gated, a categorical whitelist, not an open-generation seam",
     "features/counter_offer.py": "Counter-offer — *moved* to StateGraph in Epic 308; this name renders `compose()` (deterministic-only helper)",
     "agents/memory.py": "Memory extraction — runs at 0-temp with explicit sanitize rules downstream, not an open-generation seam",

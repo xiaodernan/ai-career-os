@@ -6,7 +6,9 @@ then every criterion is bound to retrieved evidence chunks so the UI can show
 """
 
 import logging
+import re
 
+from app.agents.stategraph import NodeResult, StateGraph
 from app.core import db
 from app.core.ai import ask, stable_messages
 from app.core.skills import extract_skills, normalize
@@ -323,6 +325,104 @@ def _why_match(matched: list[str], req: list[dict], pref: list[dict], experience
     return out
 
 
+_EN_WORD_NUM = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+    "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+    "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+    "seventeen": 17, "eighteen": 18, "nineteen": 19,
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
+    "seventy": 70, "eighty": 80, "ninety": 90,
+}
+_CN_NUM = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5,
+           "六": 6, "七": 7, "八": 8, "九": 9, "十": 10, "百": 100}
+
+
+def _word_number(raw: str) -> float | None:
+    """Parse a single-token written numeral: English ("six", "twenty-one") or
+    Chinese ("九", "十二", "二十"). Anything unparseable returns None and the
+    auditor skips it rather than rejecting prose it cannot understand."""
+    token = raw.strip().lower().replace("-", " ")
+    if token in _EN_WORD_NUM:
+        return float(_EN_WORD_NUM[token])
+    parts = [p for p in token.split() if p]
+    if len(parts) > 1 and all(p in _EN_WORD_NUM for p in parts):
+        return float(sum(_EN_WORD_NUM[p] for p in parts))
+    cn = [_CN_NUM.get(c) for c in token]
+    if token and all(v is not None for v in cn):
+        if len(cn) == 1:
+            return float(cn[0])
+        if len(cn) == 2 and cn[0] == 1:          # 十X
+            return float(10 + cn[1])
+        if len(cn) == 2 and cn[1] == 10:         # X十
+            return float(cn[0] * 10)
+    return None
+
+
+def _audit_narrative_numbers(text: str, allowed_percents: set[int],
+                             years_reference: list[float]) -> list[str]:
+    """Every number the narrative states that the computed facts did not.
+
+    Two shapes are audited. Percentages: the five computed scores are the only
+    ones the model was given, so any percentage whose round(value) is not one of
+    them is an invention the UI must not render as if it were arithmetic. Years:
+    the model was given the candidate's computed years and the JD's bar; a year
+    count in prose is checked against those two (with 0.5 of float slack), never
+    against nothing at all. Bare counts ("3 of 9 skills") are audited loosely —
+    any integer below the number of JD-listed skills is accepted as a count the
+    model read off the facts, anything above is not.
+
+    Returns the offending substrings; empty means the prose stayed inside the
+    numbers the wire computed.
+    """
+    out: list[str] = []
+
+    for m in re.finditer(r"(\d+(?:\.\d+)?)\s*%", text):
+        try:
+            v = float(m.group(1))
+        except ValueError:
+            continue
+        r = round(v)
+        if r not in allowed_percents:
+            out.append(m.group(0))
+
+    for m in re.finditer(r"(\d+(?:\.\d+)?)\s*(?:years?|yrs?|y\b|年)", text, re.IGNORECASE):
+        try:
+            v = float(m.group(1))
+        except ValueError:
+            continue
+        if not any(abs(v - ref) <= 0.5 for ref in years_reference):
+            out.append(m.group(0))
+
+    # Single-token numerals written as words, English and Chinese ("six years",
+    # "年" with 九/十二/二十): the commonest slipping variant. Compound Chinese
+    # numerals beyond two characters ("三十二") stay out of scope deliberately;
+    # an unparseable word is skipped, never flagged — the gate must not
+    # hallucinate its own rejections.
+    for m in re.finditer(r"([零一二三四五六七八九十百两])\s*年", text):
+        v = _word_number(m.group(1))
+        if v is None:
+            continue
+        if not any(abs(v - ref) <= 0.5 for ref in years_reference):
+            out.append(m.group(0))
+
+    for m in re.finditer(r"([A-Za-z]{1,24})\s*(?:years?|yrs?|y\b|percent)", text,
+                         re.IGNORECASE):
+        v = _word_number(m.group(1))
+        if v is None:
+            continue
+        trailing = m.group(0)
+        if re.search(r"percent\s*$", trailing, re.IGNORECASE):
+            # a word-percent: check against the allowed percentage set instead
+            r = round(v)
+            if r not in allowed_percents:
+                out.append(m.group(0))
+            continue
+        if not any(abs(v - ref) <= 0.5 for ref in years_reference):
+            out.append(m.group(0))
+
+    return out
+
+
 async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
                         job_id: str | None = None, run_id: str | None = None) -> dict:
     resume_parsed = resume_parsed or {}
@@ -370,30 +470,90 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
                      "chunk_ids": [], "quote": exp_note, "source": "Resume",
                      "section": "experience", "reasoning": exp_note})
 
-    # ---- LLM narrative constrained to computed numbers ----
+    # ---- LLM narrative, riding the bounded spine (Epic 316) ----
+    # The narrative is the only part of this engine that needs a provider; every number
+    # above is deterministic. The draft is prose written over the computed facts, the
+    # verify node fingerprints every percentage and year the model states against the
+    # set the wire computed (±0.5 of float slack), one bounded revision is offered when
+    # the first draft invents one, and the fallback is the computed facts — never the
+    # invented prose on the UI.
     facts = (f"Computed scores — overall:{overall:.0%}, technical:{technical:.0%} "
              f"({len(matched)} of {len(req) + len(pref)} listed skills matched), "
              f"experience:{experience:.0%} ({exp_note}) projects:{projects:.0%} education:{education:.0%}.\n"
              f"Matched: {', '.join(matched[:12])}\nMissing: {', '.join(missing[:12])}")
-    try:
-        llm = await ask(LLMRequest(
-            messages=stable_messages(
-                "You are a hiring analyst. Using ONLY the computed facts, "
-                "write 2 short paragraphs: (1) overall assessment, (2) the "
-                "top 2-3 concrete actions to improve chances. Do not change "
-                "or restate numbers beyond those given; do not invent "
-                "experience. Plain text.",
-                LLMMessage("user", f"JD: {jd.get('title','')} at {jd.get('company','')}\n{facts}"),
-            ), temperature=0.4, max_tokens=500),
-            user_id=user_id, run_id=run_id, agent="jd_analyst", kind="match_narrative")
-        narrative, model = llm.text, llm.model
-    except Exception as e:
-        # The narrative is the only part of this engine that needs a provider; every
-        # number above is deterministic. Failing the whole match because the prose could
-        # not be written would discard a score the user can act on -- `calculate_match`
-        # would answer with a tool error instead of "72%, missing Kafka".
-        log.warning("match narrative failed; answering with the computed facts: %s", e)
-        narrative, model = facts, ""
+    have_years = _user_years(resume_parsed)
+    need_years = jd.get("experienceYears")
+    years_reference = [have_years]
+    if isinstance(need_years, (int, float)):
+        years_reference.append(float(need_years))
+    allowed_percents = {round(v * 100) for v in (overall, technical, experience, projects, education)}
+
+    async def _draft(state: dict) -> NodeResult:
+        feedback = state.get("verifier_feedback") or ""
+        user_prompt = f"JD: {jd.get('title','')} at {jd.get('company','')}\n{facts}"
+        if feedback:
+            user_prompt += ("\n\nVERIFIER REJECTION (rewrite completely; none of these "
+                            f"may remain or be rephrased as-is): {feedback}")
+        draft = None
+        try:
+            llm = await ask(LLMRequest(
+                messages=stable_messages(
+                    "You are a hiring analyst. Using ONLY the computed facts, "
+                    "write 2 short paragraphs: (1) overall assessment, (2) the "
+                    "top 2-3 concrete actions to improve chances. Do not change "
+                    "or restate numbers beyond those given; do not invent "
+                    "experience. Plain text.",
+                    LLMMessage("user", user_prompt),
+                ), temperature=0.4, max_tokens=500),
+                user_id=user_id, run_id=run_id, agent="jd_analyst",
+                kind="match_narrative")
+            draft = {"text": llm.text, "model": llm.model}
+        except Exception as e:
+            # The narrative is the only part of this engine that needs a provider; every
+            # number above is deterministic. Failing the whole match because the prose could
+            # not be written would discard a score the user can act on -- `calculate_match`
+            # would answer with a tool error instead of "72%, missing Kafka".
+            log.warning("match narrative provider failed; answering with the computed facts: %s", e)
+        return NodeResult({"draft": draft, "attempts": state["attempts"] + 1},
+                          "verify", trace={"providerOk": draft is not None})
+
+    async def _verify(state: dict) -> NodeResult:
+        draft = state.get("draft")
+        if not draft:
+            return NodeResult({"verdict": "fallback", "rejected": ["provider"]},
+                              "render", trace={"verdict": "fallback", "reason": "provider"})
+        violations = _audit_narrative_numbers(draft["text"], allowed_percents,
+                                              years_reference)
+        if not violations:
+            return NodeResult(
+                {"verdict": "accept", "narrative": draft["text"], "model": draft["model"]},
+                "render", trace={"verdict": "accept"})
+        if state["attempts"] < 2:
+            feedback = "; ".join(violations[:10])
+            return NodeResult(
+                {"verdict": "retry", "verifier_feedback": feedback,
+                 "rejected": violations},
+                "draft", trace={"verdict": "retry", "inventedNumbers": len(violations)})
+        return NodeResult(
+            {"verdict": "fallback", "rejected": violations},
+            "render", trace={"verdict": "fallback", "inventedNumbers": len(violations)})
+
+    async def _render(state: dict) -> NodeResult:
+        if state.get("narrative"):
+            return NodeResult({"narrative": state["narrative"],
+                               "model": state.get("model") or ""},
+                              None, trace={"outcome": "accepted"})
+        # The model invented a number the wire never computed; the user sees the
+        # computed facts, not the invention with extra flourish.
+        return NodeResult({"narrative": facts, "model": ""},
+                          None, trace={"outcome": "fallback_facts"})
+
+    graph = StateGraph("draft",
+                       {"draft": _draft, "verify": _verify, "render": _render},
+                       max_steps=6)
+    final = await graph.run({"attempts": 0}, run_id=run_id, agent="jd_analyst")
+    narrative = final["narrative"]
+    model = final.get("model", "")
 
     result = MatchResult(
         overall=overall, technical=round(technical, 4), experience=round(experience, 4),

@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T16:43:37.490553Z",
+  "generated_at": "2026-11-17T17:16:11.027782Z",
   "branch": "main",
-  "head": "ce6c6c9",
-  "total_commits": 1556,
-  "milestone": "Epic 315",
-  "milestone_full": "the ledger of done epics (through 467 items), closed at Epic 315 — The dossier never vanishes, and the count is true (2026-11-18)",
-  "pushed_at": "2026-11-17",
+  "head": "c013097",
+  "total_commits": 1557,
+  "milestone": "Epic 316",
+  "milestone_full": "the ledger of done epics (through 468 items), closed at Epic 316 — The match narrative rides the spine",
+  "pushed_at": "2026-11-18",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 467,
-  "epics": 181,
+  "work_items": 468,
+  "epics": 182,
   "feature_surface": [
+    "Epic 316 — The match narrative rides the spine",
     "Epic 315 — The dossier never vanishes, and the count is true (2026-11-18)",
     "Epic 314 — The health line learns what it can afford (2026-11-18)",
     "Epic 313 — The interview's three decision calls ride the bounded StateGraph (2026-11-17)",
     "Epic 312 — The copilot walks in knowing the candidate's CV",
-    "Epic 311 — Every memory the wire writes passes the StateGraph verify node (2026-11-17)",
-    "Epic 310 — The installer knows your own career today (2026-11-17)"
+    "Epic 311 — Every memory the wire writes passes the StateGraph verify node (2026-11-17)"
   ]
 }

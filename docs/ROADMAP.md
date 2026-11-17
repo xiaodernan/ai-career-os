@@ -6918,6 +6918,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **316** The match narrative rides the spine — and the spine audits the numbers (2026-11-18).
+
+  The match engine computed every number honestly (the five subscores, the years of
+  experience, the JD's bar, the skill counts) and then let the model recite prose over
+  them unread — a user reading "your 94% match" for a computed 86% would never know the
+  model had slipped. The narrative now rides `draft → verify → render`
+  (Epic 269's pattern, this time with a fingerprint: the verify node audits every
+  percentage the model states against the computed set out of `round(v * 100)`, every
+  year count against the candidate's computed years and the JD bar (±0.5 of float
+  slack), single-token numerals in English **and Chinese** included (九年, 十二年,
+  six/九/twenty-one), and one bounded revision is offered. An unfixable invention
+  replaces the model's prose with the computed facts — the UI never renders a lie. The
+  gate caught my own float bug during development (fractions passed where percentages
+  were expected; banker's rounding at exactly-half ties), which is exactly why it is a
+  gate and not a mood. Six new tests live in `test_match_narrative_guard.py`; the live
+  relay through the Clash proxy accepted a real first-pass narrative whose
+  86/95/94/45/100 all landed inside the computed set. The approved one-shot list lost
+  this seam (`test_every_llm_call_rides_the_stategraph.py`); 82/82 match tests and
+  verify_gates remain green.
+
 - [x] **315** The dossier never vanishes, and the count is true (2026-11-18).
 
   The Epic 312 flood-guard collapsed sixty-one identical rows into one and the
