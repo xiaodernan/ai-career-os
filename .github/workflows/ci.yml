@@ -227,6 +227,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          # `rev-list --count HEAD` in scripts/showcase-sync.py must see the whole
+          # history — the default depth=1 counts only the event tip, which the card
+          # then reports as "1 commit". Cheap to ask for the full history.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
