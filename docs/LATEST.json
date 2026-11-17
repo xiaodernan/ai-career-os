@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T15:06:32.251812Z",
+  "generated_at": "2026-11-17T15:06:46.529308Z",
   "branch": "main",
-  "head": "7042d6f",
-  "total_commits": 1543,
+  "head": "78997f7",
+  "total_commits": 1544,
   "milestone": "Epic 312",
   "milestone_full": "the ledger of done epics (through 464 items), closed at Epic 312 — The copilot walks in knowing the candidate's CV",
   "pushed_at": "2026-11-17",
