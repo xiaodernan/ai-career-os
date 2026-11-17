@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T17:51:26.938358Z",
+  "generated_at": "2026-11-17T17:58:06.196252Z",
   "branch": "main",
-  "head": "a311c3e",
-  "total_commits": 1560,
+  "head": "dff83fd",
+  "total_commits": 1562,
   "milestone": "Epic 316",
   "milestone_full": "the ledger of done epics (through 468 items), closed at Epic 316 — The match narrative rides the spine",
   "pushed_at": "2026-11-17",
