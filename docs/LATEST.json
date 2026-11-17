@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T13:20:34.596997Z",
+  "generated_at": "2026-11-17T13:22:08.453668Z",
   "branch": "main",
-  "head": "57f0c58",
-  "total_commits": 1533,
+  "head": "2fb0a8c",
+  "total_commits": 1,
   "milestone": "Epic 308",
   "milestone_full": "the ledger of done epics (through 460 items), closed at Epic 308 — The negotiator's numbers are whitelisted (2026-11-17)",
   "pushed_at": "2026-11-17",
