@@ -27,6 +27,7 @@ import { formatNumber, relativeTime } from "@/lib/format";
 import { seriesTotal, projectedSparkline } from "@/lib/admin-trend";
 import { funnelReading } from "@/lib/admin-funnel";
 import { deriveCounsel } from "@/lib/admin-counsel";
+import { traceKindWord } from "@/lib/status-words";
 
 interface AdminStats {
   users?: number;
@@ -391,7 +392,7 @@ export default function AdminPage() {
                 const width = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
                 return (
                   <tr key={row.kind} className="border-t border-border/60">
-                    <td className="px-4 py-2 font-mono text-xs">{row.kind}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{traceKindWord(t, row.kind)}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{row.calls}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{row.hit_pct ?? "—"}%</td>
                     <td className="px-4 py-2">
