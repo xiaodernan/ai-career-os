@@ -58,7 +58,7 @@ async function main() {
   const routes = ["/dashboard","/jobs","/applications","/resumes","/interviews","/copilot","/knowledge","/activity","/notifications","/networking","/offers","/replies","/growth","/studio","/ceremony","/letters","/settings","/playbook","/tour","/admin"];
   for (const route of routes) {
     try {
-      await page.goto(route, { waitUntil: "networkidle", timeout: 30_000 });
+      await page.goto(route, { waitUntil: "load", timeout: 90_000 });
       if (route === "/admin") {
         try { await page.locator("#admin-pass").fill("123", { timeout: 5_000 }); await page.locator('button[type="submit"]').click(); await page.waitForTimeout(1_000); } catch {}
       }
