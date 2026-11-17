@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T19:15:54.228543Z",
+  "generated_at": "2026-11-17T19:55:44.884879Z",
   "branch": "main",
-  "head": "d2aeca5",
-  "total_commits": 1569,
+  "head": "210293f",
+  "total_commits": 1571,
   "milestone": "Epic 318",
   "milestone_full": "the ledger of done epics (through 470 items), closed at Epic 318 — The cache economy, measured and shown honestly (2026-11-17)",
   "pushed_at": "2026-11-17",
