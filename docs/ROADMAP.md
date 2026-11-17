@@ -6918,6 +6918,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **312** The copilot walks in knowing the candidate's CV — not just the wire's surface (2026-11-17).
+
+  The dossier now carries what the model would hand to a real-world senior engineer:
+  the latest resume plaintext (verbatim), the ten most recently updated distinct
+  application+company+status triples (deduped so the prefix cache never pays twice
+  for the same row), the ten best-scored job matches (missing-skill tail visible),
+  the five most recent interview memories (the interviewer's actual notes on the
+  candidate — the wire has 69 of them now), and the user's named skills from the
+  profile. No LLM call inside `build_dossier_context` — this is the wire, written in SQL,
+  rendered into byte-identical bytes the prefix cache can serve.
+
 - [x] **311** Every memory the wire writes passes the StateGraph verify node (2026-11-17).
 
   `extract_and_store` — the call that runs on every conversation turn — rode a bare

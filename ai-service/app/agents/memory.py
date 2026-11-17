@@ -9,6 +9,7 @@ import logging
 
 from app.core import db
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.skills import normalize
 from app.db import domain, observability
 from app.providers.base import LLMMessage, LLMRequest
 from app.agents.stategraph import NodeResult, StateGraph
@@ -95,15 +96,26 @@ async def build_dossier_context(user_id: str) -> str:
         out.append(f"### resume ({label})\n{plain}" if plain else f"### resume ({label})\n(plaintext not stored)")
 
     try:
-        apps = await db.fetch(
-            """SELECT title, COALESCE(company_name, '') AS company, status,
-                      updated_at
+        rows = await db.fetch(
+            """SELECT title, COALESCE(company_name, '') AS company, status, updated_at
                FROM applications
                WHERE user_id = $1::uuid
                ORDER BY updated_at DESC NULLS LAST, created_at DESC
-               LIMIT 10""",
+               LIMIT 40""",
             user_id,
         )
+        seen: set[tuple[str, str, str]] = set()
+        apps = []
+        for r in rows:
+            key = (_trim(r.get("title"), 64),
+                   _trim(r.get("company"), 48),
+                   _trim(r.get("status"), 12))
+            if key in seen:
+                continue
+            seen.add(key)
+            apps.append(r)
+            if len(apps) >= 10:
+                break
     except Exception as e:
         log.warning("dossier: applications fetch failed, continuing: %s", e)
         apps = []
@@ -132,6 +144,37 @@ async def build_dossier_context(user_id: str) -> str:
         overall = overall if isinstance(overall, (int, float)) else 0
         missing = _trim(", ".join([str(s) for s in (m.get("missing_skills") or []) if isinstance(s, str)]), 80)
         out.append(f"- [match {round(overall):.0%}] {title} — missing: {missing}")
+
+    # The interview history is the wire's second-richest material after the resume.
+    # The interview_agent has been writing `kind=interview` rows for weeks; carrying
+    # the 5 most recent into the dossier gives the copilot the trajectory it actually
+    # trains on.
+    try:
+        interviews = await domain.get_memories(user_id, kinds=["interview"], limit=5)
+    except Exception as e:
+        log.warning("dossier: interviews fetch failed, continuing: %s", e)
+        interviews = []
+    if interviews:
+        out.append("### interview memory")
+        for iv in interviews:
+            content = _trim(iv.get("content") if isinstance(iv, dict) else None, 220)
+            if content:
+                out.append(f"- {content}")
+
+    # The user's named skills. The wire already knows them; the dossier finally says them.
+    try:
+        profile = await domain.get_profile(user_id)
+    except Exception as e:
+        log.warning("dossier: profile fetch failed, continuing: %s", e)
+        profile = None
+    if profile and isinstance(profile, dict):
+        ps = profile.get("skills")
+        if isinstance(ps, list) and ps:
+            canonical = sorted({normalize(s.get("name") or str(s)) for s in ps
+                                if isinstance(s, (str, dict))} - {""})
+            if canonical:
+                out.append(f"### dossier: skills ({len(canonical)} named)\n" +
+                           ", ".join(canonical[:30]))
 
     return "\n".join(out) if len(out) > 2 else ""
 

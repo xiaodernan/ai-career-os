@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T14:55:06.811207Z",
+  "generated_at": "2026-11-17T15:06:32.251812Z",
   "branch": "main",
-  "head": "3f8acff",
-  "total_commits": 1542,
-  "milestone": "Epic 311",
-  "milestone_full": "the ledger of done epics (through 463 items), closed at Epic 311 — Every memory the wire writes passes the StateGraph verify node (2026-11-17)",
+  "head": "7042d6f",
+  "total_commits": 1543,
+  "milestone": "Epic 312",
+  "milestone_full": "the ledger of done epics (through 464 items), closed at Epic 312 — The copilot walks in knowing the candidate's CV",
   "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 463,
-  "epics": 177,
+  "work_items": 464,
+  "epics": 178,
   "feature_surface": [
+    "Epic 312 — The copilot walks in knowing the candidate's CV",
     "Epic 311 — Every memory the wire writes passes the StateGraph verify node (2026-11-17)",
     "Epic 310 — The installer knows your own career today (2026-11-17)",
     "Epic 309 — The thirty-thousand-line graph audit is now mechanical (2026-11-17)",
     "Epic 308 — The negotiator's numbers are whitelisted (2026-11-17)",
-    "Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)",
-    "Epic 306 — The veto chapter lands in the book (2026-11-17)"
+    "Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)"
   ]
 }
