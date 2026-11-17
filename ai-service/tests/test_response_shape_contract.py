@@ -3237,11 +3237,10 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 14),
-        # Epic 279's admin trend card names the attention ledger's heartbeat in
-        # its series comment -- noun vocabulary, no interval beside the word.
-        # 120 rather than 118 since Epic 305's two weekly-digest lines shifted the
-        # same comment block down; the sentence itself did not change.
-        ("frontend/src/app/admin/admin-page.tsx", 120),
+        # 140 rather than 120 since Epic 318's cache-economy panel grew the file by
+        # the table, the totals card and the two fetches above it; the sentence itself
+        # did not change.
+        ("frontend/src/app/admin/admin-page.tsx", 140),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.
