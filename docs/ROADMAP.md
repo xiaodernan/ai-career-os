@@ -6918,6 +6918,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **318** The cache economy, measured and shown honestly (2026-11-17).
+
+  The overseer could watch call counts and could not answer the question this install's own
+  wire has been answering all along: is the prompt cache actually working? `ai_usage_events`
+  already carries the evidence — tokens in, tokens cached, the kind it rode in on — and the
+  admin page shows a new panel (缓存经济账本 · 七日) reading it. Backend sums the trailing 7
+  days by `kind` (one row per event kind the wire wrote; 25 kinds max; sums never averages of
+  per-row ratios), plus `totals` across them, and exposes them at `/admin/cache-economy`
+  (public like every other admin route, counts only, no prompt text, no user anything). The
+  frontend renders a headline hit rate (this install: 54.7% over 1,658 calls / 5.3 M tokens)
+  with every kind's bar under it — resume_parse 84.3%, step_3 83.8% vs tailor 5.9% vs
+  cover_letter 23.4% — and a note that one-shot kinds read cold by design because every
+  document is a fresh prefix; only a repeat turns warm. AdminCacheEconomyControllerTest
+  pins the sums-vs-averages contract and a null `hit_pct` stays null (dividing by zero is
+  not a zero). API.md names the route; the admin page's own metadata title was found
+  leaking the raw i18n key (`admin.title`) and both locales now carry it. Verify_gates green;
+  2/2 new backend tests and 75/75 frontend census pass.
+
 - [x] **317** The interviewer finally hears the candidate's own history (2026-11-17).
 
   The `/internal/interview/*` turn builds its session context the same way it always
