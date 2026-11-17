@@ -6918,6 +6918,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **313** The interview's three decision calls ride the bounded StateGraph (2026-11-17).
+
+  `opening_question`, `evaluate_answer` and `advance` used to be bare LLM calls wearing
+  defensive parses — the three highest-miss kinds on the wire (`interview_open`,
+  `answer_eval`, `interview_advance`). They now ride the same `draft → verify → render`
+  spine `finalize` got in Epic 302, with deterministic verifies: the opening prose is
+  unwrapped, capped at 1.2 KB, and floored with a deterministic opening so a blank
+  provider turn can never dead-end the session; the evaluator clamps every score into
+  [0,1], whitelists the four dims the prompt promised, caps each list at five rows of
+  200 chars, whitelists `question_was_answered` onto a real boolean, and counts what it
+  dropped in the trace; the director's move goes through `decide_next` as the verify
+  node (action whitelist, question-budget force-finish, difficulty clamped into the
+  0.1–0.95 band). `test_interview_decision_calls_ride_the_graph.py` pins all of it,
+  hostile output and provider failure included; `test_core_modules.py`'s floor test now
+  expects the full promised shape.
+
 - [x] **312** The copilot walks in knowing the candidate's CV — not just the wire's surface (2026-11-17).
 
   The dossier now carries what the model would hand to a real-world senior engineer:

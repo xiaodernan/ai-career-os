@@ -112,6 +112,38 @@ def unwrap_text_envelope(text: str) -> str:
     return s
 
 
+def _clamp01(value, default):
+    """Coerce to a float in [0, 1]. Returns (value, dropped): `dropped` counts a value
+    the model gave that was unusable (non-number, NaN, ±inf) — the caller decides what
+    the default means for its contract."""
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return default, True
+    if f != f or f == float("inf") or f == float("-inf"):
+        return default, True
+    return max(0.0, min(1.0, f)), False
+
+
+def _string_list(value, *, cap: int, item_chars: int):
+    """Coerce to a list of <= `cap` non-blank strings, each trimmed to `item_chars`.
+    Returns (items, dropped): a list-typed answer with junk rows drops the junk rows;
+    a non-list answer drops to the empty list."""
+    if not isinstance(value, list):
+        return [], 1 if value is not None else 0
+    items: list[str] = []
+    dropped = 0
+    for it in value:
+        if len(items) >= cap:
+            dropped += 1
+            continue
+        if isinstance(it, str) and it.strip():
+            items.append(it.strip()[:item_chars])
+        else:
+            dropped += 1
+    return items, dropped
+
+
 async def opening_question(*, mode: str, company: str, position: str, resume_ctx: str,
                           jd_topics: list[str], candidate_name: str = "",
                           user_id: str | None = None, run_id: str | None = None) -> dict:
@@ -120,17 +152,45 @@ async def opening_question(*, mode: str, company: str, position: str, resume_ctx
         f"\n\nCompany: {company} Position: {position}. Open the interview: one short " \
         f"greeting{' using the name ' + candidate_name if candidate_name else ''}, " \
         "one sentence on format, then the FIRST question only."
-    resp = await ask(LLMRequest(
-        messages=stable_messages("You conduct realistic mock job interviews. "
-                                 "Ask exactly ONE question. Be concise.",
-                                 LLMMessage("user", prompt)),
-        temperature=0.7, max_tokens=260),
-        user_id=user_id, run_id=run_id, agent="interview", kind="interview_open")
-    # The relay answered this prompt with a JSON envelope in live verification;
-    # the runner renders whatever we store, so the words are what we store.
-    text = unwrap_text_envelope(resp.text)
-    topic = (jd_topics or ["background"])[0]
-    return {"question": text, "meta": opening_meta(topic), "model": resp.model}
+
+    # The opening turn rides the bounded spine too: the model drafts the prose, the
+    # verify node undoes the JSON-envelope failure mode the renderer used to ship raw,
+    # bounds the length, and replaces an empty answer with a deterministic opening so
+    # the session can never dead-end on a blank turn.
+    async def _draft(state: dict) -> NodeResult:
+        resp = await ask(LLMRequest(
+            messages=stable_messages("You conduct realistic mock job interviews. "
+                                     "Ask exactly ONE question. Be concise.",
+                                     LLMMessage("user", prompt)),
+            temperature=0.7, max_tokens=260),
+            user_id=user_id, run_id=run_id, agent="interview", kind="interview_open")
+        return NodeResult({"raw": resp.text, "model": resp.model}, "verify",
+                          trace={"rawChars": len(resp.text or "")})
+
+    async def _verify(state: dict) -> NodeResult:
+        raw = str(state.get("raw") or "")
+        text = unwrap_text_envelope(raw).strip()
+        unwrapped = text != raw.strip()
+        truncated = False
+        if len(text) > 1200:
+            text = text[:1200].rsplit(" ", 1)[0].rstrip()
+            truncated = True
+        empty = not text
+        if empty:
+            text = "Could you walk me through your background and why this role?"
+        return NodeResult({"question": text}, "render",
+                          trace={"unwrapped": unwrapped, "truncated": truncated,
+                                 "empty": empty})
+
+    async def _render(state: dict) -> NodeResult:
+        topic = (jd_topics or ["background"])[0]
+        return NodeResult({"question": state["question"], "meta": opening_meta(topic),
+                           "model": state.get("model")}, None)
+
+    graph = StateGraph("draft", {"draft": _draft, "verify": _verify, "render": _render},
+                       max_steps=3)
+    final = await graph.run({}, run_id=run_id, agent="interview")
+    return {"question": final["question"], "meta": final["meta"], "model": final.get("model")}
 
 
 async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: str,
@@ -141,14 +201,83 @@ async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: 
               f"{wrap_untrusted('CANDIDATE_CONTEXT', ctx[:2500])}\n\n"
               f"QUESTION: {question}\n\nCANDIDATE ANSWER:\n"
               f"{wrap_untrusted('ANSWER', ans[:4000])}")
-    try:
-        ev = await ask_json(LLMRequest(
-            messages=stable_messages(EVAL_SYSTEM, LLMMessage("user", prompt)),
-            temperature=0.1, max_tokens=900),
-            user_id=user_id, run_id=run_id, agent="interview", kind="answer_eval")
-    except Exception:
-        ev = {"score": 0.5, "question_was_answered": True}
-    return ev
+
+    # The evaluator rides the bounded spine: the model drafts, the verify node clamps
+    # every number into [0, 1], whitelists the dims the prompt promised, drops junk rows
+    # honestly counted in the trace — the reader never sees an 88.0 "score".
+    async def _draft(state: dict) -> NodeResult:
+        try:
+            ev = await ask_json(LLMRequest(
+                messages=stable_messages(EVAL_SYSTEM, LLMMessage("user", prompt)),
+                temperature=0.1, max_tokens=900),
+                user_id=user_id, run_id=run_id, agent="interview", kind="answer_eval")
+        except Exception:
+            ev = {"score": 0.5, "question_was_answered": True}
+        if not isinstance(ev, dict):
+            ev = {}
+        return NodeResult({"model": ev}, "verify",
+                          trace={"scoreIsNumber": isinstance(ev.get("score"), (int, float))})
+
+    async def _verify(state: dict) -> NodeResult:
+        ev = state.get("model") or {}
+        out: dict = {}
+        dropped = 0
+
+        score, s_dropped = _clamp01(ev.get("score"), 0.5)
+        dropped += int(s_dropped)
+        out["score"] = score
+
+        dims = ev.get("dims")
+        if isinstance(dims, dict):
+            clean: dict[str, float] = {}
+            for key in DIMENSIONS[:4]:
+                if key not in dims:
+                    continue
+                f, dd = _clamp01(dims.get(key), 0.0)
+                if dd:
+                    dropped += 1
+                    continue
+                clean[key] = f
+            # The prompt names exactly four dims; extra keys are dropped, not shipped.
+            extra = [k for k in dims if isinstance(k, str) and k not in DIMENSIONS[:4]]
+            dropped += len(extra)
+            out["dims"] = clean
+
+        for field in ("strengths", "weaknesses", "missing_concepts"):
+            items, dd = _string_list(ev.get(field), cap=5, item_chars=200)
+            dropped += dd
+            out[field] = items
+
+        better = ev.get("better_answer")
+        out["better_answer"] = (better.strip()[:600]
+                                if isinstance(better, str) else "")
+        if better is not None and not isinstance(better, str):
+            dropped += 1
+
+        answered = ev.get("question_was_answered")
+        if isinstance(answered, bool):
+            out["question_was_answered"] = answered
+        elif isinstance(answered, str):
+            out["question_was_answered"] = answered.strip().lower() in (
+                "true", "yes", "1")
+        elif isinstance(answered, (int, float)):
+            out["question_was_answered"] = bool(answered)
+        else:
+            out["question_was_answered"] = True
+
+        return NodeResult({"verified": out}, "render",
+                          trace={"droppedFields": dropped})
+
+    async def _render(state: dict) -> NodeResult:
+        out = dict(state.get("verified") or {})
+        out.setdefault("score", 0.5)
+        out.setdefault("question_was_answered", True)
+        return NodeResult({"result": out}, None)
+
+    graph = StateGraph("draft", {"draft": _draft, "verify": _verify, "render": _render},
+                       max_steps=3)
+    final = await graph.run({}, run_id=run_id, agent="interview")
+    return final["result"]
 
 
 def decide_next(out: dict, *, difficulty: float, qnum: int, max_q: int,
@@ -184,16 +313,40 @@ async def advance(*, mode: str, turns: list[dict], difficulty: float, qnum: int,
     persona = _INTERVIEWER_PERSONA.get(mode, _INTERVIEWER_PERSONA["mixed"])
     prompt = _state_brief(persona, mode, turns, difficulty, qnum, max_q, resume_ctx,
                           jd_topics)
-    try:
-        out = await ask_json(LLMRequest(
-            messages=stable_messages(ADVANCE_SYSTEM, LLMMessage("user", prompt)),
-            temperature=0.5, max_tokens=350),
-            user_id=user_id, run_id=run_id, agent="interview", kind="interview_advance")
-    except Exception:
-        out = {"action": "next_topic", "question": "Could you tell me about another "
-               "project relevant to this role?", "topic": "general",
-               "difficulty": difficulty, "reasoning": "fallback"}
-    return decide_next(out, difficulty=difficulty, qnum=qnum, max_q=max_q, turns=turns)
+
+    # The interview director rides the bounded spine: the model drafts the move,
+    # decide_next is the deterministic verify (action whitelist, budget force-finish,
+    # difficulty clamped to the adaptive band), the renderer ships the exact shape
+    # the session runner reads.
+    async def _draft(state: dict) -> NodeResult:
+        try:
+            out = await ask_json(LLMRequest(
+                messages=stable_messages(ADVANCE_SYSTEM, LLMMessage("user", prompt)),
+                temperature=0.5, max_tokens=350),
+                user_id=user_id, run_id=run_id, agent="interview",
+                kind="interview_advance")
+        except Exception:
+            out = {"action": "next_topic", "question": "Could you tell me about another "
+                   "project relevant to this role?", "topic": "general",
+                   "difficulty": difficulty, "reasoning": "fallback"}
+        if not isinstance(out, dict):
+            out = {}
+        return NodeResult({"model": out}, "verify")
+
+    async def _verify(state: dict) -> NodeResult:
+        decided = decide_next(state.get("model") or {}, difficulty=difficulty,
+                              qnum=qnum, max_q=max_q, turns=turns)
+        return NodeResult({"decided": decided}, "render",
+                          trace={"action": decided["action"],
+                                 "difficulty": decided["difficulty"]})
+
+    async def _render(state: dict) -> NodeResult:
+        return NodeResult({"result": state["decided"]}, None)
+
+    graph = StateGraph("draft", {"draft": _draft, "verify": _verify, "render": _render},
+                       max_steps=3)
+    final = await graph.run({}, run_id=run_id, agent="interview")
+    return final["result"]
 
 
 FINALIZE_SYSTEM = f"""You produce the interview report. JSON only:

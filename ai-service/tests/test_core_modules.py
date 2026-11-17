@@ -676,7 +676,10 @@ async def test_evaluate_answer_falls_back_to_neutral_score_when_llm_fails(monkey
         raise RuntimeError("provider down")
     monkeypatch.setattr("app.features.interview.ask_json", fake)
     ev = await evaluate_answer(mode="technical", question="q", answer="a", resume_ctx="ctx")
-    assert ev == {"score": 0.5, "question_was_answered": True}
+    # Epic 313: the verify node always emits the full promised shape, floored.
+    assert ev == {"score": 0.5, "question_was_answered": True,
+                  "better_answer": "", "strengths": [],
+                  "weaknesses": [], "missing_concepts": []}
 
 
 async def test_evaluate_answer_passes_through_model_output_on_success(monkeypatch):
