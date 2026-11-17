@@ -4194,6 +4194,7 @@ export const en = {
       attentionDwellsLabel: "Dwell reads",
       weeklyDigestsLabel: "Letters composed",
       weeklyDigestsDeliveredLabel: "Letters delivered",
+      aiUsageCachedLabel: "Cache-served calls (week)",
       cacheEconomyTitle: "The cache ledger · seven days",
       cacheEconomyNote:
         "Every model call leaves its tokens in the ledger. This panel measures warmth, not volume — the share of tokens served from cache per call kind. One-shot features (jd_analyze, tailor, …) read a fresh document every time, so they are cold by design; the warm lane lives in the repeated turns of a conversation. Sums straight off the table, never a per-row average.",

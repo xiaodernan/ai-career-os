@@ -6918,6 +6918,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **319** The weekly trend carries the cache economy too (2026-11-17).
+
+  The 7-day ledger panel proved the warm-vs-cold picture; this round the weekly trends card does the
+  same job one column over. `AdminTrendsService` gained a fourth honest series after the volume
+  counters: `aiUsageCached` — calls whose prefix was served at least partially from the relay's
+  cache, counted straight off `ai_usage_events` (`count(*)` where `cached_tokens > 0`), bucketing by
+  ISO week like the rest of the trends. The admin tile carries its own flame icon and a one-line
+  zh/en label; quiet weeks read zero rather than a missing key. Two-week window on this install
+  reports `aiUsageCached: [324, 517]` — the warm calls are more than half of all calls now, which is
+  the first time the trend has shown the cache working week-over-week, not just day-over-day.
+
 - [x] **318** The cache economy, measured and shown honestly (2026-11-17).
 
   The overseer could watch call counts and could not answer the question this install's own

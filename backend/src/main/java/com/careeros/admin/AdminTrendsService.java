@@ -36,7 +36,12 @@ public class AdminTrendsService {
     // series reads worse than silence, and the trailing-30-day door counts the number.
     new Series("attention_events", "created_at", "attentionLands", "event = 'land'"),
     new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"),
-    // The Monday letter (Epics 251/305): every row in weekly_digests is a letter the backend
+    // The cache economy (Epic 319): the number of provider calls whose prefix was served
+    // at least partially from the relay's cache. Counting these against `aiUsageEvents`
+    // is the weekly warm-vs-cold picture — 1,400 calls with zero cached bytes reads
+    // differently from 1,400 with nine-tenths of their prefixes warm.
+    new Series("ai_usage_events", "created_at", "aiUsageCached", "cached_tokens > 0"),
+    // Monday letter (Epics 251/305): every row in weekly_digests is a letter the backend
     // attempted to compose that week; delivered_at IS NOT NULL marks the ones that actually went
     // out. attempts − delivered is the refusal rate the install wears — a number not inferred from
     // counters inside one JVM, but read straight off the rows.

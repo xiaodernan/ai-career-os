@@ -3904,6 +3904,7 @@ export const zh = {
       attentionDwellsLabel: "停留读数",
       weeklyDigestsLabel: "信件组合数",
       weeklyDigestsDeliveredLabel: "信件送达数",
+      aiUsageCachedLabel: "缓存命中的调用（周）",
       cacheEconomyTitle: "缓存经济账本 · 七日",
       cacheEconomyNote:
         "每一次模型调用都留了 token 到账本。这里量的是温热而不是量——每个 kind 的 input token 里有多少是缓存送的。一次性的功能（jd_analyze、tailor……）每次读的是新文件，天然冷；同一段对话第二次起才温。数字从表直接加出来，从来不拿平均骗人。",

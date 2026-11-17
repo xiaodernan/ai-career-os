@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T19:55:44.884879Z",
+  "generated_at": "2026-11-17T20:50:30.417653Z",
   "branch": "main",
-  "head": "210293f",
-  "total_commits": 1571,
-  "milestone": "Epic 318",
-  "milestone_full": "the ledger of done epics (through 470 items), closed at Epic 318 — The cache economy, measured and shown honestly (2026-11-17)",
-  "pushed_at": "2026-11-17",
+  "head": "8cbc755",
+  "total_commits": 1572,
+  "milestone": "Epic 319",
+  "milestone_full": "the ledger of done epics (through 471 items), closed at Epic 319 — The weekly trend carries the cache economy too (2026-11-17)",
+  "pushed_at": "2026-11-18",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 470,
-  "epics": 184,
+  "work_items": 471,
+  "epics": 185,
   "feature_surface": [
+    "Epic 319 — The weekly trend carries the cache economy too (2026-11-17)",
     "Epic 318 — The cache economy, measured and shown honestly (2026-11-17)",
     "Epic 317 — The interviewer finally hears the candidate's own history (2026-11-17)",
     "Epic 316 — The match narrative rides the spine",
     "Epic 315 — The dossier never vanishes, and the count is true (2026-11-18)",
-    "Epic 314 — The health line learns what it can afford (2026-11-18)",
-    "Epic 313 — The interview's three decision calls ride the bounded StateGraph (2026-11-17)"
+    "Epic 314 — The health line learns what it can afford (2026-11-18)"
   ]
 }

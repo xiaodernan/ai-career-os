@@ -8,6 +8,7 @@ import {
   BarChart3,
   Database,
   Eye,
+  Flame,
   Lock,
   Mail,
   Send,
@@ -148,6 +149,8 @@ const TREND_SERIES = [
   // rate this install wears — not inferred from counters inside one JVM, but read off the rows.
   { key: "weeklyDigests", labelKey: "admin.weeklyDigestsLabel", icon: Mail },
   { key: "weeklyDigestsDelivered", labelKey: "admin.weeklyDigestsDeliveredLabel", icon: Send },
+  // The cache economy's weekly count (Epic 319): the calls whose prefix was served warm.
+  { key: "aiUsageCached", labelKey: "admin.aiUsageCachedLabel", icon: Flame },
 ] as const;
 
 /**
