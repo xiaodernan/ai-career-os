@@ -17,6 +17,9 @@ from matching a single JD to planning a whole career move.
 import re
 
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+import re
+
+from app.agents.stategraph import NodeResult, StateGraph
 from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -38,20 +41,75 @@ Rules:
 
 
 async def extract_expected_skills(target_role: str, *, user_id=None, run_id=None) -> dict:
-    """Have the model propose the skills a target role expects.
+    """Have the model propose the skills a target role expects — bounded StateGraph.
 
     Tolerant by design: when the model returns nothing usable (offline mock, or a
     degenerate reply) we fall back to dictionary skill extraction over the role
     text, so the feature still produces a report instead of an empty one.
+
+    The verify node is deterministic, no LLM in it. It drops duplicates (regardless
+    of casing/whitespace), tautological echoes of the target-role text, absurdly long
+    strings and sentence-like entries. None of those is a skill, and the model is not
+    trusted to know the product rule on its own.
     """
     target_role = target_role if isinstance(target_role, str) else ""
-    req = LLMRequest(
-        messages=stable_messages(SYSTEM,
-                                 LLMMessage("user", wrap_untrusted("TARGET_ROLE", target_role[:4000]))),
-        temperature=0.0, max_tokens=2000)
-    out = await ask_json(req, user_id=user_id, run_id=run_id, agent="learning",
-                         kind="gap_expected")
-    return _sanitize_expected(out, target_role)
+
+    async def _extract(state: dict) -> NodeResult:
+        req = LLMRequest(
+            messages=stable_messages(SYSTEM,
+                                     LLMMessage("user", wrap_untrusted("TARGET_ROLE", target_role[:4000]))),
+            temperature=0.0, max_tokens=2000)
+        out = await ask_json(req, user_id=user_id, run_id=run_id, agent="learning",
+                             kind="gap_expected")
+        if not isinstance(out, dict):
+            out = {}
+        return NodeResult({"model": out}, "verify", trace={"kind": "gap_expected"})
+
+    async def _verify(state: dict) -> NodeResult:
+        out = state.get("model") or {}
+        entries = out.get("expectedSkills") if isinstance(out.get("expectedSkills"), list) else []
+        clean = []
+        seen = set()
+        drops = 0
+        echoes = 0
+        for item in entries:
+            if not isinstance(item, dict):
+                drops += 1
+                continue
+            name = normalize(item.get("name", ""))
+            if (not name or len(name) > 64
+                    or re.search(r"[.!?;。！？]", name)  # someone handing back a sentence
+                    or name in seen
+                    or name == normalize(target_role)):  # echoes of TARGET_ROLE, not a skill
+                if name == normalize(target_role):
+                    echoes += 1
+                else:
+                    drops += 1
+                continue
+            seen.add(name)
+            clean.append(item)
+        out = dict(out)
+        out["expectedSkills"] = clean
+        if not clean:  # nothing passes: the same documented backstop, inside the verify node
+            for name in extract_skills(target_role):
+                if name not in seen:
+                    seen.add(name)
+                    clean.append({"name": name, "category": "core", "importance": "should"})
+            out["expectedSkills"] = clean
+        out["responsibilities"] = [r for r in (out.get("responsibilities") or [])
+                                   if isinstance(r, str) and r.strip()][:12]
+        out["seniorityHint"] = str(out.get("seniorityHint") or "")[:40]
+        return NodeResult({"verified": out}, "render",
+                           trace={"dropped": drops, "echoed_target": echoes})
+
+    async def _render(state: dict) -> NodeResult:
+        verified = state.get("verified") or {}
+        return NodeResult({"result": verified}, None, trace={"stage": "render"})
+
+    graph = StateGraph("extract", {"extract": _extract, "verify": _verify, "render": _render},
+                       max_steps=4)
+    final = await graph.run({"target_role": target_role}, run_id=run_id, agent="learning")
+    return final["result"]
 
 
 def _sanitize_expected(out: dict, target_role: str) -> dict:

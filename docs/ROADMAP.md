@@ -6918,6 +6918,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **307** The bookkeeper learns the ask is a step, not a monologue (2026-11-17).
+
+  Three more front-line read paths gain the StateGraph discipline, all bounded,
+  all with deterministic verify nodes in place of single LLM calls:
+
+  - **jd_analyze**: extract → verify → render. The evidence_phrase the model
+    quotes for each required/preferred skill is checked against the raw JD text;
+    if the phrase is not really from the posting, it is dropped (skill kept, quoted
+    text blank and marked evidence_gap=true), never presented as verbatim.
+    The headline untrusted-JD prompt rule is now enforced in the graph, not only
+    in a test function's comments.
+  - **gap_analysis.extract_expected_skills**: extract → verify → render. The
+    verifier drops duplicates, tautological TARGET_ROLE echoes, sentence-shaped
+    entries and absurdly long strings before the fallback path is even considered.
+  - **outreach.draft_message**: evidence → draft → verify → render. Any claimed
+    evidenceUsed that is not cited by the evidence set (which only admits
+    canonical skills from the candidate's profile + highlight) is filtered
+    deterministically before the message leaves the service.
+
 - [x] **306** The veto chapter lands in the book (2026-11-17).
 
   The bounded-StateGraph mechanics are no longer only prose about the

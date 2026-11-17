@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T12:39:17.122059Z",
+  "generated_at": "2026-11-17T12:56:42.135190Z",
   "branch": "main",
-  "head": "b818b7a",
-  "total_commits": 1,
-  "milestone": "Epic 306",
-  "milestone_full": "the ledger of done epics (through 458 items), closed at Epic 306 — The veto chapter lands in the book (2026-11-17)",
+  "head": "d3a0327",
+  "total_commits": 1531,
+  "milestone": "Epic 307",
+  "milestone_full": "the ledger of done epics (through 459 items), closed at Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)",
   "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 458,
-  "epics": 172,
+  "work_items": 459,
+  "epics": 173,
   "feature_surface": [
+    "Epic 307 — The bookkeeper learns the ask is a step, not a monologue (2026-11-17)",
     "Epic 306 — The veto chapter lands in the book (2026-11-17)",
     "Epic 305 — The admin trends read the Monday letter's real pulse (2026-11-17)",
     "Epic 304 — The copilot's hot loop is a StateGraph now (2026-11-17)",
     "Epic 303 — The book tells the truth about its spine (2026-11-17)",
-    "Epic 302 — The interview report rides the StateGraph (2026-11-17)",
-    "Epic 301 — The afterward's pointer, proven end to end (2026-11-17)"
+    "Epic 302 — The interview report rides the StateGraph (2026-11-17)"
   ]
 }

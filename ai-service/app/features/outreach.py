@@ -13,6 +13,7 @@ simply carries no evidence, and says so by citing nothing.
 
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import normalize
+from app.agents.stategraph import NodeResult, StateGraph
 from app.providers.base import LLMMessage, LLMRequest
 
 PURPOSES: dict[str, str] = {
@@ -70,6 +71,7 @@ def _prompt(contact: dict, purpose: str, evidence: dict, context: str) -> str:
     return "\n".join(parts)
 
 
+# Compose is retained as a post-hoc shape helper for the tests that call it directly.
 def compose(contact: dict, purpose: str, out: dict, evidence: dict) -> dict:
     allowed = allowed_evidence(evidence)
     used: list[str] = []
@@ -87,12 +89,68 @@ def compose(contact: dict, purpose: str, out: dict, evidence: dict) -> dict:
 
 
 async def draft_message(contact: dict, purpose: str, resume_structured, *, context: str = "",
-                        user_id=None, run_id=None) -> dict:
-    evidence = pick_evidence(resume_structured)
-    req = LLMRequest(
-        messages=stable_messages(SYSTEM,
-                                 LLMMessage("user", _prompt(contact, purpose, evidence, context))),
-        temperature=0.3, max_tokens=900)
-    out = await ask_json(req, user_id=user_id, run_id=run_id, agent="outreach",
-                         kind="outreach")
-    return compose(contact, purpose, out, evidence)
+                         user_id=None, run_id=None) -> dict:
+    """Bounded StateGraph: evidence → draft → verify → render.
+
+    Evidence (the vocabulary the letter may speak in) is chosen deterministically from
+    the candidate's own profile, then the LLM invents nothing the verifier has to
+    forgive — any skill the model claims is `evidenceUsed` is dropped unless it
+    appears in that vocabulary, no matter how plausible the sentence sounds.
+    """
+
+    async def _evidence(state: dict) -> NodeResult:
+        ev = pick_evidence(resume_structured)
+        return NodeResult({"evidence": ev}, "draft", trace={"skills": ev.get("skills")})
+
+    async def _draft(state: dict) -> NodeResult:
+        ev = state["evidence"]
+        req = LLMRequest(
+            messages=stable_messages(SYSTEM,
+                                      LLMMessage("user", _prompt(contact, purpose, ev, context))),
+            temperature=0.3, max_tokens=900)
+        out = await ask_json(req, user_id=user_id, run_id=run_id, agent="outreach",
+                             kind="outreach")
+        if not isinstance(out, dict):
+            out = {}
+        return NodeResult({"message": out}, "verify", trace={"kind": "outreach"})
+
+    async def _verify(state: dict) -> NodeResult:
+        out = state.get("message") or {}
+        ev = state["evidence"]
+        allowed = allowed_evidence(ev)
+        raw_used = out.get("evidenceUsed") or []
+        kept: list[str] = []
+        seen: set[str] = set()
+        for raw in raw_used:
+            if not isinstance(raw, str):
+                continue
+            norm = normalize(raw)
+            if norm in allowed and norm not in seen:
+                seen.add(norm)
+                kept.append(norm)
+        out = dict(out)
+        out["evidenceUsed"] = kept
+        return NodeResult({"verified": out, "kept": len(kept),
+                            "dropped": len([x for x in raw_used if isinstance(x, str)]) - len(kept)},
+                          "render",
+                          trace={"kept": len(kept)})
+
+    async def _render(state: dict) -> NodeResult:
+        ev = state["evidence"]
+        verified = state.get("verified") or {}
+        return NodeResult({"result": {
+            "purpose": purpose,
+            "contactName": (contact or {}).get("name", ""),
+            "subject": (verified.get("subject") or "").strip()[:200],
+            "body": (verified.get("body") or "").strip(),
+            "evidenceUsed": verified.get("evidenceUsed") or [],
+            "allowedEvidence": (ev or {}).get("skills") or [],
+        }}, None, trace={"stage": "render"})
+
+    graph = StateGraph("evidence", {"evidence": _evidence, "draft": _draft,
+                                     "verify": _verify, "render": _render},
+                       max_steps=5)
+    final = await graph.run({"contact": contact, "purpose": purpose,
+                             "context": context},
+                            run_id=run_id, agent="outreach")
+    return final["result"]
