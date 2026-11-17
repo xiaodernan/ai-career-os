@@ -396,8 +396,14 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
     # of the reader, not a silent pass: the collector's own seven numeric projections are pinned
     # by the meter roster gate and by AiOpsMetricsTest against the engine's answer shape, and this
     # ledger still makes the new consumer visible instead of letting it arrive unmentioned.
+    # AdminCounselController (Epic 320) holds the same shape: it hands the install's aggregates
+    # to `ai.counsel(...)` and threads the whole result out to the browser rather than reading
+    # individual keys off it -- so `_flows()` has no key reads to follow either. The controller's
+    # actual contract (the aggregate shape the model is handed) is pinned by the ai-service's own
+    # counsel tests instead, where the numbers live.
     assert sorted(p.name for p in _consumer_files()) == [
-        "AiOpsMetrics.java", "ConversationService.java", "CopilotStreamService.java",
+        "AdminCounselController.java", "AiOpsMetrics.java", "ConversationService.java",
+        "CopilotStreamService.java",
         "FileIngestService.java",
         "GrowthService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
