@@ -440,6 +440,35 @@ reports no known vulnerabilities. The same command runs in CI as a gate
 (`.github/workflows/ci.yml`, ai-service job): a fresh known vulnerability now
 reddens the build instead of waiting for a reader to re-measure.
 
+### Dependency advisories — the picomatch exception (2026-11-17, re-measured 2026-11-18)
+
+`npm audit` began failing on 2026-11-17, not because a dependency changed but because
+**GHSA-fc5q-39xc-vjpf** (CVE-2026-112366, HIGH, EPSS 0.335%, 27th percentile — picomatch
+ReDoS through single-branch repeated extglobs, upstream issue `micromatch/picomatch#175`)
+was flagged as *GitHub Reviewed* on the day. Every one of the sixteen vulnerable
+`package.json` entries traces to that single CVE through the glob chain
+(`picomatch` ← `micromatch` ← `fast-glob` / `fdir` / `tinyglobby` / `globby` / `vite` /
+`vitest` / the `eslint-*` family); there is no other advisory in the tree and **upstream
+has shipped no fixed release as of this date** (`Patched versions: None`, latest is
+4.0.7).
+
+Exposure is build-time glob expansion of this repository's own committed source tree;
+no request-time path feeds a pattern to the engine, and the advisory's own references
+(`micromatch/picomatch#175/#182/#194`) carry the upstream work.
+
+The dependency gate is therefore not disabled. It is a narrow, **expiring** exception in
+`scripts/npm-audit-gate.mjs` (the enforcement CI runs, `.github/workflows/ci.yml`), which
+collects every advisory object in the audit tree and fails on anything that is not the
+named CVE. The exception carries:
+
+- the CVE id and reviewer provenance above;
+- the reason (no patched release; build-time-only exposure; EPSS 0.335%);
+- a hard expiry — **2026-12-18**. On that date the gate fails red again regardless.
+
+When upstream ships 4.0.8+, the fix is `npm audit fix` plus deleting the exception
+entry; nothing else about the gate changes. Any other advisory, in any package, reddens
+the build today.
+
 ## Error envelope
 
 Auth failures and API errors share one shape so clients never parse stack

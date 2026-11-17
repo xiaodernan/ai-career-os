@@ -95,9 +95,12 @@ jobs:
         run: npx tsc --noEmit
       # Frontend is at 0 known vulnerabilities (vitest 5 / shadcn 1.0.0 upgrade,
       # see Epic 77). Keep the gate blocking: any fresh advisory reddens CI until
-      # it is remediated.
+      # it is remediated. One CVE, GHSA-fc5q-39xc-vjpf (picomatch ReDoS through
+      # the glob chain; EPSS 0.335%; no patched release yet), is excepted in
+      # scripts/npm-audit-gate.mjs until 2026-12-18 with a written reason in
+      # SECURITY.md — every other advisory still reddens this job today.
       - name: Dependency advisories (npm audit)
-        run: npm audit
+        run: node ../scripts/npm-audit-gate.mjs
 
   backend:
     name: backend (maven unit tests, offline)
