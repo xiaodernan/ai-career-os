@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-16T19:51:48.489611Z",
+  "generated_at": "2026-11-17T09:41:30.517846Z",
   "branch": "main",
-  "head": "6822eb8",
-  "total_commits": 1,
-  "milestone": "Epic 300",
-  "milestone_full": "the ledger of done epics (through 452 items), closed at Epic 300 — The book points at its card (2026-11-17)",
-  "pushed_at": "2026-11-16",
+  "head": "2f9466b",
+  "total_commits": 1514,
+  "milestone": "Epic 301",
+  "milestone_full": "the ledger of done epics (through 453 items), closed at Epic 301 — The afterward's pointer, proven end to end (2026-11-17)",
+  "pushed_at": "2026-11-17",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1530+",
   "test_files": 189,
-  "work_items": 452,
-  "epics": 166,
+  "work_items": 453,
+  "epics": 167,
   "feature_surface": [
+    "Epic 301 — The afterward's pointer, proven end to end (2026-11-17)",
     "Epic 300 — The book points at its card (2026-11-17)",
     "Epic 299 — The cache, counted out loud (2026-11-17)",
     "Epic 298 — The Afterward knows your way home (2026-11-17)",
     "Epic 297 — The showcase goes live on GitHub Pages (2026-11-17)",
-    "Epic 296 — Capacity re-measure",
-    "Epic 295 — The counsel doors"
+    "Epic 296 — Capacity re-measure"
   ]
 }

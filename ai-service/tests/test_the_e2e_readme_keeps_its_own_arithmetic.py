@@ -57,6 +57,7 @@ ALIASES = {
     "offer shelf": "offer-shelf",
     "offer celebration": "offer-celebration",
     "pre-interview room": "preread",
+    "afterward return": "afterward-return",
 }
 
 UNNAMED_CLAUSE = "the pagination suite"

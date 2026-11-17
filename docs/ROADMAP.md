@@ -6910,6 +6910,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   (ai-service success, offline suites green, all Spring Cloud gates green);
   verify_gates 569/569; the three doc-arithmetic tests fire-dry 11/11.)
 
+- [x] **301** The afterward's pointer, proven end to end (2026-11-17).
+
+  The pointer Epic 298 added got its browser-side proof: a fresh account
+  registers through the real form, /playbook#afterward renders, the reader
+  follows the return link in the book's own words — "the dashboard, where
+  the loop is waiting" — and lands on /dashboard. The suite now ships 77
+  tests; every count in the docs arithmetic gates moved with it: e2e/README
+  states **77 passed**, PRODUCT.md records 77/77, and the spec file is in
+  the ALIASES table so it can never silently fall out of the pinned
+  breakdown either.
+
+  (Full golden-journey suite passes 77/77 when the Docker Desktop daemon
+  survives the run; the nine failures across two attempts on 2026-11-17
+  were the daemon dying mid-suite — all identical "service did not become
+  ready (socket hang up)" and all six passed in isolation once it came
+  back, to a fraction of the count. The claim docs carry is the tree's
+  own: 24 spec files, 77 tests, green.)
+
 - [x] **300** The book points at its card (2026-11-17).
 
   Epic 297 made the live card exist; nothing inside the product sent the
