@@ -3883,6 +3883,8 @@ export const zh = {
       aiEventsLabel: "AI 调用",
       attentionLandsLabel: "注意力落点",
       attentionDwellsLabel: "停留读数",
+      weeklyDigestsLabel: "信件组合数",
+      weeklyDigestsDeliveredLabel: "信件送达数",
       trendProjection:
         "每条线的虚线段是一条穿过最近十二周的直线——最小二乘，仅此而已。下降的窗口向零投影并在此处截断；平坦的窗口投影出平坦。这不是预测，也不是行情。",
       flowTitle: "最新一行，现拉现查",

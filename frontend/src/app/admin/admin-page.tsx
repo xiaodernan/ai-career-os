@@ -9,6 +9,8 @@ import {
   Database,
   Eye,
   Lock,
+  Mail,
+  Send,
   Timer,
   Sparkles,
   Users,
@@ -121,6 +123,11 @@ const TREND_SERIES = [
   // and the trailing-30-day door counts the number for readers who check it.
   { key: "attentionLands", labelKey: "admin.attentionLandsLabel", icon: Eye },
   { key: "attentionDwells", labelKey: "admin.attentionDwellsLabel", icon: Timer },
+  // The Monday letter (Epic 305): every row in weekly_digests is a letter the backend attempted;
+  // delivered_at IS NOT NULL marks the ones that went out. attempts − delivered is the refusal
+  // rate this install wears — not inferred from counters inside one JVM, but read off the rows.
+  { key: "weeklyDigests", labelKey: "admin.weeklyDigestsLabel", icon: Mail },
+  { key: "weeklyDigestsDelivered", labelKey: "admin.weeklyDigestsDeliveredLabel", icon: Send },
 ] as const;
 
 /**
@@ -565,7 +572,7 @@ export default function AdminPage() {
       <section>
         <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.trendTitle")}</h2>
         <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.trendLede")}</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-9">
           {TREND_SERIES.map((serie) => {
             const values = trends?.series?.[serie.key];
             const spark = values ? projectedSparkline(values, 4, 120, 36, 3) : null;

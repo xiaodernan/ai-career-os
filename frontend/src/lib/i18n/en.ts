@@ -4173,6 +4173,8 @@ export const en = {
       aiEventsLabel: "AI calls",
       attentionLandsLabel: "Attention landings",
       attentionDwellsLabel: "Dwell reads",
+      weeklyDigestsLabel: "Letters composed",
+      weeklyDigestsDeliveredLabel: "Letters delivered",
       trendProjection:
         "The dashed half of each line is a straight line through the trailing twelve weeks — least squares, nothing more. A falling window projects softer than zero and clamps there; a flat window projects flat. Not a forecast, not a market move.",
       flowTitle: "Newest rows, straight off the tables",

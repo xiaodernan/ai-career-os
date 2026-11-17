@@ -6918,6 +6918,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **305** The admin trends read the Monday letter's real pulse (2026-11-17).
+
+  The overseer's weekly grid grew two tiles a single JVM could never see honestly:
+  `weeklyDigests` (every composed letter the backend ever attempted) and
+  `weeklyDigestsDelivered` (the ones with delivered_at set) — read straight off the
+  rows, per ISO week, dense-filled, same Monday-anchored frame every other series
+  wears. attempts − delivered is the install's refusal rate, not an inference from
+  in-process counters.
+
+  Verified against the live dev DB: 223 attempts / 223 delivered this week
+  (SQL expressions exercised directly in psql). Frontend: two tiles in the same
+  sparkline-plus-projection card every other trend series reuses, two new i18n
+  keys per language. Backend gates offline: AdminTrendsServiceTest 6/6 — the
+  arithmetic of the week window holds.
+
 - [x] **304** The copilot's hot loop is a StateGraph now (2026-11-17).
 
   The agentic heart of the engine — the tool-calling turn the copilot runs

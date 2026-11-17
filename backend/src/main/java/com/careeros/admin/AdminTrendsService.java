@@ -35,7 +35,14 @@ public class AdminTrendsService {
     // 289 (the overseer's synthetic door) — it stays out of the weekly frame because a sparse
     // series reads worse than silence, and the trailing-30-day door counts the number.
     new Series("attention_events", "created_at", "attentionLands", "event = 'land'"),
-    new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"));
+    new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"),
+    // The Monday letter (Epics 251/305): every row in weekly_digests is a letter the backend
+    // attempted to compose that week; delivered_at IS NOT NULL marks the ones that actually went
+    // out. attempts − delivered is the refusal rate the install wears — a number not inferred from
+    // counters inside one JVM, but read straight off the rows.
+    new Series("weekly_digests", "week_start::timestamp", "weeklyDigests", null),
+    new Series("weekly_digests", "week_start::timestamp", "weeklyDigestsDelivered",
+            "delivered_at IS NOT NULL"));
 
     private final JdbcTemplate jdbc;
     private final AdminCache cache;
