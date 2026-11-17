@@ -50,6 +50,17 @@ async def _session_ctx(session_id: str, user_id: str) -> tuple[dict, str, dict]:
             parsed = json.loads(parsed)
         jd_topics = ((parsed or {}).get("interviewTopics") or [])
     resume_ctx = text or "no resume provided"
+    # Epic 317: the interviewer hears more than the resume. The candidate's own
+    # long-term memory, goals and prior interview notes are on the wire — the one
+    # interview the candidate has already done is the one that taught them where the
+    # weak spots were. Carry the dossier, byte-stable, into every turn.
+    try:
+        dossier = await memory.build_dossier_context(user_id)
+    except Exception:
+        dossier = ""
+    if dossier:
+        dossier = dossier[:10000]
+        resume_ctx = f"{resume_ctx}\n\n<candidate_history>\n{dossier}\n</candidate_history>"
     return s, resume_ctx, {"jd_topics": jd_topics}
 
 

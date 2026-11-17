@@ -6918,6 +6918,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **317** The interviewer finally hears the candidate's own history (2026-11-17).
+
+  The `/internal/interview/*` turn builds its session context the same way it always
+  did — the resume plaintext and the JD topics, nothing else. The wire has held the
+  candidate's *own words* for weeks — every strength and weakness noted across mock
+  sessions, the goals they wrote down, the dossier the copilot already walks in with
+  — and none of it reached the model that is about to judge them a second time. The
+  session context now appends a byte-stable `<candidate_history>` block with the full
+  dossier (resume, deduped applications with true ×N counts, matches with technical
+  scores, interview memories, goals, wire digest — capped at 10 k chars), and the
+  three clip windows that set the interview's context budget moved from 1.5–2.5 k
+  characters to 7.5 k: the opening, the evaluation of each answer, and the final
+  report. 144/144 interview tests stay green; the block degrades to the bare resume
+  on any failure, never to silence.
+
 - [x] **316** The match narrative rides the spine — and the spine audits the numbers (2026-11-18).
 
   The match engine computed every number honestly (the five subscores, the years of
