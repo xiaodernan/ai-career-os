@@ -829,6 +829,10 @@ describe("endpoints ↔ backend route parity", () => {
     // surface the browser reads, not a probe-only route.
     "/calendar.ics":
       "the feed address is pasted into a calendar client, not fetched by the browser; the settings card copies the URL the backend already signed",
+    // Epic 314: the liveness line. Restart loops and cheap monitors probe it; the browser
+    // never does — it is a probe, not a surface, exactly like /health before the fleet card.
+    "/health/live":
+      "the zero-probe liveness line for container restart loops and cheap gating; probes hit it, the browser never does",
     "/me": "MeController's alias of /users/me; the client spells every call through /users/...",
     "/resumes/{}/versions": "superseded for the panel by GET /resume-versions?resumeId=…",
     "/mail/preferences/{}/{}":
