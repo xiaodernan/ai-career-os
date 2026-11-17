@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T16:21:26.861979Z",
+  "generated_at": "2026-11-17T16:28:27.554509Z",
   "branch": "main",
-  "head": "0a8269c",
-  "total_commits": 1552,
+  "head": "5ff38d7",
+  "total_commits": 1554,
   "milestone": "Epic 314",
   "milestone_full": "the ledger of done epics (through 466 items), closed at Epic 314 — The health line learns what it can afford (2026-11-18)",
   "pushed_at": "2026-11-17",
