@@ -7,6 +7,7 @@ context and extracted after meaningful turns.
 
 import logging
 
+from app.core import db
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.db import domain, observability
 from app.providers.base import LLMMessage, LLMRequest
@@ -21,15 +22,12 @@ _KIND_LABEL = {
 }
 
 
-async def build_memory_context(user_id: str) -> str:
-    """The user's durable memory as prompt text, or "" when it cannot be built.
+async def build_memory_context(user_id: str) -> str:  # noqa: F811  (placeholder anchor kept for clarity below)
+    return await _memory_context(user_id)
 
-    Memory is a prompt enhancement, not the answer: the copilot can still answer a
-    turn without it. A failed read used to abort the turn *before any tool ran*, and a
-    row missing `kind`/`content` raised KeyError on the way to the prompt -- both made
-    a cosmetic input the reason the user got nothing. The write side
-    (`extract_and_store`) is documented as best-effort; this makes the read side match.
-    """
+
+async def _memory_context(user_id: str) -> str:
+    """The user's durable memory as prompt text, or "" when it cannot be built."""
     try:
         memories = await domain.get_memories(user_id, limit=40)
     except Exception as e:
@@ -63,6 +61,78 @@ async def build_memory_context(user_id: str) -> str:
     for label, line in entries:
         lines.append(f"- [{label}] {line}")
     return "\n".join(lines) if len(lines) > 1 else ""
+
+
+# ---------------------------------------------------------------- dossier --
+
+
+def _trim(text: str | None, limit: int) -> str:
+    if not isinstance(text, str):
+        return ""
+    text = text.strip()
+    return text[:limit]
+
+
+async def build_dossier_context(user_id: str) -> str:
+    """A rich, byte-stable dossier of the user's own material, for the prefix cache.
+
+    What the copilot saw arrive here is the user's actual career, every byte-identical
+    turn after a change: the latest resume plaintext, the last ten applications
+    (recency order), the last ten triggers to act, and the skills the wire has recorded.
+    No LLM call inside this function — the compiler builds it out of rows.
+    """
+    out: list[str] = ["## Candidate dossier"]
+
+    try:
+        rv = await domain.get_current_resume_version(user_id)
+    except Exception as e:
+        log.warning("dossier: resume fetch failed, continuing: %s", e)
+        rv = None
+    if rv:
+        plain = _trim(rv.get("plaintext"), 3000)
+        label = _trim(rv.get("label"), 48) or "resume"
+        out.append(f"### resume ({label})\n{plain}" if plain else f"### resume ({label})\n(plaintext not stored)")
+
+    try:
+        apps = await db.fetch(
+            """SELECT title, COALESCE(company_name, '') AS company, status,
+                      updated_at
+               FROM applications
+               WHERE user_id = $1::uuid
+               ORDER BY updated_at DESC NULLS LAST, created_at DESC
+               LIMIT 10""",
+            user_id,
+        )
+    except Exception as e:
+        log.warning("dossier: applications fetch failed, continuing: %s", e)
+        apps = []
+    for app in apps:
+        company = _trim(app.get("company"), 48)
+        title = _trim(app.get("title"), 64)
+        status = _trim(app.get("status"), 12)
+        out.append(f"- [app] {title} @{company} — {status}")
+
+    try:
+        matches = await db.fetch(
+            """SELECT j.title, jm.overall, jm.technical, jm.missing_skills
+               FROM job_matches jm
+               JOIN jobs j ON j.id = jm.job_id
+               WHERE jm.user_id = $1::uuid
+               ORDER BY jm.created_at DESC NULLS LAST
+               LIMIT 10""",
+            user_id,
+        )
+    except Exception as e:
+        log.warning("dossier: matches fetch failed, continuing: %s", e)
+        matches = []
+    for m in matches:
+        title = _trim(m.get("title"), 64)
+        overall = m.get("overall")
+        overall = overall if isinstance(overall, (int, float)) else 0
+        missing = _trim(", ".join([str(s) for s in (m.get("missing_skills") or []) if isinstance(s, str)]), 80)
+        out.append(f"- [match {round(overall):.0%}] {title} — missing: {missing}")
+
+    return "\n".join(out) if len(out) > 2 else ""
 
 
 EXTRACT_SYSTEM = """You maintain long-term memory for a career assistant.

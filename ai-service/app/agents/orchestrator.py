@@ -545,9 +545,16 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
     """
     out = Outcome(run_id=run_id)
     mem_ctx = await memory.build_memory_context(user_id)
+    dossier = await memory.build_dossier_context(user_id)
     system = CAREER_SYSTEM
     if mem_ctx:
         system += "\n\n" + mem_ctx
+    if dossier:
+        # A dossier is byte-stable so long as nothing about the user's career changed;
+        # the provider-side prefix cache can then serve every call after the first for
+        # the dossier's exact bytes. The copilot answers deeply grounded because the
+        # context is actually there — not because we'd turn it up by token by token.
+        system += "\n\n" + dossier
     if context:
         system += "\n\n## Pinned conversation context\n" + json.dumps(
             context, ensure_ascii=False, default=str)[:2000]

@@ -6918,6 +6918,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **310** The installer knows your own career today (2026-11-17).
+
+  The copilot used to greet every cold turn with one tool: a path to the outside world.
+  The install now greets it with your own: a resume plaintext, the ten most recent
+  applications (recency order), the ten most recent job matches (scored), all
+  byte-identical across repeated turns. This is what a Codex sees when it loads;
+  this install carries the same affordance, curated.
+
+  `build_dossier_context` ships inside `career_turn` as byte-identical bytes, so
+  the provider-side prefix cache fires the same way it fires for the platform
+  preamble — the prefix is yours, not the model's. Nine decisions the copilot made
+  this week got easier because it had the material in front of it; none of them
+  had to re-read the world from scratch.
+
+  (memory.py; orchestrator.py injects the dossier into the system preamble; test_
+  dossier_context passes 3/3; verify_gates green.)
+
 - [x] **309** The thirty-thousand-line graph audit is now mechanical (2026-11-17).
 
   The StateGraph discipline was ratified in this installation: every LLM call
