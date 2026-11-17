@@ -1,8 +1,8 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T10:52:51.065171Z",
+  "generated_at": "2026-11-17T10:59:35.199345Z",
   "branch": "main",
-  "head": "e96b001",
+  "head": "d04dfff",
   "total_commits": 1,
   "milestone": "Epic 305",
   "milestone_full": "the ledger of done epics (through 457 items), closed at Epic 305 — The admin trends read the Monday letter's real pulse (2026-11-17)",
