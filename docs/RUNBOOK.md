@@ -191,6 +191,57 @@ will have been raised against a healthy upstream. Burst test through the gateway
 (http_reqs at 10 VUs saw 96% 503s with sub-30 ms latency, which is the edge answering its own
 fallback body before even attempting the backend); ATP for this edge is meters-scale.
 
+## The Docker Desktop daemon dies and the host refuses every compose port
+
+**What the alert looks like.** Compose says every container is `Up (healthy)` —
+then `curl 127.0.0.1:8080/api/v1/health` refuses, `127.0.0.1:8000/health`
+refuses, and the gateway refuses — while inside the containers Tomcat/Netty/
+uvicorn are answering fine, because the probes run in-app, not through the host
+forwarding. `docker compose ps` reports `health: starting` forever, and the
+daemon crashes on the way down with `error reading from server: EOF` or
+`dockerDesktopLinuxEngine: file has already been closed`.
+
+**What it means.** The daemon (not the fleet) is the flaky part of the dev
+machine. Measured on 2026-11-17: five daemon deaths in the long session —
+three inside `docker compose build frontend`, every one within ~430 seconds of
+the lint/type phase of a ~5.6-minute compile (so the image is never tagged,
+but everything up to lint stays cached); two more surfaced as `socket hang up`
+health-flaps mid-run elsewhere. The host port *forwarder* is the thing that
+dies; the containers themselves are usually fine or fixable with one
+`restart` per service.
+
+**What to read and do, in order.**
+
+1. Restart Docker Desktop (`Start-Process "C:\Program Files\Docker\Docker\
+   Docker Desktop.exe"`), and wait until `docker info --format '{{.ServerVersion}}'`
+   answers — not merely the UI saying it's alive. The daemon can answer early
+   and still fail the next write; a build writes on every step, so a daemon
+   that dies mid-step takes the step with it, while everything before that
+   step stays cached for the next attempt.
+2. `docker compose --profile app down` then up-d — re-pinning the forwarder.
+   If `ports` still refuse, the daemon died again; step 1 is cheaper than
+   step 2's false comfort.
+3. `docker compose --profile app restart backend gateway` — after daemon
+   death the Spring apps sometimes wake before their own VM is sound; a
+   restart from a settled daemon boots clean ({Tomcat on 8080 at 09:17:38Z,
+   gateway 8081 at 09:12:38Z, both healthy after waiting ~3 minutes}).
+4. Any failing CI-like run: if every failing assertion is `Service at ...
+   did not become ready within 60000ms (socket hang up)` (or an identical
+   `ERR_CONNECTION_REFUSED`), it is the machine, not the product. Re-run only
+   the failing specs once the stack answers 200. Do **not** lengthen the
+   per-test timeouts or the health window to absorb the flap — the gates
+   shrink only with measured cause recorded alongside them.
+5. The frontend image trap: `docker compose build frontend` compiles in the
+   container at exactly the moment the daemon keeps dying, so the tag never
+   lands. Building the same production bundle locally (`next build` on the
+   host) is the honest fallback — every bundle asset is identical except the
+   `standalone` bit — and it is how the 77/77 golden-journey record was taken:
+   against the local bundle, not the container.
+
+**The honest limit.** The nightly CI and the local dev box disagree on
+stability; this section is for the dev box. On CI the same fault shape reads
+"nightly failed on X/jobs" with the X names doing the talking.
+
 ## The AI relay answers 502 from inside compose though the host reaches it fine
 
 **What the alert looks like.** Every AI call inside the stack fails fast:
