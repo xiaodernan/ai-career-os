@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T13:56:02.061887Z",
+  "generated_at": "2026-11-17T13:56:26.672923Z",
   "branch": "main",
-  "head": "753296b",
-  "total_commits": 1535,
+  "head": "c03a174",
+  "total_commits": 1,
   "milestone": "Epic 309",
   "milestone_full": "the ledger of done epics (through 461 items), closed at Epic 309 — The thirty-thousand-line graph audit is now mechanical (2026-11-17)",
   "pushed_at": "2026-11-17",
