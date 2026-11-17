@@ -75,7 +75,7 @@ public class SecurityConfig {
                         // the route that hands the address out is signed-in.
                         .requestMatchers("/api/v1/inbound/mail/**").permitAll()
                         .requestMatchers("/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/api/v1/health").permitAll()
+                        .requestMatchers("/api/v1/health", "/api/v1/health/live").permitAll()
                         // The operator's tally (Epic 248): counts only, no names, no content,
                         // no identifiers — answers "how big is this install", not "who did what".
                         // The attention writer (Epic 267): the browser reports landing/dwelling/acting.

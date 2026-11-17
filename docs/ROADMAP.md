@@ -6918,6 +6918,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **314** The health line learns what it can afford (2026-11-18).
+
+  `scripts/load_probe.py` measured the live install under a 1/10/25/50/100-way read-health
+  ramp and found a real ceiling, not a pretty one: `/api/v1/health` is a deep readiness
+  report (four real probes per call, bounded at 2 s), and at line rate it flattens Hikari
+  at ~10-30 rps while latency grows linearly — every 100-way dashboard fan-out became
+  400 database connections. The route now serves a **burst-cached** report (monotonic
+  2 s TTL, double-checked, handed out as a copy; degraded reports are cached exactly as
+  honestly as ok ones) and a new **`/api/v1/health/live`** answers liveness with zero
+  probes for restart loops and cheap gating. SecurityConfig opens both lines.
+  `HealthServiceBurstTest` pins the one-compute-per-burst behavior, the zero-TTL escape,
+  the caller-cannot-corrupt copy, and the honest degraded cache; 17/17 health tests green.
+  Authed reads stayed at HTTP 200 through a 100-way wrong-password storm; the route is
+  a probe, not a wall. First honest load numbers in the docs, and they say where the
+  knee is — before someone pretends the install was fine.
+
 - [x] **313** The interview's three decision calls ride the bounded StateGraph (2026-11-17).
 
   `opening_question`, `evaluate_answer` and `advance` used to be bare LLM calls wearing

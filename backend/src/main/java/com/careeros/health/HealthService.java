@@ -41,29 +41,47 @@ public class HealthService {
     /** The whole report's budget, not each probe's: the four run concurrently. */
     static final Duration DEFAULT_PROBE_TIMEOUT = Duration.ofSeconds(2);
 
+    /** How long the deep report may be served from the burst cache. A probe hit at
+     * the head of a 100-way burst pays for all of them; two seconds of staleness is
+     * the price of a readiness check that does not collapse the pool at line rate.
+     */
+    static final Duration DEFAULT_REPORT_CACHE_TTL = Duration.ofSeconds(2);
+
     private final DataSource dataSource;
     private final RedisTemplate<String, ?> redisTemplate;
     private final Optional<StorageService> storage;
     private final AiServiceClient aiService;
     private final Duration probeTimeout;
+    private final Duration cacheTtl;
     /** The image's own commit: `APP_BUILD_SHA` env (baked by the Dockerfile), else "dev". */
     private final String buildSha;
+    private final long startedAtNanos = System.nanoTime();
+    private volatile CachedReport cache;
 
     @Autowired
     public HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
                          Optional<StorageService> storage, AiServiceClient aiService) {
-        this(dataSource, redisTemplate, storage, aiService, DEFAULT_PROBE_TIMEOUT);
+        this(dataSource, redisTemplate, storage, aiService, DEFAULT_PROBE_TIMEOUT,
+                DEFAULT_REPORT_CACHE_TTL);
     }
 
     /** The test seam: a shorter bound than the shipped one, for a probe that never answers. */
     HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
                   Optional<StorageService> storage, AiServiceClient aiService,
                   Duration probeTimeout) {
+        this(dataSource, redisTemplate, storage, aiService, probeTimeout, Duration.ZERO);
+    }
+
+    /** The other test seam: the deep report's burst cache, shorter than production's. */
+    HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
+                  Optional<StorageService> storage, AiServiceClient aiService,
+                  Duration probeTimeout, Duration cacheTtl) {
         this.dataSource = dataSource;
         this.redisTemplate = redisTemplate;
         this.storage = storage;
         this.aiService = aiService;
         this.probeTimeout = probeTimeout;
+        this.cacheTtl = cacheTtl;
         String env = System.getenv("APP_BUILD_SHA");
         this.buildSha = env != null && !env.isBlank() ? env.trim() : "dev";
     }
@@ -110,6 +128,49 @@ public class HealthService {
         // measured cannot tell a stale image from a fixed one (Epic 78).
         body.put("buildSha", buildSha);
         return body;
+    }
+
+    /**
+     * The readiness line, served for bursts of callers. The probes are the same four,
+     * unchanged; what changes is that a 100-way concurrency spike pays for one report and
+     * shares it, instead of stampeding the database for one hundred. The cache is
+     * monotonic-clocked, never longer than {@link #DEFAULT_REPORT_CACHE_TTL}, and never
+     * consulted to hide a failure: a degraded report is cached on exactly the same
+     * terms as an ok one, because hiding half fails costs more than showing one.
+     */
+    public Map<String, Object> reportCached() {
+        long now = System.nanoTime();
+        CachedReport hit = cache;
+        if (hit != null && hit.expiresAtNanos > now) {
+            return new LinkedHashMap<>(hit.report);
+        }
+        synchronized (this) {
+            hit = cache;
+            if (hit != null && hit.expiresAtNanos > System.nanoTime()) {
+                return new LinkedHashMap<>(hit.report);
+            }
+            Map<String, Object> fresh = report();
+            cache = new CachedReport(fresh, System.nanoTime() + cacheTtl.toNanos());
+            return new LinkedHashMap<>(fresh);
+        }
+    }
+
+    /**
+     * The liveness line: the process is up. No dependency is probed -- a health probe
+     * that shares fate with the database cannot tell a monitor one from the other, and
+     * container restart loops deserve a line that fails only when this JVM does.
+     * Monitors that want the four-probe readiness answer use {@link #reportCached()}.
+     */
+    public Map<String, Object> liveness() {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", "ok");
+        body.put("kind", "liveness");
+        body.put("uptimeMs", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNanos));
+        body.put("buildSha", buildSha);
+        return body;
+    }
+
+    private record CachedReport(Map<String, Object> report, long expiresAtNanos) {
     }
 
     private static <T> FutureTask<T> startProbe(String name, Callable<T> probe) {
