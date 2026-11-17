@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-17T10:08:40.848431Z",
+  "generated_at": "2026-11-17T10:10:53.469434Z",
   "branch": "main",
-  "head": "264f833",
-  "total_commits": 1519,
+  "head": "6d0e2ff",
+  "total_commits": 1,
   "milestone": "Epic 303",
   "milestone_full": "the ledger of done epics (through 455 items), closed at Epic 303 — The book tells the truth about its spine (2026-11-17)",
   "pushed_at": "2026-11-17",
