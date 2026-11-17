@@ -6918,6 +6918,32 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **304** The copilot's hot loop is a StateGraph now (2026-11-17).
+
+  The agentic heart of the engine — the tool-calling turn the copilot runs
+  on every message, with the tool registry, the sub-agent transfer, the
+  write memo, the streaming seam, and the step budget — rode a raw `for`
+  loop for years. It now runs `decide ⇄ dispatch` on the same bounded
+  StateGraph spine as the tailor, cover-letter and interview-report paths:
+
+    decide   — one LLM call; no tool calls returns the answer; tool calls go dispatch
+    dispatch — execute the pending calls (memoized idempotently — the second
+                identical read in a turn never hits the database twice), then decide
+    budget   — out of steps forces the grounded final answer, exactly as before
+
+  Hard backstop = 2·MAX_STEPS+2 nodes; the budget lives in the decide node,
+  so the cap can never fire before the budget does. Every node emits the
+  `graph_node` ledger row, so the AI Activity timeline shows the tool-turn
+  itself as first-class steps traced per node — the loop is now visible to
+  the install that runs it, not just to the test harness.
+
+  Sub-agent transfer, idempotent write memoization, the streaming seam and
+  the overrun-as-refusal contract are all preserved. All 48 orchestrator
+  tests pass unchanged; 198 agent/career/copilot/reply tests; 2825
+  pass in the full suite. Epic 303's honesty note stands throughout: the
+  fallback answer on a failed model call after tools gathered is identical
+  in shape to what the reader already sees.
+
 - [x] **302** The interview report rides the StateGraph (2026-11-17).
 
   `finalize` was a single blind LLM call wearing setdefaults — every score the

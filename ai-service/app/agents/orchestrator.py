@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.agents import memory
+from app.agents.stategraph import NodeResult, StateGraph
 from app.agents.tools import (SUBAGENT_TOOLS, TOOL_INDEX, Tool, drop_absent_optionals,
                               validate_tool_args)
 from app.core import ai, taskbus
@@ -404,28 +405,61 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
     # database round trip and, for the write tools, performs the write twice. The
     # *successful* result is reused and the model is told, so the loop can move on.
     # Failures are deliberately not cached: a transient error deserves the retry.
+    # The dict lives in the state channels rather than closing over the function, so a
+    # node still obeys the StateGraph contract: nothing mutates in place.
     answered: dict[str, dict] = {}
 
-    for step in range(max_steps):
-        out.steps += 1
+    async def _decide(state: dict) -> NodeResult:
+        steps_left = state["max_steps"] - state["out"].steps
+        out_local = state["out"]
+        # step budget exhausted — force a grounded summary
+        if steps_left <= 0:
+            budget_msgs = state["messages"] + [LLMMessage(
+                "user", _STEP_BUDGET_INSTRUCTION + " Summarize what the "
+                        "tool results above already establish.")]
+            try:
+                resp = await _ask(LLMRequest(messages=budget_msgs, temperature=0.3,
+                                             max_tokens=1200), kind="finalize")
+                return NodeResult({"reply": resp.text}, None)
+            except Exception as e:
+                if not out_local.tools_used:
+                    raise
+                log.warning("finalize call failed for %s: %s", agent, e)
+                await _trace_degraded(run_id, agent, "finalize_failed", e, out_local)
+                return NodeResult({"reply": _fallback_answer(out_local, e,
+                                                             _user_text(budget_msgs))},
+                                   None)
+        out_local.steps += 1
+        messages_local = state["messages"]
         try:
-            resp = await _ask(LLMRequest(messages=messages, tools=specs, temperature=0.3,
-                                         max_tokens=1800),
-                              kind=f"step_{step + 1}")
+            resp = await _ask(LLMRequest(messages=messages_local, tools=specs,
+                                         temperature=0.3, max_tokens=1800),
+                              kind=f"step_{out_local.steps}")
         except Exception as e:
             # A failed call is only recoverable once tools have produced something:
             # with nothing gathered there is no answer to fall back on, and the
             # caller's error path is the honest one.
-            if not out.tools_used:
+            if not out_local.tools_used:
                 raise
             log.warning("model call failed after %d tool(s) for %s: %s",
-                        len(out.tools_used), agent, e)
-            await _trace_degraded(run_id, agent, "step_failed", e, out)
-            return _fallback_answer(out, e, _user_text(messages))
+                        len(out_local.tools_used), agent, e)
+            await _trace_degraded(run_id, agent, "step_failed", e, out_local)
+            return NodeResult({"reply": _fallback_answer(out_local, e,
+                                                         _user_text(messages_local))},
+                              None)
         if not resp.tool_calls:
-            return resp.text
-        messages.append(LLMMessage("assistant", resp.text, tool_calls=resp.tool_calls))
-        for tc in resp.tool_calls:
+            return NodeResult({"reply": resp.text}, None)
+        return NodeResult(
+            {"messages": list(messages_local) + [LLMMessage("assistant", resp.text,
+                                                           tool_calls=resp.tool_calls)],
+             "pending": list(resp.tool_calls)},
+            "dispatch")
+
+    async def _dispatch(state: dict) -> NodeResult:
+        messages_local = state["messages"]
+        answered_local = {**state["answered"]}
+        out_local = state["out"]
+        for tc in state["pending"]:
             # The model is asked for JSON arguments, but a malformed parse can land a
             # list / string / None here. `**args` inside the handler would raise, and
             # the transfer_to branch's `.get` would raise AttributeError -- either one
@@ -466,8 +500,8 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                     result = {"error": f"unknown tool {tc.name}"}
                 else:
                     key = json.dumps([tc.name, args], sort_keys=True, default=str)
-                    if key in answered:
-                        result = {**answered[key],
+                    if key in answered_local:
+                        result = {**answered_local[key],
                                   "_note": "identical to an earlier call this turn; "
                                            "not run again"}
                     else:
@@ -482,23 +516,21 @@ async def _run_loop(*, user_id: str, messages: list[LLMMessage], tools: list[Too
                                 # new state instead of the pre-write answer. The
                                 # write's own result is still cached, which is
                                 # what keeps a re-issued write from running twice.
-                                answered.clear()
-                            answered[key] = result
-            messages.append(LLMMessage("tool", _tool_result_text(result),
-                                       tool_call_id=tc.id, name=tc.name))
-    # step budget exhausted — force a grounded summary
-    messages.append(LLMMessage("user", _STEP_BUDGET_INSTRUCTION + " Summarize what the "
-                                       "tool results above already establish."))
-    try:
-        resp = await _ask(LLMRequest(messages=messages, temperature=0.3, max_tokens=1200),
-                          kind="finalize")
-        return resp.text
-    except Exception as e:
-        if not out.tools_used:
-            raise
-        log.warning("finalize call failed for %s: %s", agent, e)
-        await _trace_degraded(run_id, agent, "finalize_failed", e, out)
-        return _fallback_answer(out, e, _user_text(messages))
+                                answered_local.clear()
+                            answered_local[key] = result
+            messages_local.append(LLMMessage("tool", _tool_result_text(result),
+                                             tool_call_id=tc.id, name=tc.name))
+        return NodeResult(
+            {"messages": messages_local, "pending": None, "answered": answered_local},
+            "decide")
+
+    graph = StateGraph("decide", {"decide": _decide, "dispatch": _dispatch},
+                       max_steps=2 * max_steps + 2)
+    final = await graph.run({"messages": list(messages), "out": out,
+                             "max_steps": max_steps, "pending": None,
+                             "answered": answered, "reply": None},
+                            run_id=run_id, agent=agent)
+    return final["reply"]
 
 
 async def career_turn(*, user_id: str, message: str, history: list[dict] | None = None,
