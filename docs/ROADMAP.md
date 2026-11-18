@@ -6946,7 +6946,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the non-declined row, in both languages; the new hook's wire shape pinned by
   `analytics.test` in the same sitting), bundle gate @362 (this epic's keys carry ~0.8 kB
   shared-table gzip, jobs measured below the 362 line again after the node-build's
-  re-measure), i18n adds the counter letter slice (6 keys en+zh), copy census unchanged at
+  re-measure), i18n adds the counter letter slice (7 keys en+zh: six offer keys + one failures.* sentence), copy census unchanged at
   216. Honest limits: not probed live against the operator's relay from this sitting — Docker
   Desktop is down (`docker info` → HTTP 500 at the daemon API, three builds died of the same
   OOM this sitting); the pending screen will need its Docker once the daemon recovers. Same
