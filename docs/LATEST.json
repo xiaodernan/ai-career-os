@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T21:12:52.522243Z",
+  "generated_at": "2026-11-18T22:29:36.736248Z",
   "branch": "main",
-  "head": "89c5114",
-  "total_commits": 1636,
+  "head": "369b385",
+  "total_commits": 1638,
   "milestone": "Epic 332",
   "milestone_full": "the ledger of done epics (through 484 items), closed at Epic 332 — The analyst's read of one letter",
   "pushed_at": "2026-11-18",
