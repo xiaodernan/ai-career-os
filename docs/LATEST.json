@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T11:40:16.101093Z",
+  "generated_at": "2026-11-18T12:06:09.311608Z",
   "branch": "main",
-  "head": "9aed73b",
-  "total_commits": 1614,
+  "head": "f55ec86",
+  "total_commits": 1616,
   "milestone": "Epic 329",
   "milestone_full": "the ledger of done epics (through 481 items), closed at Epic 329 — The gap analyst's voice",
   "pushed_at": "2026-11-18",
