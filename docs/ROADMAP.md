@@ -6942,6 +6942,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   + AssistantControllerTest, next-step-card render test in both languages, i18n/zh-key parity
   held, bundle census +1.)
 
+  **Epilogue the same sitting — the analyst reads the resume, not just the arithmetic (2026-11-18).**
+  The gap analyst's editor now sees up to 2400 chars of the reader's own latest-version resume
+  plaintext (workspace query, same user — no caller-shaped surface) folded into the snapshot as
+  an `evidence` field. The verify gate did not move: every digit in the note must still exist in
+  the payload, so an editor that invents a year or a count loses the note to `null` instead of
+  getting past the wire. Pinned by `tests/test_gap_note_evidence.py` (5/5 with the grounding assertions
+  both directions) plus the existing gap-note suite green; the wire shipped live: after the backend
+  rebuild the /growth/gap-note answer still passes the same live probe in both languages.
+
 - [x] **330** One wire, one honest number — every call streams, the hot lane reads ~96% (2026-11-18).
 
   (Every LLM call in this engine now rides the SSE wire: `complete()` assembles its

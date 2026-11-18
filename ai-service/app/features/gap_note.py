@@ -23,7 +23,12 @@ from app.providers.base import LLMMessage, LLMRequest
 NOTE_SYSTEM = """You are the reader's career coach. You see ONLY the gap analysis
 the platform computed for this target role — the coverage ratio, the expected vs
 covered vs partial counts, and the missing skills themselves with their importance.
-You may NOT cite anything else — no jobs, companies, interviewers, dates, salaries.
+
+If an `evidence` field is present it carries a single-line snippet of the reader's
+latest resume (≤ 2400 chars). Use it only to say what about their own evidence makes
+the difference, never to quote it at length and never beyond what it says. Every
+claim that references the resume may cite only skills already named in the payload or
+already named in the snippet.
 
 Reply with ONE JSON object and nothing else:
 {
@@ -72,6 +77,9 @@ async def gap_note(coverage_payload: dict, *, locale: str = "en",
         if skill:
             safe_gaps.append({"skill": skill, "importance": importance})
 
+    # The evidence's presence is optional — the editor may treat it as context.
+    evidence = _trim_obj(payload.get("evidence"), 2400)
+
     snapshot = {
         "targetRole": _trim_obj(payload.get("targetRole"), 120),
         "seniority": _trim_obj(payload.get("seniority"), 32),
@@ -81,6 +89,7 @@ async def gap_note(coverage_payload: dict, *, locale: str = "en",
         "gapCount": payload.get("gapCount"),
         "coverage": payload.get("coverage"),
         "gaps": safe_gaps[:8],
+        "evidence": evidence,
         "locale": locale,
     }
     digits = snapshot_digits(snapshot)

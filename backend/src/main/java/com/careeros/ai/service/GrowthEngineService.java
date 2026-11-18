@@ -7,6 +7,7 @@ import com.careeros.ai.dto.ProfileEngineRequest;
 import com.careeros.ai.dto.ProgressRequest;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class GrowthEngineService {
 
     private final AiServiceClient aiService;
+    private final JdbcTemplate jdbc;
 
-    public GrowthEngineService(AiServiceClient aiService) {
+    public GrowthEngineService(AiServiceClient aiService, JdbcTemplate jdbc) {
         this.aiService = aiService;
+        this.jdbc = jdbc;
     }
 
     /** 10.1 — the distance between the profile and the target role. */
@@ -35,18 +38,48 @@ public class GrowthEngineService {
         return aiService.gapAnalysis(userId, request);
     }
 
+    /** The latest resume's plaintext, compacted to one line — the evidence half the gap note used to lack. */
+    private String currentPlaintextSnippet(UUID userId) {
+        try {
+            String sql = """
+                SELECT v.plaintext
+                  FROM resumes r
+                  JOIN resume_versions v ON v.resume_id = r.id
+                 WHERE r.user_id = ?
+                 ORDER BY v.created_at DESC
+                 LIMIT 1
+            """;
+            String text = jdbc.query(sql, new Object[]{userId}, rs -> rs.next() ? rs.getString(1) : null);
+            if (text == null || text.isBlank()) {
+                return null;
+            }
+            String compact = text.replaceAll("\\s+", " ").trim();
+            return compact.length() <= 2400 ? compact : compact.substring(0, 2400);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     /**
      * Epic 329 — the gap analyst's voice about the gap analysis. Runs the same engine
      * the caller could reach at /gap-analysis, then forwards the payload to the ai-service for
      * the one grounded paragraph. The backend owns the engine seam; the caller owns only
      * the locale toggle. Returns `{gap, note?}` — `note` is null when the editor could not
      * keep a grounded one. A coat of plausibility is never an acceptable answer.
+     *
+     * The payload now also carries up to 2400 chars of the reader's latest resume so the
+     * editor can ground the note in their actual evidence, not just the coverage arithmetic —
+     * the editor is still barred from inventing a fact, and the wire digits rule still holds.
      */
     @Transactional(readOnly = true)
     public Map<String, Object> gapNote(UUID userId, GapNoteRequest request) {
         GrowthEngineRequest engine = new GrowthEngineRequest(
                 request.targetRole(), request.seniority(), null, null, null, null, null);
         Map<String, Object> payload = new java.util.HashMap<>(aiService.gapAnalysis(userId, engine));
+        String evidence = currentPlaintextSnippet(userId);
+        if (evidence != null) {
+            payload.put("evidence", evidence);
+        }
         Map<String, Object> answered = aiService.gapNote(userId, payload, request.locale());
         Object note = answered == null ? null : answered.get("note");
         if (note != null) {
