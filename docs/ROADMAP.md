@@ -6960,7 +6960,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   calls returned honest silence, and the provider's internal 429/5xx retry marks the limit of
   what code should do about that. Measured: frontend **1540/1540** vitest (+3 page pins, +1
   artifacts fixture rewrite pinned to the engine's keys), backend client 26/26 incl. the locale
-  passthrough, ai-service FULL_SUITE_PENDING, verify_gates 570/570, CI CI_PENDING.)
+  passthrough, ai-service **2879/2879**, verify_gates 570/570, CI green at the tip (44233509101).)
 
 - [x] **322** The Monday letter gets an editor — one grounded LLM paragraph about the week (2026-11-18).
 
