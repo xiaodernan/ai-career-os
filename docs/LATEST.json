@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T13:28:01.298244Z",
+  "generated_at": "2026-11-18T13:51:07.002840Z",
   "branch": "main",
-  "head": "f1d5c8f",
-  "total_commits": 1620,
+  "head": "fba3a32",
+  "total_commits": 1622,
   "milestone": "Epic 331",
   "milestone_full": "the ledger of done epics (through 483 items), closed at Epic 331 — The assistant's one proactive first step",
   "pushed_at": "2026-11-18",
