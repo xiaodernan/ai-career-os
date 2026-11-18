@@ -73,7 +73,7 @@ SKIP_DIRS = {"node_modules", ".next", "target", "dist", "__pycache__", ".venv",
 # `.example` is a suffix, not a name: `Path(".env.example").suffix` is `.example`, so an entry that
 # left it out dropped both env files from the open-ended scan while still naming them in the
 # population -- which is how an origin written down by an operator escaped the census.
-TEXT_SUFFIXES = {".md", ".yml", ".yaml", ".ts", ".tsx", ".ps1", ".sh", ".py", ".java", ".example"}
+TEXT_SUFFIXES = {".md", ".yml", ".yaml", ".ts", ".tsx", ".ps1", ".sh", ".py", ".java", ".example", ".js"}
 
 # Fetch lets a cross-origin request carry these four without a preflight, so the allow-list does
 # not have to name them: https://fetch.spec.whatwg.org/#cors-safelisted-request-header

@@ -8,8 +8,8 @@ import { Counter, Rate, Trend } from "k6/metrics";
 // when a bot hammers /api/v1/auth/login with credential-stuffing shape (1 password per
 // request, no cookie, no session reuse), what does the stack answer — and does it stay up?
 //
-// The auth bucket is a Redis sliding window of `app.ratelimit.auth-per-minute`
-// (default 10/min/IP). Hammering it from one IP is THE shape of 撞库; the measurement
+// The auth bucket is a Redis sliding window sized `app.ratelimit.auth-per-minute`
+// (see `RateLimitFilter.ruleFor`). Hammering it from one IP is THE shape of 撞库; the measurement
 // that matters is what the install does next: serve 429s and stay up (correct), or
 // 5xx / timeout / crash (broken).
 //

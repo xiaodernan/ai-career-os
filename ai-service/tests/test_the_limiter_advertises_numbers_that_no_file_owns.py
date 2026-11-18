@@ -97,7 +97,7 @@ CARRIERS = (YML, PROPS, FILTER, ENUM, IT, ENV_DEV, ENV_PROD, SEC, API_DOC, E2E_R
 SCAN_POPULATION = (ROOT,)
 # `.env.example` has suffix `.example`, not a code suffix: a file a population names and a walker refuses
 # is a carrier the census would silently never read.
-SCAN_SUFFIXES = {".md", ".yml", ".yaml", ".ts", ".tsx", ".ps1", ".sh", ".py", ".java", ".example"}
+SCAN_SUFFIXES = {".md", ".yml", ".yaml", ".ts", ".tsx", ".ps1", ".sh", ".py", ".java", ".example", ".js"}
 SKIP_DIRS = {"node_modules", ".next", "target", "dist", "__pycache__", ".venv",
              "playwright-report", "test-results", "evals",
              # 27 MB of `git diff --binary` from the worktree consolidation (9a86a83):
