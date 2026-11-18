@@ -61,3 +61,18 @@ async def test_empty_model_output_answers_a_null_note(monkeypatch):
 def test_digit_run_parsing_drops_the_percent_sign():
     assert editorial_mod._digit_runs("at 4.2% with 17 and 0.5") == {"4.2", "17", "0.5"}
     assert editorial_mod._digit_runs("event 7") == {"7"}
+
+
+def test_full_width_digits_are_read_as_the_digits_they_are():
+    # A Chinese note may write １个申请 / ２６天 / ０．０% with full-width glyphs.
+    # NFKC folds them into the ASCII forms the payload carries, so grounding holds.
+    assert editorial_mod._digit_runs("１个申请沉寂２６天，回复率０．０％") == {"1", "26", "0.0"}
+
+
+@pytest.mark.asyncio
+async def test_a_chinese_note_citing_full_width_digits_is_grounded(monkeypatch):
+    async def fake_ask_json(req, **kw):
+        return {"note": "１个申请沉寂２６天，回复率０．０%，下周跟进。"}
+    monkeypatch.setattr(editorial_mod, "ask_json", fake_ask_json)
+    out = await editorial_mod.editorial(_PAYLOAD)
+    assert out["note"] is not None

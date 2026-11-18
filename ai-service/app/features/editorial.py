@@ -12,6 +12,7 @@ on any failure, never invented prose dressed as commentary.
 
 import json
 import re
+import unicodedata
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
@@ -35,7 +36,10 @@ Rules:
 
 
 def _digit_runs(text) -> set[str]:
-    raw = set(re.findall(r"\d+(?:[.,]\d+)*%?", str(text)))
+    # NFKC folds full-width digits (１２６), full-width dots and the ideographic comma into
+    # their ASCII forms: a Chinese note that writes "１个申请" IS citing a digit that exists
+    # in the snapshot, and the verifier must read it as one or it punishes the honest writer.
+    raw = set(re.findall(r"\d+(?:[.,]\d+)*%?", unicodedata.normalize("NFKC", str(text))))
     return {r[:-1] if r.endswith("%") else r for r in raw}
 
 
@@ -77,7 +81,7 @@ async def editorial(payload: dict, *, locale: str = "en",
                                              "SNAPSHOT", json.dumps(payload,
                                                          ensure_ascii=False,
                                                          default=str)[:3600]))),
-                temperature=0.3, max_tokens=180),
+                temperature=0.2, max_tokens=180),
                 user_id=user_id, run_id=run_id, agent="editor", kind="editorial")
         except Exception:
             out = {}
