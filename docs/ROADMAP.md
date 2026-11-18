@@ -6918,6 +6918,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **328** The login door under siege — measured, not asserted (2026-11-18).
+
+  (The last load-test addendum to this file (Epic 256) covered the read-only admin surface; the
+  shape the brief keeps naming — a credential-stuffing burst against /api/v1/auth/login — had no
+  measurement at all. `scripts/credential-stuff.js` (tracked) now exercises exactly that: 1 password
+  per request, a 14-entry list, nothing created or modified, nothing violated. 10 VUs baseline →
+  9,780 requests, ~163/s, 0 non-429/401, 0 5xx, median 3.4 ms; 100 VUs burst → **85,723 requests
+  at ~1,423/s**, median 10.3 ms, max 338 ms, 85,598 × 429, 125 × 401, zero crash, zero timeout.
+  Mid-burst probes: `/api/v1/health` answers 200 and `/growth/progression` answers 401 — the
+  limiter sheds the attacker without ever leaking a 5xx into the picture. Fleet healthy 8/8 after
+  the burst; a legitimate login issues a token immediately after. The claim is deliberately the
+  single-IP baseline, not a distributed-botnet claim — distributed is the next measurement, with a
+  different harness, and this entry refuses to pretend its numbers prove more than that. Docs:
+  `docs/LOADTEST.md` addendum (with what it does and does not cover, in terms).)
+
 - [x] **327** The decision letter — the offer you passed on, written back to yourself (2026-11-18).
 
   (The offers page is where a job-seeker's most consequential non-decision happens, and the

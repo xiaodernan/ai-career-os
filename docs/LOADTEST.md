@@ -142,3 +142,65 @@ as a literal. JSON per-run summaries (`--summary-export out.json`) print the sam
 numbers this file carries. If the numbers regress, the first questions are: is
 Redis `up`, is the budget at the yml default, and has the corpus grown past where
 `COUNT(*)` stays an index scan — the freshness row tells you which.
+
+---
+
+## The siege — the credential-stuffing shape, 2026-11-18
+
+The question this addendum answers: **when a bot hammers `/api/v1/auth/login` with a
+stuffing shape, what does the stack answer, and does it stay up?**
+
+### What was run
+
+`scripts/credential-stuff.js` (tracked) — constant-VUs load, 10 VUs then 100 VUs,
+60 seconds each, ~9.8k / ~85.7k total requests against `http://127.0.0.1:8080/api/v1/auth/login`,
+wrong credentials per request (`stuffing-<vu>-<iter>@example.invalid` + a rotating
+14-entry password list), nothing created, nothing authenticated, nothing sent on disk.
+Every request expected-and-accepted outcome is HTTP 401 (pre-limit) or HTTP 429 (post-limit).
+
+The auth bucket is a Redis sliding window of `app.ratelimit.auth-per-minute`
+(default 10/min per IP) — see `RateLimitFilter.ruleFor` — so single-source hammering
+is the shape this test exercises. **It is not a distributed-botnet claim**: on one
+host behind one public IP, the per-IP limiter is what holds the line, and it held.
+The botnet's equivalent answer (many IPs, one account) — and where else the bucket lands
+(`/api/v1/ai/**` at 30/min, mail and MFA at 5/min) — are separate buckets the
+install also has.
+
+### The numbers
+
+| Phase (VUs) | reqs | p95 | max | 401 | 429 | 5xx | http_req_failed (the "never-a-crash" check) |
+|---|---|---|---|---|---|---|---|
+| baseline (10) | 9,780 | 9.4 ms | 3.2 s | 102 | 9,678 | **0** | **0.00%** |
+| burst (100)   | 85,723 | 54.6 ms | 338 ms | 125 | 85,598 | **0** | **0.00%** |
+
+Rate limit engaged within the first dozen auths of either run: the 401s (125 max,
+~0.15% of total) are the first window's worth of legitimately refused attempts;
+the 429s are the limiter doing exactly its job, at ~1,420/s.
+No request returned an error shape, none hung, no dependency failed, no crash.
+
+Live mid-burst probes during a 30s burst run: `/api/v1/health` answered **200**, and a
+no-auth probe of `/api/v1/growth/progression` answered **401** — the limiter throttles the
+attacker without ever leaking a 5xx into the picture.
+
+Fleet state after the burst: 8/8 healthy, a legitimate login immediately after —
+**token issued**, same access/refresh pair the stack issues in calm conditions.
+
+### What this does and doesn't cover
+
+- **Single-IP attack shape only.** A distributed stuffing campaign from many IPs is a
+  different experiment; the defenses are the same Redis bucket primitives, but the
+  answer would need to be re-measured with many IPs before it can be honestly claimed.
+- **The growth track is not the same as "a user can sign up and work faster".** The
+  test measures the login path under attack, not normal-usage throughput. The existing
+  `/admin` supervised-read measurements are recorded earlier in this file; those hold.
+- **It does not test the ai-service or provider paths.** Those live under their own
+  budgets (`app.ratelimit.ai-per-minute`, 30/min, per authenticated user); they were
+  not exercised here.
+- **The install is a single node on one Docker daemon** — same topology caveat as
+  every measurement in this file.
+
+measure-this-rerun protocol: `k6 run scripts/credential-stuff.js` (PHASE=baseline,
+VUS, DURATION, BASE_URL all env-selectable). Any future change to the auth path —
+its bucket, its password check, its session persistence — re-runs this script and
+the numbers in it move; the run script refuses to become a decoration by naming its
+four knobs.
