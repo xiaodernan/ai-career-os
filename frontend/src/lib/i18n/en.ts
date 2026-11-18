@@ -4061,6 +4061,21 @@ export const en = {
         "If the wire has nothing to stand on — no resume on file, no applications recorded, no reminder set — the card stays quiet. A guess dressed up as a coach is not a coach.",
       assistantClosing:
         "Everything on this page is read from the rows the install owns. The sentence is a read, not a prophecy; the work it names is yours.",
+      decodeEyebrow: "THE ANALYST ON THE LETTER",
+      decodeTitle: "The one read of one letter",
+      decodeIntro:
+        "Every letter on the replies page answers to a button: \"Decode this letter.\" The analyst reads nothing before you tap it — the letter is read as data, never obeyed as instructions, and the parse is only what the wire can stand behind.",
+      decodeStepTitle: "Ask once, then copy",
+      decodeStepBody:
+        "Tap the sparkle on the letter itself. Intent is the words' own reading (a rejection stays a rejection), deadline is only the date the letter actually states, and the reply draft arrives ready to edit — copy it, change it, send it in your own words.",
+      decodeNumbersTitle: "Only the letter's own numbers",
+      decodeNumbersBody:
+        "Every digit in the parse was counted from the letter itself. The deadline survives only as the date literally stated; asks and next steps follow the same law — a number the letter does not carry is a number the answer does not carry.",
+      decodeSilenceTitle: "Grounded or silent",
+      decodeSilenceBody:
+        "If the analyst has nothing to stand behind — the relay is down, the letter is shorter than a sentence, or a digit is invented somewhere — the card says so in one honest line. The letter itself is the record; a parse is a convenience, never a verdict.",
+      decodeClosing:
+        "The reader who keeps their own letters close holds their own negotiations — the analyst only hands you what is already in the letter.",
       colophonTitle: "The close",
       codaLive:
         "The same loop keeps a public card, measured on every push and re-measured when the numbers move — an iframe you can drop anywhere:",

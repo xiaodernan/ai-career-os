@@ -54,5 +54,7 @@ describe("/playbook — the manual", () => {
     expect(html).toContain('id="ai"');
     expect(html).toContain('id="keyboard"');
     expect(html).toContain('id="faq"');
+    expect(html).toContain('id="assistant"');
+    expect(html).toContain('id="decode"');
   });
 });

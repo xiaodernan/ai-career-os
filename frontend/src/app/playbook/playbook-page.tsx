@@ -603,6 +603,30 @@ export default function PlaybookPage() {
           </ul>
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.assistantClosing")}</p>
         </section>
+        {/* The analyst on the letter — ask-first reading of one inbound letter (Epic 332) */}
+        <section id="decode" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.decodeEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">19</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.decodeTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.decodeIntro")}</p>
+          <ul className="grid gap-3 sm:grid-cols-3">
+            {[
+              { title: t("playbook.decodeStepTitle"), body: t("playbook.decodeStepBody") },
+              { title: t("playbook.decodeNumbersTitle"), body: t("playbook.decodeNumbersBody") },
+              { title: t("playbook.decodeSilenceTitle"), body: t("playbook.decodeSilenceBody") },
+            ].map((item, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {item.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{item.body}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.decodeClosing")}</p>
+        </section>
 
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>
