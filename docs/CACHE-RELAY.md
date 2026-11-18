@@ -308,3 +308,41 @@ the StateGraph verify node answers `note: null`, the letter still ships without 
 fabricated paragraph, the digests answer without the editor's voice instead of
 inventing it. Nothing in this addendum trades that for availability.
 
+## Addendum 4 — 2026-11-18 (later): the non-stream path dropped the detail entirely; every call now rides the SSE shape
+
+Continued the cache assessment against the same key and the same host. Every
+figure below was re-taken live through Clash Verge (127.0.0.1:7897).
+
+| measurement | result |
+|---|---|
+| non-stream chat/completions, 6 consecutive identical ~5.5k-token bodies | `prompt_tokens_details` absent on 6 of 6 — cached recorded as 0 every time |
+| streamed twin (include_usage), identical bytes | 5 of 6 carried `cached_tokens = 5321 of 5500 (96.8%)`; 1 of 6 dropped the detail itself |
+| `prompt_cache_key=careeros:probe:key`, 3 calls | first: no detail; second and third: `cached = 5192 of 5502 (94.4%)` |
+| same prefix with the cache-key variant flipped | miss (expected: the prefix is what is addressed) |
+| tiny / mid / big prefixes | eligible well below 1k distinct tokens; a ~4.1k-token gateway-wide shared headline rides every call and is cached after the first warm touch |
+| `/v1/responses` (Responses API), 5 attempts over ~25 min | 3 × HTTP 404 (the same transient group-404 message) + 2 × TLS EOF through the proxy lane — the relay does not serve Responses for this model family today, so the ChatGPT-Codex wire comparison cannot port over; the same streamed chat/completions is what Codex would ride on this relay |
+
+The client-side change that landed (this Epic 330): `complete()` assembles
+its reply over the same SSE exchange `stream()` consumes — `include_usage` is
+carried on every call, so the full token accounting is on the record, and the
+same transient-establishment retry lane as 429 / 5xx is honored on both shapes.
+Before the change, one-shot engine calls recorded `cached = 0` exactly because
+their bytes asked for nothing the relay reports on; the hot lane was already
+carrying ~96–97% of its prefix from cache after warm-up. The 7-day average
+picks up from here; the replay layer still answers byte-identical repeats for
+nearly nothing.
+
+Honest caveat: cache-hit figures are WIRE-REPORTED. The relay being the one
+that scores them means the numbers are consistent with what the relay believes,
+not with a third-party check; "more than 100% cached" is not possible, and the
+reply path never invents a byte the relay did not answer. There is exactly one
+wire shape left in the provider code, so a stealth regression cannot hide in a
+second shape any more.
+
+What remains true for operators reading the dashboard:
+
+- cold-lane (first touch per process window) always reads 0; warm-lane reads ~96–97%.
+- the engine never pads payloads to inflate cache hits; the reuse win comes from
+  the stable prefix, not from bigger bytes.
+- `.env` carries the same model + relay as the machine that verified this appendix.
+

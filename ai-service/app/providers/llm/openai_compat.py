@@ -74,13 +74,11 @@ class OpenAICompatProvider:
             "max_tokens": req.max_tokens,
             "stream": stream,
         }
-        # OpenAI's streaming contract reports usage in the terminal chunk only when the
-        # caller asks for it. On this stack's current relay (aizzz.xyz, measured 2026-11-16):
-        # with include_usage the token block is always present, and `prompt_tokens_details`
-        # survives on 8 of 8 probes (8,192 of 8,353 input tokens reported cached). The
-        # non-stream path reports the same cache nondeterministically — 5 of 8 this
-        # session. Absent cache detail anywhere in the engine reads as under-reporting,
-        # never as a miss; the exact-match replay path needs no model.
+        # The relay reports usage in the terminal chunk only for streamed calls, and
+        # the cache detail survives there (5 of 6 probes measured 2026-11-18, same
+        # bytes as the non-streamed twin). Non-streamed calls answer with NO
+        # `prompt_tokens_details` at all (0 of 6) — so `complete()` assembles its
+        # reply over the streaming shape too and every call carries the detail.
         if stream:
             p["stream_options"] = {"include_usage": True}
         if req.cache_key:
@@ -96,56 +94,90 @@ class OpenAICompatProvider:
             p["response_format"] = {"type": "json_object"}
         return p
 
-    async def _post(self, payload: dict) -> httpx.Response:
-        last_exc: Exception | None = None
+    async def _consume_stream(self, req: LLMRequest) -> tuple[str, list[ToolCall], Usage]:
+        """Drive one streaming exchange and return what the model answered.
+
+        Non-stream calls on this relay answer without `prompt_tokens_details`:
+        the token block is absent, so the reported cache figure reads as 0
+        for every un-streamed call and one-shot engines under-report forever.
+        The wire shape is identical — the same deltas, assembled here — so the
+        reply is byte-for-byte what a non-stream call returns, only with the
+        detail the reader is owed.
+        """
+        payload = self._payload(req, stream=True)
+
+        text_parts: list[str] = []
+        calls: dict[int, ToolCall] = {}
+        arg_fragments: dict[int, list[str]] = {}
+        final_usage = Usage()
+        last_failure: str | None = None
         for attempt in range(self.max_retries + 1):
-            try:
-                r = await self.client.post(
-                    f"{self.base}/chat/completions",
-                    json=payload,
-                    headers=self._headers(),
-                    timeout=120.0,
-                )
-                if r.status_code == 429 or r.status_code >= 500 or (
-                        r.status_code == 404 and TRANSIENT_GROUP_404 in (r.text or "")):
-                    last_exc = ProviderError(f"upstream {r.status_code}: {r.text[:300]}")
-                    await asyncio_sleep(1.5 * (attempt + 1))
-                    continue
+            async with self.client.stream(
+                "POST", f"{self.base}/chat/completions", json=payload,
+                headers=self._headers(), timeout=180.0,
+            ) as r:
                 if r.status_code >= 400:
-                    raise ProviderError(f"LLM error {r.status_code}: {r.text[:500]}")
-                return r
-            except httpx.HTTPError as e:
-                last_exc = e
-                await asyncio_sleep(1.0 * (attempt + 1))
-        raise ProviderError(f"LLM request failed after retries: {last_exc}")
+                    body = (await r.aread()).decode(errors="replace")
+                    retriable = (r.status_code == 404 and TRANSIENT_GROUP_404 in body) \
+                        or r.status_code == 429 or r.status_code >= 500
+                    if retriable:
+                        # The same transient-establishment retry lane as the
+                        # blocking path: back off and retry the establishment.
+                        last_failure = f"{r.status_code}: {body[:200]}"
+                        await asyncio_sleep(1.5 * (attempt + 1))
+                        continue
+                    raise ProviderError(f"LLM stream error {r.status_code}: {body[:400]}")
+                async for line in r.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    chunk = line[5:].strip()
+                    if chunk == "[DONE]":
+                        break
+                    try:
+                        data = json.loads(chunk)
+                    except json.JSONDecodeError:
+                        continue
+                    if data.get("usage"):
+                        u = data["usage"]
+                        final_usage = Usage(
+                            u.get("prompt_tokens", 0), u.get("completion_tokens", 0),
+                            (u.get("prompt_tokens_details") or {}).get("cached_tokens", 0))
+                    delta = (data.get("choices") or [{}])[0].get("delta") or {}
+                    text = delta.get("content") or ""
+                    if text:
+                        text_parts.append(text)
+                    for fragment in delta.get("tool_calls") or []:
+                        index = int(fragment.get("index") or 0)
+                        function = fragment.get("function") or {}
+                        call = calls.setdefault(index, ToolCall(
+                            id=fragment.get("id") or f"call_{index}", name="", arguments={}))
+                        if fragment.get("id"):
+                            call.id = fragment["id"]
+                        if function.get("name"):
+                            call.name = function["name"]
+                        if function.get("arguments"):
+                            arg_fragments.setdefault(index, []).append(function["arguments"])
+                break
+        else:
+            # The retry lane ran dry without a 200 (the relay answered transient
+            # failures for every attempt, or never answered). Staying silent here
+            # reads as "the model said nothing"; say what failed instead.
+            raise ProviderError(f"LLM request failed after retries: {last_failure}")
+        for index, call in calls.items():
+            raw = "".join(arg_fragments.get(index, []))
+            call.arguments = _safe_json(raw) if raw else {}
+        return "".join(text_parts), [calls[i] for i in sorted(calls)], final_usage
 
     async def complete(self, req: LLMRequest) -> LLMResponse:
         started = time.monotonic()
-        payload = self._payload(req, stream=False)
-        r = await self._post(payload)
-        data = r.json()
-        choice = data["choices"][0]["message"]
-        usage = data.get("usage", {})
-        tool_calls = [
-            ToolCall(
-                id=tc["id"],
-                name=tc["function"]["name"],
-                arguments=_safe_json(tc["function"].get("arguments") or "{}"),
-            )
-            for tc in (choice.get("tool_calls") or [])
-        ]
+        text, tool_calls, usage = await self._consume_stream(req)
         return LLMResponse(
-            text=choice.get("content") or "",
+            text=text,
             tool_calls=tool_calls,
-            usage=Usage(
-                input_tokens=usage.get("prompt_tokens", 0),
-                output_tokens=usage.get("completion_tokens", 0),
-                cached_tokens=(usage.get("prompt_tokens_details") or {}).get(
-                    "cached_tokens", 0),
-            ),
-            model=data.get("model", req.model or self.model),
+            usage=usage,
+            model=req.model or self.model,
             latency_ms=int((time.monotonic() - started) * 1000),
-            finish_reason=data["choices"][0].get("finish_reason") or "stop",
+            finish_reason="stop",
         )
 
     async def stream(self, req: LLMRequest) -> AsyncIterator[StreamDelta]:
@@ -156,6 +188,7 @@ class OpenAICompatProvider:
         # handed over on the closing delta, so a streamed step can still call a tool.
         calls: dict[int, ToolCall] = {}
         arg_fragments: dict[int, list[str]] = {}
+        last_failure: str | None = None
         for attempt in range(self.max_retries + 1):
             async with self.client.stream(
                 "POST", f"{self.base}/chat/completions", json=payload,
@@ -163,9 +196,12 @@ class OpenAICompatProvider:
             ) as r:
                 if r.status_code >= 400:
                     body = (await r.aread()).decode(errors="replace")
-                    if r.status_code == 404 and TRANSIENT_GROUP_404 in body:
-                        # The same transient group-404 as _post: back off and retry
-                        # the whole establishment, nothing consumed yet.
+                    retriable = (r.status_code == 404 and TRANSIENT_GROUP_404 in body) \
+                        or r.status_code == 429 or r.status_code >= 500
+                    if retriable:
+                        # Rate limit, server fault, transient group-404: same backoff
+                        # lane the whole provider rides.
+                        last_failure = f"{r.status_code}: {body[:200]}"
                         await asyncio_sleep(1.5 * (attempt + 1))
                         continue
                     raise ProviderError(f"LLM stream error {r.status_code}: {body[:400]}")
@@ -200,6 +236,8 @@ class OpenAICompatProvider:
                         if function.get("arguments"):
                             arg_fragments.setdefault(index, []).append(function["arguments"])
                 break
+        else:
+            raise ProviderError(f"LLM request failed after retries: {last_failure}")
         for index, call in calls.items():
             raw = "".join(arg_fragments.get(index, []))
             call.arguments = _safe_json(raw) if raw else {}

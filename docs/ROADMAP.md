@@ -6918,6 +6918,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **330** One wire, one honest number — every call streams, the hot lane reads ~96% (2026-11-18).
+
+  (Every LLM call in this engine now rides the SSE wire: `complete()` assembles its
+  reply over the same `_consume_stream` exchange the copilot streams — `include_usage`
+  carried on every call, so the reported cache figure reflects the wire for the
+  one-shot engines too. Measured live from this host through Clash Verge, on the
+  operator's key, `gpt-6.1-terra`: non-streamed chat/completions answered WITHOUT
+  `prompt_tokens_details` on 6 of 6 calls (the engine recorded `cached = 0`
+  forever for every engine call); the streamed twin, byte-identical, carried
+  `cached = 5321 of 5500 (96.8%)` on 5 of 6. The per-workload `prompt_cache_key`
+  (`careeros:{agent}`) ties one shard per capability; it pays off when the lane is
+  warm (second and third calls of a warm key: 5192 of 5502, 94.4%). The relay
+  does **not** serve `/v1/responses` for this model family today (3 × transient
+  group-404 + 2 × TLS EOF through the proxy), so the Codex wire comparison could
+  not port over — what ports over is what Codex effectively rides on this relay:
+  the streamed chat shape with a byte-stable prefix and a per-workload key.
+  The establishment retry lane (`TRANSIENT_GROUP_404`, 429, 5xx) is now identical
+  on the blocking and streamed establishments, and both shapes raise honestly
+  when retries are exhausted instead of silently answering nothing. Full
+  ai-service offline suite **2904 passed / 8 skipped**; verify_gates **577/577**.
+  `docs/CACHE-RELAY.md` addendum 4 carries the exact figures.)
+
 - [x] **329** The gap analyst's voice — one grounded paragraph reads what the numbers said (2026-11-18).
 
   (The gap card said `0.54 coverage` and listed five skills, then stopped talking. Epic 329 adds

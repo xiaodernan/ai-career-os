@@ -29,10 +29,16 @@ GROUP_404 = {"error": {"message":
                        'Model "gpt-6.1-terra" is not supported by any configured account in this group',
                        "type": "model_not_found"}}
 MODEL_UNKNOWN = {"error": {"message": "the model does not exist", "type": "model_not_found"}}
-OK = {"id": "resp_1", "object": "chat.completion", "created": 1, "model": "gpt-6.1-terra",
-      "choices": [{"message": {"role": "assistant", "content": "ok"},
-                   "finish_reason": "stop", "index": 0}],
-      "usage": {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12}}
+# Every LLM shape on this provider rides the SSE wire now (non-stream calls are
+# assembled from the streaming path), so the fake answers the same bytes.
+OK = (
+    'data: {"id": "resp_1", "object": "chat.completion.chunk", "created": 1, "model": "gpt-6.1-terra",'
+    ' "choices": [{"index": 0, "delta": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}]}\n\n'
+    'data: {"id": "resp_1", "object": "chat.completion.chunk", "created": 1, "model": "gpt-6.1-terra",'
+    ' "choices": [{"index": 0, "delta": {}}],'
+    ' "usage": {"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12}}\n\n'
+    'data: [DONE]\n\n'
+).encode("utf-8")
 
 
 def _provider(handler, max_retries: int = 2) -> OpenAICompatProvider:
@@ -53,7 +59,7 @@ async def test_the_transient_group_404_retries_then_answers():
         calls["n"] += 1
         if calls["n"] < 3:
             return httpx.Response(404, json=GROUP_404)
-        return httpx.Response(200, json=OK)
+        return httpx.Response(200, content=OK, headers={"content-type": "text/event-stream"})
 
     provider = _provider(handler)
     out = await provider.complete(_req())
