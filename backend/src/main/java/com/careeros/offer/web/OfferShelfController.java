@@ -2,6 +2,8 @@ package com.careeros.offer.web;
 
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
+import com.careeros.offer.dto.OfferShelfDtos.CounterLetterRequest;
+import com.careeros.offer.dto.OfferShelfDtos.CounterLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.DeleteOfferResponse;
 import com.careeros.offer.dto.OfferShelfDtos.OfferItem;
 import com.careeros.offer.dto.OfferShelfDtos.OfferLetterRequest;
@@ -77,5 +79,19 @@ public class OfferShelfController {
                                       @RequestBody(required = false) OfferLetterRequest request) {
         String locale = request == null ? null : request.locale();
         return new OfferLetterResponse(shelf.letter(user.id(), id, locale));
+    }
+
+    /**
+     * The counter-offer letter (Epic 333): the writer drafts the email the reader actually
+     * sends about the offer on this shelf — the one that names a gap the table can hear,
+     * anchors it in the shelf's own numbers and never an invented one. `letter` is null
+     * when nothing grounded survived — the card renders nothing, never a fabricated draft.
+     */
+    @PostMapping("/shelf/{id}/counter-letter")
+    public CounterLetterResponse counterLetter(@CurrentUser AuthUser user,
+                                               @PathVariable UUID id,
+                                               @RequestBody(required = false) CounterLetterRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new CounterLetterResponse(shelf.counterLetter(user.id(), id, locale));
     }
 }

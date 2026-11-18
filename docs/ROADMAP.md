@@ -6918,6 +6918,40 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **333** The sendable counter-offer letter — the email the reader actually sends about one offer (2026-11-19).
+
+  (The shelf holds the offer and up to four sibling cards; what was missing was the one email
+  the reader opens themselves — the one that asks for more without an ultimatum and without
+  invented numbers. Epic 333 adds `POST /offers/shelf/{id}/counter-letter` (en/zh): the writer
+  drafts it against the owned row's own payload — base, bonus, equity, totalComp, currency,
+  remoteType, deadline, notes — plus sibling cards shown to the model as a band context and
+  never named as ultimatums; every digit-run the letter carries must already exist in that
+  snapshot or the whole letter is dropped (`letter: null`, silence, never a fabricated ask).
+  Siblings are offered to the model as "the band joins at roughly X", the exact line a
+  negotiator uses on a screen. `OfferShelfService.counterLetter(…)` owns the seam: reads
+  the caller's owned row (another account's id is the same 404), builds the snapshot, asks
+  the ai-service (`kind="counter_offer_letter"` — one StateGraph draft → verify → render over
+  `grounding.py`, same digit-discipline as the editors) and passes the letter through
+  untouched. Wire: `POST /internal/features/counter-offer-letter` (`{offer, siblings?, locale?}`),
+  reached by `HttpAiServiceClient`; the fake client for ITs answers the same shape. Bundled in
+  this epic: `RateLimitFilter.isAiCost` finally meters both offer-letter writers
+  (`/offers/shelf/{id}/letter` — Epic 327's own gap, closed in the same change — and
+  `/offers/shelf/{id}/counter-letter`), named in SECURITY.md's AI-cost bullet; the API.md
+  gains both rows (public + internal); SECURITY/API-doc/mutation-roster/record-pins all
+  updated. Verify pins: ai-service `tests/test_counter_letter.py` 6/6 +
+  `test_forward_features_contract` (CounterOfferLetterReq, offer required),
+  backend `OfferShelfServiceTest.theCounterLetterShipsTheOfferAndTheSiblingBand_andAnotherAccountGetsA404`
+  (6/6 green with the new one; the siblings cap `<4`, the another-account empty-404 path, the
+  foreign-letter drop), frontend `offer-shelf.test.tsx` 3/3 (the counter button renders only on
+  the non-declined row, in both languages; the new hook's wire shape pinned by
+  `analytics.test` in the same sitting), bundle gate @362 (this epic's keys carry ~0.8 kB
+  shared-table gzip, jobs measured below the 362 line again after the node-build's
+  re-measure), i18n adds the counter letter slice (6 keys en+zh), copy census unchanged at
+  216. Honest limits: not probed live against the operator's relay from this sitting — Docker
+  Desktop is down (`docker info` → HTTP 500 at the daemon API, three builds died of the same
+  OOM this sitting); the pending screen will need its Docker once the daemon recovers. Same
+  discipline as 327: this letter is sent; what it says must stand on the letters' own numbers.)
+
 - [x] **332** The analyst's read of one letter — one inbound email, one grounded parse (2026-11-19).
 
   (The replies page could show a letter but not read it — the reader still had to do the

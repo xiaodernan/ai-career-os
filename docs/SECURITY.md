@@ -245,9 +245,12 @@ that rejects invented skills/numbers not present in the source evidence.
     `/jobs/{id}/(match|tailor|cover-letter)`. It also covers the two that spend
     money without living under an "AI-looking" path: `/jobs/import` (importing a JD
     runs the analyst) and `/knowledge/documents` and `/resumes/upload` (both embed
-    every chunk of the document into pgvector) and `/inbound/mails/{id}/decode`
+    every chunk of the document into pgvector), `/inbound/mails/{id}/decode`
     (the analyst reads one letter behind its own button — never on mount, and
-    metered so an scripted client cannot siege the provider through it). Left out, a scripted client could
+    metered so a scripted client cannot siege the provider through it), and
+    `/offers/shelf/{id}/letter` and `/offers/shelf/{id}/counter-letter` (the two
+    offer-letter writers ride the wire on every call; the decision letter shipped
+    without a lane, and the counter letter closes the gap too). Left out, a scripted client could
     call those without limit — the exact hole this list exists to close.
     Cheap reads (search, listings, dashboards) are deliberately excluded so browsing
     is not throttled. Covered by `RateLimitFilterTest`.

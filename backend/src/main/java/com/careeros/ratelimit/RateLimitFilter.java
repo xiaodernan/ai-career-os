@@ -193,6 +193,9 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
         // Sub-paths that trigger AI on an otherwise cheap resource.
         return uri.matches("^/api/v1/resumes/[^/]+/parse/?$")
                 || uri.matches("^/api/v1/jobs/[^/]+/(match|tailor|cover-letter)/?$")
+                // The two offer-letter writers ride the wire on every call (Epic 327/333).
+                || uri.matches("^/api/v1/offers/shelf/[^/]+/letter/?$")
+                || uri.matches("^/api/v1/offers/shelf/[^/]+/counter-letter/?$")
                 // The analyst's read of one inbound letter (Epic 332).
                 || uri.matches("^/api/v1/inbound/mails/[^/]+/decode/?$")
                 // The three that spend money without living under an "AI-looking" path:

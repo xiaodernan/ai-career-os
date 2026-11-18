@@ -221,6 +221,17 @@ export function useOfferDecisionLetter() {
   });
 }
 
+/** Epic 333 — the sendable counter-offer letter for a specific shelf row. */
+export function useCounterOfferLetter() {
+  return useMutation({
+    mutationFn: async (input: { id: string; locale?: string }) =>
+      await api.create<{ letter?: string | null }>(
+        endpoints.offerShelfCounterLetter(input.id),
+        { locale: input.locale }),
+    onError: fail("failures.counterLetter"),
+  });
+}
+
 /** 12.4 — the counter-offer draft. */
 export function useCounterOffer() {
   return useMutation({

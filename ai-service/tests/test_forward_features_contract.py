@@ -86,6 +86,8 @@ FORWARD = {
     "/internal/features/proactive-step": ("ProactiveStepReq", {"payload"}),
     # Epic 332 -- the analyst's parse of one inbound recruiter message. `body` required.
     "/internal/features/decode-reply": ("ReplyDecodeReq", {"body"}),
+    # Epic 333 -- the sendable counter-offer letter. `offer` required.
+    "/internal/features/counter-offer-letter": ("CounterOfferLetterReq", {"offer"}),
 }
 
 

@@ -120,6 +120,18 @@ describe("the inbound decode route", () => {
   });
 });
 
+describe("the inbound offer routes", () => {
+  it("posts the reader's language to the shelf's counter-letter route", async () => {
+    mockFetch({ letter: "Thank you for the offer — let's align on the band." });
+    const { api } = await import("@/lib/api/client");
+
+    await api.create(endpoints.offerShelfCounterLetter("row-1"), { locale: "en" });
+
+    expect(urls[0]).toContain("/offers/shelf/row-1/counter-letter");
+    expect(bodies[0]).toEqual({ locale: "en" });
+  });
+});
+
 describe("the offer routes", () => {
   it("post the offers as a list, so a grant stays a nested object", async () => {
     mockFetch({ rows: [] });

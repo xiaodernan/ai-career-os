@@ -83,7 +83,38 @@ public class OfferShelfService {
     return letterOfRow(userId, row, locale);
   }
 
+  /**
+   * The counter-offer letter (Epic 333): the writer drafts the email the reader actually
+   * sends about the offer on the table, grounded in the same owned numbers plus the shelf
+   * sibling cards as benchmark context (the model shows them only as band joins, never as
+   * ultimatums — the verifier holds the letter to their digits alone).
+   */
+  public String counterLetter(UUID userId, UUID id, String locale) {
+    OfferRow row = repository.findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
+    Map<String, Object> offer = offerPayload(row);
+    List<Map<String, Object>> siblings = siblingPayloads(userId, row);
+    Map<String, Object> answer = aiService.counterOfferLetter(userId, offer, siblings, locale);
+    Object value = answer == null ? null : answer.get("letter");
+    if (value == null) {
+      return null;
+    }
+    String letter = value.toString().trim();
+    return letter.isEmpty() ? null : letter;
+  }
+
   private String letterOfRow(UUID userId, OfferRow row, String locale) {
+    Map<String, Object> answer = aiService.offerDecisionLetter(userId, offerPayload(row),
+            siblingPayloads(userId, row), locale);
+    Object value = answer == null ? null : answer.get("letter");
+    if (value == null) {
+      return null;
+    }
+    String letter = value.toString().trim();
+    return letter.isEmpty() ? null : letter;
+  }
+
+  private static Map<String, Object> offerPayload(OfferRow row) {
     Map<String, Object> offer = new HashMap<>();
     offer.put("label", row.getLabel());
     offer.put("base", row.getBase());
@@ -95,10 +126,13 @@ public class OfferShelfService {
     offer.put("deadline", row.getDeadline() == null ? null : row.getDeadline().toString());
     offer.put("decision", row.getDecision());
     offer.put("notes", row.getNotes());
+    return offer;
+  }
 
+  private List<Map<String, Object>> siblingPayloads(UUID userId, OfferRow self) {
     List<Map<String, Object>> siblings = new ArrayList<>();
     for (OfferRow sib : repository.shelfOrder(userId)) {
-      if (siblings.size() >= 4 || sib.getId().equals(row.getId())) {
+      if (siblings.size() >= 4 || sib.getId().equals(self.getId())) {
         continue;
       }
       Map<String, Object> s = new HashMap<>();
@@ -107,13 +141,7 @@ public class OfferShelfService {
       s.put("currency", sib.getCurrency());
       siblings.add(s);
     }
-    Map<String, Object> answer = aiService.offerDecisionLetter(userId, offer, siblings, locale);
-    Object value = answer == null ? null : answer.get("letter");
-    if (value == null) {
-      return null;
-    }
-    String letter = value.toString().trim();
-    return letter.isEmpty() ? null : letter;
+    return siblings;
   }
 
   @Transactional

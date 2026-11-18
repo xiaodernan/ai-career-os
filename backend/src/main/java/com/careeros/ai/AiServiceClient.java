@@ -209,6 +209,16 @@ public interface AiServiceClient {
             List<Map<String, Object>> siblings, String locale);
 
     /**
+     * The sendable counter-offer letter (Epic 333): the one email the reader actually sends
+     * about the offer on the table, grounded in the owned shelf payload plus up to four siblings.
+     * Every digit-run in the letter must already appear in the snapshot, or the letter is
+     * absent (`letter` null). Optional by contract.
+     * `locale` is the reader's language.
+     */
+    Map<String, Object> counterOfferLetter(UUID userId, Map<String, Object> offer,
+            List<Map<String, Object>> siblings, String locale);
+
+    /**
      * The gap analyst's voice (Epic 329): one paragraph written about the gap the
      * analysis just computed. The ai-service drafts it, keeps only sentences that
      * cite a digit-run already present in the payload, and answers `{note}` —

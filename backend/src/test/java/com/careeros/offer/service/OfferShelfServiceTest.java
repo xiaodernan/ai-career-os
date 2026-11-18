@@ -140,6 +140,42 @@ class OfferShelfServiceTest {
     }
 
     @Test
+    void theCounterLetterShipsTheOfferAndTheSiblingBand_andAnotherAccountGetsA404() {
+        UUID rowId = UUID.randomUUID();
+        UUID sibId = UUID.randomUUID();
+        OfferRow main = row(rowId, "Main Offer", 280000, 40000, 60000, null);
+        OfferRow sib = row(sibId, "Sibling", 360000, 0, 0, null);
+        when(repository.findByIdAndUserId(org.mockito.ArgumentMatchers.eq(rowId),
+                org.mockito.ArgumentMatchers.eq(userId)))
+                .thenReturn(Optional.of(main));
+        when(repository.findByIdAndUserId(org.mockito.ArgumentMatchers.eq(UUID.randomUUID()),
+                org.mockito.ArgumentMatchers.eq(userId)))
+                .thenReturn(Optional.empty());
+        when(repository.shelfOrder(userId)).thenReturn(List.of(main, sib));
+        when(ai.counterOfferLetter(org.mockito.ArgumentMatchers.eq(userId), any(), any(), any()))
+                .thenReturn(java.util.Map.of("letter", "The offer is real — the band wants in."));
+
+        String out = service.counterLetter(userId, rowId, "en");
+
+        assertThat(out).isEqualTo("The offer is real — the band wants in.");
+        ArgumentCaptor<java.util.Map<String, Object>> offerCap =
+                ArgumentCaptor.forClass(java.util.Map.class);
+        ArgumentCaptor<List<java.util.Map<String, Object>>> sibCap =
+                ArgumentCaptor.forClass(List.class);
+        org.mockito.Mockito.verify(ai).counterOfferLetter(
+                org.mockito.ArgumentMatchers.eq(userId), offerCap.capture(),
+                sibCap.capture(), org.mockito.ArgumentMatchers.eq("en"));
+        assertThat(offerCap.getValue())
+                .containsEntry("label", "Main Offer")
+                .containsEntry("totalComp", 380000);
+        assertThat(sibCap.getValue()).extracting("label").containsExactly("Sibling");
+
+        assertThatThrownBy(() -> service.counterLetter(userId, UUID.randomUUID(), "en"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No such offer");
+    }
+
+    @Test
     void createStampsTheVocabularyDefaultsAndSumsTheTotal() {
         when(repository.save(any())).thenAnswer(inv -> {
             OfferRow row = inv.getArgument(0);

@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteOffer, useSaveOffer, useOfferDecisionLetter } from "@/lib/hooks/offers";
+import { useDeleteOffer, useSaveOffer, useOfferDecisionLetter, useCounterOfferLetter } from "@/lib/hooks/offers";
 import { useOfferShelf } from "@/lib/hooks/resources";
 import { OfferCelebration } from "@/components/offers/offer-celebration";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -58,7 +58,82 @@ function money(amount: number, currency: string, locale: string): string {
   }
 }
 
-/** The decision letter for a declined row: one honest page, written on demand. */
+/** The counter-offer for a pending row: the sendable email, written on demand. */
+function CounterLetterBlock({
+  rowId,
+  locale,
+  t,
+}: {
+  rowId: string;
+  locale: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const letter = useCounterOfferLetter();
+  const [text, setText] = React.useState<string | null>(null);
+  const [silent, setSilent] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const copy = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // the clipboard is not the product's promise — the letter stands on screen
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {t("offers.counterLetterTitle")}
+      </p>
+      {text ? (
+        <>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            onClick={() => void copy()}
+          >
+            {copied ? t("offers.counterLetterCopied") : t("offers.counterLetterCopy")}
+          </Button>
+        </>
+      ) : silent ? (
+        <p className="mt-1 text-xs text-muted-foreground">{t("offers.counterLetterSilent")}</p>
+      ) : (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">{t("offers.counterLetterHint")}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            loading={letter.isPending}
+            onClick={() =>
+              letter.mutate(
+                { id: rowId, locale },
+                {
+                  onSuccess: (out) => {
+                    if (out.letter) {
+                      setText(out.letter);
+                    } else {
+                      setSilent(true);
+                    }
+                  },
+                },
+              )
+            }
+          >
+            {t("offers.counterLetterButton")}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DecisionLetter({
   rowId,
   locale,
@@ -336,6 +411,9 @@ export function OfferShelf() {
                   </div>
                   {row.decision === "declined" && (
                     <DecisionLetter rowId={row.id} locale={locale} t={t} />
+                  )}
+                  {row.decision !== "declined" && (
+                    <CounterLetterBlock rowId={row.id} locale={locale} t={t} />
                   )}
                 </li>
               );

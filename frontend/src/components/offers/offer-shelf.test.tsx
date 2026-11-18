@@ -36,10 +36,19 @@ const letterHook: {
   variables: undefined | { id: string; locale?: string };
 } = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
 
+const counterLetterHook: {
+  data: { letter: string | null } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mutate: any;
+  isPending: boolean;
+  variables: undefined | { id: string; locale?: string };
+} = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
+
 vi.mock("@/lib/hooks/offers", () => ({
   useSaveOffer: () => ({ mutate: () => {}, isPending: false }),
   useDeleteOffer: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
   useOfferDecisionLetter: () => letterHook,
+  useCounterOfferLetter: () => counterLetterHook,
 }));
 vi.mock("@/lib/hooks/resources", () => ({
   useOfferShelf: () => ({
@@ -80,6 +89,15 @@ describe("the offer shelf", () => {
     const english = render("en");
     expect(english).toContain("Write the letter");
     expect(english).toContain("addressed to the future you");
+  });
+
+  it("renders the counter letter button on the pending row only", () => {
+    const en = render("en");
+    // The pending row offers the sendable email; the hint carries its own promise.
+    expect(en).toContain("Write the counter email");
+    expect(en).toContain("the ask, sent tonight");
+    const zh = render("zh");
+    expect(zh).toContain("写这封反要价信");
   });
 
   it("renders the letter itself once the writer answers", () => {

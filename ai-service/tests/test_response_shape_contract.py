@@ -1133,8 +1133,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # body the next-step route binds) makes it 232. This pass counts the records again.
     # 233 with Epic 332's `DecodeRequest` (the `{locale?}` body the replies route binds at the
     # same line); committed on the same walk the pin reddened, counted in the same pass.
-    assert len(declared) == 233, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 232 measured"
+    # 235 with Epic 333's `CounterLetterRequest` (the `{locale?}` body the shelf's counter-letter
+    # route binds) and `CounterLetterResponse` (the `{letter}` envelope it answers) on
+    # `OfferShelfDtos` -- same class, same reason, counted in the same sitting that landed them.
+    assert len(declared) == 235, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 235 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

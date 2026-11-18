@@ -193,6 +193,8 @@ export const endpoints = {
   offerShelf: "/offers/shelf",
   offerShelfRow: (id: string) => `/offers/shelf/${seg(id)}`,
   offerShelfLetter: (id: string) => `/offers/shelf/${seg(id)}/letter`,
+  /** The sendable counter-offer letter (Epic 333): same discipline, same gate, different letter. */
+  offerShelfCounterLetter: (id: string) => `/offers/shelf/${seg(id)}/counter-letter`,
   offerSalaryBenchmark: "/offers/salary-benchmark",
   offerNegotiate: "/offers/negotiate",
   offerCompare: "/offers/compare",
