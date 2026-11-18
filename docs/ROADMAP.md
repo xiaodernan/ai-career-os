@@ -6918,6 +6918,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **321** Chapter One extended the first week to the interview room (2026-11-17).
+
+  The first-week game (Epic 233) covered the loop up to "the recruiter says yes"; it stopped
+  one beat short of the room the reader actually walks into. A seventh scene, `interview`,
+  now lands between the letter and the phone call: three forks — `evidence` (prepare the
+  answers for the three hardest questions, walking into the room with evidence in hand),
+  `wing` (walk in with three honest stories, refuse to rehearse), `off` (skip the mock and
+  head straight in, trusting the room as rehearsal). The zh/en copy ships in the same
+  key namespace the other six scenes use (`firstweekScene_interview`, `firstweekChoice_*`);
+  the test log went from 6 → 7 scenes, `MAX_FIRST_WEEK_SCORE` from 12 → 14, and the
+  scene-count census in the component test (`{step|1,7}`) and the source-document notes
+  learn the new count without a bespoke rule. 6/6 playbook tests + full i18n census stay
+  green; the rebuilt image ships the new keys in both locales; e2e is unaffected.
+
 - [x] **320** The overseer gets a second voice — an LLM analyst grounded in this install's aggregates (2026-11-17).
 
   The deterministic counsel stays — it is honest, free, always available. What was absent

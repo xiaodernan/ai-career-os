@@ -27,7 +27,7 @@ import {
  * Chapter zero — the first week, playable (Epic 233).
  *
  * The manual teaches the loop in prose; this is the same loop rehearsed with
- * a finger before the keyboard sees it. Six scenes, three forks each, one
+ * a finger before the keyboard sees it. Seven scenes, three forks each, one
  * honest verdict at the end. Nothing here registers you anywhere — the
  * choices stay in this browser, and finishing it registers nothing.
  */

@@ -2,7 +2,7 @@
  * Chapter zero — the first week, playable (Epic 233).
  *
  * The playbook teaches the loop in prose. This is the loop rehearsed with a
- * finger before it ever sees a keyboard: six scenes, three forks each, and a
+ * finger before it ever sees a keyboard: seven scenes, three forks each, and a
  * verdict at the end that tells the reader which reader they will be. The
  * story is second person, and every choice is a real one the app walks the
  * reader through on the way to the closing page. No model calls — the value
@@ -61,6 +61,14 @@ export const FIRST_WEEK_SCENES: readonly FirstWeekScene[] = [
       { id: "slash", points: 2 },
       { id: "own", points: 2 },
       { id: "keep", points: 0 },
+    ],
+  },
+  {
+    id: "interview",
+    choices: [
+      { id: "evidence", points: 2 },
+      { id: "wing", points: 1 },
+      { id: "off", points: 0 },
     ],
   },
   {

@@ -21,12 +21,15 @@ function memoryStorage() {
 }
 
 describe("first week structure", () => {
-  it("six scenes, three forks each, twelve points on the table", () => {
-    expect(FIRST_WEEK_SCENES).toHaveLength(6);
+  it("seven scenes, three forks each, fourteen points on the table", () => {
+    expect(FIRST_WEEK_SCENES).toHaveLength(7);
     for (const scene of FIRST_WEEK_SCENES) {
       expect(scene.choices).toHaveLength(3);
-      expect(MAX_FIRST_WEEK_SCORE).toBe(12);
+      expect(MAX_FIRST_WEEK_SCORE).toBe(14);
     }
+    expect(firstWeekPoints("interview", "evidence")).toBe(2);
+    expect(firstWeekPoints("interview", "wing")).toBe(1);
+    expect(firstWeekPoints("interview", "off")).toBe(0);
     expect(firstWeekPoints("upload", "all")).toBe(2);
     expect(firstWeekPoints("upload", "recent")).toBe(1);
     expect(firstWeekPoints("upload", "polish")).toBe(0);
@@ -42,7 +45,7 @@ describe("first week structure", () => {
   });
 
   it("totals only the choices it knows, and bands the week honestly", () => {
-    expect(firstWeekTotal({ choices: { upload: "all", jd: "asis" }, sentence: "" })).toBe(4);
+    expect(firstWeekTotal({ choices: { upload: "all", jd: "asis", interview: "evidence" }, sentence: "" })).toBe(6);
     const all2 = Object.fromEntries(FIRST_WEEK_SCENES.map((s) => [s.id, "all"]));
     // "all" is only a valid id for the upload scene — foreign entries score 0.
     expect(firstWeekTotal({ choices: all2, sentence: "" })).toBe(2);

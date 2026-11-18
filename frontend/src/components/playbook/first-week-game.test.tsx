@@ -17,7 +17,7 @@ describe("FirstWeekGame", () => {
     const html = renderToStaticMarkup(<FirstWeekGame />);
     expect(html).toContain('data-testid="first-week-game"');
     expect(html).toContain("[playbook.firstweekTitle]");
-    expect(html).toContain("[playbook.firstweekStep|1,6]");
+    expect(html).toContain("[playbook.firstweekStep|1,7]");
     expect(html).toContain("[playbook.firstweekScene_upload]");
     expect(html).toContain("playbook.firstweekChoice_upload_all");
     expect(html).toContain("playbook.firstweekChoice_upload_recent");
