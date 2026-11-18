@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T00:02:47.393215Z",
+  "generated_at": "2026-11-18T00:03:04.670781Z",
   "branch": "main",
-  "head": "793a3c3",
-  "total_commits": 1581,
+  "head": "e6d7c14",
+  "total_commits": 1582,
   "milestone": "Epic 321",
   "milestone_full": "the ledger of done epics (through 473 items), closed at Epic 321 — Chapter One extended the first week to the interview room (2026-11-17)",
   "pushed_at": "2026-11-18",
