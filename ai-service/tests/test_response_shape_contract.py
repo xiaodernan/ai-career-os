@@ -3651,7 +3651,12 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # union itself stays put.
         # 1800 rather than 1792 since Epic 322's `editorial` field (with its doc comment)
         # joined the InsightDigest interface above the trace union — the union itself stays put.
-        ("types.ts", 1800, "kind:"),
+        # 1811 rather than 1800 since Epic 323's wire-retyped OfferComparison and OfferRow
+        # (doc comments included) joined the salary & offers block above the trace union —
+        # the union itself stays put.
+        # 1819 is the census's token-match line — the `| "message"` arm — not the `kind:`
+        # head's line (1811); the head travels in the `head` column. Set in the same commit that moved the union.
+        ("types.ts", 1819, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "
