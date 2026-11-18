@@ -568,3 +568,29 @@
   /* Ink-gentle ask: avoid large radial fills and borders on paper. */
   .print-quiet { background: transparent !important; box-shadow: none !important; border-color: #ccc !important; }
 }
+
+/* ------------------------------------------------------------------ */
+/* The CJK face (Epic 332): Chinese mode never shrinks the glyph box   */
+/* that containment shows. CJK glyphs sit near the full em box, so     */
+/* Latin tuning (negative tracking, 1.0-1.08 line-height) that makes    */
+/* display headings look designed in English reads as cut in half in   */
+/* Chinese -- the counters touch, the tails sheared off by the next    */
+/* line. Every rule here applies only under html[lang="zh"];           */
+/* English keeps its own kerning.                                      */
+/* ------------------------------------------------------------------ */
+html[lang="zh"] .tracking-tight,
+html[lang="zh"] .tracking-tighter,
+html[lang="zh"] .tracking-widest.text-2xs,
+html[lang="zh"] .leading-none,
+html[lang="zh"] .leading-[1],
+html[lang="zh"] .leading-[1.05],
+html[lang="zh"] .leading-[1.08] {
+  letter-spacing: 0;
+}
+html[lang="zh"] .leading-none { line-height: 1.4; }
+html[lang="zh"] .leading-[1],
+html[lang="zh"] .leading-[1.05],
+html[lang="zh"] .leading-[1.08] { line-height: 1.35; }
+/* balanced wrap reads worse on CJK at display size; pretty fills better */
+html[lang="zh"] .text-balance,
+html[lang="zh"] .text-pretty { text-wrap: pretty; }

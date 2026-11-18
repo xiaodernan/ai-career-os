@@ -369,6 +369,8 @@ export const en = {
       goToDashboard: "AI Career OS — go to dashboard",
       openNavigationMenu: "Open navigation menu",
       openCommandPalette: "Open command palette",
+      commandPaletteHint: "Jump anywhere — type what you want to do, or the page you want.",
+      accountMenuHint: "Your account: profile, settings, or sign out.",
       accountMenu: "Account menu",
       resetHint: "Replay — start this card over",
       editHint: "Edit — fix it in place",

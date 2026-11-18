@@ -57,31 +57,35 @@ export function Topbar() {
         <h2 className="truncate text-sm font-semibold">{titleForPath(pathname, t)}</h2>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={open}
-        // WCAG 2.5.3: the visible copy names the control; an aria-label that does
-        // not contain it breaks Label in Name (Lighthouse flags it as a mismatch).
-        className="hidden h-8 w-52 items-center justify-between px-2.5 text-muted-foreground sm:flex lg:w-60"
-      >
-        <span className="flex items-center gap-2">
-          <Search className="size-3.5" aria-hidden />
-          <span className="text-xs">{t("chrome.commandPalettePlaceholder")}</span>
-        </span>
-        <span className="rounded-md border border-border bg-muted px-1.5 text-2xs text-muted-foreground">
-          <PlatformKeyHint />K
-        </span>
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={open}
-        aria-label={t("chrome.openCommandPalette")}
-        className="sm:hidden"
-      >
-        <Search aria-hidden />
-      </Button>
+      <Hint side="bottom" label={t("chrome.commandPaletteHint")}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={open}
+          // WCAG 2.5.3: the visible copy names the control; an aria-label that does
+          // not contain it breaks Label in Name (Lighthouse flags it as a mismatch).
+          className="hidden h-8 w-52 items-center justify-between px-2.5 text-muted-foreground sm:flex lg:w-60"
+        >
+          <span className="flex items-center gap-2">
+            <Search className="size-3.5" aria-hidden />
+            <span className="text-xs">{t("chrome.commandPalettePlaceholder")}</span>
+          </span>
+          <span className="rounded-md border border-border bg-muted px-1.5 text-2xs text-muted-foreground">
+            <PlatformKeyHint />K
+          </span>
+        </Button>
+      </Hint>
+      <Hint side="bottom" label={t("chrome.commandPaletteHint")}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={open}
+          aria-label={t("chrome.openCommandPalette")}
+          className="sm:hidden"
+        >
+          <Search aria-hidden />
+        </Button>
+      </Hint>
 
       <Hint side="bottom" label={t("chrome.manualOpen")}>
         <ManualSheet />
@@ -90,21 +94,22 @@ export function Topbar() {
         <ThemeToggle />
       </Hint>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            // WCAG 2.5.3: the visible initials lead the accessible name, so Label in Name holds.
-            aria-label={`${initials} · ${t("chrome.accountMenu")}`}
-            className="rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
-          >
-            <Avatar className="size-8 ring-1 ring-border">
-              {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
-              <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-          </button>
-        </DropdownMenuTrigger>
+      <Hint side="bottom" label={t("chrome.accountMenuHint")}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              // WCAG 2.5.3: the visible initials lead the accessible name, so Label in Name holds.
+              aria-label={`${initials} · ${t("chrome.accountMenu")}`}
+              className="rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
+            >
+              <Avatar className="size-8 ring-1 ring-border">
+                {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
+                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-60">
           <DropdownMenuLabel className="font-normal">
             <p className="truncate text-sm font-medium">{user?.displayName ?? t("chrome.signedIn")}</p>
@@ -135,6 +140,7 @@ export function Topbar() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </Hint>
     </header>
   );
 }

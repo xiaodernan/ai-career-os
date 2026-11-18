@@ -325,6 +325,8 @@ export const zh = {
       goToDashboard: "AI Career OS — 回到仪表盘",
       openNavigationMenu: "打开导航菜单",
       openCommandPalette: "打开命令面板",
+      commandPaletteHint: "跳到任何地方——输入你想做什么，或想去的页面。",
+      accountMenuHint: "你的账户：个人资料、设置，或退出登录。",
       accountMenu: "账户菜单",
       resetHint: "再来一次——这张卡从头来过",
       editHint: "编辑——原地改好",
