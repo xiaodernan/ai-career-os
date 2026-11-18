@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T06:29:02.010352Z",
+  "generated_at": "2026-11-18T06:37:59.062828Z",
   "branch": "main",
-  "head": "f68a010",
-  "total_commits": 1610,
+  "head": "7e26371",
+  "total_commits": 1612,
   "milestone": "Epic 328",
   "milestone_full": "the ledger of done epics (through 480 items), closed at Epic 328 — The login door under siege",
   "pushed_at": "2026-11-18",
