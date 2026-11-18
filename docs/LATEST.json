@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T22:45:55.663682Z",
+  "generated_at": "2026-11-18T23:29:38.855382Z",
   "branch": "main",
-  "head": "83a1ea8",
-  "total_commits": 1640,
-  "milestone": "Epic 332",
-  "milestone_full": "the ledger of done epics (through 484 items), closed at Epic 332 — The analyst's read of one letter",
+  "head": "ca3f4df",
+  "total_commits": 1643,
+  "milestone": "Epic 333",
+  "milestone_full": "the ledger of done epics (through 485 items), closed at Epic 333 — The sendable counter-offer letter",
   "pushed_at": "2026-11-18",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1535+",
   "test_files": 193,
-  "work_items": 484,
-  "epics": 198,
+  "work_items": 485,
+  "epics": 199,
   "feature_surface": [
+    "Epic 333 — The sendable counter-offer letter",
     "Epic 332 — The analyst's read of one letter",
     "Epic 331 — The assistant's one proactive first step",
     "Epic 330 — One wire, one honest number",
     "Epic 329 — The gap analyst's voice",
-    "Epic 328 — The login door under siege",
-    "Epic 327 — The decision letter"
+    "Epic 328 — The login door under siege"
   ]
 }
