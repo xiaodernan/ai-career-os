@@ -6934,11 +6934,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   zh (`覆盖率 1.0 … 已覆盖 1 项、缺口 0 项，预期技能 1 项`) and en (`full coverage at 1.0, with 1 of
   1 expected skills covered and 0 gaps`), and a corpus-derived `Senior Backend Engineer - Agent
   Platform` answers HTTP 200 with a grounded paragraph in each language. The live run surfaced
-  two boundary defects, both fixed in the same sitting. The 404 lane flattened the upstream's
-  own refusal into a bare `Resource not found` — a user without a parsed resume now reads
-  `no resume version found`, the sentence that tells them what to fix (the 400 lane already
-  crossed the upstream sentence; the 404 lane now does too, pinned by
-  `HttpAiServiceClientTest.aNotFoundCarriesTheUpstreamSentence`). And the panel never handed
+  two boundary defects, both fixed in the same sitting. The 404 lane flattened the engine's one
+  refusal into a bare `Resource not found` — the reader now gets the sentence they can act on:
+  the boundary maps the engine's exact `no resume version found` onto the existing fine code
+  `RESUME_VERSION_MISSING`, the one code whose bilingual sentence already says it
+  ("That resume has no version yet." / "那份简历还没有版本。"), at the same literal the resume
+  path's own throw raises — pinned by two boundary tests (the mapped shape and the coarse arm
+  that keeps `AI_SERVICE_NOT_FOUND` with its measurable literal). And the panel never handed
   the reader's `locale` down, so a Chinese reader would be handed an English note (absent is
   English by contract) — the panel sends it now, pinned by a render test that holds the figure
   to both languages and holds its absence when no paragraph survives (two frontend render tests;

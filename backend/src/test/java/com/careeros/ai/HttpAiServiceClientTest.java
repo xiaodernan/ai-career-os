@@ -90,7 +90,8 @@ class HttpAiServiceClientTest {
             // ai-service's typed refusals do; anything else succeeds. The
             // marker rides in the payload, so one context covers both.
             byte[] answer = refusalFor(body).getBytes(StandardCharsets.UTF_8);
-            int status = body.contains("REFUSE-NOTFOUND") ? 404 : body.contains("REFUSE") ? 400 : 200;
+            int status = (body.contains("REFUSE-NOTFOUND") || body.contains("REFUSE-NOTFOUND-OTHER")) ? 404
+                    : body.contains("REFUSE") ? 400 : 200;
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, answer.length);
             exchange.getResponseBody().write(answer);
@@ -257,11 +258,11 @@ class HttpAiServiceClientTest {
     }
 
     @Test
-    void aNotFoundCarriesTheUpstreamSentence() {
-        // "Not yours" and "not there" are the same upstream answer in its WHERE clause,
-        // so the code stays AI_SERVICE_NOT_FOUND -- but the sentence is the reader's:
-        // "no resume version found" tells them they must upload a resume; a bare
-        // "Resource not found" tells them nothing.
+    void aResumeShapedNotFoundMapsToTheCodeWhoseSentenceTellsTheReaderToParse() {
+        // The engine's one upstream 404 is "no resume version" -- the seeker has not
+        // parsed one. The mapped call site uses the exact literal the resume path's
+        // throw uses: one code, one sentence ("That resume has no version yet." in
+        // both languages), one reader move (parse it).
         ApiException thrown = null;
         try {
             client.parseFeed("REFUSE-NOTFOUND", "rss", UUID.randomUUID());
@@ -269,8 +270,24 @@ class HttpAiServiceClientTest {
             thrown = e;
         }
         assertThat(thrown).isNotNull();
+        assertThat(thrown.code()).isEqualTo(ApiErrorCode.RESUME_VERSION_MISSING);
+        assertThat(thrown).hasMessage("Resume has no version to parse");
+    }
+
+    @Test
+    void anyOtherNotFoundStaysTheCoarseCodeWithTheMeasurableSentence() {
+        // A 404 that is not the engine's one refusal is a record gone; the coarse code
+        // keeps its one fixed, measurable sentence -- the gate measures literals at the
+        // throw site, so the coarse arm cannot become a dynamic message again.
+        ApiException thrown = null;
+        try {
+            client.parseFeed("REFUSE-NOTFOUND-OTHER", "rss", UUID.randomUUID());
+        } catch (ApiException e) {
+            thrown = e;
+        }
+        assertThat(thrown).isNotNull();
         assertThat(thrown.code()).isEqualTo(ApiErrorCode.AI_SERVICE_NOT_FOUND);
-        assertThat(thrown).hasMessage("no resume version found");
+        assertThat(thrown).hasMessage("Resource not found");
     }
 
     @Test
@@ -537,6 +554,9 @@ class HttpAiServiceClientTest {
         }
         if (body.contains("REFUSE-NO-SENTENCE")) {
             return "{\"detail\": {\"code\": \"INGEST_FEED_INVALID\"}}";
+        }
+        if (body.contains("REFUSE-NOTFOUND-OTHER")) {
+            return "{\"detail\": \"honestly not here\"}";
         }
         if (body.contains("REFUSE-NOTFOUND")) {
             return "{\"detail\": \"no resume version found\"}";

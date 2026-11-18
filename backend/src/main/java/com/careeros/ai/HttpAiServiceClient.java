@@ -957,13 +957,14 @@ public class HttpAiServiceClient implements AiServiceClient {
      * was unreachable from HTTP. Connection failures and timeouts stay 502: nothing
      * upstream answered, so nothing upstream can be quoted.
      *
-     * A 400 carries the upstream's own sentence, because a refused file is the
+     * A 400 also carries the upstream's own sentence, because a refused file is the
      * caller's to fix: "invalid bundle: missing data section: knowledge" tells a reader
      * which part of their file the product did not understand, and "AI service rejected
-     * the request" names the wrong party and tells them nothing. A 404 carries it too —
-     * "no resume version found" is the whole difference between a reader knowing they
-     * need to upload a resume and a reader refreshing a page that cannot work yet.
-     * The sentence arrives
+     * the request" names the wrong party and tells them nothing. A 404 is mapped onto
+     * the finer code it means when the upstream names its one refusal (no resume
+     * version — the reader parses one); anything else stays the coarse code whose
+     * sentence is bilingual today and measurable at the throw site. The sentence
+     * arrives
      * two ways now: as a bare string (the legacy shape) and inside the ai-service's
      * typed refusals, which answer {"detail": {"code": ..., "message": ...}} so the
      * upstream's own vocabulary survives the crossing. Both are read; the code stays
@@ -972,13 +973,18 @@ public class HttpAiServiceClient implements AiServiceClient {
     private static ApiException translateStatus(RestClientResponseException e) {
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
         if (status == HttpStatus.NOT_FOUND) {
-            // "not yours" and "not there" are the same upstream answer, so the code stays
-            // AI_SERVICE_NOT_FOUND -- but the sentence is the upstream's own when one
-            // arrived. "no resume version found" tells the reader what to fix; a bare
-            // "Resource not found" tells them nothing.
+            // The engine's 404 is one refusal: no resume version -- the seeker has not
+            // parsed one. The code for exactly that already exists and carries its own
+            // bilingual sentence, so the mapped call site uses the same literal as the
+            // resume path's throw: one code, one sentence, one reader move (parse it).
+            // Everything else stays the coarse upstream answer with the coarse fixed
+            // sentence -- a sentence that must stay measurable at the throw site.
             String detail = upstreamDetail(e);
-            return new ApiException(ApiErrorCode.AI_SERVICE_NOT_FOUND,
-                    detail != null ? detail : "Resource not found");
+            if ("no resume version found".equalsIgnoreCase(detail)) {
+                return new ApiException(ApiErrorCode.RESUME_VERSION_MISSING,
+                        "Resume has no version to parse");
+            }
+            return new ApiException(ApiErrorCode.AI_SERVICE_NOT_FOUND, "Resource not found");
         }
         if (status == HttpStatus.BAD_REQUEST || status == HttpStatus.UNPROCESSABLE_ENTITY) {
             String detail = upstreamDetail(e);
