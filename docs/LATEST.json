@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T06:37:59.062828Z",
+  "generated_at": "2026-11-18T11:40:16.101093Z",
   "branch": "main",
-  "head": "7e26371",
-  "total_commits": 1612,
-  "milestone": "Epic 328",
-  "milestone_full": "the ledger of done epics (through 480 items), closed at Epic 328 — The login door under siege",
+  "head": "9aed73b",
+  "total_commits": 1614,
+  "milestone": "Epic 329",
+  "milestone_full": "the ledger of done epics (through 481 items), closed at Epic 329 — The gap analyst's voice",
   "pushed_at": "2026-11-18",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1535+",
-  "test_files": 190,
-  "work_items": 480,
-  "epics": 194,
+  "test_files": 191,
+  "work_items": 481,
+  "epics": 195,
   "feature_surface": [
+    "Epic 329 — The gap analyst's voice",
     "Epic 328 — The login door under siege",
     "Epic 327 — The decision letter",
     "Epic 326 — The relay's transient group-404 rides the retry lane",
     "Epic 325 — The artifacts court",
-    "Epic 324 — The reader's wheel, decisively leveled",
-    "Epic 323 — The offer decision gets a voice"
+    "Epic 324 — The reader's wheel, decisively leveled"
   ]
 }
