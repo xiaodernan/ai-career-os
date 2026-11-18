@@ -6918,6 +6918,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **331** The assistant's one proactive first step — the dashboard learns to name it (2026-11-18).
+
+  (The dashboard showed every number the user owns and ended where numbers end. Epic 331
+  adds the sentence a coach would say first: one grounded action naming the day's highest-
+  leverage move, drafted by the same StateGraph draft → verify → render the editors use
+  (`app/features/proactive_step.py`, `kind="proactive_step"`). The backend owns the seam:
+  `AssistantService` reads the caller's own workspace — total applications, the dashboard's
+  own needs-attention count (`DashboardRepository.needsAttention` + `attentionBreakdown` on
+  the same `NEEDS_ATTENTION` predicate), split into due reminders vs a fortnight of silence,
+  interview rehearsals started in the last 7 days, and offers pending a decision. The bridge
+  can never inject a claim the caller could not see; the editor can never cite a digit the
+  payload does not carry. `step: null` on any failure — the panel renders nothing rather
+  than a generic instruction. The dashboard carries a new `NextStepCard`: it never fires on
+  mount — a tap asks — and shows the sentence in the reader's language (both verified live
+  through the install: the seeded probe reads `我先处理到期提醒…` / `I'll handle the 1
+  reminder due first…`, grounded in payload counts, `0`-signals handled honestly).
+  `/api/v1/assistant/next-step` is rate-limited like every AI-cost lane; usage rides
+  `proactive_step` so the admin cache ledger counts it. Two boundary defects were fixed on
+  the way in: the wire answer said `attentionCount` and never split it (now `reminderDue` /
+  `staleCount`), and the single-row native query threw ClassCastException on the engine's
+  own install. verify_gates **579/579** (+2 for the new contract gates), AssistantService
+  + AssistantControllerTest, next-step-card render test in both languages, i18n/zh-key parity
+  held, bundle census +1.)
+
 - [x] **330** One wire, one honest number — every call streams, the hot lane reads ~96% (2026-11-18).
 
   (Every LLM call in this engine now rides the SSE wire: `complete()` assembles its

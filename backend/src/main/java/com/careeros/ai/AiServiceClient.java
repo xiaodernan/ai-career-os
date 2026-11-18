@@ -218,6 +218,15 @@ public interface AiServiceClient {
     Map<String, Object> gapNote(UUID userId, Map<String, Object> payload, String locale);
 
     /**
+     * The assistant's one proactive first step (Epic 331): a single grounded sentence
+     * naming the highest-leverage action today. The ai-service drafts it over the
+     * workspace payload the backend built itself, keeps only sentences that cite a
+     * digit-run already present, and answers `{step}` — `step` is null on any failure.
+     * Optional by contract; the dashboard renders nothing rather than a generic chant.
+     */
+    Map<String, Object> proactiveStep(UUID userId, Map<String, Object> payload, String locale);
+
+    /**
      * Export all user data as a versioned, hashed bundle (13.1).
      * `sections` carries the rows the BACKEND owns (`applications` and
      * `growth_plans`): the ai-service cannot read them, so the bridge hands

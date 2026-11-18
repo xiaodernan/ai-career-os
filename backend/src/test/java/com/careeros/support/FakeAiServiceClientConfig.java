@@ -474,6 +474,14 @@ public class FakeAiServiceClientConfig {
                     + "the rest follows.");
         }
 
+        @Override
+        public Map<String, Object> proactiveStep(UUID userId, Map<String, Object> payload,
+                                                 String locale) {
+            record("proactiveStep");
+            Object due = payload == null ? null : payload.get("reminderDue");
+            return map("step", "Knock out the " + due + " due reminder(s) first; the rest holds.");
+        }
+
         /**
          * The timeline bridge's answer (Epic 81): the same merge the engine performs,
          * so an integration test can assert both that the events travelled and that the

@@ -82,6 +82,8 @@ FORWARD = {
     "/internal/features/offer-decision-letter": ("OfferLetterReq", {"offer"}),
     # Epic 329 -- the gap analyst's read on the engine's own gap output. `payload` is required.
     "/internal/features/gap-note": ("GapNoteReq", {"payload"}),
+    # Epic 331 -- the assistant's one proactive first step. `payload` is required.
+    "/internal/features/proactive-step": ("ProactiveStepReq", {"payload"}),
 }
 
 

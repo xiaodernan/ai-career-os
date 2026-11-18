@@ -33,6 +33,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { MetricCard } from "@/components/common/metric-card";
 import { NineQuestsCard } from "@/components/dashboard/nine-quests-card";
+import { NextStepCard } from "@/components/dashboard/next-step-card";
 import { Hint } from "@/components/ui/hint";
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { LoadingListSkeleton, LoadingMetricGridSkeleton } from "@/components/common/loading-skeletons";
@@ -474,6 +475,11 @@ export default function DashboardPage() {
                   ) : null}
                 </CardContent>
               </Card>
+
+              {/* Epic 331 — the assistant's one proactive first step. The reader
+                  asks, the backend reads the caller's own rows, and the editor
+                  answers one grounded sentence. Nothing is spent before they tap. */}
+              <NextStepCard />
 
               {/* The five newest application_events the backend already computed, cached and sent
                   (Epic 153). The mapper now hands them over instead of dropping them at the wire;

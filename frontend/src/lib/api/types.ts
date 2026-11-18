@@ -1956,6 +1956,18 @@ export interface GapBlock {
   note?: string | null;
 }
 
+/** Epic 331 — the assistant's one proactive first step: the workspace counts plus `step`. */
+export interface NextStep {
+  totalApplications?: number;
+  attentionCount?: number;
+  reminderDue?: number;
+  staleCount?: number;
+  interviewsStartedLast7Days?: number;
+  offersPending?: number;
+  /** One grounded sentence naming the first thing to do today; null when nothing survived verify. */
+  step?: string | null;
+}
+
 export interface SkillRow {
   skill?: string;
   category?: string;

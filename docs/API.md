@@ -572,6 +572,7 @@ that narrow the question.
 |---|---|---|
 | POST | `/growth/gap-analysis` | `{targetRole, seniority?, resumeVersionId?, location?, currency?, targetSalary?, top?}` → the coverage and the gaps. `targetRole` is required and floored at 10 characters (the engine's own floor) |
 | POST | `/growth/gap-note` | Epic 329 -- the gap analyst's voice: the same answer as `/growth/gap-analysis` plus one grounded paragraph (`note`) in the reader's language (`locale`?; en otherwise). The note is kept only when every claim cites a digit-run already in the payload — otherwise the field is absent; never a coat of plausibility. Mirrors `/offers/compare`'s grounded-voice pattern |
+| POST | `/assistant/next-step` | Epic 331 -- the assistant's one proactive first step: one sober sentence naming the highest-leverage action today, drafted over the caller's own counts by the same editor discipline — every digit cited exists in the backend-built payload; absent otherwise. `step` is kept only when every claim cites a digit-run already in the payload; `step: null` otherwise (backend `nextStep`; locale?, en otherwise) |
 | POST | `/growth/readiness` | the same request → one verdict (`ready` / `borderline` / `not_ready`), the coverage, the covered/partial/open counts, and the blockers. A must-gap caps a `ready` |
 | POST | `/growth/learning-plan` | the same request → the phased study items (foundation → core → applied) with category-aware resource hints |
 | POST | `/growth/skill-demand` | the same request → which skills a role family's postings ask for, and how often — the market-centric half of the gap view |
@@ -789,6 +790,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/counter-offer` | Epic 12.4 -- the deterministic anchor and reasons a counter-offer is built from (backend `counterOffer`) |
 | POST | `/internal/features/gap-analysis` | Epic 10.1 -- the distance between the profile and the target role (backend `gapAnalysis`) |
 | POST | `/internal/features/gap-note` | Epic 329 -- the gap analyst's paragraph over the gap-analysis's own answer: `{payload, locale?}`; `note` is kept only when every claim cites a digit-run already in the payload — `note: null` otherwise (backend `gapNote`) |
+| POST | `/internal/features/proactive-step` | Epic 331 -- the assistant's one proactive first step over the backend-built workspace payload: `{payload, locale?}`; `step` is kept only when every claim cites a digit-run already in the payload — `step: null` otherwise (backend `proactiveStep`) |
 | POST | `/internal/features/readiness` | Epic 10.7 -- target-role readiness, as one verdict (backend `readiness`) |
 | POST | `/internal/features/learning-plan` | Epic 10.5 -- the plan that closes the gaps readiness named (backend `learningPlan`) |
 | POST | `/internal/features/skill-demand` | Epic 10.9 -- which skills the market asks for, counted from the corpus (backend `skillDemand`) |

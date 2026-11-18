@@ -481,6 +481,17 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> proactiveStep(UUID userId, Map<String, Object> payload,
+                                             String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("payload", payload != null ? payload : Map.of());
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/proactive-step", userId, body);
+    }
+
+    @Override
     public Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot,
                                          String locale) {
         Map<String, Object> body = new HashMap<>();

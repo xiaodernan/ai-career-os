@@ -10,9 +10,9 @@
 /* ------------------------------------------------------------------ */
 
 @theme inline {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Newsreader Variable", ui-serif, Georgia, serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+  --font-serif: "Newsreader Variable", ui-serif, Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", "Cascadia Mono", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

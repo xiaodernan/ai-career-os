@@ -51,6 +51,10 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
 
     long countByUserId(UUID userId);
 
+    /** Rehearsals started this week -- the editor's one session-shape number. */
+    @Query("SELECT COUNT(s) FROM InterviewSession s WHERE s.userId = :userId AND s.startedAt >= :since")
+    long countStartedSince(@Param("userId") UUID userId, @Param("since") java.time.OffsetDateTime since);
+
     /** One card's rehearsals (57.2): the packet's fifth row is this number. */
     long countByApplicationIdAndUserId(UUID applicationId, UUID userId);
 }

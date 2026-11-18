@@ -201,6 +201,7 @@ export const endpoints = {
   /* ---------------- Granular growth engines (10.1-10.13) --------------- */
   growthGapAnalysis: "/growth/gap-analysis",
   growthGapNote: "/growth/gap-note",
+  assistantNextStep: "/assistant/next-step",
   growthReadiness: "/growth/readiness",
   growthLearningPlan: "/growth/learning-plan",
   growthSkillDemand: "/growth/skill-demand",

@@ -10,6 +10,7 @@ from app.features import company as company_mod
 from app.features import counsel as counsel_mod
 from app.features import editorial as editorial_mod
 from app.features import gap_note as gap_note_mod
+from app.features import proactive_step as proactive_step_mod
 from app.features import offer_narrative as offer_narrative_mod
 from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
@@ -886,6 +887,31 @@ async def gap_note_ep(req: GapNoteReq, ctx: Ctx = Depends(require_internal)):
     result = await gap_note_mod.gap_note(payload, locale=req.locale,
                                           user_id=str(ctx.user_id) if ctx.user_id else None,
                                           run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class ProactiveStepReq(BaseModel):
+    """Epic 331 -- the assistant's one proactive first step.
+
+    Same discipline as the other editors: locale (en/zh) picks the language,
+    `step` is kept only when every claim cites a digit-run already in the payload."""
+    payload: dict
+    locale: str | None = None
+
+
+@router.post("/proactive-step")
+async def proactive_step_ep(req: ProactiveStepReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 331 -- one grounded sentence naming the first thing to do today.
+
+    Optional by contract: an ungrounded or silent relay answers null; the dashboard
+    renders nothing rather than a confident generic instruction.
+    """
+    payload = req.payload if isinstance(req.payload, dict) else {}
+    run_id = await _run(ctx, "assistant", "proactive_step")
+    result = await proactive_step_mod.proactive_step(payload, locale=req.locale,
+                                                     user_id=str(ctx.user_id) if ctx.user_id else None,
+                                                     run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
 

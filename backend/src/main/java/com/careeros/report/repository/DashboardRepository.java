@@ -100,6 +100,29 @@ public class DashboardRepository {
     }
 
     /**
+     * The question behind the editor's one first step: what the attention count
+     * is made of. Two facts, the way the clause reads them — how many rows have
+     * a due reminder (someone is waiting), and how many rows went quiet without
+     * one. A row that satisfies both is counted in each side, which is the
+     * granularity the reader needs: the union is the count on the dashboard,
+     * the split is what the editor is allowed to ground on.
+     */
+    public long[] attentionBreakdown(UUID userId, int staleDays) {
+        String sql = """
+                SELECT COUNT(*) FILTER (WHERE a.reminder_at IS NOT NULL AND a.reminder_at <= now()),
+                       COUNT(*) FILTER (WHERE a.updated_at < now() - make_interval(days => :staleDays))
+                  FROM applications a
+                  WHERE a.user_id = :userId AND a.status NOT IN ('offer', 'rejected')
+                """;
+        Query query = em.createNativeQuery(sql);
+        query.setParameter("userId", userId);
+        query.setParameter("staleDays", staleDays);
+        Object single = query.getSingleResult();
+        Object[] row = (single instanceof Object[] arr) ? arr : (Object[]) ((List<?>) single).get(0);
+        return new long[]{ ((Number) row[0]).longValue(), ((Number) row[1]).longValue() };
+    }
+
+    /**
      * The rows behind {@link #needsAttention}, ordered the way they should be worked: a reminder
      * that has come due first (someone is waiting on the user), then the longest-idle application.
      *
