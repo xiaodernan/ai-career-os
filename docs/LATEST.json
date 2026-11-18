@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T02:31:08.429451Z",
+  "generated_at": "2026-11-18T02:41:33.877026Z",
   "branch": "main",
-  "head": "e6d7c14",
-  "total_commits": 1582,
+  "head": "f6e28d3",
+  "total_commits": 1584,
   "milestone": "Epic 322",
   "milestone_full": "the ledger of done epics (through 474 items), closed at Epic 322 — The Monday letter gets an editor",
   "pushed_at": "2026-11-18",
