@@ -8,11 +8,12 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 102 mutation sites in fifteen files
+What the shipped code says, measured rather than assumed: 103 mutation sites in fifteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
-second door, the account and replies screens' hooks, 42.2's mail dials, and the kept letter's
-save/delete/correct trio, 66.1/67.2's delete and abandon, and Epic 185's offer pair).
-90 declare their failure at the hook; the twelve that do not sit in
+second door, the account and replies screens' hooks, 42.2's mail dials, the kept letter's
+save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair, and Epic
+327's decision letter writer).
+91 declare their failure at the hook; the twelve that do not sit in
 ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -27,7 +28,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 87 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 88 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -122,8 +123,9 @@ ROSTER = {
     "frontend/src/lib/hooks/notifications.ts": 4,
     # 6 rather than 4 since Epic 185's shelf pair joined the four offer verbs
     # (benchmark, negotiate, compare, counter) with save and delete, each
-    # announcing its failure at the hook with its own fail() sentence.
-    "frontend/src/lib/hooks/offers.ts": 6,
+    # announcing its failure at the hook with its own fail() sentence; 7 since
+    # Epic 327's decision letter joins with its own fail() sentence.
+    "frontend/src/lib/hooks/offers.ts": 7,
     PUSH_HOOKS: 1,
     "frontend/src/lib/hooks/voice.ts": 2,
     REPLIES_HOOKS: 1,
@@ -156,8 +158,9 @@ SENTENCES = {
     "frontend/src/lib/hooks/notifications.ts": 4,
     # 6 rather than 4 since Epic 185's shelf pair joined the four offer verbs
     # (benchmark, negotiate, compare, counter) with save and delete, each
-    # announcing its failure at the hook with its own fail() sentence.
-    "frontend/src/lib/hooks/offers.ts": 6,
+    # announcing its failure at the hook with its own fail() sentence; 7 since
+    # Epic 327's decision letter spends its own sentence.
+    "frontend/src/lib/hooks/offers.ts": 7,
     "frontend/src/lib/hooks/mfa.ts": 4,
     # 42.2: one write, one sentence -- the dial could not be changed.
     "frontend/src/lib/hooks/mail-settings.ts": 1,

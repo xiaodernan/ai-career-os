@@ -1124,8 +1124,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 228 with Epic 314's `CachedReport` (the {report, expiresAtNanos} pair HealthService
     # keeps in its two-second burst cache; private to the module, reaches no route, held
     # to the opener for the same reason as Flow/Series/Pending).
-    assert len(declared) == 228, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 228 measured"
+    # 230 with Epic 327's `OfferLetterRequest` (the {locale?} body the reader posts to
+    # the letter route, crossing the web seam) and `OfferLetterResponse` (the {letter}
+    # envelope it answers) on `OfferShelfDtos`. The pin was red on the tree that landed
+    # Epic 327; this pass counts the records again.
+    assert len(declared) == 230, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 230 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

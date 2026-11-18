@@ -192,6 +192,7 @@ export const endpoints = {
   /** Epic 185: the reader's own shelf of the offers they hold, compared by total comp. */
   offerShelf: "/offers/shelf",
   offerShelfRow: (id: string) => `/offers/shelf/${seg(id)}`,
+  offerShelfLetter: (id: string) => `/offers/shelf/${seg(id)}/letter`,
   offerSalaryBenchmark: "/offers/salary-benchmark",
   offerNegotiate: "/offers/negotiate",
   offerCompare: "/offers/compare",

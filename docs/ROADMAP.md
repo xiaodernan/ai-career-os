@@ -6918,6 +6918,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **327** The decision letter — the offer you passed on, written back to yourself (2026-11-18).
+
+  (The offers page is where a job-seeker's most consequential non-decision happens, and the
+  shelf only kept the numbers: `decision: declined`, and that was all. Each declined row
+  now carries one page written by the same editor StateGraph — `app/features/offer_letter.py`,
+  draft → verify → render, `kind="offer_letter"` — addressed to the future reader:
+  what the offer taught them, the honest sentence about why they passed. Same discipline as
+  the other editors: every claim must cite a digit-run already present in the offer's own
+  payload (label, base, bonus, equity, totalComp, currency, remoteType, deadline, decision,
+  notes, plus shelf siblings — labels and totalComp only), NFKC-folded, `%` and thousands-
+  separators normalized, `locale` en/zh; `letter: null` on any failure. The backend builds
+  the offer payload itself from the owned row — the caller cannot inject numbers — and
+  carries it to the ai-service seam with the shelf siblings the reader compared against (backend `offerDecisionLetter` → `/internal/features/offer-decision-letter`); the public backend route is
+  `POST /api/v1/offers/shelf/{id}/letter`, attributed to the caller, mirrors the editorials.
+  The frontend renders the letter as a small card inside the declined row
+  (`DecisionLetter`), one honest line of teaching copy above the button
+  (`offers.shelfLetterHint`), both languages. Measured: live through the relay, both
+  languages kept and grounded (zh citation 360000; en citation 337100 AND 360000);
+  ai-service standalone suite +4, forward contract census +1 row,
+  OfferShelfServiceTest +1 (5/5) with siblings passed alongside the offer; frontend vitest
+  **1539/1539** (+2 shelf render tests, both languages); verify_gates **575/575**; CI CI_PENDING at head.)
+
 - [x] **326** The relay's transient group-404 rides the retry lane — and an English role finds the Chinese corpus (2026-11-18).
 
   (The user asked, again, why the relay answers our probes with cached=0 and "not streaming"

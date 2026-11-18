@@ -198,6 +198,17 @@ public interface AiServiceClient {
     Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot, String locale);
 
     /**
+     * The decision letter (Epic 327): one short paragraph addressed to the reader about the
+     * offer they just declined — what the offer taught them, and the honest sentence about
+     * why they passed. The ai-service drafts it, keeps only sentences that cite a digit-run
+     * already present in the offer's own numbers (and its shelf siblings'), and answers
+     * `{letter}` — `letter` is null on any failure. Never a fabricated keepsake.
+     * `locale` is the reader's language, same rule as the digest.
+     */
+    Map<String, Object> offerDecisionLetter(UUID userId, Map<String, Object> offer,
+            List<Map<String, Object>> siblings, String locale);
+
+    /**
      * Export all user data as a versioned, hashed bundle (13.1).
      * `sections` carries the rows the BACKEND owns (`applications` and
      * `growth_plans`): the ai-service cannot read them, so the bridge hands

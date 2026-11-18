@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteOffer, useSaveOffer } from "@/lib/hooks/offers";
+import { useDeleteOffer, useSaveOffer, useOfferDecisionLetter } from "@/lib/hooks/offers";
 import { useOfferShelf } from "@/lib/hooks/resources";
 import { OfferCelebration } from "@/components/offers/offer-celebration";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -56,6 +56,59 @@ function money(amount: number, currency: string, locale: string): string {
   } catch {
     return `${amount} ${currency}`;
   }
+}
+
+/** The decision letter for a declined row: one honest page, written on demand. */
+function DecisionLetter({
+  rowId,
+  locale,
+  t,
+}: {
+  rowId: string;
+  locale: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const letter = useOfferDecisionLetter();
+  const [text, setText] = React.useState<string | null>(null);
+  const [silent, setSilent] = React.useState(false);
+  return (
+    <div className="mt-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {t("offers.shelfLetterTitle")}
+      </p>
+      {text ? (
+        <p className="mt-1 text-sm leading-relaxed text-foreground/90">{text}</p>
+      ) : silent ? (
+        <p className="mt-1 text-xs text-muted-foreground">{t("offers.shelfLetterSilent")}</p>
+      ) : (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">{t("offers.shelfLetterHint")}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            loading={letter.isPending}
+            onClick={() =>
+              letter.mutate(
+                { id: rowId, locale },
+                {
+                  onSuccess: (out) => {
+                    if (out.letter) {
+                      setText(out.letter);
+                    } else {
+                      setSilent(true);
+                    }
+                  },
+                },
+              )
+            }
+          >
+            {t("offers.shelfLetterButton")}
+          </Button>
+        </>
+      )}
+    </div>
+  );
 }
 
 function daysLeft(deadline: string | null): number | null {
@@ -281,6 +334,9 @@ export function OfferShelf() {
                       </Hint>
                     </div>
                   </div>
+                  {row.decision === "declined" && (
+                    <DecisionLetter rowId={row.id} locale={locale} t={t} />
+                  )}
                 </li>
               );
             })}

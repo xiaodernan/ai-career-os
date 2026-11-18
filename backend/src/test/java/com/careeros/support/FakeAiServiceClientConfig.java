@@ -455,6 +455,16 @@ public class FakeAiServiceClientConfig {
             return map("note", "The quiet application is the one to move this week.");
         }
 
+        @Override
+        public Map<String, Object> offerDecisionLetter(UUID userId, Map<String, Object> offer,
+                                                       List<Map<String, Object>> siblings,
+                                                       String locale) {
+            record("offerDecisionLetter");
+            Object total = offer == null ? null : offer.get("totalComp");
+            return map("letter", "You passed on " + total + " because your bar is higher "
+                    + "than the number; that is the thing worth keeping.");
+        }
+
         /**
          * The timeline bridge's answer (Epic 81): the same merge the engine performs,
          * so an integration test can assert both that the events travelled and that the

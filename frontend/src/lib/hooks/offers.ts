@@ -210,6 +210,17 @@ export function useCompareOffers() {
   });
 }
 
+/** Epic 327 — the decision letter, written about a specific shelf row. */
+export function useOfferDecisionLetter() {
+  return useMutation({
+    mutationFn: async (input: { id: string; locale?: string }) =>
+      await api.create<{ letter?: string | null }>(
+        endpoints.offerShelfLetter(input.id),
+        { locale: input.locale }),
+    onError: fail("failures.offerLetter"),
+  });
+}
+
 /** 12.4 — the counter-offer draft. */
 export function useCounterOffer() {
   return useMutation({

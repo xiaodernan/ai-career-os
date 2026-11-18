@@ -77,6 +77,9 @@ FORWARD = {
     # Epic 322 -- the weekly letter's editor's note. `snapshot` is the digest the
     # letter already files; empty is valid (an empty payload yields silence).
     "/internal/features/editorial": ("EditorialReq", {"snapshot"}),
+    # Epic 327 -- the decision letter. `offer` is the shelf row's own payload
+    # (required), siblings/locale optional.
+    "/internal/features/offer-decision-letter": ("OfferLetterReq", {"offer"}),
 }
 
 

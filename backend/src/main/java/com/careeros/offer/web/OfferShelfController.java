@@ -4,6 +4,8 @@ import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.offer.dto.OfferShelfDtos.DeleteOfferResponse;
 import com.careeros.offer.dto.OfferShelfDtos.OfferItem;
+import com.careeros.offer.dto.OfferShelfDtos.OfferLetterRequest;
+import com.careeros.offer.dto.OfferShelfDtos.OfferLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.OfferShelfResponse;
 import com.careeros.offer.dto.OfferShelfDtos.UpsertOfferRequest;
 import com.careeros.offer.dto.OfferShelfDtos.UpsertOfferResponse;
@@ -63,5 +65,17 @@ public class OfferShelfController {
     @GetMapping("/shelf/{id}")
     public OfferItem get(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return shelf.get(user.id(), id);
+    }
+
+    /**
+     * The decision letter (Epic 327): the writer addresses the reader about the offer they are
+     * holding, grounded in the shelf's own numbers. Always answers; `letter` is null when the
+     * ai-service could not keep a grounded one — the honest answer, never a coat of plausibility.
+     */
+    @PostMapping("/shelf/{id}/letter")
+    public OfferLetterResponse letter(@CurrentUser AuthUser user, @PathVariable UUID id,
+                                      @RequestBody(required = false) OfferLetterRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new OfferLetterResponse(shelf.letter(user.id(), id, locale));
     }
 }

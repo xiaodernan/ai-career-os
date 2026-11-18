@@ -457,6 +457,19 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> offerDecisionLetter(UUID userId, Map<String, Object> offer,
+                                                   List<Map<String, Object>> siblings,
+                                                   String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("offer", offer != null ? offer : Map.of());
+        body.put("siblings", siblings != null ? siblings : List.of());
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/offer-decision-letter", userId, body);
+    }
+
+    @Override
     public Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot,
                                          String locale) {
         Map<String, Object> body = new HashMap<>();

@@ -51,4 +51,10 @@ public final class OfferShelfDtos {
   public record UpsertOfferResponse(OfferItem item) {}
 
   public record DeleteOfferResponse(UUID id) {}
+
+  /** The decision letter's request (Epic 327). The backend builds the offer payload itself from the row. */
+  public record OfferLetterRequest(@Size(max = 8) String locale) {}
+
+  /** The decision letter (Epic 327). `letter` is null when the letter could not be written grounded — the honest answer, not a coat of plausibility. */
+  public record OfferLetterResponse(String letter) {}
 }

@@ -10,6 +10,7 @@ from app.features import company as company_mod
 from app.features import counsel as counsel_mod
 from app.features import editorial as editorial_mod
 from app.features import offer_narrative as offer_narrative_mod
+from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
 from app.features import export_render as export_render_mod
 from app.features import gap_analysis as gap_mod
@@ -815,6 +816,32 @@ async def editorial_ep(req: EditorialReq, ctx: Ctx = Depends(require_internal)):
     snapshot = req.snapshot if isinstance(req.snapshot, dict) else {}
     run_id = await _run(ctx, "analytics", "editorial")
     result = await editorial_mod.editorial(snapshot, locale=req.locale,
+                                           user_id=str(ctx.user_id) if ctx.user_id else None,
+                                           run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class OfferLetterReq(BaseModel):
+    """Epic 327 -- the decision letter's input: the shelf row's own numbers plus a
+    few sibling rows (labels and totalComp only) for the contrast the reader was
+    looking at when they passed on it. Same discipline as the editorials: the letter
+    keeps only sentences that cite digits already in this payload."""
+    offer: dict
+    siblings: list[dict] = Field(default_factory=list)
+    locale: str | None = None
+
+
+@router.post("/offer-decision-letter")
+async def offer_decision_letter_ep(req: OfferLetterReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 327 -- the decision letter: the offer the reader just declined,
+    addressed to themselves. Optional by contract (an ungrounded letter is absent,
+    never coated in plausibility); the letter is keepsake material, not a decision tool.
+    """
+    offer = req.offer if isinstance(req.offer, dict) else {}
+    siblings = [s for s in req.siblings if isinstance(s, dict)] if isinstance(req.siblings, list) else []
+    run_id = await _run(ctx, "offers", "offer_letter")
+    result = await offer_letter_mod.letter(offer, siblings, locale=req.locale,
                                            user_id=str(ctx.user_id) if ctx.user_id else None,
                                            run_id=run_id)
     await observability.finish_run(run_id, "completed")

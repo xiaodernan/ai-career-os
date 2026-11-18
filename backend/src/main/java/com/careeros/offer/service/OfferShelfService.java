@@ -2,12 +2,17 @@ package com.careeros.offer.service;
 
 import com.careeros.common.ApiErrorCode;
 import com.careeros.common.ApiException;
+import com.careeros.ai.AiServiceClient;
 import com.careeros.offer.dto.OfferShelfDtos.OfferItem;
 import com.careeros.offer.dto.OfferShelfDtos.OfferShelfResponse;
 import com.careeros.offer.dto.OfferShelfDtos.UpsertOfferRequest;
 import com.careeros.offer.entity.OfferRow;
 import com.careeros.offer.repository.OfferShelfRepository;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class OfferShelfService {
 
   private final OfferShelfRepository repository;
+  private final AiServiceClient aiService;
 
-  public OfferShelfService(OfferShelfRepository repository) {
+  public OfferShelfService(OfferShelfRepository repository, AiServiceClient aiService) {
     this.repository = repository;
+    this.aiService = aiService;
   }
 
   @Transactional(readOnly = true)
@@ -63,6 +70,50 @@ public class OfferShelfService {
             .findByIdAndUserId(id, userId)
             .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
     return toItem(row);
+  }
+
+  /**
+   * The decision letter (Epic 327): the writer addresses the reader about the offer they are
+   * holding, grounded in the shelf's own numbers. The letter is optional by contract — an
+   * ungrounded or unwritten answer is an empty letter, never a fabricated one.
+   */
+  public String letter(UUID userId, UUID id, String locale) {
+    OfferRow row = repository.findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
+    return letterOfRow(userId, row, locale);
+  }
+
+  private String letterOfRow(UUID userId, OfferRow row, String locale) {
+    Map<String, Object> offer = new HashMap<>();
+    offer.put("label", row.getLabel());
+    offer.put("base", row.getBase());
+    offer.put("bonus", row.getBonus());
+    offer.put("annualEquity", row.getEquity());
+    offer.put("totalComp", row.totalComp());
+    offer.put("currency", row.getCurrency());
+    offer.put("remoteType", row.getRemoteType());
+    offer.put("deadline", row.getDeadline() == null ? null : row.getDeadline().toString());
+    offer.put("decision", row.getDecision());
+    offer.put("notes", row.getNotes());
+
+    List<Map<String, Object>> siblings = new ArrayList<>();
+    for (OfferRow sib : repository.shelfOrder(userId)) {
+      if (siblings.size() >= 4 || sib.getId().equals(row.getId())) {
+        continue;
+      }
+      Map<String, Object> s = new HashMap<>();
+      s.put("label", sib.getLabel());
+      s.put("totalComp", sib.totalComp());
+      s.put("currency", sib.getCurrency());
+      siblings.add(s);
+    }
+    Map<String, Object> answer = aiService.offerDecisionLetter(userId, offer, siblings, locale);
+    Object value = answer == null ? null : answer.get("letter");
+    if (value == null) {
+      return null;
+    }
+    String letter = value.toString().trim();
+    return letter.isEmpty() ? null : letter;
   }
 
   @Transactional
