@@ -1377,6 +1377,26 @@ export interface InboundMail {
   filedAt: string | null;
 }
 
+/**
+ * The analyst's read of one letter (Epic 332): the intent the words settle, the one date the
+ * letter actually states (`null` when it states none or invents it), the next action, what
+ * they ask for, and a ready-to-edit reply. Every field is the server's own answer; `null`
+ * in `decode` means the analyst had nothing grounded to say — the card stays quiet.
+ */
+export interface InboundMailDecode {
+  intent: string;
+  deadline: string | null;
+  next_action: string;
+  asks: string[];
+  reply: string | null;
+}
+
+/** What the decode route answers: the reader passes `locale`, gets back the letter's read. */
+export interface InboundDecodeResponse {
+  mailId: string;
+  decode?: InboundMailDecode;
+}
+
 /** One letter from the shelf the reader keeps across applications (Epic 210). */
 export interface LetterCatalogItem {
   id: string;

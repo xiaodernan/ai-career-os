@@ -492,6 +492,28 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> decodeReply(UUID userId, Map<String, Object> mail,
+                                           String locale) {
+        Map<String, Object> body = new HashMap<>();
+        Map<String, Object> mailBody = new HashMap<>();
+        if (mail != null) {
+            Object subject = mail.get("subject");
+            if (subject != null) {
+                mailBody.put("subject", subject);
+            }
+            Object text = mail.get("body");
+            mailBody.put("body", text != null ? text : "");
+        } else {
+            mailBody.put("body", "");
+        }
+        body.put("body", mailBody);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/decode-reply", userId, body);
+    }
+
+    @Override
     public Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot,
                                          String locale) {
         Map<String, Object> body = new HashMap<>();

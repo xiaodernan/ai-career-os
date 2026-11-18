@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/common/page-header";
 import { NotYetCard } from "@/components/replies/not-yet-card";
 import { NearMissCard } from "@/components/replies/near-miss-card";
+import { InboundDecode } from "@/components/replies/inbound-decode";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmptyComposition } from "@/components/common/empty-composition";
 import { ErrorState } from "@/components/common/error-state";
@@ -367,6 +368,7 @@ export default function RepliesPage() {
                             </p>
                           </details>
                         )}
+                        {mail.bodyText ? <InboundDecode mail={mail} /> : null}
                       </div>
 
                       <div className="flex shrink-0 flex-col items-end gap-2">

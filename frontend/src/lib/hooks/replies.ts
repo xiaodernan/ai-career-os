@@ -8,7 +8,7 @@ import { field } from "@/lib/api/body";
 import { normalizePage, num, str } from "@/lib/api/normalize";
 import { translate } from "@/lib/i18n/locale-context";
 import { fail } from "@/lib/hooks/failure";
-import type { InboundIntentCounts, InboundLinkRow, InboundMail, Page } from "@/lib/api/types";
+import type { InboundDecodeResponse, InboundIntentCounts, InboundLinkRow, InboundMail, Page } from "@/lib/api/types";
 
 /**
  * The replies surface (37.4): the address the settings card hands out, the letters the
@@ -201,4 +201,51 @@ export function useFileInboundMail() {
     },
     onError: fail("replies.fileFailed"),
   });
+}
+
+/**
+ * The analyst's read of one letter (Epic 332).
+ *
+ * Reading is ask-first: the hook only posts when the reader taps "Decode this letter", same
+ * law as the assistant's next step. The answer is the letter's own facts — intent, the one
+ * stated deadline (or an absent one), the next action, what they ask for, and a ready-to-edit
+ * reply — or an absent `decode` when the analyst had nothing grounded to stand behind. The
+ * mapper never invents a missing field.
+ */
+export function useDecodeReply() {
+  return useMutation({
+    mutationFn: async ({
+      id,
+      locale,
+    }: {
+      id: string;
+      locale: "en" | "zh" | string;
+    }): Promise<InboundDecodeResponse> =>
+      mapInboundDecodeResponse(
+        await api.create<unknown>(endpoints.inboundMailDecode(id), field("locale", locale))
+      ),
+    onError: fail("failures.replyDecode"),
+  });
+}
+
+/** One decode payload, read under the names the ai-service spells (Epic 332). */
+export function mapInboundDecodeResponse(raw: unknown): InboundDecodeResponse {
+  const decode = (raw as { decode?: unknown } | null)?.decode;
+  return {
+    mailId: str(raw, "mailId") ?? "",
+    decode:
+      decode && typeof decode === "object"
+        ? {
+            intent: str(decode, "intent") ?? "other",
+            deadline: str(decode, "deadline") ?? null,
+            next_action: str(decode, "next_action") ?? "",
+            asks: Array.isArray((decode as { asks?: unknown }).asks)
+              ? ((decode as { asks: unknown[] }).asks
+                  .filter((a): a is string => typeof a === "string")
+                  .slice(0, 4))
+              : [],
+            reply: str(decode, "reply") ?? null,
+          }
+        : undefined,
+  };
 }

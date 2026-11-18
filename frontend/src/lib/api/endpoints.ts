@@ -257,6 +257,8 @@ export const endpoints = {
   /** The chips' numbers under the same words (49.4); the reading filter is not applied. */
   inboundIntentCounts: "/inbound/mails/intents",
   inboundMailFile: (id: string) => `/inbound/mails/${seg(id)}/file`,
+  /** The analyst's read of one letter (Epic 332): ask-first, locale-aware. */
+  inboundMailDecode: (id: string) => `/inbound/mails/${seg(id)}/decode`,
 
   /* ---------------- The second door (36.1-36.4) --------------------------- */
   /** Status, enrollment, activation and the two proofs; see MfaController. */

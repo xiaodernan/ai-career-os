@@ -6,14 +6,17 @@ import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.common.PageDTO;
 import com.careeros.common.Paging;
+import com.careeros.inbound.dto.InboundMailDtos.DecodeRequest;
 import com.careeros.inbound.dto.InboundMailDtos.FileRequest;
 import com.careeros.inbound.dto.InboundMailDtos.InboundMailItem;
 import com.careeros.inbound.dto.InboundMailDtos.IntentCounts;
 import com.careeros.inbound.service.InboundLinks;
 import com.careeros.inbound.service.InboundMailService;
 import com.careeros.inbound.service.InboundReplyService;
+import com.careeros.inbound.service.InboundDecodeService;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,12 +53,14 @@ public class InboundController {
     private final InboundLinks links;
     private final InboundMailService mail;
     private final InboundReplyService replies;
+    private final InboundDecodeService decode;
 
     public InboundController(InboundLinks links, InboundMailService mail,
-                             InboundReplyService replies) {
+                             InboundReplyService replies, InboundDecodeService decode) {
         this.links = links;
         this.mail = mail;
         this.replies = replies;
+        this.decode = decode;
     }
 
     /** The account's own forwarding address, for the settings card to show and copy. */
@@ -113,6 +118,21 @@ public class InboundController {
     public InboundMailItem file(@CurrentUser AuthUser user, @PathVariable("id") UUID id,
                                 @RequestBody @Valid FileRequest request) {
         return replies.file(user.id(), id, request.applicationId());
+    }
+
+    /**
+     * The analyst's read of one letter (Epic 332). Nothing is moved, flagged or filed by
+     * this call — it answers a parse of the letter already stored (intent the words
+     * settle, the one date the letter actually states, the next action, what they ask,
+     * and a ready-to-edit reply), in the reader's language. Optional by contract: the
+     * answer carries {@code decode} only when the analyst had grounded footing; otherwise
+     * the card stays quiet. Another account's letter id is the same 404 as a missing one.
+     */
+    @PostMapping("/mails/{id}/decode")
+    public Map<String, Object> decode(@CurrentUser AuthUser user,
+                                      @PathVariable("id") UUID id,
+                                      @RequestBody(required = false) @Valid DecodeRequest request) {
+        return decode.decode(user.id(), id, request == null ? null : request.locale());
     }
 
     /** The answer key the settings card reads. */

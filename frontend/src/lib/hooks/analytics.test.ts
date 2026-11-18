@@ -108,6 +108,18 @@ describe("the growth engine routes", () => {
   });
 });
 
+describe("the inbound decode route", () => {
+  it("posts the reader's language under the mail's own id", async () => {
+    mockFetch({ mailId: "m-1", decode: { intent: "interview" } });
+    const { api } = await import("@/lib/api/client");
+
+    await api.create(endpoints.inboundMailDecode("m-1"), { locale: "zh" });
+
+    expect(urls[0]).toContain("/inbound/mails/m-1/decode");
+    expect(bodies[0]).toEqual({ locale: "zh" });
+  });
+});
+
 describe("the offer routes", () => {
   it("post the offers as a list, so a grant stays a nested object", async () => {
     mockFetch({ rows: [] });

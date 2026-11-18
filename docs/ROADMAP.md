@@ -6918,6 +6918,43 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **332** The analyst's read of one letter — one inbound email, one grounded parse (2026-11-19).
+
+  (The replies page could show a letter but not read it — the reader still had to do the
+  thirty-second parse by hand: who wrote, what they want, which one date they actually state,
+  how to answer. Epic 332 adds the card the reader asked for: on the letter itself, behind a
+  "解读/Decode" button (never on mount — the copy never invents a read nobody requested), one
+  tap gets a full parse of the letter's own words. The ai-service rides the same StateGraph
+  discipline as the editors (`app/features/reply_decode.py`, `kind="reply_decode"`): `draft`
+  proposes `{intent, deadline, next_action, asks[], reply}`; `verify` keeps a field only when
+  every digit-run in it already appears in the letter — the deadline survives only as the ISO
+  date the letter literally states, and a foreign digit anywhere load-bearing answers
+  `decode: null` rather than a confident invention. The intent layer is the classifier's own
+  cue pass, not the model's: a "unfortunately" letter is a rejection no matter what the model
+  Dreams, `INTENTS` is the `reply_classify` vocabulary verbatim, and the compose-law is
+  byte-for-byte the classifier's own (`settled or model or other`). The backend owns the seam:
+  `POST /api/v1/inbound/mails/{id}/decode` (`InboundDecodeService`) reads the caller's own
+  letter by `findByIdAndUserId` (another account's id is the same 404 as a missing one),
+  forwards subject + body to `decode-reply`, answers `{mailId, decode?}` — `decode` absent
+  when the analyst had nothing grounded to stand behind. The reply draft is labeled
+  ready-to-edit and the copy button says so; intent dims the card, never a decision. Two
+  riders shipped with it: `RateLimitFilter.isAiCost` finally meters `/api/v1/assistant`
+  (Epic 331 had claimed the lane was limited and the code never did it — the doc/code
+  mismatch found by the wire census, closed in the same change) and the new decode lane joins
+  the AI bucket too; `docs/API.md` gains both rows (`POST /inbound/mails/{id}/decode` public,
+  `/internal/features/decode-reply` internal), and the API-doc contract gate passes 12/12
+  with the route reached through `HttpAiServiceClient.decodeReply`. Verify pins: ai-service
+  `tests/test_reply_decode.py` 10/10 + `test_forward_features_contract` (`{"body"}` required),
+  backend `InboundControllerTest` 18/18 (decode ride/locale/404/absent-decode), frontend
+  `inbound-decode.tsx` + page test in both languages, `analytics.test` pins the wire URL,
+  i18n adds the decode slice (en+zh), copy census 215 → 216 with the file named. Live E2E on
+  this host: one synthetic letter inserted via the probe's own row, `POST
+  /api/v1/inbound/mails/{id}/decode` through the rebuilt backend → ai-service → the operator's
+  relay answered `intent: interview` (cue-settled), `deadline: 2026-11-24` (the letter's own
+  stated date), `next_action` naming exactly that date, the two asks copied from the letter,
+  and a ready-to-edit reply that invents nothing (every digit in it is in the letter, or it
+  would have been dropped by the verifier). Bundle gate stays green at 361 kB.)
+
 - [x] **331** The assistant's one proactive first step — the dashboard learns to name it (2026-11-18).
 
   (The dashboard showed every number the user owns and ended where numbers end. Epic 331

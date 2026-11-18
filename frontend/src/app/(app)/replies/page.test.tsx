@@ -50,6 +50,7 @@ vi.mock("@/lib/hooks/replies", () => ({
     return state.counts;
   },
   useFileInboundMail: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
+  useDecodeReply: () => ({ mutate: () => {}, isPending: false, isError: false, data: undefined }),
 }));
 
 // The page's URL state is the one piece SSR cannot hydrate (its effect only runs in a

@@ -167,7 +167,8 @@ describe("the browser's copy", () => {
     // 213 with Epic 276: `components/ceremony/afterward-card.tsx`, the weight you carry out.
     // 214 with Epic 278: `components/dashboard/engine-map-card.tsx`, the state graph drawn where the reader already reads.
     // 215 with Epic 331: `components/dashboard/next-step-card.tsx`, the assistant's one first step.
-    expect(browserSources().length).toBe(215);
+    // 216 with Epic 332: `components/replies/inbound-decode.tsx`, the analyst's read of one letter.
+    expect(browserSources().length).toBe(216);
   });
 
   it("finds a sentence, however long it is", () => {

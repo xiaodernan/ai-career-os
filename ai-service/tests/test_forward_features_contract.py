@@ -84,6 +84,8 @@ FORWARD = {
     "/internal/features/gap-note": ("GapNoteReq", {"payload"}),
     # Epic 331 -- the assistant's one proactive first step. `payload` is required.
     "/internal/features/proactive-step": ("ProactiveStepReq", {"payload"}),
+    # Epic 332 -- the analyst's parse of one inbound recruiter message. `body` required.
+    "/internal/features/decode-reply": ("ReplyDecodeReq", {"body"}),
 }
 
 

@@ -227,6 +227,15 @@ public interface AiServiceClient {
     Map<String, Object> proactiveStep(UUID userId, Map<String, Object> payload, String locale);
 
     /**
+     * The analyst's read of one inbound letter (Epic 332): who wrote it, what they want, which
+     * one date they actually state, the concrete next action, what they ask for, and a drafted
+     * reply ready to edit. Same law as the other grounded voices: the intent is the words' own
+     * when they settle it, and every digit-run the answer carries must already appear in the
+     * letter — `decode` is null on any failure. `locale` is the reader's language.
+     */
+    Map<String, Object> decodeReply(UUID userId, Map<String, Object> mail, String locale);
+
+    /**
      * Export all user data as a versioned, hashed bundle (13.1).
      * `sections` carries the rows the BACKEND owns (`applications` and
      * `growth_plans`): the ai-service cannot read them, so the bridge hands

@@ -24,11 +24,13 @@ import com.careeros.common.PageDTO;
 import com.careeros.inbound.dto.InboundMailDtos.InboundMailItem;
 import com.careeros.inbound.dto.InboundMailDtos.IntentCount;
 import com.careeros.inbound.dto.InboundMailDtos.IntentCounts;
+import com.careeros.inbound.service.InboundDecodeService;
 import com.careeros.inbound.service.InboundLinks;
 import com.careeros.inbound.service.InboundMailService;
 import com.careeros.inbound.service.InboundReplyService;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +63,7 @@ class InboundControllerTest {
     private InboundLinks links;
     private InboundMailService mail;
     private InboundReplyService replies;
+    private InboundDecodeService decode;
     private MockMvc mvc;
 
     @BeforeEach
@@ -68,7 +71,8 @@ class InboundControllerTest {
         links = new InboundLinks("test-secret", "inbox.careeros.example");
         mail = mock(InboundMailService.class);
         replies = mock(InboundReplyService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new InboundController(links, mail, replies))
+        decode = mock(InboundDecodeService.class);
+        mvc = MockMvcBuilders.standaloneSetup(new InboundController(links, mail, replies, decode))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();
@@ -94,7 +98,7 @@ class InboundControllerTest {
     @Test
     void aDeploymentWithoutAReceivingDomainSaysSoRatherThanHandingOutABouncingAddress() throws Exception {
         mvc = MockMvcBuilders.standaloneSetup(
-                        new InboundController(new InboundLinks("test-secret", ""), mail, replies))
+                        new InboundController(new InboundLinks("test-secret", ""), mail, replies, decode))
                 .setControllerAdvice(new EnvelopeAdvice(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new CurrentUserArgumentResolver())
                 .build();
@@ -299,5 +303,52 @@ class InboundControllerTest {
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
 
         verifyNoInteractions(replies);
+    }
+
+    @Test
+    void theAnalystsReadTravelsWithTheReadersLanguage() throws Exception {
+        when(decode.decode(ALICE, MAIL, "zh"))
+                .thenReturn(Map.of("mailId", MAIL.toString(),
+                        "decode", Map.of("intent", "interview",
+                                "deadline", "2026-11-27",
+                                "next_action", "确认2026-11-27是否方便",
+                                "asks", List.of("确认2026-11-27是否方便"),
+                                "reply", "您好，2026-11-27方便。期待与您交流。")));
+
+        mvc.perform(post("/api/v1/inbound/mails/{id}/decode", MAIL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"zh\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.mailId").value(MAIL.toString()))
+                .andExpect(jsonPath("$.data.decode.intent").value("interview"))
+                .andExpect(jsonPath("$.data.decode.deadline").value("2026-11-27"))
+                .andExpect(jsonPath("$.data.decode.next_action").value("确认2026-11-27是否方便"));
+
+        verify(decode).decode(ALICE, MAIL, "zh");
+        verifyNoInteractions(mail, replies);
+    }
+
+    @Test
+    void theDecodeRouteNeedsNoBodyAtAll() throws Exception {
+        when(decode.decode(ALICE, MAIL, null))
+                .thenReturn(Map.of("mailId", MAIL.toString()));
+
+        mvc.perform(post("/api/v1/inbound/mails/{id}/decode", MAIL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.decode").doesNotExist());
+
+        verify(decode).decode(ALICE, MAIL, null);
+    }
+
+    @Test
+    void aDecodeLetterThatIsNotTheAccountsIsTheSame404() throws Exception {
+        when(decode.decode(ALICE, MAIL, "en"))
+                .thenThrow(new ApiException(ApiErrorCode.INBOUND_MAIL_NOT_FOUND, "Reply not found"));
+
+        mvc.perform(post("/api/v1/inbound/mails/{id}/decode", MAIL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"en\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("INBOUND_MAIL_NOT_FOUND"));
     }
 }

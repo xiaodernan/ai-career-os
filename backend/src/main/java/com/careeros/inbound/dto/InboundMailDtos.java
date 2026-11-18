@@ -1,6 +1,7 @@
 package com.careeros.inbound.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -43,5 +44,9 @@ public final class InboundMailDtos {
      * that pile, so the six add up to it.
      */
     public record IntentCounts(List<IntentCount> items, long unfiled) {
+    }
+
+    /** The reader's language for the analyst's read (Epic 332); absent is English. */
+    public record DecodeRequest(@Size(max = 8) String locale) {
     }
 }

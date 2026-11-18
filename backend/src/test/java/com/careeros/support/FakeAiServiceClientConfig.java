@@ -482,6 +482,22 @@ public class FakeAiServiceClientConfig {
             return map("step", "Knock out the " + due + " due reminder(s) first; the rest holds.");
         }
 
+        @Override
+        public Map<String, Object> decodeReply(UUID userId, Map<String, Object> mail,
+                                               String locale) {
+            record("decodeReply");
+            Object letter = mail == null ? null : mail.get("body");
+            // Deterministic stand-in: the letter is quoted back so an IT can assert the
+            // bridge travelled subject+body untouched; the analyst's real answer lives
+            // behind the ai-service contract tests.
+            return map("decode", map(
+                    "intent", "interview",
+                    "deadline", null,
+                    "next_action", "Reply to the letter",
+                    "asks", List.of("Reply to the letter"),
+                    "reply", "Thank you for the update — received: " + letter));
+        }
+
         /**
          * The timeline bridge's answer (Epic 81): the same merge the engine performs,
          * so an integration test can assert both that the events travelled and that the

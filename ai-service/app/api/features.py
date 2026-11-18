@@ -11,6 +11,7 @@ from app.features import counsel as counsel_mod
 from app.features import editorial as editorial_mod
 from app.features import gap_note as gap_note_mod
 from app.features import proactive_step as proactive_step_mod
+from app.features import reply_decode as reply_decode_mod
 from app.features import offer_narrative as offer_narrative_mod
 from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
@@ -912,6 +913,32 @@ async def proactive_step_ep(req: ProactiveStepReq, ctx: Ctx = Depends(require_in
     result = await proactive_step_mod.proactive_step(payload, locale=req.locale,
                                                      user_id=str(ctx.user_id) if ctx.user_id else None,
                                                      run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class ReplyDecodeReq(BaseModel):
+    """Epic 332 -- one inbound message, read once.
+
+    `body` carries the writer's own words exactly as the backend received them; the verifier
+    keeps only digits already in the message, and silence on any failure. locale (en/zh)
+    picks the language every field answers in."""
+    body: dict
+    locale: str | None = None
+
+
+@router.post("/decode-reply")
+async def decode_reply_ep(req: ReplyDecodeReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 332 -- the analyst parse of an inbound recruiter message.
+
+    Optional by contract: an ungrounded or silent relay answers `decode: null`; the card renders
+    nothing rather than a confident instruction.
+    """
+    payload = req.body if isinstance(req.body, dict) else {}
+    run_id = await _run(ctx, "inbound", "reply_decode")
+    result = await reply_decode_mod.decode_reply(payload, locale=req.locale,
+                                                 user_id=str(ctx.user_id) if ctx.user_id else None,
+                                                 run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
 

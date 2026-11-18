@@ -186,12 +186,15 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
                 || uri.startsWith("/api/v1/interview") // answer evaluation, finalize
                 || uri.startsWith("/api/v1/jds")       // JD analysis + suggestions
                 || uri.startsWith("/api/v1/growth")    // growth report + the granular engines behind it
+                || uri.startsWith("/api/v1/assistant") // the assistant's next-step (Epic 331)
                 || uri.startsWith("/api/v1/knowledge/text")) { // embedding ingest
             return true;
         }
         // Sub-paths that trigger AI on an otherwise cheap resource.
         return uri.matches("^/api/v1/resumes/[^/]+/parse/?$")
                 || uri.matches("^/api/v1/jobs/[^/]+/(match|tailor|cover-letter)/?$")
+                // The analyst's read of one inbound letter (Epic 332).
+                || uri.matches("^/api/v1/inbound/mails/[^/]+/decode/?$")
                 // The three that spend money without living under an "AI-looking" path:
                 // importing a JD runs the analyst, and both upload routes embed every chunk
                 // of the document into pgvector. Left out, a scripted client could call them
