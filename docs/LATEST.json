@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T04:59:01.774550Z",
+  "generated_at": "2026-11-18T05:01:12.942897Z",
   "branch": "main",
-  "head": "356d350",
-  "total_commits": 1599,
+  "head": "90f430a",
+  "total_commits": 1601,
   "milestone": "Epic 326",
   "milestone_full": "the ledger of done epics (through 478 items), closed at Epic 326 — The relay's transient group-404 rides the retry lane",
   "pushed_at": "2026-11-18",
