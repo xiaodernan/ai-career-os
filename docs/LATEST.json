@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T03:20:52.978811Z",
+  "generated_at": "2026-11-18T03:48:57.592532Z",
   "branch": "main",
-  "head": "f021f4a",
-  "total_commits": 1586,
-  "milestone": "Epic 322",
-  "milestone_full": "the ledger of done epics (through 474 items), closed at Epic 322 — The Monday letter gets an editor",
+  "head": "8286697",
+  "total_commits": 1589,
+  "milestone": "Epic 324",
+  "milestone_full": "the ledger of done epics (through 476 items), closed at Epic 324 — The reader's wheel, decisively leveled",
   "pushed_at": "2026-11-18",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1535+",
-  "test_files": 189,
-  "work_items": 474,
-  "epics": 188,
+  "test_files": 190,
+  "work_items": 476,
+  "epics": 190,
   "feature_surface": [
+    "Epic 324 — The reader's wheel, decisively leveled",
+    "Epic 323 — The offer decision gets a voice",
     "Epic 322 — The Monday letter gets an editor",
     "Epic 321 — Chapter One extended the first week to the interview room (2026-11-17)",
     "Epic 320 — The overseer gets a second voice",
-    "Epic 319 — The weekly trend carries the cache economy too (2026-11-17)",
-    "Epic 318 — The cache economy, measured and shown honestly (2026-11-17)",
-    "Epic 317 — The interviewer finally hears the candidate's own history (2026-11-17)"
+    "Epic 319 — The weekly trend carries the cache economy too (2026-11-17)"
   ]
 }
