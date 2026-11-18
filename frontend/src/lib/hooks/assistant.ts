@@ -15,7 +15,8 @@ import { fail } from "@/lib/hooks/failure";
 export function useNextStep() {
   return useMutation({
     mutationFn: async (input: { locale?: string }) =>
-      (await api.create<unknown>(endpoints.assistantNextStep, input)) as NextStep,
+      (await api.create<unknown>(endpoints.assistantNextStep,
+        { locale: input.locale })) as NextStep,
     onError: fail("failures.nextStep"),
   });
 }

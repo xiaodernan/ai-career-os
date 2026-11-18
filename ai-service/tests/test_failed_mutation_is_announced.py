@@ -8,12 +8,12 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 104 mutation sites in fifteen files
+What the shipped code says, measured rather than assumed: 105 mutation sites in sixteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
 second door, the account and replies screens' hooks, 42.2's mail dials, the kept letter's
-save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair, and Epic
-327's decision letter writer).
-92 declare their failure at the hook; the twelve that do not sit in
+save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair,
+Epic 327's decision letter writer, and Epic 331's assistant ask).
+93 declare their failure at the hook; the twelve that do not sit in
 ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -28,7 +28,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 89 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 90 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -80,6 +80,8 @@ BRIDGE_HOOKS = {
     "frontend/src/lib/hooks/voice.ts",
     # 42.2's mail dials: one write per dial, announced at the hook with the card's own sentence.
     "frontend/src/lib/hooks/mail-settings.ts",
+    # Epic 331: the assistant's ask joins the bridges it rides.
+    "frontend/src/lib/hooks/assistant.ts",
 }
 #: 33.1's push switch: one write, and the only one whose failure is announced by its
 #: caller's try/catch instead of the hook's ``onError``.
@@ -127,6 +129,8 @@ ROSTER = {
     # Epic 327's decision letter joins with its own fail() sentence.
     "frontend/src/lib/hooks/offers.ts": 7,
     PUSH_HOOKS: 1,
+    # Epic 331: the assistant's ask joins the roster with its own fail() sentence.
+    "frontend/src/lib/hooks/assistant.ts": 1,
     "frontend/src/lib/hooks/voice.ts": 2,
     REPLIES_HOOKS: 1,
     SOURCE_ACTIONS: 1,
@@ -164,6 +168,8 @@ SENTENCES = {
     "frontend/src/lib/hooks/mfa.ts": 4,
     # 42.2: one write, one sentence -- the dial could not be changed.
     "frontend/src/lib/hooks/mail-settings.ts": 1,
+    # Epic 331: the assistant's ask spends its own sentence on the failure path.
+    "frontend/src/lib/hooks/assistant.ts": 1,
     "frontend/src/lib/hooks/voice.ts": 2,
     # 37.3: filing a waiting letter announces a refusal with the replies page's own sentence.
     REPLIES_HOOKS: 1,
@@ -187,7 +193,7 @@ RECOVERY = "frontend/src/lib/auth-recovery.ts"
 #: walk and looks for the sentence it would have to have written today.
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
              8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen",
-             14: "fourteen", 15: "fifteen"}
+             14: "fourteen", 15: "fifteen", 16: "sixteen"}
 
 
 def object_literal(text: str, pos: int) -> str:
