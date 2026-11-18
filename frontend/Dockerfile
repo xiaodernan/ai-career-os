@@ -24,6 +24,10 @@ ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
 # NEXT_STANDALONE=1 is what makes `next build` emit `.next/standalone`. It cannot be the
 # default: `next start` refuses to serve a standalone build, and the local run and the
 # E2E suite both use `next start`.
+# The compile is the memory peak of the build; on a shared Docker Desktop VM this task
+# has died mid-compile three times (EOF from buildkit). A 2 GB ceiling keeps the process
+# from blowing the VM and stays well above what the host build needs.
+ENV NODE_OPTIONS=--max-old-space-size=2048
 RUN NEXT_STANDALONE=1 npm run build
 
 # Runtime stage: the traced server bundle, not the build tree.
