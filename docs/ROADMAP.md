@@ -6918,6 +6918,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **325** The artifacts court — the export and the import prove each other (2026-11-18).
+
+  (Epic 323 found one dead artifact by accident — the copilot's offer-comparison card read
+  `rows` against the engine's `offers` and drew nothing for months while green tests pinned the
+  invention. This epic stops the class. `tests/test_the_artifact_cards_read_the_keys_the_engines_emit.py`
+  parses the frontend's `artifacts.tsx`, attributes every literal key it reads to its renderer,
+  resolves lambda row variables back to their containers (`gaps.map((g) =>` → row keys of `gaps[]`),
+  and asserts each read against what its producer actually emits — `list(report, …)` and the row
+  keys are strict (a wrong one draws nothing, silently), `pick(…)` is exempt by construction
+  (null-tolerant fallback), and normalizer results stay trusted. The offer_comparison and
+  prioritization producer declarations are pinned to the pure engines, so neither side can drift
+  silently in either direction. The gate was proven by reverting the Epic 323 fix and watching it
+  fail on its own, with the offending reads named. Along the way the reader sweep verified all
+  nine renderers (match/tailor/cover_letter via wire-pinned normalizers; interview/job_list by
+  walking producers); every artifact is key-safe.)
+
 - [x] **324** The reader's wheel, decisively leveled — stale preferences reset once (2026-11-18).
 
   (The brief kept saying the wheel felt backwards on the reader's machine, even after the
