@@ -74,6 +74,9 @@ FORWARD = {
     # 37.2: the webhook has already kept the letter when this runs, so the text
     # is the whole input and "no text" is the caller's mistake, not a real state.
     "/internal/features/classify-reply": ("ClassifyReplyReq", {"text"}),
+    # Epic 322 -- the weekly letter's editor's note. `snapshot` is the digest the
+    # letter already files; empty is valid (an empty payload yields silence).
+    "/internal/features/editorial": ("EditorialReq", {"snapshot"}),
 }
 
 

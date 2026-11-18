@@ -3649,7 +3649,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1792 rather than 1776 since Epic 212's envelope (`/api/v1/letters`) joined
         # above the union — the letters/offers rows shifted the trace union down; the
         # union itself stays put.
-        ("types.ts", 1792, "kind:"),
+        # 1800 rather than 1792 since Epic 322's `editorial` field (with its doc comment)
+        # joined the InsightDigest interface above the trace union — the union itself stays put.
+        ("types.ts", 1800, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

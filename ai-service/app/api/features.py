@@ -8,6 +8,7 @@ from ..core.errors import EXPORT_SEND_ONE, RefusalError
 from app.db import domain, observability
 from app.features import company as company_mod
 from app.features import counsel as counsel_mod
+from app.features import editorial as editorial_mod
 from app.features import export as export_mod
 from app.features import export_render as export_render_mod
 from app.features import gap_analysis as gap_mod
@@ -776,6 +777,37 @@ async def counsel_ep(req: CounselReq, ctx: Ctx = Depends(require_internal)):
     """
     snapshot = req.snapshot if isinstance(req.snapshot, dict) else {}
     return await counsel_mod.recommend(snapshot, user_id=None, run_id=None)
+
+
+class EditorialReq(BaseModel):
+    """Epic 322 -- the weekly letter's own digest, plus the reader's language.
+
+    ``snapshot`` is the payload the Monday letter already files -- board count, stage
+    mix, stalled rows, rates, signals. It is data, not instructions; the editor's
+    verifier keeps only sentences that cite a number already in it. ``locale`` is the
+    reader's language (``zh`` / ``en``); an absent or unknown language renders in
+    English, the product's default.
+    """
+    snapshot: dict
+    locale: str | None = None
+
+
+@router.post("/editorial")
+async def editorial_ep(req: EditorialReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 322 -- one short paragraph written about the week the letter files.
+
+    Composed in the Monday sweep for the letter's own recipient: the run row and its
+    usage are attributed to that user, exactly like the insight-digest call that feeds
+    it. The honest answer on any failure is an absent note -- never a paragraph of
+    plausibility dressed as commentary.
+    """
+    snapshot = req.snapshot if isinstance(req.snapshot, dict) else {}
+    run_id = await _run(ctx, "analytics", "editorial")
+    result = await editorial_mod.editorial(snapshot, locale=req.locale,
+                                           user_id=str(ctx.user_id) if ctx.user_id else None,
+                                           run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
 
 
 @router.post("/follow-ups")

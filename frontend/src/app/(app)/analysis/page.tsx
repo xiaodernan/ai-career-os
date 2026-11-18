@@ -333,6 +333,14 @@ function WeeklyLetterCard({
                 value={percent(payload?.offerRate)}
               />
             </div>
+            {typeof payload?.editorial === "string" && payload.editorial.trim().length > 0 && (
+              <figure className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                <figcaption className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {t("analysis.weeklyEditorialLabel")}
+                </figcaption>
+                <p className="mt-1 text-sm leading-relaxed">{payload.editorial}</p>
+              </figure>
+            )}
             {stalled.length > 0 && (
               <ul className="space-y-2">
                 {stalled.map((s) => (

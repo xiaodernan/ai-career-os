@@ -935,6 +935,14 @@ export interface InsightDigest {
   signals?: string[];
   growthDeltas?: unknown[];
   topMatches?: unknown[];
+  /**
+   * Epic 322 — the editor's note (19.4's weekly letter): one short paragraph written
+   * about the same numbers the rest of this payload carries. Written by the ai-service's
+   * editor and kept only if every sentence cites a digit-run already in this payload —
+   * absent when no grounded note could be written. Never rendered as an opinion about
+   * anything the payload does not contain.
+   */
+  editorial?: string;
 }
 
 /**

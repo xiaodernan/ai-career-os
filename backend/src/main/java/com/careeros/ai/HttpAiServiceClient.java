@@ -457,6 +457,17 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot,
+                                         String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("snapshot", snapshot != null ? snapshot : Map.of());
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/editorial", userId, body);
+    }
+
+    @Override
     public Map<String, Object> exportBundle(UUID userId, boolean anonymized,
                                            Map<String, Object> sections) {
         Map<String, Object> body = new HashMap<>();

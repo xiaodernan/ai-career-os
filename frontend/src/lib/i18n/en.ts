@@ -1257,6 +1257,7 @@ export const en = {
       weeklyQuietCount: "Quiet",
       weeklyReply: "Reply rate",
       weeklyOffer: "Offer rate",
+      weeklyEditorialLabel: "The editor says",
       weeklyQuietDays: "{days}d quiet",
       stalledDays: "{days}d",
       weeklyUntitled: "Untitled",

@@ -204,6 +204,36 @@ class WeeklyDigestServiceTest {
     }
 
     @Test
+    void anEditorialRidesOnThePayloadTheLetterFilesWithoutTouchingTheDigestAnswer() {
+        Map<String, Object> answer = new HashMap<>();
+        answer.put("totalApplications", 3);
+        when(analysis.insightDigest(ALICE, "en", 7)).thenReturn(answer);
+        when(analysis.editorial(eq(ALICE), same(answer), eq("en")))
+                .thenReturn(Map.of("note", "One lived application, quiet; follow up this week."));
+        when(digests.findByUserIdAndWeekStart(eq(ALICE), any())).thenReturn(Optional.empty());
+
+        WeeklyDigestDto letter = service.compose(ALICE, WEEK);
+
+        assertThat(letter.payload())
+                .containsEntry("totalApplications", 3)
+                .containsEntry("editorial", "One lived application, quiet; follow up this week.");
+        assertThat(answer).doesNotContainKey("editorial");
+    }
+
+    @Test
+    void anEditorialThatCannotBeComposedCostsTheNoteNotTheLetter() {
+        when(analysis.insightDigest(ALICE, "en", 7)).thenReturn(Map.of("totalApplications", 4));
+        when(analysis.editorial(eq(ALICE), any(), eq("en")))
+                .thenThrow(new RuntimeException("relay down"));
+        when(digests.findByUserIdAndWeekStart(eq(ALICE), any())).thenReturn(Optional.empty());
+
+        WeeklyDigestDto letter = service.compose(ALICE, WEEK);
+
+        assertThat(letter.payload()).doesNotContainKey("editorial")
+                .containsEntry("totalApplications", 4);
+    }
+
+    @Test
     void theNightMailsEachLetterToItsOwnAddressAndKeepsTheReceipt() {
         when(applications.distinctUserIds()).thenReturn(List.of(ALICE, BOB));
         when(analysis.insightDigest(eq(ALICE), any(), eq(7))).thenReturn(Map.of("totalApplications", 3));

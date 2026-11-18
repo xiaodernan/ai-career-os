@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.TemporalAdjusters;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -168,7 +169,24 @@ public class WeeklyDigestService {
 
     private WeeklyDigest composeLetter(UUID userId, LocalDate weekStart) {
         String locale = localeOf(userId);
-        Map<String, Object> payload = analysis.insightDigest(userId, locale, WINDOW_DAYS);
+        Map<String, Object> digest = analysis.insightDigest(userId, locale, WINDOW_DAYS);
+        Map<String, Object> payload = digest;
+        // Epic 322 -- one paragraph written about the week the digest already files. The note is
+        // optional by contract: a relay outage or an ungrounded answer must not cost the letter --
+        // the honest failure is a letter without an editorial, never no letter at all.
+        try {
+            Map<String, Object> editor = analysis.editorial(userId, digest, locale);
+            Object note = editor == null ? null : editor.get("note");
+            String editorial = note == null ? null : note.toString().trim();
+            if (editorial != null && !editorial.isEmpty()) {
+                Map<String, Object> withEditor = new HashMap<>(digest);
+                withEditor.put("editorial", editorial);
+                payload = withEditor;
+            }
+        } catch (RuntimeException e) {
+            log.warn("the editor's note for {}'s weekly letter could not be composed; "
+                    + "the letter files without it", userId, e);
+        }
         WeeklyDigest letter = digests.findByUserIdAndWeekStart(userId, weekStart)
                 .orElseGet(() -> {
                     WeeklyDigest fresh = new WeeklyDigest();

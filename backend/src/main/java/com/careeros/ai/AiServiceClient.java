@@ -188,6 +188,16 @@ public interface AiServiceClient {
     }
 
     /**
+     * The weekly letter's editor's note (Epic 322): one short paragraph written about the SAME
+     * digest the letter files. The ai-service drafts it, keeps only sentences that cite a
+     * digit-run already present in the snapshot, and answers `{note}` — `note` is null on any
+     * failure (relay down, nothing grounded, silence requested). The letter prints the paragraph
+     * only when one arrives; an absent note is the honest letter, never a coat of plausibility.
+     * `locale` is the reader's language, same rule as the digest.
+     */
+    Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot, String locale);
+
+    /**
      * Export all user data as a versioned, hashed bundle (13.1).
      * `sections` carries the rows the BACKEND owns (`applications` and
      * `growth_plans`): the ai-service cannot read them, so the bridge hands

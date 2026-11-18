@@ -1156,6 +1156,7 @@ export const zh = {
       weeklyQuietCount: "无动静",
       weeklyReply: "回复率",
       weeklyOffer: "录取率",
+      weeklyEditorialLabel: "编辑说",
       weeklyQuietDays: "已 {days} 天",
       stalledDays: "{days}天",
       weeklyUntitled: "未命名",

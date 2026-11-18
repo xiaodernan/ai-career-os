@@ -78,6 +78,19 @@ public class AnalysisService {
     }
 
     /**
+     * The weekly letter's editor's note (Epic 322): one short paragraph written about the
+     * SAME digest the letter files. The ai-service drafts it and keeps only sentences that
+     * cite a digit-run already present in the snapshot, so the note cannot invent a number
+     * the letter does not already carry. Returns the note, or null when the relay is down or
+     * nothing grounded -- the honest letter, never a fabricated one. No database read and no
+     * transaction of its own: the call exists solely to let the letter's author read back the
+     * week the digest already describes.
+     */
+    public Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot, String locale) {
+        return aiService.editorial(userId, snapshot, locale);
+    }
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is. The same rows the digest reads, one lens on them.
      */

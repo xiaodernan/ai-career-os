@@ -448,6 +448,13 @@ public class FakeAiServiceClientConfig {
                     "signals", List.of("1 application(s) have gone quiet past 14 days."));
         }
 
+        @Override
+        public Map<String, Object> editorial(UUID userId, Map<String, Object> snapshot,
+                                             String locale) {
+            record("editorial");
+            return map("note", "The quiet application is the one to move this week.");
+        }
+
         /**
          * The timeline bridge's answer (Epic 81): the same merge the engine performs,
          * so an integration test can assert both that the events travelled and that the

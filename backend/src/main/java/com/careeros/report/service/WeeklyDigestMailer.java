@@ -73,7 +73,8 @@ public class WeeklyDigestMailer {
             Map.of(),
             EN_WEEK,
             EN_SHORT_WEEK,
-            "Stop these letters: {url}\n");
+            "Stop these letters: {url}\n",
+            "\nThe editor says:\n");
 
     private static final Words ZH = new Words(
             "你的求职周报（{date}）",
@@ -98,7 +99,8 @@ public class WeeklyDigestMailer {
             ZH_STAGES,
             ZH_WEEK,
             ZH_WEEK,
-            "不想再收到这些信：{url}\n");
+            "不想再收到这些信：{url}\n",
+            "\n编辑说：\n");
 
     private final EmailSender email;
     private final MailLinks links;
@@ -198,6 +200,11 @@ public class WeeklyDigestMailer {
             }
         }
 
+        String editorial = text(payload.get("editorial"));
+        if (editorial != null) {
+            body.append(words.editorial()).append(editorial).append('\n');
+        }
+
         body.append(fill(words.unsubscribe(), "url", settingsUrl));
         return body.toString();
     }
@@ -285,6 +292,7 @@ public class WeeklyDigestMailer {
             Map<String, String> stages,
             DateTimeFormatter week,
             DateTimeFormatter shortWeek,
-            String unsubscribe) {
+            String unsubscribe,
+            String editorial) {
     }
 }

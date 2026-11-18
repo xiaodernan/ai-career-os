@@ -171,6 +171,27 @@ class WeeklyDigestMailerTest {
     }
 
     @Test
+    void anEditorialThePayloadCarriesPrintsUnderItsOwnHeadingInBothLanguages() {
+        Map<String, Object> en = new LinkedHashMap<>();
+        en.put("totalApplications", 1);
+        en.put("editorial", "One stalled application for 26 days; follow it up this week.");
+        String english = WeeklyDigestMailer.letterBody(WEEK, en, "en", SETTINGS);
+        assertThat(english).contains("The editor says:\nOne stalled application for 26 days");
+
+        Map<String, Object> zh = new LinkedHashMap<>();
+        zh.put("totalApplications", 1);
+        zh.put("editorial", "1 条投递已停滞 26 天；本周跟进一下。");
+        String chinese = WeeklyDigestMailer.letterBody(WEEK, zh, "zh", SETTINGS);
+        assertThat(chinese).contains("编辑说：\n1 条投递已停滞 26 天");
+    }
+
+    @Test
+    void anEditorialThePayloadDoesNotCarryLeavesNoHeading() {
+        String letter = WeeklyDigestMailer.letterBody(WEEK, Map.of("totalApplications", 2), "en", SETTINGS);
+        assertThat(letter).doesNotContain("editor says").doesNotContain("编辑说");
+    }
+
+    @Test
     void theTransportReceivesTheLettersOwnLanguage() {
         EmailSender email = mock(EmailSender.class);
         WeeklyDigest letter = new WeeklyDigest();

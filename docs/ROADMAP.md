@@ -6918,6 +6918,42 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **322** The Monday letter gets an editor — one grounded LLM paragraph about the week (2026-11-18).
+
+  (The digest stays — exact, free, repeatable, and it was never in doubt. What it never
+  did was read the reader's situation back to them: it is a scoreboard, not a voice. The
+  editor's note is the one paragraph that *reads the week*: `POST /internal/features/editorial`
+  hands the ai-service the SAME digest the letter files (`{snapshot, locale?}`) — no new
+  data path, no PII — and the bounded StateGraph (draft → verify → render, `kind="editorial"`,
+  `editorial`) drafts one short paragraph (≤60 words, plain language; the reader's language
+  when `locale=zh`). The verify node keeps only sentences that cite a digit-run already
+  present in the snapshot — the normalization strips a trailing `%` so `0.0%` equals the
+  payload's `0.0` — and keeps nothing that invents one; any failure (relay down, nothing
+  grounded, answer over 480 chars) answers `note: null`. Empty is the honest failure mode,
+  never a coat of plausibility. The backend composes it inside the Monday sweep, after the
+  digest returns and before the row is stored: `AnalysisService.editorial` →
+  `AiServiceClient.editorial` → `HttpAiServiceClient` → `/internal/features/editorial`, the
+  run and its usage attributed to the letter's recipient exactly like the insight-digest call
+  that feeds it (an admin view's rule — bill nobody for the install reflecting on itself —
+  does not apply to a per-user letter). A RuntimeException from the editor costs the note,
+  never the letter. The digest map is never mutated in place: the letter files a copy with
+  `editorial` added only when a grounded note arrived. The mail appends the paragraph under
+  a localized heading (`The editor says:` / `编辑说：`) only when the payload carries one —
+  a letter without a note prints exactly the letter it always printed. The analysis page
+  renders the note in the letter card under the same bilingual heading
+  (`analysis.weeklyEditorialLabel`), EN+ZH, and `InsightDigest.editorial?` types the wire
+  key. Live through the relay (`gpt-6.1-terra` via aizzz.xyz through Clash Verge), English:
+  *"The board has 1 application and a 0.0% response rate; 1 application has been stalled for
+  26 days. Next week, verify its status and consider a follow-up."* — Chinese: *"本周看板只有
+  1 个申请，仍处于 applied，且有 1 个申请已沉寂 26 天；回复率为 0.0%，下周应先核对申请状态并跟进
+  这条停滞记录。"* Both cite only digits that exist in the payload; the verify node's drop-rate
+  is visible in the run trail (`trace.noteKept` / `trace.chars`). Measured: backend 61/61
+  across the letter + api-doc suites (+2 editor/payload tests, +2 mailer heading tests, the
+  `editorial` stub pinned in the shared fake), ai-service offline suite FULL_SUITE_PENDING
+  (+5 editorial, +1 census line-shift re-pin), verify_gates GATES_PENDING, frontend letter
+  card 7/7 (+1 editor-figure test, both languages) and vitest **1535/1535**; CI CI_PENDING on
+  `PENDING_SHA`.)
+
 - [x] **321** Chapter One extended the first week to the interview room (2026-11-17).
 
   The first-week game (Epic 233) covered the loop up to "the recruiter says yes"; it stopped

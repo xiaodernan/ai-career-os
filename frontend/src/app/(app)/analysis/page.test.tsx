@@ -61,6 +61,7 @@ vi.mock("@/lib/hooks/analytics", () => ({
           stalledCount: 1,
           responseRate: 0.5,
           offerRate: 0.25,
+          editorial: "One application has gone quiet for 9 days; follow it up this week.",
           stalled: [
             {
               id: "s1",
@@ -194,5 +195,17 @@ describe("the weekly letter", () => {
     expect(zh).toContain("更早的来信");
     expect(zh).toContain("生成本周");
     expect(zh).not.toContain("Week of");
+  });
+
+  it("prints the editor's note under its own heading, in both languages", () => {
+    const en = render("en");
+    expect(en).toContain("The editor says");
+    expect(en).toContain("follow it up this week");
+
+    const zh = render("zh");
+    expect(zh).toContain("编辑说");
+    expect(zh).toContain("follow it up this week");
+    // The label is table copy — it must not double up with the note itself.
+    expect(zh).not.toContain("The editor says");
   });
 });
