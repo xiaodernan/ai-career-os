@@ -9,6 +9,7 @@ from app.db import domain, observability
 from app.features import company as company_mod
 from app.features import counsel as counsel_mod
 from app.features import editorial as editorial_mod
+from app.features import gap_note as gap_note_mod
 from app.features import offer_narrative as offer_narrative_mod
 from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
@@ -864,6 +865,29 @@ async def follow_ups_ep(req: FollowUpsReq, ctx: Ctx = Depends(require_internal))
     ranked = reminders_mod.follow_ups_for(contacts, include_fresh=req.include_fresh)
     await observability.finish_run(run_id, "completed")
     return {"follow_ups": ranked, "count": len(ranked)}
+
+
+class GapNoteReq(BaseModel):
+    """Epic 329 -- the gap analyst's input: the engine's own answer, verbatim.
+
+    Same discipline as the editorials: the note is kept only if every claim cites
+    a digit-run already in the payload; locale (en/zh) picks the language."""
+    payload: dict
+    locale: str | None = None
+
+
+@router.post("/gap-note")
+async def gap_note_ep(req: GapNoteReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 329 -- one paragraph written about the reader's own gap, optional by
+    contract: an ungrounded or silent relay answers null, never a coat of plausibility.
+    """
+    payload = req.payload if isinstance(req.payload, dict) else {}
+    run_id = await _run(ctx, "growth", "gap_note")
+    result = await gap_note_mod.gap_note(payload, locale=req.locale,
+                                          user_id=str(ctx.user_id) if ctx.user_id else None,
+                                          run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
 
 
 class ExportBundleReq(BaseModel):

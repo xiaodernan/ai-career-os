@@ -465,6 +465,15 @@ public class FakeAiServiceClientConfig {
                     + "than the number; that is the thing worth keeping.");
         }
 
+        @Override
+        public Map<String, Object> gapNote(UUID userId, Map<String, Object> payload,
+                                           String locale) {
+            record("gapNote");
+            Object coverage = payload == null ? null : payload.get("coverage");
+            return map("note", "Coverage " + coverage + " — close the must-gaps first; "
+                    + "the rest follows.");
+        }
+
         /**
          * The timeline bridge's answer (Epic 81): the same merge the engine performs,
          * so an integration test can assert both that the events travelled and that the

@@ -76,6 +76,19 @@ export function useGapAnalysis() {
   });
 }
 
+/** Epic 329 — the gap analyst's read on the gap analysis, one call: the flat gap answer plus `note`. */
+export function useGapNote() {
+  return useMutation({
+    mutationFn: async (input: { targetRole: string; seniority?: string; locale?: string }) =>
+      (await api.create<unknown>(endpoints.growthGapNote, {
+        targetRole: input.targetRole,
+        seniority: input.seniority,
+        locale: input.locale,
+      })) as GapReport,
+    onError: fail("failures.gapNote"),
+  });
+}
+
 /** 10.7 — target-role readiness, as one verdict. */
 export function useReadiness() {
   return useMutation({

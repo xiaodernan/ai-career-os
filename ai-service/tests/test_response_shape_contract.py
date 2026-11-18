@@ -1128,8 +1128,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # the letter route, crossing the web seam) and `OfferLetterResponse` (the {letter}
     # envelope it answers) on `OfferShelfDtos`. The pin was red on the tree that landed
     # Epic 327; this pass counts the records again.
-    assert len(declared) == 230, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 230 measured"
+    # 231 with Epic 329's `GapNoteRequest` (the `{targetRole, seniority?, locale?}` body the
+    # gap-note route binds in the web layer); this pass counts the records again.
+    assert len(declared) == 231, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 231 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

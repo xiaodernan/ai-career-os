@@ -1952,6 +1952,8 @@ export interface GapBlock {
   partial?: SkillRow[];
   gaps?: SkillRow[];
   strengths?: string[];
+  /** Epic 329 — the analyst's one grounded paragraph for this gap. */
+  note?: string | null;
 }
 
 export interface SkillRow {

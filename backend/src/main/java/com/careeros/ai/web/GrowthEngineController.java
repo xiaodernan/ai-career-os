@@ -1,5 +1,6 @@
 package com.careeros.ai.web;
 
+import com.careeros.ai.dto.GapNoteRequest;
 import com.careeros.ai.dto.GrowthEngineRequest;
 import com.careeros.ai.dto.ProfileEngineRequest;
 import com.careeros.ai.dto.ProgressRequest;
@@ -32,6 +33,13 @@ public class GrowthEngineController {
 
     public GrowthEngineController(GrowthEngineService growth) {
         this.growth = growth;
+    }
+
+    /** Epic 329 — the gap analyst's voice about the gap analysis. */
+    @PostMapping("/gap-note")
+    public Map<String, Object> gapNote(@CurrentUser AuthUser user,
+                                       @RequestBody @Valid GapNoteRequest request) {
+        return growth.gapNote(user.id(), request);
     }
 
     /** 10.1 — the distance between the profile and the target role. */

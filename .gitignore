@@ -62,3 +62,6 @@ Python/
 
 # pnpm lockfile (the repo tracks npm's package-lock.json; npx pnpm runs leave one behind)
 frontend/pnpm-lock.yaml
+# session-local working files (harness memory) and the local-install convenience image
+.workbuddy/
+backend/Dockerfile.local-jar

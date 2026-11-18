@@ -90,7 +90,7 @@ class HttpAiServiceClientTest {
             // ai-service's typed refusals do; anything else succeeds. The
             // marker rides in the payload, so one context covers both.
             byte[] answer = refusalFor(body).getBytes(StandardCharsets.UTF_8);
-            int status = body.contains("REFUSE") ? 400 : 200;
+            int status = body.contains("REFUSE-NOTFOUND") ? 404 : body.contains("REFUSE") ? 400 : 200;
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, answer.length);
             exchange.getResponseBody().write(answer);
@@ -254,6 +254,23 @@ class HttpAiServiceClientTest {
         assertThat(thrown).isNotNull();
         assertThat(thrown.code()).isEqualTo(ApiErrorCode.AI_SERVICE_BAD_REQUEST);
         assertThat(thrown).hasMessage("invalid feed xml");
+    }
+
+    @Test
+    void aNotFoundCarriesTheUpstreamSentence() {
+        // "Not yours" and "not there" are the same upstream answer in its WHERE clause,
+        // so the code stays AI_SERVICE_NOT_FOUND -- but the sentence is the reader's:
+        // "no resume version found" tells them they must upload a resume; a bare
+        // "Resource not found" tells them nothing.
+        ApiException thrown = null;
+        try {
+            client.parseFeed("REFUSE-NOTFOUND", "rss", UUID.randomUUID());
+        } catch (ApiException e) {
+            thrown = e;
+        }
+        assertThat(thrown).isNotNull();
+        assertThat(thrown.code()).isEqualTo(ApiErrorCode.AI_SERVICE_NOT_FOUND);
+        assertThat(thrown).hasMessage("no resume version found");
     }
 
     @Test
@@ -520,6 +537,9 @@ class HttpAiServiceClientTest {
         }
         if (body.contains("REFUSE-NO-SENTENCE")) {
             return "{\"detail\": {\"code\": \"INGEST_FEED_INVALID\"}}";
+        }
+        if (body.contains("REFUSE-NOTFOUND")) {
+            return "{\"detail\": \"no resume version found\"}";
         }
         if (body.contains("REFUSE-LONG")) {
             return "{\"detail\": {\"code\": \"X\", \"message\": \""

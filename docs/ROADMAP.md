@@ -6918,6 +6918,34 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **329** The gap analyst's voice — one grounded paragraph reads what the numbers said (2026-11-18).
+
+  (The gap card said `0.54 coverage` and listed five skills, then stopped talking. Epic 329 adds
+  one paragraph — the same StateGraph draft → verify → render the editors use — that reads the
+  same payload back in the reader's language. `app/features/gap_note.py`, `kind="gap_note"`;
+  grounding NFKC-folded `%` and thousands separators normalized, `locale` en/zh; `note` is dropped
+  when nothing grounded survives. The payload the note reads is the gap engine's own answer —
+  expected skills, covered/partial/gap counts, coverage ratio, the must/should/nice importance
+  labels — no new truth introduced. The backend owns the seam: `GrowthEngineService.gapNote`
+  wraps `aiService.gapAnalysis` + `aiService.gapNote`, returns `{...gap, note?}` flat; the bridge
+  can never inject a claim the engine does not carry. The panel renders the paragraph under the
+  coverage line in a small muted block only when one arrives — silent run keeps the card clean.
+  Live through the install, both languages (2026-11-18): the seeded-resume probe account reads
+  zh (`覆盖率 1.0 … 已覆盖 1 项、缺口 0 项，预期技能 1 项`) and en (`full coverage at 1.0, with 1 of
+  1 expected skills covered and 0 gaps`), and a corpus-derived `Senior Backend Engineer - Agent
+  Platform` answers HTTP 200 with a grounded paragraph in each language. The live run surfaced
+  two boundary defects, both fixed in the same sitting. The 404 lane flattened the upstream's
+  own refusal into a bare `Resource not found` — a user without a parsed resume now reads
+  `no resume version found`, the sentence that tells them what to fix (the 400 lane already
+  crossed the upstream sentence; the 404 lane now does too, pinned by
+  `HttpAiServiceClientTest.aNotFoundCarriesTheUpstreamSentence`). And the panel never handed
+  the reader's `locale` down, so a Chinese reader would be handed an English note (absent is
+  English by contract) — the panel sends it now, pinned by a render test that holds the figure
+  to both languages and holds its absence when no paragraph survives (two frontend render tests;
+  the panel's card is otherwise unchanged). Demo fixture remains honest: a thin JD
+  returns `gapNote: {}` with `coverage 0.0` and `gaps: []` — the analyst says so instead of
+  inventing one.)
+
 - [x] **328** The login door under siege — measured, not asserted (2026-11-18).
 
   (The last load-test addendum to this file (Epic 256) covered the read-only admin surface; the

@@ -1536,6 +1536,7 @@ export const zh = {
       covered: "已覆盖",
       partial: "部分覆盖",
       expected: "预期",
+      gapNoteLabel: "分析师说",
       missingForDreamRole: "目标职位还缺：",
       engines: {
         gap: "差距分析",
@@ -4078,6 +4079,7 @@ export const zh = {
       contactDelete: "没能删除这位联系人。",
       growthReport: "没能生成成长报告。",
       gapAnalyze: "没能分析这处差距。",
+      gapNote: "写不出这条差距分析。",
       roleReadiness: "没能读到那个岗位的就绪度。",
       learningPlan: "没能生成学习计划。",
       marketDemand: "没能读到市场需求。",

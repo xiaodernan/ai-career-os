@@ -209,6 +209,15 @@ public interface AiServiceClient {
             List<Map<String, Object>> siblings, String locale);
 
     /**
+     * The gap analyst's voice (Epic 329): one paragraph written about the gap the
+     * analysis just computed. The ai-service drafts it, keeps only sentences that
+     * cite a digit-run already present in the payload, and answers `{note}` —
+     * `note` is null on any failure. Optional by contract, never a coat of plausibility.
+     * `locale` is the reader's language, same rule as the digest.
+     */
+    Map<String, Object> gapNote(UUID userId, Map<String, Object> payload, String locale);
+
+    /**
      * Export all user data as a versioned, hashed bundle (13.1).
      * `sections` carries the rows the BACKEND owns (`applications` and
      * `growth_plans`): the ai-service cannot read them, so the bridge hands

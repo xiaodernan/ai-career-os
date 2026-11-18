@@ -1668,6 +1668,7 @@ export const en = {
       covered: "covered",
       partial: "partial",
       expected: "expected",
+      gapNoteLabel: "The analyst says",
       missingForDreamRole: "Missing for the dream role:",
       /**
        * The nine engines, by name.
@@ -4368,6 +4369,7 @@ export const en = {
       contactDelete: "Couldn't delete that contact.",
       growthReport: "Couldn't build the growth report.",
       gapAnalyze: "Couldn't analyze the gap.",
+      gapNote: "Couldn't write the gap note.",
       roleReadiness: "Couldn't read that role's readiness.",
       learningPlan: "Couldn't build the learning plan.",
       marketDemand: "Couldn't read the market demand.",

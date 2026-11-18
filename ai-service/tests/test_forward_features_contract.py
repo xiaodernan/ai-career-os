@@ -80,6 +80,8 @@ FORWARD = {
     # Epic 327 -- the decision letter. `offer` is the shelf row's own payload
     # (required), siblings/locale optional.
     "/internal/features/offer-decision-letter": ("OfferLetterReq", {"offer"}),
+    # Epic 329 -- the gap analyst's read on the engine's own gap output. `payload` is required.
+    "/internal/features/gap-note": ("GapNoteReq", {"payload"}),
 }
 
 

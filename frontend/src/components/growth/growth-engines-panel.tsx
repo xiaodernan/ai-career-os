@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   useGapAnalysis,
+  useGapNote,
   useInterviewPrep,
   useLearningPlan,
   useLearningPriority,
@@ -78,12 +79,12 @@ const ENGINES = [
 type EngineKey = (typeof ENGINES)[number]["key"];
 
 export function GrowthEnginesPanel() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [role, setRole] = React.useState("");
   const [location, setLocation] = React.useState("");
   const [engine, setEngine] = React.useState<EngineKey>("gap");
 
-  const gap = useGapAnalysis();
+  const gap = useGapNote();
   const demand = useSkillDemand();
   const priority = useLearningPriority();
   const plan = useLearningPlan();
@@ -112,7 +113,9 @@ export function GrowthEnginesPanel() {
     };
     switch (engine) {
       case "gap":
-        gap.mutate(common);
+        // The note is written in the reader's own language; an absent locale
+        // means English, which would be the wrong wrong for half of them.
+        gap.mutate({ targetRole: role.trim(), locale });
         break;
       case "demand":
         demand.mutate(common);
@@ -278,6 +281,14 @@ function EngineAnswer({ engine, data }: { engine: EngineKey; data: Record<string
             {report.partialCount ?? 0} {t("growthEngines.partial")},{" "}
             {report.expectedSkillCount ?? 0} {t("growthEngines.expected")}
           </p>
+          {typeof report.note === "string" && report.note.trim().length > 0 && (
+            <figure className="rounded-lg border border-border/60 bg-muted/30 p-3">
+              <figcaption className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {t("growthEngines.gapNoteLabel")}
+              </figcaption>
+              <p className="mt-1 text-sm leading-relaxed">{report.note}</p>
+            </figure>
+          )}
           <ul className="space-y-1">
             {(report.gaps ?? []).map((g, i) => (
               <li key={`${g.skill}-${i}`} className="flex items-center gap-2 text-sm">

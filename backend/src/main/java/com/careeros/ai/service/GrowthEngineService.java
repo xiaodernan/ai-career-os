@@ -1,6 +1,7 @@
 package com.careeros.ai.service;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.ai.dto.GapNoteRequest;
 import com.careeros.ai.dto.GrowthEngineRequest;
 import com.careeros.ai.dto.ProfileEngineRequest;
 import com.careeros.ai.dto.ProgressRequest;
@@ -32,6 +33,26 @@ public class GrowthEngineService {
     @Transactional(readOnly = true)
     public Map<String, Object> gapAnalysis(UUID userId, GrowthEngineRequest request) {
         return aiService.gapAnalysis(userId, request);
+    }
+
+    /**
+     * Epic 329 — the gap analyst's voice about the gap analysis. Runs the same engine
+     * the caller could reach at /gap-analysis, then forwards the payload to the ai-service for
+     * the one grounded paragraph. The backend owns the engine seam; the caller owns only
+     * the locale toggle. Returns `{gap, note?}` — `note` is null when the editor could not
+     * keep a grounded one. A coat of plausibility is never an acceptable answer.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> gapNote(UUID userId, GapNoteRequest request) {
+        GrowthEngineRequest engine = new GrowthEngineRequest(
+                request.targetRole(), request.seniority(), null, null, null, null, null);
+        Map<String, Object> payload = new java.util.HashMap<>(aiService.gapAnalysis(userId, engine));
+        Map<String, Object> answered = aiService.gapNote(userId, payload, request.locale());
+        Object note = answered == null ? null : answered.get("note");
+        if (note != null) {
+            payload.put("note", note);
+        }
+        return payload;
     }
 
     /** 10.7 — target-role readiness, as one verdict. */

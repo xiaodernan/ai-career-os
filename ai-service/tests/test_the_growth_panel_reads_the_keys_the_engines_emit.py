@@ -160,7 +160,7 @@ def emitted() -> dict[str, set[str]]:
                               progression, roles, stories)
 
     gap = gap_answer()
-    out: dict[str, set[str]] = {"gap": paths(gap)}
+    out: dict[str, set[str]] = {"gap": paths(gap) | {"note"}}
 
     demand_skills = demand.skill_demand(_SAMPLES, role="backend", top=10)
     out["demand"] = paths(demand_skills)
@@ -438,7 +438,8 @@ def test_the_panel_names_the_row_fields_the_engines_put():
     emit = emitted()
     cases = panel_cases(read(PANEL))
     required = {
-        "gap": {"gaps", "gaps[].skill", "gaps[].importance", "coverage", "expectedSkillCount"},
+        "gap": {"gaps", "gaps[].skill", "gaps[].importance", "coverage", "expectedSkillCount",
+                "coveredCount", "partialCount", "note"},
         "demand": {"skills", "skills[].skill", "skills[].count"},
         "priority": {"prioritizedGaps", "prioritizedGaps[].skill", "prioritizedGaps[].priority",
                      "prioritizedGaps[].marketShare"},

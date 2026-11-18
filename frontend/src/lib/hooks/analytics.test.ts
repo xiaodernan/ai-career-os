@@ -94,11 +94,14 @@ describe("the growth engine routes", () => {
 
     await api.create(endpoints.growthGapAnalysis, { targetRole: "Backend Engineer" });
     await api.create(endpoints.growthRoleSuggestions, { top: 5 });
+    await api.create(endpoints.growthGapNote, { targetRole: "Backend Engineer", locale: "zh" });
 
     expect(urls[0]).toContain("/growth/gap-analysis");
     expect(urls[1]).toContain("/growth/role-suggestions");
+    expect(urls[2]).toContain("/growth/gap-note");
     expect(bodies[0]).toEqual({ targetRole: "Backend Engineer" });
     expect(bodies[1]).toEqual({ top: 5 });
+    expect(bodies[2]).toEqual({ targetRole: "Backend Engineer", locale: "zh" });
   });
 });
 
