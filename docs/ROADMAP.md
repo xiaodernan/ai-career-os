@@ -6935,9 +6935,10 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   languages** (`salary.py`): `_role_tokens` now expands English family words to the Chinese
   titles this corpus is written in (`backend` → 后端/后台， `machine learning` → 算法， `intern`
   → 实习生 …), match-side only — the corpus is never rewritten, an English benchmark against
-  Chinese data returns real verdicts (live probe: `role="Backend Engineer"` → sampleSize **29**,
+  Chinese data returns real verdicts (live probe: `role="Backend Engineer"` → sampleSize `29`,
   both offers `below_market`, grounded zh narrative), and a genuinely-uncovered role still answers
-  zero rows. One pre-existing token-pin test updated to the expanded contract.)
+  zero rows. One pre-existing token-pin test updated to the expanded contract. Measured after
+  the change: ai-service offline suite **2889/2889** (11 env-skipped), verify_gates **573/573**.)
 
 - [x] **325** The artifacts court — the export and the import prove each other (2026-11-18).
 
