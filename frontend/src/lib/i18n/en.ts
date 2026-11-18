@@ -1828,7 +1828,7 @@ export const en = {
       wheelNatural: "Content follows the gesture",
       wheelSaved: "Scroll direction saved.",
       wheelHint:
-        "Standard moves the view with the notch — down is down on every platform. Natural travels content with the gesture, for readers who expect pull-to-follow on macOS-style “Natural” scrolling or classic Windows wheels.",
+        "Down is down here: wheel down, the view moves down — on every platform. If your machine inverts the wheel, switch to Natural — down will be down. One switch, no reload.",
       paletteDark: "dark",
       paletteLight: "light",
       keyboard: "Keyboard",

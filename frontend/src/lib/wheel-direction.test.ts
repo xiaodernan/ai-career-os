@@ -29,12 +29,30 @@ function node(partial: Partial<ScrollNode> = {}): ScrollNode {
 }
 
 describe("readWheelDirection / writeWheelDirection", () => {
-  it("defaults to standard, migrating Epic 225's `os` onto the forced dialect", () => {
+  it("one-time reset: any legacy value drops to standard, then v2 rules", () => {
     expect(readWheelDirection(memoryStorage())).toBe("standard");
-    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "os" }))).toBe("standard");
-    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "reverse" }))).toBe("natural");
-    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "natural" }))).toBe("natural");
-    expect(readWheelDirection(memoryStorage({ "careeros.wheelDirection": "bogus" }))).toBe("standard");
+    for (const legacy of ["os", "reverse", "natural", "standard", "bogus"]) {
+      const storage = memoryStorage({ "careeros.wheelDirection": legacy });
+      expect(readWheelDirection(storage)).toBe("standard");
+      // the reset writes v2 so the next load skips the migration path
+      expect(storage.getItem("careeros.wheelDirection.v2")).toBe("standard");
+    }
+  });
+
+  it("v2 wins over the legacy key once written", () => {
+    const storage = memoryStorage({
+      "careeros.wheelDirection": "reverse",
+      "careeros.wheelDirection.v2": "natural",
+    });
+    expect(readWheelDirection(storage)).toBe("natural");
+    expect(storage.getItem("careeros.wheelDirection.v2")).toBe("natural");
+  });
+
+  it("an explicit natural pick survives the reset path", () => {
+    const storage = memoryStorage();
+    writeWheelDirection("natural", storage);
+    expect(readWheelDirection(storage)).toBe("natural");
+    expect(storage.getItem("careeros.wheelDirection.v2")).toBe("natural");
   });
 
   it("falls back to standard when storage throws", () => {
@@ -54,9 +72,9 @@ describe("readWheelDirection / writeWheelDirection", () => {
   it("round-trips the two dialects and only ever emits one of the two values", () => {
     const storage = memoryStorage();
     writeWheelDirection("natural", storage);
-    expect(storage.getItem("careeros.wheelDirection")).toBe("natural");
+    expect(storage.getItem("careeros.wheelDirection.v2")).toBe("natural");
     writeWheelDirection("standard", storage);
-    expect(storage.getItem("careeros.wheelDirection")).toBe("standard");
+    expect(storage.getItem("careeros.wheelDirection.v2")).toBe("standard");
   });
 });
 

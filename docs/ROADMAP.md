@@ -6918,6 +6918,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **324** The reader's wheel, decisively leveled — stale preferences reset once (2026-11-18).
+
+  (The brief kept saying the wheel felt backwards on the reader's machine, even after the
+  forced-standard dialect shipped. The cause was in the migration: Epic 255 mapped Epic 225's
+  legacy `reverse` onto `natural` — the exact reader who asked for "down is down" kept an
+  inverted wheel forever. This one drop fixes it permanently: the legacy key is read exactly
+  once, anything it holds (`os` / `reverse` / `natural` / `bogus`) drops to the corrected
+  default and is written to the new `careeros.wheelDirection.v2` key, after which the v2 key
+  rules — an explicit natural stays natural, a picked standard stays standard, and no machine
+  can arrive feeling backwards ever again. The settings hint now names the fix for the one
+  machine class that genuinely inverts the wheel: switch to Natural — down will be down. Copy
+  in both languages; 17/17 wheel tests (the migration pin is now a lifetime-reset pin).)
+
 - [x] **323** The offer decision gets a voice — and the papers finally read the engine's keys (2026-11-18).
 
   (The comparison engine stayed deterministic and the ranking never moves. What shipped is

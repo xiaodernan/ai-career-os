@@ -25,10 +25,11 @@
 export type WheelDirection = "standard" | "natural";
 
 const STORAGE_KEY = "careeros.wheelDirection";
+const STORAGE_KEY_V2 = "careeros.wheelDirection.v2";
 const EVENT = "careeros:wheelDirection";
 
 export const WHEEL_DIRECTION_EVENT = EVENT;
-export const WHEEL_DIRECTION_KEY = STORAGE_KEY;
+export const WHEEL_DIRECTION_KEY = STORAGE_KEY_V2;
 
 const LINE_PX = 16;
 const PAGE_PX = 40;
@@ -38,15 +39,28 @@ type StorageLike = Pick<Storage, "getItem" | "setItem">;
 const defaultStorage = (): StorageLike | null =>
   typeof window === "undefined" ? null : window.localStorage;
 
-/** The stored preference, clamped to the two the product knows, with migration. */
+/** The stored preference, clamped to the two the product knows.
+ *
+ * Epic 255 still honored Epic 225's legacy values: `reverse` mapped onto `natural`,
+ * which left the exact reader who asked for "down is down" staring at an inverted
+ * wheel forever. This is the one-time reset: any value stored under the legacy key
+ * is dropped and the corrected default (standard) is written to the v2 key, so a
+ * machine that arrived feeling backwards lands forwards after one load. From then
+ * on the v2 key rules — an explicit natural stays natural, a picked standard stays
+ * standard, and the legacy key is never read again.
+ */
 export function readWheelDirection(storage: StorageLike | null = defaultStorage()): WheelDirection {
   if (!storage) return "standard";
   try {
-    const raw = storage.getItem(STORAGE_KEY);
-    // Epic 225 stored "reverse" for pull-to-follow and "os" for passthrough;
-    // both dialects lived in one binary toggle the reader could not see. The
-    // forced default is standard; "reverse" maps onto natural.
-    if (raw === "natural" || raw === "reverse") return "natural";
+    const v2 = storage.getItem(STORAGE_KEY_V2);
+    if (v2 === "natural" || v2 === "standard") return v2;
+    if (storage.getItem(STORAGE_KEY) !== null) {
+      try {
+        storage.setItem(STORAGE_KEY_V2, "standard");
+      } catch {
+        /* best effort — the reader still gets the corrected default this load */
+      }
+    }
     return "standard";
   } catch {
     return "standard";
@@ -60,7 +74,7 @@ export function writeWheelDirection(
 ): void {
   if (!storage) return;
   try {
-    storage.setItem(STORAGE_KEY, direction);
+    storage.setItem(STORAGE_KEY_V2, direction);
   } catch {
     // best effort — the visible setting still flips for this session via the event
   }
