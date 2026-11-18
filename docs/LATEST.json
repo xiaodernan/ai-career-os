@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T03:53:25.200877Z",
+  "generated_at": "2026-11-18T04:16:57.649632Z",
   "branch": "main",
-  "head": "7e4944d",
-  "total_commits": 1591,
+  "head": "20edf59",
+  "total_commits": 1593,
   "milestone": "Epic 324",
   "milestone_full": "the ledger of done epics (through 476 items), closed at Epic 324 — The reader's wheel, decisively leveled",
   "pushed_at": "2026-11-18",
