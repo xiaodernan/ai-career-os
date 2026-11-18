@@ -405,7 +405,7 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "AdminCounselController.java", "AiOpsMetrics.java", "ConversationService.java",
         "CopilotStreamService.java",
         "FileIngestService.java",
-        "GrowthService.java", "InboundMailService.java", "InterviewService.java",
+        "GrowthService.java", "InboundDecodeService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
         "RagCacheInvalidator.java", "ResumeService.java", "ScheduledIngestionService.java",
         "TimelineService.java", "VoiceService.java",
@@ -1131,7 +1131,9 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 231 with Epic 329's `GapNoteRequest` (the `{targetRole, seniority?, locale?}` body the
     # gap-note route binds in the web layer); Epic 331's `NextStepRequest` (the `{locale?}`
     # body the next-step route binds) makes it 232. This pass counts the records again.
-    assert len(declared) == 232, \
+    # 233 with Epic 332's `DecodeRequest` (the `{locale?}` body the replies route binds at the
+    # same line); committed on the same walk the pin reddened, counted in the same pass.
+    assert len(declared) == 233, \
         f"{len(declared)} records carry a declaration the shared opener reads, not the 232 measured"
     problems, renamed = [], []
     for relative, record in declared:
@@ -3663,7 +3665,10 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # the union itself stays put.
         # 1819 is the census's token-match line — the `| "message"` arm — not the `kind:`
         # head's line (1811); the head travels in the `head` column. Set in the same commit that moved the union.
-        ("types.ts", 1819, "kind:"),
+        # 1839 rather than 1819 since Epic 332's `InboundMailDecode` / `InboundDecodeResponse`
+        # joined types.ts above the union (+20 lines with their doc comments); the union its-
+        # self did not change.
+        ("types.ts", 1839, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

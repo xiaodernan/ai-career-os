@@ -923,7 +923,8 @@ class ReplyDecodeReq(BaseModel):
     `body` carries the writer's own words exactly as the backend received them; the verifier
     keeps only digits already in the message, and silence on any failure. locale (en/zh)
     picks the language every field answers in."""
-    body: dict
+    body: str
+    subject: str | None = None
     locale: str | None = None
 
 
@@ -934,7 +935,7 @@ async def decode_reply_ep(req: ReplyDecodeReq, ctx: Ctx = Depends(require_intern
     Optional by contract: an ungrounded or silent relay answers `decode: null`; the card renders
     nothing rather than a confident instruction.
     """
-    payload = req.body if isinstance(req.body, dict) else {}
+    payload = {"subject": req.subject, "body": req.body}
     run_id = await _run(ctx, "inbound", "reply_decode")
     result = await reply_decode_mod.decode_reply(payload, locale=req.locale,
                                                  user_id=str(ctx.user_id) if ctx.user_id else None,

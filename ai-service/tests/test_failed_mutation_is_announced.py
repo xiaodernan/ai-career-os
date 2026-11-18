@@ -8,12 +8,12 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 105 mutation sites in sixteen files
+What the shipped code says, measured rather than assumed: 106 mutation sites in sixteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
 second door, the account and replies screens' hooks, 42.2's mail dials, the kept letter's
 save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair,
-Epic 327's decision letter writer, and Epic 331's assistant ask).
-93 declare their failure at the hook; the twelve that do not sit in
+Epic 327's decision letter writer, and Epic 331's assistant ask, and Epic 332's analyst ask).
+94 declare their failure at the hook; the twelve that do not sit in
 ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -28,7 +28,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 90 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 91 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -132,7 +132,9 @@ ROSTER = {
     # Epic 331: the assistant's ask joins the roster with its own fail() sentence.
     "frontend/src/lib/hooks/assistant.ts": 1,
     "frontend/src/lib/hooks/voice.ts": 2,
-    REPLIES_HOOKS: 1,
+    # 2 since Epic 332: the analyst's ask joins 37.3's file write, each announcing
+    # its failure at the hook with its own fail() sentence.
+    REPLIES_HOOKS: 2,
     SOURCE_ACTIONS: 1,
 }
 SITES = sum(ROSTER.values())
@@ -171,8 +173,9 @@ SENTENCES = {
     # Epic 331: the assistant's ask spends its own sentence on the failure path.
     "frontend/src/lib/hooks/assistant.ts": 1,
     "frontend/src/lib/hooks/voice.ts": 2,
-    # 37.3: filing a waiting letter announces a refusal with the replies page's own sentence.
-    REPLIES_HOOKS: 1,
+    # 37.3: filing a waiting letter announces a refusal with the replies page's own sentence;
+    # 2 since Epic 332: the analyst's ask spends its own sentence beside it.
+    REPLIES_HOOKS: 2,
 }
 FAIL_USES = sum(SENTENCES.values())
 
