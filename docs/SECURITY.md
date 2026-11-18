@@ -238,13 +238,17 @@ that rejects invented skills/numbers not present in the source evidence.
     (`RateLimitFilter.isAiCost`), not a prefix sweep: it covers the `/ai` SSE
     routes **plus** `/copilot` (the agent turn, the single most expensive call),
     `/interview`, `/jds`, `/growth` (the 10.2 bridge — the aggregate report and the
-    granular engines that will join under the prefix), `/knowledge/text`,
+    granular engines that will join under the prefix), `/assistant` (the ask that
+    names the assistant's one proactive step — it re-reads a workspace's worth of
+    counts on every tap), `/knowledge/text`,
     `/resumes/{id}/parse` and
-    `/jobs/{id}/(match|tailor|cover-letter)`. It also covers the three that spend
+    `/jobs/{id}/(match|tailor|cover-letter)`. It also covers the two that spend
     money without living under an "AI-looking" path: `/jobs/import` (importing a JD
     runs the analyst) and `/knowledge/documents` and `/resumes/upload` (both embed
-    every chunk of the document into pgvector). Left out, a scripted client could
-    call those three without limit — the exact hole this list exists to close.
+    every chunk of the document into pgvector) and `/inbound/mails/{id}/decode`
+    (the analyst reads one letter behind its own button — never on mount, and
+    metered so an scripted client cannot siege the provider through it). Left out, a scripted client could
+    call those without limit — the exact hole this list exists to close.
     Cheap reads (search, listings, dashboards) are deliberately excluded so browsing
     is not throttled. Covered by `RateLimitFilterTest`.
   - Code-judging MFA routes — 5/min per signed-in user. `POST /me/mfa/activate`,

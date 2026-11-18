@@ -6938,7 +6938,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   forwards subject + body to `decode-reply`, answers `{mailId, decode?}` — `decode` absent
   when the analyst had nothing grounded to stand behind. The reply draft is labeled
   ready-to-edit and the copy button says so; intent dims the card, never a decision. Two
-  riders shipped with it: `RateLimitFilter.isAiCost` finally meters `/api/v1/assistant`
+  riders shipped with it: `RateLimitFilter.isAiCost` finally meters `/api/v1/assistant/next-step`
   (Epic 331 had claimed the lane was limited and the code never did it — the doc/code
   mismatch found by the wire census, closed in the same change) and the new decode lane joins
   the AI bucket too; `docs/API.md` gains both rows (`POST /inbound/mails/{id}/decode` public,
