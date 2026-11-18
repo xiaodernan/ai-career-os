@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T04:33:34.206711Z",
+  "generated_at": "2026-11-18T04:33:56.996908Z",
   "branch": "main",
-  "head": "7106c11",
-  "total_commits": 1594,
+  "head": "d70dab1",
+  "total_commits": 1595,
   "milestone": "Epic 325",
   "milestone_full": "the ledger of done epics (through 477 items), closed at Epic 325 — The artifacts court",
   "pushed_at": "2026-11-18",
