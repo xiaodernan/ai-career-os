@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-18T06:13:59.810757Z",
+  "generated_at": "2026-11-18T06:22:03.335049Z",
   "branch": "main",
-  "head": "4e0bbd2",
-  "total_commits": 1606,
+  "head": "ca39bdf",
+  "total_commits": 1608,
   "milestone": "Epic 327",
   "milestone_full": "the ledger of done epics (through 479 items), closed at Epic 327 — The decision letter",
   "pushed_at": "2026-11-18",
