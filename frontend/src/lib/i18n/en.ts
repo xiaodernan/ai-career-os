@@ -1116,6 +1116,7 @@ export const en = {
       counterOfferScript: "Counter-offer script",
       againstTheMarket: "Your offer against the market, and what to say.",
       leadsOnTotal: "{label} leads on total compensation.",
+  narrativeLabel: "The editor says",
       anchorAt: "Anchor at {amount}.",
       ledgerTitle: "The decision ledger",
       ledgerDescription:

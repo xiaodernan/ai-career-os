@@ -616,6 +616,7 @@ public class HttpAiServiceClient implements AiServiceClient {
         if (request.seniority() != null) body.put("seniority", request.seniority());
         if (request.currency() != null) body.put("currency", request.currency());
         if (request.matchScore() != null) body.put("match_score", request.matchScore());
+        if (request.locale() != null && !request.locale().isBlank()) body.put("locale", request.locale());
         List<Map<String, Object>> offers = request.offers().stream()
                 .map(HttpAiServiceClient::offerBody)
                 .toList();

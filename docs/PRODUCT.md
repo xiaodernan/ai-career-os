@@ -72,7 +72,7 @@ Each row is a shipped capability, the route that exposes it, and the API behind 
 | Profile and preferences | `/settings` | `/users/me` |
 | Growth: readiness, gaps, learning plan, and each engine on its own | `/growth` | `/growth-report`, `/growth/*` |
 | Salary & offers: market band, negotiation coaching, offer comparison, counter-offer | `/offers` | `/offers/*` |
-| Analytics: the pipeline funnel, the response rates, the weekly digest | `/analysis` | `/analysis/*` |
+| Analytics: the pipeline funnel, the response rates, the weekly digest — now with a grounded editor's note in the reader's language | `/analysis` | `/analysis/*` |
 | Job ingestion: parse a feed, de-duplicate it, sweep it, plan the write | `/ingestion` | `/jobs/ingest/*` |
 | Data portability: export, preview a restore, redact before sharing | `/data` | `/data-portability/*` |
 | Networking: the contact registry and the follow-up drafts | `/networking` | `/contacts`, `/outreach/draft` |

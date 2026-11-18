@@ -1024,6 +1024,7 @@ export const zh = {
       counterOfferScript: "还价话术",
       againstTheMarket: "你的录用对着市场，以及该怎么说。",
       leadsOnTotal: "{label} 的总薪酬最高。",
+      narrativeLabel: "编辑说",
       anchorAt: "锚定在 {amount}。",
       ledgerTitle: "决策账簿",
       ledgerDescription:

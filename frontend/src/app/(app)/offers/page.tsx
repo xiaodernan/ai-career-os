@@ -38,7 +38,7 @@ import { marketVerdictWord } from "@/lib/status-words";
  * candidate's own offer — the page never states a market fact the engine did not.
  */
 export default function OffersPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const benchmark = useSalaryBenchmark();
   const negotiate = useNegotiate();
   const compare = useCompareOffers();
@@ -114,10 +114,11 @@ export default function OffersPage() {
         currency,
         matchScore: matchNum,
         offers,
+        locale,
       },
       { onSuccess: () => toast.success(t("offers.compared")) }
     );
-  }, [role, location, roleOk, baseNum, matchNum, offerLabels, compare, t]);
+  }, [role, location, roleOk, baseNum, matchNum, offerLabels, compare, t, locale]);
 
   const bench = benchmark.data;
   const plan = negotiate.data;
@@ -380,25 +381,25 @@ export default function OffersPage() {
 
           {comparison && (
             <>
-              {(comparison.rows ?? []).length > 0 ? (
+              {(comparison.offers ?? []).length > 0 ? (
                 <div className="space-y-3">
                   <BarChart
-                    data={comparison.rows!.map((row) => ({
+                    data={comparison.offers!.map((row) => ({
                       label: row.label ?? "—",
                       value: row.totalComp ?? 0,
                       detail: row.assessment?.verdict
                         ? marketVerdictWord(t, row.assessment.verdict)
                         : undefined,
                       tone:
-                        row.label && comparison.best?.label === row.label
+                        row.label && comparison.bestByComp === row.label
                           ? "success"
                           : "primary",
                     }))}
                     valueFormat={(v) => formatSalary(v, v, currency) ?? "—"}
                   />
-                  {comparison.best?.label && (
+                  {comparison.bestByComp && (
                     <p className="text-xs text-muted-foreground">
-                      {t("offers.leadsOnTotal", { label: comparison.best.label })}
+                      {t("offers.leadsOnTotal", { label: comparison.bestByComp })}
                     </p>
                   )}
                 </div>
@@ -413,6 +414,15 @@ export default function OffersPage() {
                 <p className="text-xs text-muted-foreground">
                   {comparison.notes!.join(" ")}
                 </p>
+              )}
+              {typeof comparison.narrative === "string"
+                && comparison.narrative.trim().length > 0 && (
+                <figure className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <figcaption className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {t("offers.narrativeLabel")}
+                  </figcaption>
+                  <p className="mt-1 text-sm leading-relaxed">{comparison.narrative}</p>
+                </figure>
               )}
             </>
           )}

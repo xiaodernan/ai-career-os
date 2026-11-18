@@ -1631,7 +1631,7 @@ export interface NegotiationPlan {
   note?: string;
 }
 
-/** One offer in a comparison (12.3 / 12.5). */
+/** One offer in a comparison (12.3 / 12.5) — the engine's row, verbatim. */
 export interface OfferRow {
   label?: string;
   base?: number;
@@ -1639,14 +1639,33 @@ export interface OfferRow {
   firstYearCash?: number;
   annualEquity?: number;
   totalComp?: number;
-  assessment?: { verdict?: string };
+  assessment?: {
+    /** below_market | within_market | above_market | unknown — the engine's own words. */
+    verdict?: string;
+    vsP50Pct?: number | null;
+    toP50?: number | null;
+    toP75?: number | null;
+  };
+  /** strong | moderate | weak | unknown — a plain string the engine emits, not an object. */
+  leverage?: string;
 }
 
-/** The offer comparison (12.3 / 12.5). */
+/** The offer comparison (12.3 / 12.5) — the engine's own keys, verbatim. */
 export interface OfferComparison {
-  rows?: OfferRow[];
-  best?: OfferRow | null;
+  currency?: string;
+  /** How many market samples the benchmark behind the verdicts stands on. */
+  sampleSize?: number;
+  offers?: OfferRow[];
+  /** The label of the offer that leads on total compensation, or null. */
+  bestByComp?: string | null;
   notes?: string[];
+  /**
+   * Epic 323 — one grounded paragraph written ABOUT these numbers: the trade-off
+   * on the table and which single fact should drive the decision. Kept only when
+   * every claim cites a digit-run already in this payload — null when the relay
+   * is down or nothing grounded survived. Never a ranking of its own.
+   */
+  narrative?: string | null;
 }
 
 /** The counter-offer draft (12.4). */

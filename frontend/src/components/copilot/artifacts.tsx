@@ -334,7 +334,7 @@ function SalaryBandArtifact({ data }: { data?: unknown }) {
 function OfferComparisonArtifact({ data }: { data?: unknown }) {
   const { t } = useLocale();
   const report = pick(data, "comparison") ?? data;
-  const rows = list(report, "rows");
+  const rows = list(report, "offers");
   if (!rows.length) return null;
   return (
     <GrowthArtifact

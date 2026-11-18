@@ -9,6 +9,7 @@ from app.db import domain, observability
 from app.features import company as company_mod
 from app.features import counsel as counsel_mod
 from app.features import editorial as editorial_mod
+from app.features import offer_narrative as offer_narrative_mod
 from app.features import export as export_mod
 from app.features import export_render as export_render_mod
 from app.features import gap_analysis as gap_mod
@@ -312,6 +313,7 @@ class CompareOffersReq(BaseModel):
     currency: str = "CNY"
     match_score: float | None = Field(default=None, ge=0, le=1)
     offers: list[OfferItem] = Field(min_length=1)
+    locale: str | None = None
 
 
 @router.post("/compare-offers")
@@ -322,6 +324,15 @@ async def compare_offers_ep(req: CompareOffersReq, ctx: Ctx = Depends(require_in
                                   seniority=req.seniority, currency=req.currency)
     result = offers_mod.compare_offers([o.model_dump() for o in req.offers], report,
                                        match_score=req.match_score)
+    # Epic 323 -- one grounded paragraph about the same numbers. Optional by contract:
+    # a relay outage or an ungrounded answer costs the paragraph, never the ranking.
+    try:
+        narrated = await offer_narrative_mod.narrate(result, locale=req.locale,
+                                                     user_id=str(ctx.user_id) if ctx.user_id else None,
+                                                     run_id=run_id)
+        result["narrative"] = narrated.get("narrative")
+    except Exception:
+        result["narrative"] = None
     await observability.finish_run(run_id, "completed")
     return result
 

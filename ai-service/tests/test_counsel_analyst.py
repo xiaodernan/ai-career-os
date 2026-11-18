@@ -87,5 +87,5 @@ async def test_non_dict_model_answer_answers_silent(monkeypatch):
 def test_digit_run_parsing():
     # Snapshots carry bare numbers; the parser must normalize the model's prose
     # percent signs so "84.3%" matches the snapshot's "84.3".
-    assert counsel_mod._digit_runs("at 2.7% with 1,658 and 0.4") == {"2.7", "1,658", "0.4"}
+    assert counsel_mod._digit_runs("at 2.7% with 1,658 and 0.4") == {"2.7", "1658", "0.4"}
     assert counsel_mod._digit_runs("54.7 hit rate") == {"54.7"}

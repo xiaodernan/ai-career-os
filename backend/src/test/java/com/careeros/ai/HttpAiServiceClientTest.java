@@ -151,6 +151,27 @@ class HttpAiServiceClientTest {
     }
 
     @Test
+    void theComparisonCarriesTheReadersLanguageOnlyWhenAsked() {
+        // Epic 323 -- the engine writes the decision narrative in the reader's language;
+        // an absent language rides as absent, never as a blank string.
+        var zh = new com.careeros.ai.dto.OfferDtos.CompareOffersRequest(
+                "Backend Engineer", null, null, "CNY", null,
+                List.of(new com.careeros.ai.dto.OfferDtos.OfferItem(
+                        "Offer A", 300000, 0, null)),
+                "zh");
+        client.compareOffers(UUID.randomUUID(), zh);
+        assertThat(bodies.get(0)).contains("\"locale\":\"zh\"");
+
+        var without = new com.careeros.ai.dto.OfferDtos.CompareOffersRequest(
+                "Backend Engineer", null, null, "CNY", null,
+                List.of(new com.careeros.ai.dto.OfferDtos.OfferItem(
+                        "Offer A", 300000, 0, null)),
+                null);
+        client.compareOffers(UUID.randomUUID(), without);
+        assertThat(bodies.get(1)).doesNotContain("\"locale\"");
+    }
+
+    @Test
     void thePrintViewCarriesTheRowBodyAndTheReadersLanguage() {
         client.renderResume(UUID.randomUUID(), Map.of("profile", Map.of("name", "Ada")),
                 "plain body", "Main", "v2", "zh");

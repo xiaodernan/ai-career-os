@@ -63,11 +63,16 @@ describe("the growth artifact cards", () => {
   });
 
   it("draws the offer comparison with every offer's total compensation", () => {
+    // The engine emits `offers` — not `rows` — and `bestByComp`, not a nested
+    // object. A fixture that invented its own keys would keep this suite green
+    // while the product painted an empty panel.
     const html = render({
       type: "offer_comparison",
       data: {
         comparison: {
-          rows: [
+          currency: "CNY",
+          bestByComp: "Offer A",
+          offers: [
             { label: "Offer A", totalComp: 520000 },
             { label: "Offer B", totalComp: 480000 },
           ],

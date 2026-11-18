@@ -103,6 +103,7 @@ function compareBody(input: {
   seniority?: string;
   currency?: string;
   matchScore?: number;
+  locale?: string;
   offers: Array<{
     label: string;
     base: number;
@@ -115,14 +116,19 @@ function compareBody(input: {
   seniority?: string;
   currency?: string;
   matchScore?: number;
+  locale?: string;
   offers: unknown[];
 } {
+  // `locale: undefined` never reaches the wire (JSON.stringify drops it), so this
+  // stays byte-identical to a caller who never asked for a language — and the key
+  // stays visible to the body-reader instead of hidden behind a spread.
   return {
     role: input.role,
     location: input.location,
     seniority: input.seniority,
     currency: input.currency,
     matchScore: input.matchScore,
+    locale: input.locale,
     offers: input.offers.map(offerBody),
   };
 }
@@ -192,6 +198,7 @@ export function useCompareOffers() {
       seniority?: string;
       currency?: string;
       matchScore?: number;
+      locale?: string;
       offers: Array<{
         label: string;
         base: number;

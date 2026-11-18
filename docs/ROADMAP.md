@@ -6918,6 +6918,37 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **323** The offer decision gets a voice — and the papers finally read the engine's keys (2026-11-18).
+
+  (The comparison engine stayed deterministic and the ranking never moves. What shipped is
+  ONE short paragraph written about the same numbers — the spread, the cash-vs-equity trade-off,
+  which single fact should drive the decision — through the shared StateGraph
+  (draft → verify → render, `kind="offer_narrative"`, `offer_narrative`): the verify node keeps
+  only sentences whose digit-runs already exist in the comparison, NFKC-folded, `%` and thousands
+  separators normalized, exactly one per language (`locale` en/zh; English otherwise), and any
+  failure — relay down, nothing grounded, a paragraph over 480 chars — answers `narrative: null`.
+  Along the way the drift this product keeps finding surfaced at full size: **the comparison
+  surface always rendered its own empty state** — the offers page and the copilot artifact both
+  read `rows` / `best`, while the engine has always emitted `offers` / `bestByComp`. The one
+  screen built to drive a real decision painted a shrug for every comparison the install ever
+  ran, and the artifact test pinned the invented keys, so it stayed green doing it. Both
+  surfaces now read the engine for real; `OfferComparison` is retyped to the wire
+  (`currency`, `sampleSize`, `offers[]`, `bestByComp`, `notes`, `narrative`); `OfferRow` gains
+  `leverage`; new offer-page tests pin the bar chart, the best-by-comp line, the narrative
+  figure, the editor-silence case and the honest empty state (both languages).
+  The backend passes `locale` end to end (web → DTO with `@Size(max=16)` → HttpAiServiceClient
+  → `/internal/features/compare-offers` → compare route), and the two editors' prompts now
+  forbid deriving digits the snapshot does not carry (a 22900 difference the model computed
+  itself was correctly dropped by the verifier — the rule that keeps invented numbers out).
+  The digit-run discipline is now one shared module, `app/features/grounding.py`, after the
+  editorial and counsel copies diverged by a whole comma handling. Live through the relay:
+  the zh narrative kept — including the model catching the benchmark's own thin 3-sample
+  honesty — the EN narrative kept after the prompt fix; one transient relay failure in three
+  calls returned honest silence, and the provider's internal 429/5xx retry marks the limit of
+  what code should do about that. Measured: frontend **1540/1540** vitest (+3 page pins, +1
+  artifacts fixture rewrite pinned to the engine's keys), backend client 26/26 incl. the locale
+  passthrough, ai-service FULL_SUITE_PENDING, verify_gates 570/570, CI CI_PENDING.)
+
 - [x] **322** The Monday letter gets an editor — one grounded LLM paragraph about the week (2026-11-18).
 
   (The digest stays — exact, free, repeatable, and it was never in doubt. What it never
@@ -6947,12 +6978,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   26 days. Next week, verify its status and consider a follow-up."* — Chinese: *"本周看板只有
   1 个申请，仍处于 applied，且有 1 个申请已沉寂 26 天；回复率为 0.0%，下周应先核对申请状态并跟进
   这条停滞记录。"* Both cite only digits that exist in the payload; the verify node's drop-rate
-  is visible in the run trail (`trace.noteKept` / `trace.chars`). Measured: backend 61/61
+  is visible in the run trail (`trace.noteKept` / `trace.chars`). Verified live on the real install:
+  a probe account composed its letter through `POST /api/v1/digests/run` — HTTP 200 in 4.6s,
+  the filed letter carries `payload.editorial` ("The board is empty: 0 applications and 0 active
+  pipeline, with a 0.0% response rate and 0.0% offer rate. Next week, add applications so there
+  is activity to track.") written by the relay and kept by the verifier, attributed to the probe user.
+  Full-width Chinese digits (１个申请／２６天／０．０％) surfaced during the live fire and the
+  verifier now NFKC-normalizes before scanning — an honest zh note is never dropped for its
+  glyphs — and the draft runs at temperature 0.2. Measured: backend 61/61
   across the letter + api-doc suites (+2 editor/payload tests, +2 mailer heading tests, the
-  `editorial` stub pinned in the shared fake), ai-service offline suite FULL_SUITE_PENDING
-  (+5 editorial, +1 census line-shift re-pin), verify_gates GATES_PENDING, frontend letter
-  card 7/7 (+1 editor-figure test, both languages) and vitest **1535/1535**; CI CI_PENDING on
-  `PENDING_SHA`.)
+  `editorial` stub pinned in the shared fake), ai-service offline suite **2867/2867**
+  (+7 editorial incl. the NFKC pins, +1 census line-shift re-pin), verify_gates **570/570**, frontend letter
+  card 7/7 (+1 editor-figure test, both languages) and vitest **1535/1535**; CI green on
+  f6e28d3 (44225095323) and f021f4a (44229759895).)
 
 - [x] **321** Chapter One extended the first week to the interview room (2026-11-17).
 

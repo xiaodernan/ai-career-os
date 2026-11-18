@@ -66,13 +66,19 @@ public final class OfferDtos {
      * grant is annualized over its vest, so a cash-only comparison is unchanged
      * by it (12.5).
      */
+    /**
+     * The comparison route. `locale` is the reader's language and is optional: it rides
+     * to the engine, which writes the decision narrative in it (defaults to English); an
+     * absent language never fails validation and never affects the ranking.
+     */
     public record CompareOffersRequest(
             @NotBlank @Size(min = 2, max = 200) String role,
             @Size(max = 120) String location,
             @Size(max = 80) String seniority,
             @Size(min = 3, max = 3) String currency,
             @Min(0) Double matchScore,
-            @NotEmpty @Size(max = 10) List<OfferItem> offers) {
+            @NotEmpty @Size(max = 10) List<OfferItem> offers,
+            @Size(max = 16) String locale) {
     }
 
     /**
