@@ -28,7 +28,13 @@ const COMPARISON_ROWS = [
   { ...SHELF_ROW, id: "row-2", label: "云帆", base: 340000, bonus: 20000, equity: 0, totalComp: 360000, decision: "pending" as const },
 ];
 
-const letterHook = { data: null, mutate: vi.fn(), isPending: false, variables: undefined as undefined | { id: string; locale?: string } };
+const letterHook: {
+  data: { letter: string | null } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mutate: any;
+  isPending: boolean;
+  variables: undefined | { id: string; locale?: string };
+} = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
 
 vi.mock("@/lib/hooks/offers", () => ({
   useSaveOffer: () => ({ mutate: () => {}, isPending: false }),
