@@ -269,7 +269,7 @@ from this host, through Clash Verge (127.0.0.1:7897), on the user's own key,
 | same body, next 4 calls, no key | 200, then 404, 404, 404 |
 | identical body with `careeros:match`, `careeros:jd_analyze`, `careeros:memory_extract`, `careeros:counsel`, no key | 0 / 4 succeeded each (404) |
 | identical body with `careeros:editorial` | 2 / 4 succeeded in the same window |
-| same table repeated ~30 minutes later | every call answering 200 again |
+| same table re-taken half an hour later | every call answering 200 again |
 | `careeros:probe`, when the lane answers | usage carried, `prompt_tokens_details.cached_tokens = 4608 of 4840 (95.2%)` |
 | the first (non-stream) call of the day, cold prefix | `cached_tokens = 0`, 9.5s |
 
