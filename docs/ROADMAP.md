@@ -6935,10 +6935,10 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   The frontend renders the letter as a small card inside the declined row
   (`DecisionLetter`), one honest line of teaching copy above the button
   (`offers.shelfLetterHint`), both languages. Measured: live through the relay, both
-  languages kept and grounded (zh citation 360000; en citation 337100 AND 360000);
-  ai-service standalone suite +4, forward contract census +1 row,
+  languages kept and grounded (zh citation 360000, 280000, 40000, 60000; en citation 380000, 280000, 40000, 60000);
+  ai-service standalone suite +4 (`tests/test_offer_letter.py`), forward contract census +1 row,
   OfferShelfServiceTest +1 (5/5) with siblings passed alongside the offer; frontend vitest
-  **1539/1539** (+2 shelf render tests, both languages); verify_gates **575/575**; CI CI_PENDING at head.)
+  **1539/1539** (+2 shelf render tests, both languages); verify_gates **575/575**; CI success at the tip (44249597651).)
 
 - [x] **326** The relay's transient group-404 rides the retry lane — and an English role finds the Chinese corpus (2026-11-18).
 
