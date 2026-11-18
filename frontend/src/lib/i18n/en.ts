@@ -4031,6 +4031,21 @@ export const en = {
       ledgerFootnote:
         "None of this tolls for an individual; all of it asks one question in public: is this install doing what it was built to do? The ledger cannot answer for you. It can only say what the room recorded, back to the room.",
       ledgerLink: "Open the overseer's ledger",
+      assistantEyebrow: "THE ASSISTANT ON THE FRONT DOOR",
+      assistantTitle: "The one sentence you will hear first",
+      assistantIntro:
+        "The front door reads what this install already wrote down for you — applications in flight, reminders due, this week's interviews, offers pending — and says one thing you can do next, in your language. No guessing, no coaching template: the sentence cites the counts it already counted.",
+      assistantStepTitle: "Ask once, then act",
+      assistantStepBody:
+        "Tap the sparkle at the bottom-right of the dashboard whenever you want it. It answers once — one grounded next move. Ask again tomorrow and the numbers are re-read; the coach's tone can shift, the derivation cannot.",
+      assistantEvidenceTitle: "Annotated by your own rows",
+      assistantEvidenceBody:
+        "The editor reads the application count, how many are due a reminder, how many went quiet for a fortnight, how many interviews this week, how many offers are pending — and answers with a sentence that uses exactly those numbers, nothing else.",
+      assistantSilenceTitle: "Grounded or silent",
+      assistantSilenceBody:
+        "If the wire has nothing to stand on — no resume on file, no applications recorded, no reminder set — the card stays quiet. A guess dressed up as a coach is not a coach.",
+      assistantClosing:
+        "Everything on this page is read from the rows the install owns. The sentence is a read, not a prophecy; the work it names is yours.",
       colophonTitle: "The close",
       codaLive:
         "The same loop keeps a public card, measured on every push and re-measured when the numbers move — an iframe you can drop anywhere:",

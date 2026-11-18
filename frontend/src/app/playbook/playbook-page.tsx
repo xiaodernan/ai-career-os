@@ -579,6 +579,31 @@ export default function PlaybookPage() {
             </Button>
           </div>
         </section>
+        {/* The assistant's first step — the one grounded sentence (Epic 329/331) */}
+        <section id="assistant" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.assistantEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">18</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.assistantTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.assistantIntro")}</p>
+          <ul className="grid gap-3 sm:grid-cols-3">
+            {[
+              { title: t("playbook.assistantStepTitle"), body: t("playbook.assistantStepBody") },
+              { title: t("playbook.assistantEvidenceTitle"), body: t("playbook.assistantEvidenceBody") },
+              { title: t("playbook.assistantSilenceTitle"), body: t("playbook.assistantSilenceBody") },
+            ].map((item, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {item.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{item.body}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.assistantClosing")}</p>
+        </section>
+
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/90">{t("playbook.codaBody")}</p>
