@@ -18,6 +18,13 @@ class ProviderError(Exception):
     pass
 
 
+# This relay's 404 message for "no channel in the account group can serve this
+# model right now" — measured 2026-11-18 as bursty over hours (the identical
+# request answered 200 four times, then 404 nine times, then 200 again). It is
+# transient, and terminal handling of it poisons every retry-free path.
+TRANSIENT_GROUP_404 = "not supported by any configured account"
+
+
 def _to_openai_messages(messages: list[LLMMessage]) -> list[dict]:
     out = []
     for m in messages:
@@ -99,7 +106,8 @@ class OpenAICompatProvider:
                     headers=self._headers(),
                     timeout=120.0,
                 )
-                if r.status_code == 429 or r.status_code >= 500:
+                if r.status_code == 429 or r.status_code >= 500 or (
+                        r.status_code == 404 and TRANSIENT_GROUP_404 in (r.text or "")):
                     last_exc = ProviderError(f"upstream {r.status_code}: {r.text[:300]}")
                     await asyncio_sleep(1.5 * (attempt + 1))
                     continue
@@ -148,43 +156,50 @@ class OpenAICompatProvider:
         # handed over on the closing delta, so a streamed step can still call a tool.
         calls: dict[int, ToolCall] = {}
         arg_fragments: dict[int, list[str]] = {}
-        async with self.client.stream(
-            "POST", f"{self.base}/chat/completions", json=payload,
-            headers=self._headers(), timeout=180.0,
-        ) as r:
-            if r.status_code >= 400:
-                body = (await r.aread()).decode(errors="replace")
-                raise ProviderError(f"LLM stream error {r.status_code}: {body[:400]}")
-            async for line in r.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                chunk = line[5:].strip()
-                if chunk == "[DONE]":
-                    break
-                try:
-                    data = json.loads(chunk)
-                except json.JSONDecodeError:
-                    continue
-                if data.get("usage"):
-                    u = data["usage"]
-                    final_usage = Usage(
-                        u.get("prompt_tokens", 0), u.get("completion_tokens", 0),
-                        (u.get("prompt_tokens_details") or {}).get("cached_tokens", 0))
-                delta = (data.get("choices") or [{}])[0].get("delta") or {}
-                text = delta.get("content") or ""
-                if text:
-                    yield StreamDelta(text=text)
-                for fragment in delta.get("tool_calls") or []:
-                    index = int(fragment.get("index") or 0)
-                    function = fragment.get("function") or {}
-                    call = calls.setdefault(index, ToolCall(
-                        id=fragment.get("id") or f"call_{index}", name="", arguments={}))
-                    if fragment.get("id"):
-                        call.id = fragment["id"]
-                    if function.get("name"):
-                        call.name = function["name"]
-                    if function.get("arguments"):
-                        arg_fragments.setdefault(index, []).append(function["arguments"])
+        for attempt in range(self.max_retries + 1):
+            async with self.client.stream(
+                "POST", f"{self.base}/chat/completions", json=payload,
+                headers=self._headers(), timeout=180.0,
+            ) as r:
+                if r.status_code >= 400:
+                    body = (await r.aread()).decode(errors="replace")
+                    if r.status_code == 404 and TRANSIENT_GROUP_404 in body:
+                        # The same transient group-404 as _post: back off and retry
+                        # the whole establishment, nothing consumed yet.
+                        await asyncio_sleep(1.5 * (attempt + 1))
+                        continue
+                    raise ProviderError(f"LLM stream error {r.status_code}: {body[:400]}")
+                async for line in r.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    chunk = line[5:].strip()
+                    if chunk == "[DONE]":
+                        break
+                    try:
+                        data = json.loads(chunk)
+                    except json.JSONDecodeError:
+                        continue
+                    if data.get("usage"):
+                        u = data["usage"]
+                        final_usage = Usage(
+                            u.get("prompt_tokens", 0), u.get("completion_tokens", 0),
+                            (u.get("prompt_tokens_details") or {}).get("cached_tokens", 0))
+                    delta = (data.get("choices") or [{}])[0].get("delta") or {}
+                    text = delta.get("content") or ""
+                    if text:
+                        yield StreamDelta(text=text)
+                    for fragment in delta.get("tool_calls") or []:
+                        index = int(fragment.get("index") or 0)
+                        function = fragment.get("function") or {}
+                        call = calls.setdefault(index, ToolCall(
+                            id=fragment.get("id") or f"call_{index}", name="", arguments={}))
+                        if fragment.get("id"):
+                            call.id = fragment["id"]
+                        if function.get("name"):
+                            call.name = function["name"]
+                        if function.get("arguments"):
+                            arg_fragments.setdefault(index, []).append(function["arguments"])
+                break
         for index, call in calls.items():
             raw = "".join(arg_fragments.get(index, []))
             call.arguments = _safe_json(raw) if raw else {}

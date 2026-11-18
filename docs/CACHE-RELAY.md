@@ -253,3 +253,58 @@ relay, 2026-11-16T12:22Z), logged in the install's own `ai_usage_events`:
 
 The warm `memory_extract` did not call the model at all — the deterministic
 replay path served it. The warm `step_1` paid for exactly 86 fresh input tokens.
+
+---
+
+## Addendum 3 — 2026-11-18: the lane churn measured end to end, and the one client fix that landed
+
+The question came back (again) that the relay "must work with Codex at 90%, so the
+calling method must be wrong". This sitting, every figure below was re-taken live,
+from this host, through Clash Verge (127.0.0.1:7897), on the user's own key,
+`gpt-6.1-terra`. Nothing is asserted from previous sessions.
+
+| measurement | result |
+|---|---|
+| same `gpt-6.1-terra` body, 4 consecutive calls (with `prompt_cache_key`) | 4 × HTTP 200 |
+| same body, next 4 calls, no key | 200, then 404, 404, 404 |
+| identical body with `careeros:match`, `careeros:jd_analyze`, `careeros:memory_extract`, `careeros:counsel`, no key | 0 / 4 succeeded each (404) |
+| identical body with `careeros:editorial` | 2 / 4 succeeded in the same window |
+| same table repeated ~30 minutes later | every call answering 200 again |
+| `careeros:probe`, when the lane answers | usage carried, `prompt_tokens_details.cached_tokens = 4608 of 4840 (95.2%)` |
+| the first (non-stream) call of the day, cold prefix | `cached_tokens = 0`, 9.5s |
+
+The gpt-6.1-terra account group is not a stable resource: it drains and refills
+on the half-hour, for reasons on the vendor side (the same pattern Addendum 2
+recorded the day before). The `prompt_cache_key` routing ties the stickiness
+to the account group's per-channel capacity, not to anything the client controls:
+all the client can do honestly is (a) keep the preamble byte-stable (it is —
+95.2% when the lane answers), (b) re-try the transient, (c) never fake the number.
+
+**The one client-side fix that landed (Epic 326):** the transient group-404
+(`not supported by any configured account in this group`) now rides the same retry
+lane as 429 / 5xx — backed off, bounded by the provider's `max_retries=2`
+(three attempts total), pinned by a message-marker constant so a relay wording
+rotation cannot silently degrade it to a permanent refusal, and kept for the
+establishment of streams too. A genuinely unknown model's 404 still raises on
+the first call. Four new offline tests pin the contract
+(`test_the_transient_404_rides_the_retry_lane.py`).
+
+**About "is the calling method wrong", answered with the wire values:**
+
+- Streaming is not a cache requirement. The endpoint reports `cached_tokens` on
+  both shapes when the lane answers (this addendum's editor/compare calls all
+  rode the non-stream path and produced grounded notes with visible hit rates).
+- Inflating prompts toward 5–9万 tokens would be theatre, not engineering: our
+  payloads carry what the call needs. The 50k+ inputs Codex shows are
+  conversational workspace; applicants' digests are not, and padding them buys
+  nothing but billable tokens.
+- Parallel sessions printing `cached=0`: measured effect unchanged; the lane's
+  churn, not session concurrency, was the dominating variable today. The
+  `prompt_cache_key` routing is exactly the per-workload shard the relay wants;
+  the group just does not hold the model on some minutes.
+
+**The honest state either way:** the product survives any lane outage by design —
+the StateGraph verify node answers `note: null`, the letter still ships without a
+fabricated paragraph, the digests answer without the editor's voice instead of
+inventing it. Nothing in this addendum trades that for availability.
+

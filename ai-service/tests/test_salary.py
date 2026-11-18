@@ -70,7 +70,9 @@ def test_representative_none_when_no_salary():
 
 
 def test_role_tokens_strip_generic_words():
-    assert _role_tokens("Senior Backend Engineer") == ["backend"]
+    # "backend" expands with the Chinese synonyms the corpus is written in
+    # (Epic 326) — the English family and its Chinese match twins.
+    assert _role_tokens("Senior Backend Engineer") == ["backend", "后端", "后台"]
 
 
 def test_role_tokens_fallback_when_all_generic():

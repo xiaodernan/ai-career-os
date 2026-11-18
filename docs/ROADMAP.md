@@ -6918,6 +6918,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **326** The relay's transient group-404 rides the retry lane — and an English role finds the Chinese corpus (2026-11-18).
+
+  (The user asked, again, why the relay answers our probes with cached=0 and "not streaming"
+  while Codex holds ~90% on the same key. This sitting re-took every measurement live, through
+  Clash Verge (127.0.0.1:7897), on the aizzz.xyz relay, `gpt-6.1-terra`: the identical body
+  answered 200 four times in a row, then 404 nine times in a row, then 200 again — the exact
+  state Addendum 2 of docs/CACHE-RELAY.md also logged for the day before. Time-bounded lanes,
+  not session concurrency, dominate the cache-trust story; when the lane answers, our byte-stable
+  preamble caches at 4608/4840 (~95%). Two client-side fixes followed. **Transient group-404
+  rides the retry lane** (`openai_compat.py`): the `not supported by any configured account in
+  this group` marker — pinned as `TRANSIENT_GROUP_404` after a transient-causing relay wording
+  — is retried with backoff for the establishment of both `_post` calls and streams, bounded by
+  the provider's `max_retries=2` (three attempts), while a genuinely unknown model's 404 still
+  raises on the first call. Four offline tests pin the contract. **The corpus speaks both
+  languages** (`salary.py`): `_role_tokens` now expands English family words to the Chinese
+  titles this corpus is written in (`backend` → 后端/后台， `machine learning` → 算法， `intern`
+  → 实习生 …), match-side only — the corpus is never rewritten, an English benchmark against
+  Chinese data returns real verdicts (live probe: `role="Backend Engineer"` → sampleSize **29**,
+  both offers `below_market`, grounded zh narrative), and a genuinely-uncovered role still answers
+  zero rows. One pre-existing token-pin test updated to the expanded contract.)
+
 - [x] **325** The artifacts court — the export and the import prove each other (2026-11-18).
 
   (Epic 323 found one dead artifact by accident — the copilot's offer-comparison card read

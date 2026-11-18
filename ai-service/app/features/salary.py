@@ -19,6 +19,45 @@ from app.core import db
 
 # Role words that carry no signal on their own -- stripping them keeps "Senior
 # Backend Engineer" from matching every posting whose title contains "engineer".
+# English family words mapped onto the Chinese title vocabulary this corpus is
+# written in. The corpus is Chinese-titled; a benchmark asked in English must
+# not find zero rows where the Chinese twin would find dozens ("Backend
+# Engineer" -> 后端). Token expansion only ADDS alternatives — the corpus is
+# never rewritten, and zero rows still honestly means zero rows.
+EN_TO_ZH_ROLE_TOKENS = {
+    "backend": ["后端", "后台"],
+    "frontend": ["前端"],
+    "fullstack": ["全栈"],
+    "devops": ["运维"],
+    "sre": ["运维"],
+    "cloud": ["云"],
+    "platform": ["平台"],
+    "infra": ["基础架构", "infra"],
+    "data": ["数据"],
+    "algorithm": ["算法"],
+    "ai": ["算法", "智能"],
+    "ml": ["算法"],
+    "nlp": ["自然语言", "nlp"],
+    "cv": ["图像", "视觉"],
+    "search": ["搜索"],
+    "recommendation": ["推荐"],
+    "qa": ["测试"],
+    "test": ["测试"],
+    "intern": ["实习生"],
+    "graduate": ["校招"],
+    "campus": ["校招"],
+}
+
+# Multi-word phrases -> the Chinese family they name. Handled separately because
+# token splitting shreds them into generic words ("machine", "learning").
+PHRASE_TO_ZH = {
+    "machine learning": "算法",
+    "deep learning": "算法",
+    "computer vision": "图像",
+    "large language model": "大模型",
+    "large language": "大模型",
+}
+
 GENERIC_ROLE_TOKENS = {
     "engineer", "engineers", "developer", "developers", "programmer",
     "senior", "junior", "staff", "lead", "principal", "head", "manager",
@@ -87,12 +126,25 @@ def summarize(values: list[float]) -> dict:
 
 def _role_tokens(role: str) -> list[str]:
     """Significant role words. Falls back to *all* tokens (then the raw string) so a
-    role made only of generic words still filters by something rather than nothing."""
-    tokens = [t for t in re.split(r"[^0-9A-Za-z\u4e00-\u9fff]+", (role or "").lower()) if t]
+    role made only of generic words still filters by something rather than nothing.
+
+    English words are expanded with the Chinese synonyms used by the corpus titles
+    ("Backend Engineer" also matches 后端), because the corpus is Chinese-titled and
+    an English-typed role must not silently find zero rows. Expansion only adds
+    alternatives — nothing is rewritten, and zero rows still honestly means zero rows.
+    """
+    low = (role or "").lower()
+    tokens = [t for t in re.split(r"[^0-9A-Za-z\u4e00-\u9fff]+", low) if t]
     significant = [t for t in tokens if len(t) >= 3 and t not in GENERIC_ROLE_TOKENS]
-    if significant:
-        return significant
-    return [t for t in tokens if len(t) >= 2] or tokens
+    if not significant:
+        significant = [t for t in tokens if len(t) >= 2] or tokens
+    expanded = list(significant)
+    for phrase, target in PHRASE_TO_ZH.items():
+        if phrase in low:
+            expanded.append(target)
+    for t in significant:
+        expanded.extend(EN_TO_ZH_ROLE_TOKENS.get(t, []))
+    return list(dict.fromkeys(expanded))
 
 
 def filter_samples(samples: list[dict], *, role: str = "", location: str | None = None,
