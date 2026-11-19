@@ -58,7 +58,7 @@ jobs:
       - name: Security advisories (pip-audit)
         run: |
           py -3.11 -m pip install --user pip-audit
-          py -3.11 -m pip-audit -r requirements.txt
+          py -3.11 -m pip_audit -r requirements.txt
       - name: Test
         run: py -3.11 -m pytest -q
 
@@ -180,7 +180,7 @@ jobs:
           ref: main
           fetch-depth: 0
       - name: Regenerate the card from measured truth
-        run: python scripts/showcase-sync.py
+        run: py -3.11 scripts/showcase-sync.py
       - name: Commit it back, only when the numbers moved
         run: |
           git config --global user.name "github-actions[bot]"
@@ -259,7 +259,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: python -m app.ops.embed_jobs --force
+        run: py -3.11 -m app.ops.embed_jobs --force
       - name: Build vector index (types column + HNSW)
         id: index
         run: Get-Content ai-service/ops/vector_index.sql | docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -f -
@@ -271,7 +271,7 @@ jobs:
           EMBEDDING_PROVIDER: hash
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: python -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
+        run: py -3.11 -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
       - name: RAG + agent eval harnesses
         id: eval
         working-directory: ai-service
@@ -280,14 +280,14 @@ jobs:
           EMBEDDING_PROVIDER: hash
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: python -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
+        run: py -3.11 -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
       - name: The portable export builds against the real schema
         id: export
         working-directory: ai-service
         env:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: python -m app.ops.check_export
+        run: py -3.11 -m app.ops.check_export
       - name: Record the night in the deployment's history
         if: always()
         working-directory: ai-service
@@ -298,7 +298,7 @@ jobs:
           $startedAt = Get-Content $env:RUNNER_TEMP/night-start.txt
           $commit = "${{ github.sha }}"
           $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          python -m app.ops.nightly_report --started-at "$startedAt" --commit "$commit" --run-url "$runUrl" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
+          py -3.11 -m app.ops.nightly_report --started-at "$startedAt" --commit "$commit" --run-url "$runUrl" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
       - name: Tear down infra
         if: always()
         run: docker compose down -v
