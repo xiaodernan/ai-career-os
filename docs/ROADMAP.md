@@ -6918,6 +6918,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **336** The thank-you letter sent after the interview (2026-11-19).
+
+  (`POST /api/v1/interview/sessions/{id}/thank-you-letter` — one letter from
+  the interview the reader just finished, addressed to the people who ran the room. The frontend
+  letter goes on the interview report page right under `<DebriefCard/>`, ask-first with a teaching
+  Hint, nothing on mount, nothing invented when nothing survived verification. Grounded in the
+  session's own turns — role and company straight from `interview_sessions`, up to eight most recent
+  turns from `interview_turns`. Sibling session touches `HttpAiServiceClient` to talk to
+  `/internal/features/thank-you-letter`; turns are forwarded as `{interview: {turns, role, company}}`;
+  the StateGraph in `thank_you_letter.py` rides draft → verify → render exactly like the offer
+  letters: every digit-run in the output must already appear in the snapshot, `letter: null`
+  when nothing grounded survives. `InterviewService.thankYouLetter(...)` reads the caller's
+  own session (another account's id is the same 404) and returns `{letter, mailId?}`. Frontend:
+  `useInterviewThankYouLetter` mirrors the offer-letter hook; `InterviewThankYouLetter` component
+  next to DebriefCard in the same screen; Hint teaching. Census +1, i18n both langs. Live probe:
+  the letter sent against the probe's seeded sessions satisfies the wire shape; the offer-letter
+  trio and the this letter all run through the same StateGraph shape pinned by
+  `test_the_trace_pin` and the census gates (`test_failed_mutation_is_announced`,
+  `test_response_shape_contract`).)
+
 - [x] **335** The acceptance playbook — the offer that was just signed becomes a first quarter (2026-11-19).
 
   (The shelf holds the offer they just signed; there is rarely anywhere else to go from here.
