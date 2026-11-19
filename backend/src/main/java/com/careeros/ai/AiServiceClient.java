@@ -107,6 +107,15 @@ public interface AiServiceClient {
     Map<String, Object> interviewFinalize(UUID sessionId, List<Map<String, Object>> turns, UUID userId);
 
     /**
+     * Epic 336 — the thank-you letter the reader sends after an interview.
+     * The payload carries the session's role and company plus up to eight of the most recent
+     * turns; the ai-service drafts one letter grounded in those turns. Same discipline —
+     * silence (`letter: null`) when nothing survives.
+     * `locale` is the reader's language.
+     */
+    Map<String, Object> interviewThankYouLetter(UUID sessionId, Map<String, Object> turns, UUID userId, String locale);
+
+    /**
      * 19.6 -- whether this deployment can hear an answer and speak a question.
      * Answers {@code {provider, stt, tts}}; both flags are false when no speech
      * provider is configured, which is what sends the page to the browser's own

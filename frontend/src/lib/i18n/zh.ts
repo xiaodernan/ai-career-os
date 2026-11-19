@@ -3357,6 +3357,15 @@ export const zh = {
         reset: "清空复盘",
         resetDone: "复盘已清空。这场面试的记录不受影响。",
       },
+      thankYouLetter: {
+        eyebrow: "面试之后你发出去的那一封",
+        title: "感谢信",
+        hint: "对方给你时间、给你注意力。认真回一封——三句话里请有你记住了什么、有你期望的下一步。",
+        button: "写这封感谢信",
+        copy: "复制",
+        copied: "已复制",
+        silent: "没什么站得住可写的——面试本身就是那封信。",
+      },
     },
     // Jobs
     jobs: {
@@ -4157,6 +4166,7 @@ export const zh = {
       openingQuestion: "没能取到开场问题。",
       answerEvaluate: "没能评估这个回答。",
       interviewFinalize: "没能收尾这场面试。",
+      interviewThankYouLetter: "没能写这封感谢信。",
       conversationStart: "没能开始一段对话。",
       conversationRename: "没能重命名这段对话。",
       conversationDelete: "没能删除这段对话。",

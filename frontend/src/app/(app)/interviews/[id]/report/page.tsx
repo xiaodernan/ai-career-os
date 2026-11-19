@@ -36,6 +36,7 @@ import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { useCreateInterviewSession, useFinalizeInterview } from "@/lib/hooks/actions";
+import { InterviewThankYouLetter } from "@/components/interviews/interview-thank-you-letter";
 import { useInterviewSession, useInterviewSessions } from "@/lib/hooks/resources";
 import { cardPractice, previousRehearsal, scoreDelta } from "@/lib/interview-practice";
 import { normalizeInterviewReport, str, type InterviewTrajectoryPoint } from "@/lib/api/normalize";
@@ -295,6 +296,7 @@ export default function InterviewReportPage() {
       {/* Your own words first, then the evaluator's verdict — the reader writes
           their debrief before reading the dimensions. */}
       <DebriefCard sessionId={data.id} />
+      <InterviewThankYouLetter sessionId={data.id} />
 
       {/* Dimensions */}
       {dims.length > 0 && (

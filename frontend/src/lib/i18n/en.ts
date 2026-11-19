@@ -3640,6 +3640,15 @@ export const en = {
         reset: "Clear the debrief",
         resetDone: "The debrief is cleared. The session record is untouched.",
       },
+      thankYouLetter: {
+        eyebrow: "The letter you send after the room",
+        title: "The thank-you letter",
+        hint: "They gave you their time and their attention. Write back — one short letter in your own voice, with one honest thing that landed and the next step you expect.",
+        button: "Write the thank-you letter",
+        copy: "Copy",
+        copied: "Copied",
+        silent: "Nothing grounded enough to send — the interview itself is the letter.",
+      },
     },
     // Jobs
     jobs: {
@@ -4449,6 +4458,7 @@ export const en = {
       openingQuestion: "Couldn't fetch the opening question.",
       answerEvaluate: "Couldn't evaluate that answer.",
       interviewFinalize: "Couldn't finalize the interview.",
+      interviewThankYouLetter: "Couldn't write the thank-you letter.",
       conversationStart: "Couldn't start a conversation.",
       conversationRename: "Couldn't rename the conversation.",
       conversationDelete: "Couldn't delete the conversation.",

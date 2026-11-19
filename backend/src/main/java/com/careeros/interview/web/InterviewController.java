@@ -10,6 +10,8 @@ import com.careeros.interview.dto.InterviewDtos.FinalizeResponse;
 import com.careeros.interview.dto.InterviewDtos.OpeningResponse;
 import com.careeros.interview.dto.InterviewDtos.SessionDetail;
 import com.careeros.interview.dto.InterviewDtos.SessionItem;
+import com.careeros.interview.dto.InterviewDtos.ThankYouLetterRequest;
+import com.careeros.interview.dto.InterviewDtos.ThankYouLetterResponse;
 import com.careeros.interview.service.InterviewService;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -83,5 +85,14 @@ public class InterviewController {
     @PostMapping("/{id}/finalize")
     public FinalizeResponse finalize(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return interviews.finalize(user.id(), id);
+    }
+
+    /** Epic 336 — the thank-you letter the reader sends after the interview. */
+    @PostMapping("/{id}/thank-you-letter")
+    public ThankYouLetterResponse thankYouLetter(@CurrentUser AuthUser user,
+                                                  @PathVariable UUID id,
+                                                  @RequestBody(required = false) ThankYouLetterRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new ThankYouLetterResponse(interviews.thankYouLetter(user.id(), id, locale));
     }
 }

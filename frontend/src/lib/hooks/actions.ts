@@ -943,6 +943,20 @@ export function useFinalizeInterview(sessionId: string) {
   });
 }
 
+/** Epic 336 — the thank-you letter the reader sends after the interview. */
+export function useInterviewThankYouLetter(sessionId: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const raw = await api.request<unknown>(endpoints.interviewThankYouLetter(sessionId), {
+        method: "POST",
+        body: { locale: undefined },
+      });
+      return pick(raw, "letter") ?? null;
+    },
+    onError: fail("failures.interviewThankYouLetter"),
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Copilot                                                             */
 /* ------------------------------------------------------------------ */

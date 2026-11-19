@@ -116,6 +116,8 @@ export const endpoints = {
   interviewOpening: (id: string) => `/interview/sessions/${seg(id)}/opening`,
   interviewAnswer: (id: string) => `/interview/sessions/${seg(id)}/answer`,
   interviewFinalize: (id: string) => `/interview/sessions/${seg(id)}/finalize`,
+  /** Epic 336 — the thank-you letter the reader sends after the interview. */
+  interviewThankYouLetter: (id: string) => `/interview/sessions/${seg(id)}/thank-you-letter`,
   /** 19.6 -- whether this deployment has a speech provider at all; the page's fallback gate. */
   interviewVoice: "/interview/voice",
   interviewVoiceTranscribe: (id: string) => `/interview/sessions/${seg(id)}/voice/transcribe`,

@@ -15,6 +15,7 @@ from app.features import reply_decode as reply_decode_mod
 from app.features import counter_letter as counter_letter_mod
 from app.features import follow_up_letter as follow_up_letter_mod
 from app.features import acceptance_playbook as acceptance_playbook_mod
+from app.features import thank_you_letter as thank_you_letter_mod
 from app.features import offer_narrative as offer_narrative_mod
 from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
@@ -943,6 +944,31 @@ async def decode_reply_ep(req: ReplyDecodeReq, ctx: Ctx = Depends(require_intern
     result = await reply_decode_mod.decode_reply(payload, locale=req.locale,
                                                  user_id=str(ctx.user_id) if ctx.user_id else None,
                                                  run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class ThankYouLetterReq(BaseModel):
+    """Epic 336 -- the thank-you letter the reader sends after an interview.
+
+    `turns` carries the last few turns of the interview (trimmed server-side); the letter keeps
+    only digits already in the snapshot (role, company, turns); locale (en/zh) picks the language."""
+    turns: dict
+    locale: str | None = None
+
+
+@router.post("/thank-you-letter")
+async def thank_you_letter_ep(req: ThankYouLetterReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 336 -- the thank-you letter about an interview.
+
+    Optional by contract: an ungrounded or silent relay answers `letter: null`; the card renders
+    nothing rather than a generic form letter with promises nobody made.
+    """
+    payload = req.turns if isinstance(req.turns, dict) else {}
+    run_id = await _run(ctx, "interview", "thank_you_letter")
+    result = await thank_you_letter_mod.thank_you_letter(payload, locale=req.locale,
+                                                         user_id=str(ctx.user_id) if ctx.user_id else None,
+                                                         run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
 

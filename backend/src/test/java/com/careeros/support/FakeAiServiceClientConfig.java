@@ -313,6 +313,12 @@ public class FakeAiServiceClientConfig {
         }
 
         @Override
+        public Map<String, Object> interviewThankYouLetter(UUID sessionId, Map<String, Object> turns, UUID userId, String locale) {
+            record("interviewThankYouLetter");
+            return map("letter", "Hi — thank you for the interview. Best of luck to you; we'll be in touch.");
+        }
+
+        @Override
         public Map<String, Object> voiceState(UUID userId) {
             record("voiceState");
             return map("provider", voiceProvider, "stt", true, "tts", true);

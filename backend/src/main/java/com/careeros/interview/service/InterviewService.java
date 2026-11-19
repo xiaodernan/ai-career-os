@@ -263,6 +263,36 @@ public class InterviewService {
         return tx.execute(status -> persistFinalization(sessionId, userId, session, evaluation));
     }
 
+    /**
+     * Epic 336 — the thank-you letter the reader sends after the interview.
+     * The payload carries up to eight of the most recent turns (enough for the verifier to
+     * accept honest claims and reject invented ones) and the session's own role and company —
+     * the candidate may not have a real company recorded, and "this conversation" is better
+     * than a fabricated one. Same discipline as every other bridge: another account's session
+     * id is the same 404; another account's session id is the same 404; another account's
+     * session id is the same 404.
+     */
+    public String thankYouLetter(UUID userId, UUID sessionId, String locale) {
+        InterviewSession session = requireReadOnly(userId, sessionId);
+        List<InterviewTurn> existing = turns.findBySessionIdOrderBySeqAsc(sessionId);
+        if (existing.isEmpty()) {
+            throw new ApiException(ApiErrorCode.INTERVIEW_NOTHING_TO_FINALIZE, "Nothing to thank");
+        }
+        List<InterviewTurn> window = existing.size() > 8 ? existing.subList(existing.size() - 8, existing.size()) : existing;
+
+        Map<String, Object> turnsPayload = new java.util.LinkedHashMap<>();
+        turnsPayload.put("role", session.getPositionTitle());
+        turnsPayload.put("company", session.getCompanyName());
+        turnsPayload.put("turns", window.stream().map(InterviewService::toAiTurn).toList());
+
+        Map<String, Object> answer = ai.interviewThankYouLetter(sessionId, turnsPayload, userId, locale);
+        if (answer == null) {
+            return null;
+        }
+        String letter = Json.strOr(answer, "letter", "").trim();
+        return letter.isEmpty() ? null : letter;
+    }
+
     @Transactional
     public FinalizeResponse persistFinalization(UUID sessionId, UUID userId, InterviewSession session,
                                                 Map<String, Object> evaluation) {

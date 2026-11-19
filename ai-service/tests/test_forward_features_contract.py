@@ -92,6 +92,8 @@ FORWARD = {
     "/internal/features/follow-up-letter": ("FollowUpLetterReq", {"offer"}),
     # Epic 335 -- the reader's first-90-days playbook. `offer` required.
     "/internal/features/acceptance-playbook": ("AcceptancePlaybookReq", {"offer"}),
+    # Epic 336 -- the thank-you letter after an interview. `turns` required.
+    "/internal/features/thank-you-letter": ("ThankYouLetterReq", {"turns"}),
 }
 
 

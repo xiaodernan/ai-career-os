@@ -66,6 +66,12 @@ public final class InterviewDtos {
     public record FinalizeResponse(EvaluationItem evaluation, SessionItem session) {
     }
 
+    /** The thank-you letter's request (Epic 336). `locale` en or zh; English otherwise. */
+    public record ThankYouLetterRequest(@Size(max = 8) String locale) {}
+
+    /** The thank-you letter (Epic 336). `letter` is null when nothing grounded survived. */
+    public record ThankYouLetterResponse(String letter) {}
+
     /**
      * 19.6 -- one recorded answer on its way to the speech provider. The audio
      * is base64 because it crosses the ai-service bridge as JSON; the cap is

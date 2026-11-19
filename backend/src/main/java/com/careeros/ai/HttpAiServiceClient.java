@@ -324,6 +324,16 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> interviewThankYouLetter(UUID sessionId, Map<String, Object> turns, UUID userId, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("turns", turns != null ? turns : Map.of());
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/thank-you-letter", userId, body);
+    }
+
+    @Override
     public Map<String, Object> voiceState(UUID userId) {
         return get("/internal/voice/status", userId);
     }
