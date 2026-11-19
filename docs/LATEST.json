@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-19T02:59:30.485090Z",
+  "generated_at": "2026-11-19T03:18:22.078948Z",
   "branch": "main",
-  "head": "b0bba51",
-  "total_commits": 1651,
+  "head": "5e6aaba",
+  "total_commits": 1653,
   "milestone": "Epic 335",
   "milestone_full": "the ledger of done epics (through 487 items), closed at Epic 335 — The acceptance playbook",
   "pushed_at": "2026-11-19",
