@@ -33,8 +33,13 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # Pushes queue instead of cancelling: a project that lands three epics a day
+  # used to starve every verification run behind the newest push, so no commit
+  # from 06:27Z through 08:58Z ever reported a verdict. PRs keep the cancel
+  # semantics (stale-heads-fast feedback); the nightly cron keeps it too (two
+  # nightlies on one ref must not stack).
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
   contents: read

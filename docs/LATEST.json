@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-19T05:58:00.358560Z",
+  "generated_at": "2026-11-19T09:01:31.702896Z",
   "branch": "main",
-  "head": "169ea25",
-  "total_commits": 1661,
-  "milestone": "Epic 335",
-  "milestone_full": "the ledger of done epics (through 487 items), closed at Epic 335 — The acceptance playbook",
+  "head": "91fd243",
+  "total_commits": 1672,
+  "milestone": "Epic 338",
+  "milestone_full": "the ledger of done epics (through 490 items), closed at Epic 338 — The warm lane",
   "pushed_at": "2026-11-19",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1535+",
-  "test_files": 193,
-  "work_items": 487,
-  "epics": 201,
+  "test_files": 194,
+  "work_items": 490,
+  "epics": 204,
   "feature_surface": [
+    "Epic 338 — The warm lane",
+    "Epic 337 — The negotiation prep one-pager",
+    "Epic 336 — The thank-you letter sent after the interview (2026-11-19)",
     "Epic 335 — The acceptance playbook",
     "Epic 334 — The stalled-offer check-in letter",
-    "Epic 333 — The sendable counter-offer letter",
-    "Epic 332 — The analyst's read of one letter",
-    "Epic 331 — The assistant's one proactive first step",
-    "Epic 330 — One wire, one honest number"
+    "Epic 333 — The sendable counter-offer letter"
   ]
 }
