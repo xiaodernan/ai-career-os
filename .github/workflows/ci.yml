@@ -113,18 +113,7 @@ jobs:
           .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
       - name: Spring Cloud contract gates
         run: |
-          .\.venv\Scripts\python.exe -m pytest -q \
-            tests/test_the_spring_cloud_actuator_surface_contract.py \
-            tests/test_the_config_client_stays_opt_in.py \
-            tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py \
-            tests/test_the_spring_cloud_services_publish_latency_histograms.py \
-            tests/test_the_spring_cloud_services_publish_build_sha_in_info.py \
-            tests/test_the_spring_cloud_readiness_runbook_exists.py \
-            tests/test_the_topology_page_reads_the_fleet_the_backend_writes.py \
-            tests/test_the_resilience_page_reads_the_breakers_the_backend_writes.py \
-            tests/test_the_load_balancer_health_check_stays_on.py \
-            tests/test_the_compose_files_parse.py \
-            tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
+          .\.venv\Scripts\python.exe -m pytest -q tests/test_the_spring_cloud_actuator_surface_contract.py tests/test_the_config_client_stays_opt_in.py tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py tests/test_the_spring_cloud_services_publish_latency_histograms.py tests/test_the_spring_cloud_services_publish_build_sha_in_info.py tests/test_the_spring_cloud_readiness_runbook_exists.py tests/test_the_topology_page_reads_the_fleet_the_backend_writes.py tests/test_the_resilience_page_reads_the_breakers_the_backend_writes.py tests/test_the_load_balancer_health_check_stays_on.py tests/test_the_compose_files_parse.py tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
 
   springcloud-java:
     name: springcloud-java (gateway/discovery/config-server unit tests)
