@@ -4096,6 +4096,21 @@ export const en = {
         "If the analyst has nothing to stand behind — the relay is down, the letter is shorter than a sentence, or a digit is invented somewhere — the card says so in one honest line. The letter itself is the record; a parse is a convenience, never a verdict.",
       decodeClosing:
         "The reader who keeps their own letters close holds their own negotiations — the analyst only hands you what is already in the letter.",
+      lettersEyebrow: "THE THREE LETTERS YOU WILL SEND",
+      lettersTitle: "The offer you keep, and the one you sign",
+      lettersIntro:
+        "Every row on the shelf is the start of a signed deal or the end of one. The three letters the product writes are strictly about your own numbers — never a negotiation with the market, never a deadline on the table the reader does not carry.",
+      lettersCounterTitle: "Counter: open the number",
+      lettersCounterBody:
+        "One email, addressed to the company, asking to align the package with what the offer already tells us — base, bonus, equity, deadline. Sibling cards appear only as a band, never as leverage; every digit-run in the letter already appears on your own shelf. If nothing survives the verifier, the letter does not write itself; the card stays quiet.",
+      lettersFollowUpTitle: "Follow-up: open the silence",
+      lettersFollowUpBody:
+        "When the reply does not arrive, one polite check-in: one concrete ask, one date, no drama, no ultimatum. Every digit-run survives only if the offer already carried it. The reader who stays silent is not being ignored; the letter is the follow-through.",
+      lettersAfterTitle: "Aftercare: the first 90 days",
+      lettersAfterBody:
+        "Once the row flips to accepted, one aftercare document the reader keeps: day 1, day 30, day 60, day 90, framed from the offer you just signed. Every number, deadline and headline is drawn from the same snapshot; nothing invented, nothing missing.",
+      lettersClosing:
+        "The shelf holds the facts; the letters only ever reuse them. A reader who trusts their own numbers and sends honest letters keeps both the deal and the dignity.",
       colophonTitle: "The close",
       codaLive:
         "The same loop keeps a public card, measured on every push and re-measured when the numbers move — an iframe you can drop anywhere:",

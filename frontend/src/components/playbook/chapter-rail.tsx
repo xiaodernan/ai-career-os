@@ -26,6 +26,7 @@ const CHAPTERS = [
   { href: "#afterward", titleKey: "playbook.afterwardTitle" },
   { href: "#assistant", titleKey: "playbook.assistantTitle" },
   { href: "#decode", titleKey: "playbook.decodeTitle" },
+  { href: "#letters", titleKey: "playbook.lettersTitle" },
   { href: "#about", titleKey: "playbook.colophonTitle" },
 ] as const;
 
