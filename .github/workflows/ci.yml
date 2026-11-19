@@ -53,14 +53,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install
         run: |
-          python -m pip install --user --upgrade pip
-          python -m pip install --user -r requirements.txt -r requirements-dev.txt
+          py -3.11 -m pip install --user --upgrade pip
+          py -3.11 -m pip install --user -r requirements.txt -r requirements-dev.txt
       - name: Security advisories (pip-audit)
         run: |
-          python -m pip install --user pip-audit
-          pip-audit -r requirements.txt
+          py -3.11 -m pip install --user pip-audit
+          py -3.11 -m pip-audit -r requirements.txt
       - name: Test
-        run: python -m pytest -q
+        run: py -3.11 -m pytest -q
 
   frontend:
     name: frontend (vitest + tsc)
@@ -103,11 +103,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install
         run: |
-          python -m pip install --user --upgrade pip
-          python -m pip install --user -r requirements.txt -r requirements-dev.txt
+          py -3.11 -m pip install --user --upgrade pip
+          py -3.11 -m pip install --user -r requirements.txt -r requirements-dev.txt
       - name: Spring Cloud contract gates
         run: |
-          python -m pytest -q \
+          py -3.11 -m pytest -q \
             tests/test_the_spring_cloud_actuator_surface_contract.py \
             tests/test_the_config_client_stays_opt_in.py \
             tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py \
@@ -251,8 +251,8 @@ jobs:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: |
-          python -m pip install --user --upgrade pip
-          python -m pip install --user -r requirements.txt -r requirements-dev.txt
+          py -3.11 -m pip install --user --upgrade pip
+          py -3.11 -m pip install --user -r requirements.txt -r requirements-dev.txt
       - name: Backfill job vectors
         id: vectors
         working-directory: ai-service
