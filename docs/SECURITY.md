@@ -248,9 +248,9 @@ that rejects invented skills/numbers not present in the source evidence.
     every chunk of the document into pgvector), `/inbound/mails/{id}/decode`
     (the analyst reads one letter behind its own button — never on mount, and
     metered so a scripted client cannot siege the provider through it), and
-    `/offers/shelf/{id}/letter` and `/offers/shelf/{id}/counter-letter` (the two
-    offer-letter writers ride the wire on every call; the decision letter shipped
-    without a lane, and the counter letter closes the gap too). Left out, a scripted client could
+    `/offers/shelf/{id}/letter` and `/offers/shelf/{id}/counter-letter` and
+    `/offers/shelf/{id}/follow-up-letter` (the three offer-letter writers ride the
+    wire on every call). Left out, a scripted client could
     call those without limit — the exact hole this list exists to close.
     Cheap reads (search, listings, dashboards) are deliberately excluded so browsing
     is not throttled. Covered by `RateLimitFilterTest`.

@@ -13,6 +13,7 @@ from app.features import gap_note as gap_note_mod
 from app.features import proactive_step as proactive_step_mod
 from app.features import reply_decode as reply_decode_mod
 from app.features import counter_letter as counter_letter_mod
+from app.features import follow_up_letter as follow_up_letter_mod
 from app.features import offer_narrative as offer_narrative_mod
 from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
@@ -941,6 +942,31 @@ async def decode_reply_ep(req: ReplyDecodeReq, ctx: Ctx = Depends(require_intern
     result = await reply_decode_mod.decode_reply(payload, locale=req.locale,
                                                  user_id=str(ctx.user_id) if ctx.user_id else None,
                                                  run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class FollowUpLetterReq(BaseModel):
+    """Epic 334 -- the stalled-offer check-in letter.
+
+    `offer` is the shelf's own row; the letter keeps only digits already in the snapshot;
+    `locale` (en/zh) picks the language."""
+    offer: dict
+    locale: str | None = None
+
+
+@router.post("/follow-up-letter")
+async def follow_up_letter_ep(req: FollowUpLetterReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 334 -- the stalled-offer check-in letter.
+
+    Optional by contract: an ungrounded or silent relay answers `letter: null`; the card renders
+    nothing rather than a half-pressure letter that invents a timeline.
+    """
+    run_id = await _run(ctx, "offers", "follow_up_letter")
+    result = await follow_up_letter_mod.follow_up_letter(
+        req.offer if isinstance(req.offer, dict) else {}, locale=req.locale,
+        user_id=str(ctx.user_id) if ctx.user_id else None,
+        run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
 

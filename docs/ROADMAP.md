@@ -6918,6 +6918,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **334** The stalled-offer check-in letter — the email that opens the silence on a quiet offer (2026-11-18).
+
+  (The shelf already builds the offer payload (base, bonus, equity, totalComp, currency,
+  remoteType, deadline) — Epic 334 sends a second, gentler letter. The writer addresses the
+  hiring side with courtesy, one concrete ask and no invented timeline — `letter: null` on any
+  failure, the card says "silence is the answer". Same digit-discipline as 327/333:
+  `follow_up_letter.py`, one StateGraph draft → verify → render, `kind="follow_up_letter"`.
+  `/api/v1/offers/shelf/{id}/follow-up-letter` rides `HttpAiServiceClient.followUpLetter`;
+  another account's id is the same 404, no ownership bypass. Sibling cards are not shown to
+  this writer — the letter says nothing about competition, only about the reader's own case,
+  which is the right note when the company has gone quiet. `isAiCost` includes the third
+  shelf-letter lane; SECURITY.md names the three spells; the API.md rows landed. Frontend
+  adds the follow-up button on non-declined rows (`useFollowUpOfferLetter`); 7 keys en+zh;
+  census 116 → 118 sites / 94 → 96 uses, updated same sitting. Verify pins: ai-service
+  `tests/test_follow_up_letter.py` 6/6 + `test_forward_features_contract`
+  (FollowUpLetterReq, offer required), backend `OfferShelfServiceTest` — the foreign-letter
+  drop, the sibling-cap, another-account 404 — 7/7 green; frontend `offer-shelf.test.tsx`
+  4/4; OfferShelf's `useFollowUpOfferLetter` pin. Honest limits: live E2E against the operator
+  relay is pending a Docker rebuild — the current image lacks this route; the card ships the
+  button as a no-op on the stale payload until the next `app` profile rebuild.)
+
 - [x] **333** The sendable counter-offer letter — the email the reader actually sends about one offer (2026-11-19).
 
   (The shelf holds the offer and up to four sibling cards; what was missing was the one email

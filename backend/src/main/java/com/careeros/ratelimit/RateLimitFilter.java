@@ -196,6 +196,8 @@ public class RateLimitFilter extends org.springframework.web.filter.OncePerReque
                 // The two offer-letter writers ride the wire on every call (Epic 327/333).
                 || uri.matches("^/api/v1/offers/shelf/[^/]+/letter/?$")
                 || uri.matches("^/api/v1/offers/shelf/[^/]+/counter-letter/?$")
+                // The stalled-offer check-in (Epic 334).
+                || uri.matches("^/api/v1/offers/shelf/[^/]+/follow-up-letter/?$")
                 // The analyst's read of one inbound letter (Epic 332).
                 || uri.matches("^/api/v1/inbound/mails/[^/]+/decode/?$")
                 // The three that spend money without living under an "AI-looking" path:

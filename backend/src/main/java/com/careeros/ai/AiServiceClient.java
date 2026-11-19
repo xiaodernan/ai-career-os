@@ -219,6 +219,14 @@ public interface AiServiceClient {
             List<Map<String, Object>> siblings, String locale);
 
     /**
+     * The stalled-offer letter (Epic 334): the one check-in email the reader sends when the
+     * company has gone quiet on an offer on the shelf — same discipline, same verification
+     * (every digit-run in the letter must appear in the offer payload, silence on any failure).
+     * `locale` is the reader's language.
+     */
+    Map<String, Object> followUpLetter(UUID userId, Map<String, Object> offer, String locale);
+
+    /**
      * The gap analyst's voice (Epic 329): one paragraph written about the gap the
      * analysis just computed. The ai-service drafts it, keeps only sentences that
      * cite a digit-run already present in the payload, and answers `{note}` —

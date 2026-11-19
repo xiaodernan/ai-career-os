@@ -476,6 +476,14 @@ public class FakeAiServiceClientConfig {
         }
 
         @Override
+        public Map<String, Object> followUpLetter(UUID userId, Map<String, Object> offer,
+                                                  String locale) {
+            record("followUpLetter");
+            Object total = offer == null ? null : offer.get("totalComp");
+            return map("letter", "Hello — following up on the offer; total was " + total + ".");
+        }
+
+        @Override
         public Map<String, Object> gapNote(UUID userId, Map<String, Object> payload,
                                            String locale) {
             record("gapNote");

@@ -4,6 +4,8 @@ import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
 import com.careeros.offer.dto.OfferShelfDtos.CounterLetterRequest;
 import com.careeros.offer.dto.OfferShelfDtos.CounterLetterResponse;
+import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterRequest;
+import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.DeleteOfferResponse;
 import com.careeros.offer.dto.OfferShelfDtos.OfferItem;
 import com.careeros.offer.dto.OfferShelfDtos.OfferLetterRequest;
@@ -93,5 +95,18 @@ public class OfferShelfController {
                                                @RequestBody(required = false) CounterLetterRequest request) {
         String locale = request == null ? null : request.locale();
         return new CounterLetterResponse(shelf.counterLetter(user.id(), id, locale));
+    }
+
+    /**
+     * The stalled-offer check-in letter (Epic 334): one polite sentence to follow up when the
+     * company has gone quiet on this offer — no pressure, no contrived urgency. `letter` is null
+     * when nothing grounded survived; the card asks the reader to say nothing instead of inventing.
+     */
+    @PostMapping("/shelf/{id}/follow-up-letter")
+    public FollowUpLetterResponse followUpLetter(@CurrentUser AuthUser user,
+                                                 @PathVariable UUID id,
+                                                 @RequestBody(required = false) FollowUpLetterRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new FollowUpLetterResponse(shelf.followUpLetter(user.id(), id, locale));
     }
 }

@@ -232,6 +232,17 @@ export function useCounterOfferLetter() {
   });
 }
 
+/** Epic 334 — the stalled-offer check-in letter for a specific shelf row. */
+export function useFollowUpOfferLetter() {
+  return useMutation({
+    mutationFn: async (input: { id: string; locale?: string }) =>
+      await api.create<{ letter?: string | null }>(
+        endpoints.offerShelfFollowUpLetter(input.id),
+        { locale: input.locale }),
+    onError: fail("failures.followUpLetter"),
+  });
+}
+
 /** 12.4 — the counter-offer draft. */
 export function useCounterOffer() {
   return useMutation({

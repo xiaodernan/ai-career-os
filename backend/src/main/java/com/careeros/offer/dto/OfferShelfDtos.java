@@ -58,9 +58,15 @@ public final class OfferShelfDtos {
   /** The decision letter (Epic 327). `letter` is null when the letter could not be written grounded — the honest answer, not a coat of plausibility. */
   public record OfferLetterResponse(String letter) {}
 
-  /** The counter-offer letter's request (Epic 333). Same discipline: the backend builds the payload from the owned row. */
+  /** The sendable counter-offer letter's request (Epic 333). */
   public record CounterLetterRequest(@Size(max = 8) String locale) {}
 
-  /** The sendable counter-offer letter (Epic 333). `letter` is null when nothing grounded survived — the reader is asked to send the numbers as they stand, never a fabricated drawer. */
+  /** The sendable counter-offer letter (Epic 333). `letter` is null when nothing grounded survived. */
   public record CounterLetterResponse(String letter) {}
+
+  /** The stalled-offer letter's request (Epic 334). */
+  public record FollowUpLetterRequest(@Size(max = 8) String locale) {}
+
+  /** The stalled-offer letter (Epic 334). `letter` is null when nothing grounded survived. */
+  public record FollowUpLetterResponse(String letter) {}
 }

@@ -88,6 +88,8 @@ FORWARD = {
     "/internal/features/decode-reply": ("ReplyDecodeReq", {"body"}),
     # Epic 333 -- the sendable counter-offer letter. `offer` required.
     "/internal/features/counter-offer-letter": ("CounterOfferLetterReq", {"offer"}),
+    # Epic 334 -- the stalled-offer check-in letter. `offer` required.
+    "/internal/features/follow-up-letter": ("FollowUpLetterReq", {"offer"}),
 }
 
 

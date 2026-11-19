@@ -84,6 +84,22 @@ public class OfferShelfService {
   }
 
   /**
+   * The stalled-offer letter (Epic 334): one check-in email the reader sends when the company has
+   * gone quiet on the offer — no pressure, no made-up urgency, just the reader's own facts restated.
+   */
+  public String followUpLetter(UUID userId, UUID id, String locale) {
+    OfferRow row = repository.findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
+    Map<String, Object> answer = aiService.followUpLetter(userId, offerPayload(row), locale);
+    Object value = answer == null ? null : answer.get("letter");
+    if (value == null) {
+      return null;
+    }
+    String letter = value.toString().trim();
+    return letter.isEmpty() ? null : letter;
+  }
+
+  /**
    * The counter-offer letter (Epic 333): the writer drafts the email the reader actually
    * sends about the offer on the table, grounded in the same owned numbers plus the shelf
    * sibling cards as benchmark context (the model shows them only as band joins, never as
