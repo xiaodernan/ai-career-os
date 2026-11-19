@@ -946,12 +946,13 @@ export function useFinalizeInterview(sessionId: string) {
 /** Epic 336 — the thank-you letter the reader sends after the interview. */
 export function useInterviewThankYouLetter(sessionId: string) {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (locale?: "en" | "zh") => {
       const raw = await api.request<unknown>(endpoints.interviewThankYouLetter(sessionId), {
         method: "POST",
-        body: { locale: undefined },
+        body: locale ? { locale } : {},
       });
-      return pick(raw, "letter") ?? null;
+      const letter = pick<string>(raw, "letter");
+      return typeof letter === "string" && letter.length > 0 ? letter : null;
     },
     onError: fail("failures.interviewThankYouLetter"),
   });

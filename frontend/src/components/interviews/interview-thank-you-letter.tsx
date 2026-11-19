@@ -58,7 +58,7 @@ export function InterviewThankYouLetter({ sessionId }: { sessionId: string | nul
               loading={letter.isPending}
               onClick={() =>
                 sessionId &&
-                letter.mutate(undefined, {
+                letter.mutate(locale === "zh" ? "zh" : "en", {
                   onSuccess: (out) => {
                     if (out) {
                       setText(out);

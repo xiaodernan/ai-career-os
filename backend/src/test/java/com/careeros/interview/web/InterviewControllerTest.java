@@ -3,7 +3,9 @@ package com.careeros.interview.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -126,6 +128,8 @@ class InterviewControllerTest {
         set(s, "id", SESSION);
         s.setUserId(ALICE);
         s.setStatus(status);
+        s.setCompanyName("Acme");
+        s.setPositionTitle("Senior Backend Engineer");
         return s;
     }
 
@@ -271,6 +275,54 @@ class InterviewControllerTest {
                 .andExpect(jsonPath("$.error.message").value("Nothing to finalize"));
 
         verifyNoInteractions(ai);
+    }
+
+    @Test
+    void thankYouLetter_is_refused_when_no_turn_exists() throws Exception {
+        givenOwned("active");
+        when(turns.findBySessionIdOrderBySeqAsc(SESSION)).thenReturn(List.of());
+
+        mvc.perform(post("/api/v1/interview/sessions/" + SESSION + "/thank-you-letter"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.message").value("Nothing to thank"));
+
+        verifyNoInteractions(ai);
+    }
+
+    @Test
+    void thankYouLetter_passes_role_and_company_and_returns_the_letter() throws Exception {
+        givenOwned("completed");
+        when(turns.findBySessionIdOrderBySeqAsc(SESSION)).thenReturn(List.of(turn(1, "interviewer", "Q1"), turn(2, "candidate", "A1")));
+        when(ai.interviewThankYouLetter(eq(SESSION), anyMap(), eq(ALICE), isNull())).thenReturn(Map.of(
+                "letter", "Hi — thank you for the interview."));
+
+        mvc.perform(post("/api/v1/interview/sessions/" + SESSION + "/thank-you-letter"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.letter").value("Hi — thank you for the interview."));
+
+        ArgumentCaptor<Map<String, Object>> payloadCap = ArgumentCaptor.forClass(Map.class);
+        verify(ai).interviewThankYouLetter(
+                eq(SESSION), payloadCap.capture(), eq(ALICE), isNull());
+        assertThat(payloadCap.getValue())
+                .containsEntry("role", "Senior Backend Engineer")
+                .containsEntry("company", "Acme");
+        assertThat(payloadCap.getValue().get("turns"))
+                .isInstanceOf(List.class);
+        assertThat(((List<?>) payloadCap.getValue().get("turns")).size()).isEqualTo(2);
+    }
+
+    @Test
+    void thankYouLetter_passes_locale_through_to_the_ai() throws Exception {
+        givenOwned("completed");
+        when(turns.findBySessionIdOrderBySeqAsc(SESSION)).thenReturn(List.of(turn(1, "interviewer", "你好")));
+        when(ai.interviewThankYouLetter(eq(SESSION), anyMap(), eq(ALICE), eq("zh"))).thenReturn(Map.of(
+                "letter", "您好 — 谢谢您今天的时间。"));
+
+        mvc.perform(post("/api/v1/interview/sessions/" + SESSION + "/thank-you-letter")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"zh\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.letter").value("您好 — 谢谢您今天的时间。"));
     }
 
     @Test
