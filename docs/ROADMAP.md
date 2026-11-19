@@ -6925,18 +6925,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   letter goes on the interview report page right under `<DebriefCard/>`, ask-first with a teaching
   Hint, nothing on mount, nothing invented when nothing survived verification. Grounded in the
   session's own turns — role and company straight from `interview_sessions`, up to eight most recent
-  turns from `interview_turns`. Sibling session touches `HttpAiServiceClient` to talk to
-  `/internal/features/thank-you-letter`; turns are forwarded as `{interview: {turns, role, company}}`;
+  turns from `interview_turns`. The bridge touches `HttpAiServiceClient` to talk to
+  `/internal/features/thank-you-letter`; turns are forwarded flat as `{role, company, turns}`;
   the StateGraph in `thank_you_letter.py` rides draft → verify → render exactly like the offer
   letters: every digit-run in the output must already appear in the snapshot, `letter: null`
   when nothing grounded survives. `InterviewService.thankYouLetter(...)` reads the caller's
-  own session (another account's id is the same 404) and returns `{letter, mailId?}`. Frontend:
-  `useInterviewThankYouLetter` mirrors the offer-letter hook; `InterviewThankYouLetter` component
-  next to DebriefCard in the same screen; Hint teaching. Census +1, i18n both langs. Live probe:
-  the letter sent against the probe's seeded sessions satisfies the wire shape; the offer-letter
-  trio and the this letter all run through the same StateGraph shape pinned by
-  `test_the_trace_pin` and the census gates (`test_failed_mutation_is_announced`,
-  `test_response_shape_contract`).)
+  own session (another account's id is the same 404) and returns `{letter}`. Frontend:
+  `useInterviewThankYouLetter` mirrors the offer-letter hook (the volume it reads is en or zh,
+  threaded as the mutate variable — the letter writes in the room the reader was sitting in);
+  `InterviewThankYouLetter` component next to DebriefCard on the same screen; Hint teaching.
+  Census 216 → 217, i18n both languages, `failures.interviewThankYouLetter`; copy-census green,
+  tsc clean, `vitest run src/lib/i18n src/lib/hooks src/components/interviews` 185/185.
+  `RateLimitFilter.isAiCost` already covered `/interview` (prefix), so SECURITY.md's list needed
+  no addition. Verify pins green: `tests/test_thank_you_letter.py` 6/6;
+  `test_failed_mutation_is_announced.py` roster/move 110 sites / 98 declare / 96 uses;
+  `test_response_shape_contract.py` 241 records (vs 239 before), drill census kept the
+  `Json.strOr` shape so no unbound drill appeared; `InterviewControllerTest` gained three cases
+  (empty turns → 400 "Nothing to thank" with zero AI calls, payload carries role/company/turns,
+  `zh` passes straight through) — 19/19 green. Live probe against the local install (relay-backed):
+  a session created fresh through `POST /interview/sessions`, the opening answered in Chinese,
+  then the letter answered `200` in en and in zh — both grounded in the actual room (Mock Corp,
+  "Senior Backend Engineer — Agent Platform", the 14 → 6 replicas answer, the 9 weeks), no
+  invented digits in either.)
 
 - [x] **335** The acceptance playbook — the offer that was just signed becomes a first quarter (2026-11-19).
 
