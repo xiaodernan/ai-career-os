@@ -1,20 +1,16 @@
 "use client";
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
-
 /**
  * MatchRing — animated circular match-score indicator.
- * Color follows the score band; sweep-in on mount via stroke-dashoffset transition.
+ *
+ * SSR must carry the truth: the figure, the arc and the aria-label all render the
+ * reader's real score on the very first paint. The sweep is a CSS keyframe (opens with
+ * the arc at full gap, closes on the real offset), NOT a rAF counter — a paused or
+ * occluded tab used to leave the dial at "0 %" forever even though the number lived
+ * one frame away in React state.
  */
-export type ScoreBand = "strong" | "good" | "fair" | "weak";
-
-export function scoreBand(value: number): ScoreBand {
-  if (value >= 80) return "strong";
-  if (value >= 60) return "good";
-  if (value >= 40) return "fair";
-  return "weak";
-}
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 const BAND_CLASS: Record<ScoreBand, string> = {
   strong: "text-success",
@@ -22,6 +18,15 @@ const BAND_CLASS: Record<ScoreBand, string> = {
   fair: "text-warning",
   weak: "text-destructive",
 };
+
+export type ScoreBand = "strong" | "good" | "fair" | "weak";
+
+export function scoreBand(v: number): ScoreBand {
+  if (v >= 85) return "strong";
+  if (v >= 70) return "good";
+  if (v >= 50) return "fair";
+  return "weak";
+}
 
 export interface MatchRingProps extends React.ComponentProps<"div"> {
   /** 0–100 */
@@ -49,16 +54,7 @@ function MatchRing({
   const clamped = Math.max(0, Math.min(100, value));
   const radius = (size - thickness) / 2;
   const circumference = 2 * Math.PI * radius;
-  const [progress, setProgress] = React.useState(animated ? 0 : clamped);
-
-  React.useEffect(() => {
-    if (!animated) {
-      setProgress(clamped);
-      return;
-    }
-    const raf = requestAnimationFrame(() => setProgress(clamped));
-    return () => cancelAnimationFrame(raf);
-  }, [clamped, animated]);
+  const offset = circumference * (1 - clamped / 100);
 
   const band = BAND_CLASS[scoreBand(clamped)];
 
@@ -89,17 +85,19 @@ function MatchRing({
           strokeWidth={thickness}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - progress / 100)}
+          strokeDashoffset={offset}
           style={{
-            transition: animated
-              ? "stroke-dashoffset 900ms cubic-bezier(0.16,1,0.3,1)"
+            ["--ring-from" as string]: `${circumference}`,
+            ["--ring-to" as string]: `${offset}`,
+            animation: animated
+              ? "scoreRingDraw 900ms cubic-bezier(0.16, 1, 0.3, 1) both"
               : undefined,
           }}
         />
       </svg>
       {showValue && (
         <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums text-foreground">
-          {Math.round(progress)}
+          {Math.round(clamped)}
           <span className="text-2xs font-normal text-muted-foreground">%</span>
         </span>
       )}
