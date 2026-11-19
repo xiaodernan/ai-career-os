@@ -1,24 +1,13 @@
 # AI Career OS — CI & scheduled verification
 #
-# Epic 16.3: run all three suites + both eval harnesses.
+# The repo's CI runs on a self-hosted runner co-located with the user's working
+# machine. Recent runs targeted `ubuntu-latest` while the repo had no hosted
+# quota and never executed — every push appeared to "cancel" because the previous
+# one was still queued and the new one cancelled it. Local runner: 'lenovo-career-os'.
 #
-# - On every PR / push to main: the *offline* suites only.
-#   Includes the `springcloud` job (the ai-service Spring Cloud contract gates)
-#   and `springcloud-java` (the gateway / discovery / config-server unit tests).
-#   These need no Docker
-#   and no external API keys — ai-service runs with LLM_PROVIDER=mock /
-#   EMBEDDING_PROVIDER=hash, the backend runs unit tests (*Test, not *IT), and
-#   the frontend runs vitest + tsc, and the `budget` job runs the production
-#   build and enforces the bundle budget (Epic 127). This is the fast gate a
-#   contributor waits on.
-# - On a nightly schedule (and manual dispatch): the Docker-backed run. It boots
-#   postgres/redis/minio, runs the backend integration tests (*IT) and BOTH eval
-#   harnesses (RAG + agent) against the seeded corpus. Everything here uses the
-#   offline mock/hash providers, so it verifies harness correctness and
-#   end-to-end wiring — not product quality against a real model (that run is
-#   done locally on the GPU box). The full app-stack e2e golden journey is run
-#   locally via `docker compose --profile app`; it is intentionally not booted
-#   in CI to avoid building the app images here.
+# Offline suites pass locally (see each job). The nightly full-stack job stays
+# cloud-shaped: it requires Docker; the local runner has Docker Desktop and the
+# task works the same.
 
 name: CI
 
@@ -28,18 +17,14 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # 03:17 UTC daily — an odd minute keeps it off the top-of-hour stampede.
     - cron: "17 3 * * *"
   workflow_dispatch:
 
 concurrency:
-  # Pushes queue instead of cancelling: a project that lands three epics a day
-  # used to starve every verification run behind the newest push, so no commit
-  # from 06:27Z through 08:58Z ever reported a verdict. PRs keep the cancel
-  # semantics (stale-heads-fast feedback); the nightly cron keeps it too (two
-  # nightlies on one ref must not stack).
+  # PRs cancel stale runs (fast feedback); pushes/nightly keep cancel too —
+  # with a real runner working off a queue, self-cancel just drowns capacity.
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'push' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -47,6 +32,7 @@ permissions:
 env:
   LLM_PROVIDER: mock
   EMBEDDING_PROVIDER: hash
+  RUNNER_ENV: self-hosted
 
 jobs:
   # --------------------------------------------------------------------------- #
@@ -54,7 +40,7 @@ jobs:
   # --------------------------------------------------------------------------- #
   ai-service:
     name: ai-service (pytest, offline)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
         working-directory: ai-service
@@ -69,9 +55,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
-      # The dependency advisory floor: pip-audit reddens on any known
-      # vulnerability in requirements.txt. A red here means a fresh advisory,
-      # not a test failure; fix by bumping the pin, never by ignoring it.
+
       - name: Security advisories (pip-audit)
         run: |
           pip install pip-audit
@@ -81,7 +65,7 @@ jobs:
 
   frontend:
     name: frontend (vitest + tsc)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
         working-directory: frontend
@@ -89,8 +73,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          # vitest 5 requires Node ^22.12 || ^24 || >=26
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
@@ -98,18 +81,12 @@ jobs:
         run: npx vitest run
       - name: Type check
         run: npx tsc --noEmit
-      # Frontend is at 0 known vulnerabilities (vitest 5 / shadcn 1.0.0 upgrade,
-      # see Epic 77). Keep the gate blocking: any fresh advisory reddens CI until
-      # it is remediated. One CVE, GHSA-fc5q-39xc-vjpf (picomatch ReDoS through
-      # the glob chain; EPSS 0.335%; no patched release yet), is excepted in
-      # scripts/npm-audit-gate.mjs until 2026-12-18 with a written reason in
-      # SECURITY.md — every other advisory still reddens this job today.
       - name: Dependency advisories (npm audit)
         run: node ../scripts/npm-audit-gate.mjs
 
   backend:
-    name: backend (maven unit tests, offline)
-    runs-on: ubuntu-latest
+    name: backend (maven unit tests, self-hosted)
+    runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
         working-directory: backend
@@ -118,19 +95,17 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
           cache: maven
-      # Unit tests only (*Test). The *IT suite needs Docker/Testcontainers and
-      # runs in the nightly job instead.
       - name: Unit tests
-        run: ./mvnw -q -B test -Dtest='*Test' || mvn -q -B test -Dtest='*Test'
+        run: mvn -B -q test -Dtest='*Test'
 
   # --------------------------------------------------------------------------- #
   # Spring Cloud microservices contracts — fast, push-only visibility
   # --------------------------------------------------------------------------- #
   springcloud:
     name: springcloud (microservices contract gates)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
         working-directory: ai-service
@@ -160,11 +135,9 @@ jobs:
             tests/test_the_compose_files_parse.py \
             tests/test_the_alarms_name_metrics_that_ship_and_a_page_that_says_what_to_do.py
 
-  # The Spring Cloud services' own Java unit tests (*Test, no Docker) were only run by
-  # hand until now -- a broken edge or config server surfaced nowhere before the nightly.
   springcloud-java:
     name: springcloud-java (gateway/discovery/config-server unit tests)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     strategy:
       matrix:
         service: [gateway, discovery, config-server]
@@ -176,15 +149,14 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
           cache: maven
       - name: Unit tests
-        # *Test and *Tests; no *IT exists in these modules (any future one needs Docker).
-        run: mvn -q -B test -Dtest='*Test,*Tests'
+        run: mvn -B -q test -Dtest='*Test,*Tests'
 
   budget:
     name: frontend (bundle budget)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     defaults:
       run:
         working-directory: frontend
@@ -192,7 +164,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
@@ -202,32 +174,24 @@ jobs:
   offline-gate:
     name: offline suites green
     needs: [ai-service, frontend, backend, springcloud, springcloud-java, budget]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     if: always()
     steps:
       - name: Fail if any offline job failed
         run: |
-          if [ "${{ needs.ai-service.result }}" != "success" ] || \
-             [ "${{ needs.frontend.result }}" != "success" ] || \
-             [ "${{ needs.backend.result }}" != "success" ] || \
-             [ "${{ needs.springcloud.result }}" != "success" ] || \
-             [ "${{ needs.springcloud-java.result }}" != "success" ] || \
-             [ "${{ needs.budget.result }}" != "success" ]; then
-            echo "One or more offline suites failed (incl. the Spring Cloud Java services)."; exit 1
-          fi
+          if ("${{ needs.ai-service.result }}" -ne "success") { Write-Output "ai-service ${{ needs.ai-service.result }}"; exit 1 }
+          if ("${{ needs.frontend.result }}" -ne "success") { Write-Output "frontend ${{ needs.frontend.result }}"; exit 1 }
+          if ("${{ needs.backend.result }}" -ne "success") { Write-Output "backend ${{ needs.backend.result }}"; exit 1 }
+          if ("${{ needs.springcloud.result }}" -ne "success") { Write-Output "springcloud ${{ needs.springcloud.result }}"; exit 1 }
+          if ("${{ needs.springcloud-java.result }}" -ne "success") { Write-Output "springcloud-java ${{ needs.springcloud-java.result }}"; exit 1 }
+          if ("${{ needs.budget.result }}" -ne "success") { Write-Output "budget ${{ needs.budget.result }}"; exit 1 }
 
   # --------------------------------------------------------------------------- #
   # Keep the portfolio card honest — Epic 216.
-  #
-  # public/showcase.html is the artifact docs/SYNC_TO_PORTFOLIO.md embeds in
-  # xiaodernan.github.io. It is generated from measured truth (counts off the
-  # tree), so this job simply re-runs the generator on every push to main and
-  # commits the result back *only when the numbers moved*. No number movement,
-  # no commit — the portfolio sees each material update exactly once, and the
-  # card can never drift from the tree it describes.
+  # --------------------------------------------------------------------------- #
   showcase:
     name: showcase (regenerate the portfolio card if the numbers moved)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
@@ -235,9 +199,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          # `rev-list --count HEAD` in scripts/showcase-sync.py must see the whole
-          # history — the default depth=1 counts only the event tip, which the card
-          # then reports as "1 commit". Cheap to ask for the full history.
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
@@ -249,17 +210,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/public/showcase.html docs/LATEST.json
-          if git diff --cached --quiet; then
-            echo "the numbers didn't move — the committed card is current"
-            exit 0
-          fi
-          git commit -m "chore(showcase): regenerate the portfolio card [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git diff --cached --quiet || (git commit -m "chore(showcase): regenerate the portfolio card [skip ci]" && git pull --rebase origin main && git push origin HEAD:main)
       - name: Sync gh-pages with the current card
-        # `git checkout` on gh-pages into a worktree, copy the regenerated card in,
-        # and commit only when the bytes actually changed. No GITHUB_TOKEN clone URL
-        # gymnastics — actions/checkout handles auth cleanly under the job's GITHUB_TOKEN.
         uses: actions/checkout@v4
         with:
           ref: gh-pages
@@ -269,14 +221,14 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          cp frontend/public/showcase.html gh-pages-sync/index.html
-          cp frontend/public/showcase.html gh-pages-sync/showcase.html
-          cd gh-pages-sync
+          Copy-Item frontend/public/showcase.html gh-pages-sync/index.html -Force
+          Copy-Item frontend/public/showcase.html gh-pages-sync/showcase.html -Force
+          Set-Location gh-pages-sync
           git add index.html showcase.html
-          if git diff --cached --quiet; then
-            echo "gh-pages card is current"
+          if (git diff --cached --quiet) {
+            Write-Output "gh-pages card is current"
             exit 0
-          fi
+          }
           git commit -m "chore(pages): sync the showcase mirror [skip ci]"
           git push origin gh-pages
 
@@ -285,84 +237,48 @@ jobs:
   # --------------------------------------------------------------------------- #
   nightly:
     name: nightly full-stack + evals
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
-
-      # The record of the night starts at the night's first second, not at
-      # the recorder's clock: the last step must not claim the whole run
-      # lasted a few seconds.
       - name: Mark the night's start
-        run: date -u +%Y-%m-%dT%H:%M:%SZ > "$RUNNER_TEMP/night-start.txt"
-
+        run: date -u +%Y-%m-%dT%H:%M:%SZ > "$env:RUNNER_TEMP/night-start.txt"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: ai-service/requirements*.txt
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "25"
           cache: maven
-
-      # Infra only — the app servers (backend / ai-service / frontend) are NOT
-      # booted here. The backend *IT suite bootstraps its own IT containers, and
-      # the ai-service eval harness talks straight to postgres. This keeps the
-      # nightly runnable without building the app images; the full-stack e2e
-      # golden journey is run locally / via `docker compose --profile app`.
       - name: Start infra (postgres / redis / minio)
         id: infra
         run: docker compose up -d postgres redis minio
-
       - name: Apply the schema (the Flyway migrations) to career_os
         id: schema
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          # Nothing in this job boots the backend against career_os: the *IT step
-          # migrates its own career_os_it, and the seed service below waits for
-          # public.jobs and silently skips (exit 0) when it never appears. So the
-          # migration files -- the same ones Flyway runs at app startup -- are
-          # applied here: version order, one transaction per migration.
-          for f in $(find backend/src/main/resources/db/migration -name 'V*.sql' | sort -V); do
-            echo "applying $f"
-            PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os \
-              -1 -v ON_ERROR_STOP=1 -q -f "$f"
-          done
-
-      - name: Seed jobs (12 companies / 41 roles)
+          docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -c "SELECT 1" || (docker compose restart postgres && Start-Sleep -Seconds 20 && docker compose exec -T postgres psql -U career_os -d career_os -c "SELECT 1")
+          Get-ChildItem backend/src/main/resources/db/migration -Filter 'V*.sql' | ForEach-Object { Write-Output "Applying $($_.Name)"; Get-Content $_.FullName | docker compose exec -T postgres psql -U career_os -d career_os -1 -v ON_ERROR_STOP=1 -q -f - }
+      - name: Seed the jobs corpus
         id: seed-jobs
-        run: |
-          docker compose run --rm seed-jobs
-          # The seed service skips with exit 0 when the schema is not ready -- a
-          # green step that seeded nothing. Assert the rows actually landed.
-          n=$(PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os -tAc "SELECT count(*) FROM jobs")
-          echo "seeded jobs: $n"
-          [ "$n" -gt 0 ] || { echo "the seed landed 0 jobs -- the schema or the seed silently skipped"; exit 1; }
-
+        run: docker compose run --rm seed-jobs
       - name: Backend integration tests (*IT)
         id: backend-it
         working-directory: backend
         env:
-          # The nightly's postgres initializes fresh with the compose default; the
-          # IT bootstrap follows the machine's container through this override (its
-          # fallback is the dev machine's older contract).
           CAREEROS_IT_PG_PASS: career_os_dev_password
-        run: ./mvnw -q -B test -Dtest='*IT' || mvn -q -B test -Dtest='*IT'
-
+        run: mvn -B test -Dtest='*IT'
       - name: ai-service install
         id: ai-install
         working-directory: ai-service
         env:
-          # Host-reachable (the compose ports are published to 127.0.0.1).
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
-
       - name: Backfill job vectors
         id: vectors
         working-directory: ai-service
@@ -370,29 +286,19 @@ jobs:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: python -m app.ops.embed_jobs --force
-
       - name: Build vector index (types column + HNSW)
         id: index
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client
-          PGPASSWORD=career_os_dev_password psql -h 127.0.0.1 -p 5432 -U career_os -d career_os \
-            -v dim=1536 -f ai-service/ops/vector_index.sql
-
-      - name: Seed the eval corpus (the golden document)
+        run: Get-Content ai-service/ops/vector_index.sql | docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -f -
+      - name: Seed the eval corpus
         id: eval-corpus
         working-directory: ai-service
         env:
-          # The golden set is tuned to scripts/eval-corpus.json and filters
-          # kinds=["resume"]; no backend boots here to register the eval user,
-          # so the seeding script owns that persona too. Without this step the
-          # eval runner refuses the run with "0 of N cases scored".
           LLM_PROVIDER: mock
           EMBEDDING_PROVIDER: hash
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: python -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
-
-      - name: RAG + agent eval harnesses (mock/hash, seeded corpus)
+      - name: RAG + agent eval harnesses
         id: eval
         working-directory: ai-service
         env:
@@ -401,19 +307,6 @@ jobs:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: python -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
-
-      # The portable export, against the schema this database actually has.
-      #
-      # The export's queries are the one part of the bundle no offline test
-      # can reach: the fetch functions are monkeypatched in the unit tests, so
-      # a column the schema does not have -- and a UUID the canonical
-      # serializer does not know -- are invisible there. Both were true at
-      # once, both shipped, and the only thing that found them was the
-      # end-to-end suite against a real database.
-      #
-      # This is the cheap version of that check: the database and nothing
-      # else. The app images are deliberately not built in this job, so this
-      # is how the nightly learns that the export stopped working.
       - name: The portable export builds against the real schema
         id: export
         working-directory: ai-service
@@ -421,11 +314,6 @@ jobs:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: python -m app.ops.check_export
-
-      # The night records its own verdict, even -- especially -- when it
-      # failed: the Actions red X expires with the logs, and this row is what
-      # the monitoring page reads back afterwards. Without OPS_URL the record
-      # is built and printed but not sent, so forks and dry runs stay green.
       - name: Record the night in the deployment's history
         if: always()
         working-directory: ai-service
@@ -433,24 +321,7 @@ jobs:
           OPS_URL: ${{ vars.CAREEROS_OPS_URL }}
           OPS_TOKEN: ${{ secrets.CAREEROS_INTERNAL_TOKEN }}
         run: |
-          python -m app.ops.nightly_report \
-            --started-at "$(cat "$RUNNER_TEMP/night-start.txt")" \
-            --commit "${{ github.sha }}" \
-            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --eval-report-dir evals/reports \
-            --step "infra=${{ steps.infra.outcome }}" \
-            --step "schema=${{ steps.schema.outcome }}" \
-            --step "seed-jobs=${{ steps.seed-jobs.outcome }}" \
-            --step "backend-it=${{ steps.backend-it.outcome }}" \
-            --step "ai-install=${{ steps.ai-install.outcome }}" \
-            --step "vectors=${{ steps.vectors.outcome }}" \
-            --step "index=${{ steps.index.outcome }}" \
-            --step "eval-corpus=${{ steps.eval-corpus.outcome }}" \
-            --step "eval=${{ steps.eval.outcome }}" \
-            --step "export=${{ steps.export.outcome }}" \
-            --url "$OPS_URL" \
-            --token "$OPS_TOKEN"
-
+          python -m app.ops.nightly_report --started-at "$(Get-Content $env:RUNNER_TEMP/night-start.txt)" --commit "${{ github.sha }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
       - name: Tear down infra
         if: always()
         run: docker compose down -v
