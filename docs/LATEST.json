@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-19T02:25:24.027880Z",
+  "generated_at": "2026-11-19T02:57:28.413190Z",
   "branch": "main",
-  "head": "b05269a",
-  "total_commits": 1647,
+  "head": "fee435e",
+  "total_commits": 1649,
   "milestone": "Epic 334",
   "milestone_full": "the ledger of done epics (through 486 items), closed at Epic 334 — The stalled-offer check-in letter",
   "pushed_at": "2026-11-19",
