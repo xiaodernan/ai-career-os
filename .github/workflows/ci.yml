@@ -53,14 +53,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install
         run: |
-          py -3.11 -m pip install --user --upgrade pip
-          py -3.11 -m pip install --user -r requirements.txt -r requirements-dev.txt
+          py -3.11 -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
       - name: Security advisories (pip-audit)
         run: |
-          py -3.11 -m pip install --user pip-audit
-          py -3.11 -m pip_audit -r requirements.txt
+          .\.venv\Scripts\python.exe -m pip install pip-audit
+          .\.venv\Scripts\python.exe -m pip_audit -r requirements.txt
       - name: Test
-        run: py -3.11 -m pytest -q
+        run: .\.venv\Scripts\python.exe -m pytest -q
 
   frontend:
     name: frontend (vitest + tsc)
@@ -103,11 +104,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install
         run: |
-          py -3.11 -m pip install --user --upgrade pip
-          py -3.11 -m pip install --user -r requirements.txt -r requirements-dev.txt
+          py -3.11 -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
       - name: Spring Cloud contract gates
         run: |
-          py -3.11 -m pytest -q \
+          .\.venv\Scripts\python.exe -m pytest -q \
             tests/test_the_spring_cloud_actuator_surface_contract.py \
             tests/test_the_config_client_stays_opt_in.py \
             tests/test_the_spring_cloud_services_print_a_common_metrics_tag.py \
@@ -251,15 +253,16 @@ jobs:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
         run: |
-          py -3.11 -m pip install --user --upgrade pip
-          py -3.11 -m pip install --user -r requirements.txt -r requirements-dev.txt
+          py -3.11 -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
       - name: Backfill job vectors
         id: vectors
         working-directory: ai-service
         env:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: py -3.11 -m app.ops.embed_jobs --force
+        run: .\.venv\Scripts\python.exe -m app.ops.embed_jobs --force
       - name: Build vector index (types column + HNSW)
         id: index
         run: Get-Content ai-service/ops/vector_index.sql | docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -f -
@@ -271,7 +274,7 @@ jobs:
           EMBEDDING_PROVIDER: hash
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: py -3.11 -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
+        run: .\.venv\Scripts\python.exe -m app.ops.seed_eval_corpus --user-id 00000000-0000-0000-0000-000000000000 --corpus ../scripts/eval-corpus.json
       - name: RAG + agent eval harnesses
         id: eval
         working-directory: ai-service
@@ -280,14 +283,14 @@ jobs:
           EMBEDDING_PROVIDER: hash
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: py -3.11 -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
+        run: .\.venv\Scripts\python.exe -m app.eval.run_eval --user-id 00000000-0000-0000-0000-000000000000 --answer
       - name: The portable export builds against the real schema
         id: export
         working-directory: ai-service
         env:
           DATABASE_URL: postgresql://career_os:career_os_dev_password@127.0.0.1:5432/career_os
           REDIS_URL: redis://127.0.0.1:16380/0
-        run: py -3.11 -m app.ops.check_export
+        run: .\.venv\Scripts\python.exe -m app.ops.check_export
       - name: Record the night in the deployment's history
         if: always()
         working-directory: ai-service
@@ -298,7 +301,7 @@ jobs:
           $startedAt = Get-Content $env:RUNNER_TEMP/night-start.txt
           $commit = "${{ github.sha }}"
           $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          py -3.11 -m app.ops.nightly_report --started-at "$startedAt" --commit "$commit" --run-url "$runUrl" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
+          .\.venv\Scripts\python.exe -m app.ops.nightly_report --started-at "$startedAt" --commit "$commit" --run-url "$runUrl" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
       - name: Tear down infra
         if: always()
         run: docker compose down -v
