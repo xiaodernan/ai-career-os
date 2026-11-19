@@ -204,3 +204,27 @@ VUS, DURATION, BASE_URL all env-selectable). Any future change to the auth path 
 its bucket, its password check, its session persistence — re-runs this script and
 the numbers in it move; the run script refuses to become a decoration by naming its
 four knobs.
+
+---
+
+## Addendum 2026-11-19 — one more full burst against the same shape
+
+Re-ran on this sitting's stack (Docker compose, gpt-6.2-sol on the Clash relay, host =
+this machine). Nothing about the auth path changed this sitting; these figures say the
+shape still behaves and the install still stands exactly where the 2026-11-18 measurement
+left it.
+
+| Phase (VUs) | reqs | p95 | max | 401 | 429 | 5xx | http_req_failed_custom |
+|---|---|---|---|---|---|---|---|
+| baseline (10, 30 s) | 5,092  | 19.7 ms | 113 ms | 103 | 4,989 | **0** | **0.00%** |
+| burst (100, 60 s)   | 72,786 | 87.2 ms | 694 ms | 102 | 72,684 | **0** | **0.00%** |
+
+- Sustained 1,210 req/s across the full minute; the limiter engaged in the first dozen
+  attempts of both runs; 45 MB in / 15 MB out over the burst; no error shape, no hang,
+  no dependency failed.
+- A normal read (`/api/v1/health` → 200) and a wrong-credential login (→ 401) both held
+  mid-burst. Fleet state after: 8/8 containers healthy.
+- Concurrency smoke separately (`scripts/concurrency_smoke.py`): 16 workers × 8 calls,
+  128 mutations/calls (jobs search, dashboard, knowledge sources, profile patch, contact
+  create) — 96 × 200, 32 × 201, zero 5xx/4xx, p50 112 ms, p95 1559 ms (local Docker on
+  the host disk, not a production SLA).
