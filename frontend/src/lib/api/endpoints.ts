@@ -195,8 +195,10 @@ export const endpoints = {
   offerShelfLetter: (id: string) => `/offers/shelf/${seg(id)}/letter`,
   /** The sendable counter-offer letter (Epic 333): same discipline, same gate, different letter. */
   offerShelfCounterLetter: (id: string) => `/offers/shelf/${seg(id)}/counter-letter`,
-  /** Epic 334 — the stalled-offer check-in letter, written about a specific shelf row. */
+  /** Epic 334 — the stalled-offer check-in email for a specific shelf row. */
   offerShelfFollowUpLetter: (id: string) => `/offers/shelf/${seg(id)}/follow-up-letter`,
+  /** Epic 335 — the first-90-days playbook, written from the row the reader just accepted. */
+  offerShelfAcceptancePlaybook: (id: string) => `/offers/shelf/${seg(id)}/acceptance-playbook`,
   offerSalaryBenchmark: "/offers/salary-benchmark",
   offerNegotiate: "/offers/negotiate",
   offerCompare: "/offers/compare",

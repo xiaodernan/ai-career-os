@@ -84,6 +84,23 @@ public class OfferShelfService {
   }
 
   /**
+   * The acceptance playbook (Epic 335): the reader's first 90 days, written from the offer they just signed.
+   * The playbook is always reader-facing; `playbook` is null when nothing grounded survived.
+   */
+  public String acceptancePlaybook(UUID userId, UUID id, String locale) {
+    OfferRow row = repository.findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
+    Map<String, Object> offer = offerPayload(row);
+    Map<String, Object> answer = aiService.acceptancePlaybook(userId, offer, locale);
+    Object value = answer == null ? null : answer.get("playbook");
+    if (value == null) {
+      return null;
+    }
+    String playbook = value.toString().trim();
+    return playbook.isEmpty() ? null : playbook;
+  }
+
+  /**
    * The stalled-offer letter (Epic 334): one check-in email the reader sends when the company has
    * gone quiet on the offer — no pressure, no made-up urgency, just the reader's own facts restated.
    */

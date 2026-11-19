@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteOffer, useSaveOffer, useOfferDecisionLetter, useCounterOfferLetter, useFollowUpOfferLetter } from "@/lib/hooks/offers";
+import { useDeleteOffer, useSaveOffer, useOfferDecisionLetter, useCounterOfferLetter, useFollowUpOfferLetter, useAcceptancePlaybook } from "@/lib/hooks/offers";
 import { useOfferShelf } from "@/lib/hooks/resources";
 import { OfferCelebration } from "@/components/offers/offer-celebration";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -210,6 +210,82 @@ function FollowUpLetterBlock({
   );
 }
 
+/** The acceptance playbook: the reader's own first-90-days, written from the offer they signed. */
+function AcceptancePlaybook({
+  rowId,
+  locale,
+  t,
+}: {
+  rowId: string;
+  locale: string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}) {
+  const playbook = useAcceptancePlaybook();
+  const [text, setText] = React.useState<string | null>(null);
+  const [silent, setSilent] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const copy = async () => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard is not the product's promise — the playbook stands on screen
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {t("offers.acceptancePlaybookTitle")}
+      </p>
+      {text ? (
+        <>
+          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            onClick={() => void copy()}
+          >
+            {copied ? t("offers.acceptancePlaybookCopied") : t("offers.acceptancePlaybookCopy")}
+          </Button>
+        </>
+      ) : silent ? (
+        <p className="mt-1 text-xs text-muted-foreground">{t("offers.acceptancePlaybookSilent")}</p>
+      ) : (
+        <>
+          <p className="mt-1 text-xs text-muted-foreground">{t("offers.acceptancePlaybookHint")}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            loading={playbook.isPending}
+            onClick={() =>
+              playbook.mutate(
+                { id: rowId, locale },
+                {
+                  onSuccess: (out) => {
+                    if (out.playbook) {
+                      setText(out.playbook);
+                    } else {
+                      setSilent(true);
+                    }
+                  },
+                },
+              )
+            }
+          >
+            {t("offers.acceptancePlaybookButton")}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function DecisionLetter({
   rowId,
   locale,
@@ -343,21 +419,24 @@ export function OfferShelf() {
       </CardHeader>
       <CardContent className="space-y-4">
         {accepted && (
-          <div
-            role="status"
-            className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3"
-          >
-            <Sparkles aria-hidden className="size-5 shrink-0 text-success" />
-            <div className="min-w-0 text-sm">
-              <p className="font-semibold">{t("offers.shelfTakingTitle", { label: accepted.label })}</p>
-              <p className="text-muted-foreground">{t("offers.shelfTakingBody")}</p>
-              <p className="mt-1 font-medium tabular-nums text-success">
-                {t("offers.shelfTakingNumber", {
-                  total: money(accepted.totalComp, accepted.currency, locale),
-                })}
-              </p>
+          <>
+            <div
+              role="status"
+              className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3"
+            >
+              <Sparkles aria-hidden className="size-5 shrink-0 text-success" />
+              <div className="min-w-0 text-sm">
+                <p className="font-semibold">{t("offers.shelfTakingTitle", { label: accepted.label })}</p>
+                <p className="text-muted-foreground">{t("offers.shelfTakingBody")}</p>
+                <p className="mt-1 font-medium tabular-nums text-success">
+                  {t("offers.shelfTakingNumber", {
+                    total: money(accepted.totalComp, accepted.currency, locale),
+                  })}
+                </p>
+              </div>
             </div>
-          </div>
+            <AcceptancePlaybook rowId={accepted.id} locale={locale} t={t} />
+          </>
         )}
         {shelf.isPending && (
           <div className="space-y-2">

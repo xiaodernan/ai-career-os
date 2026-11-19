@@ -243,6 +243,17 @@ export function useFollowUpOfferLetter() {
   });
 }
 
+/** Epic 335 — the first-90-days playbook for the offer the reader just accepted. */
+export function useAcceptancePlaybook() {
+  return useMutation({
+    mutationFn: async (input: { id: string; locale?: string }) =>
+      await api.create<{ playbook?: string | null }>(
+        endpoints.offerShelfAcceptancePlaybook(input.id),
+        { locale: input.locale }),
+    onError: fail("failures.acceptancePlaybook"),
+  });
+}
+
 /** 12.4 — the counter-offer draft. */
 export function useCounterOffer() {
   return useMutation({

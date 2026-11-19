@@ -227,6 +227,13 @@ public interface AiServiceClient {
     Map<String, Object> followUpLetter(UUID userId, Map<String, Object> offer, String locale);
 
     /**
+     * The acceptance playbook (Epic 335): the reader's first-90-days plan from the offer's own
+     * numbers. `locale` is the reader's language; digits must all come from the snapshot; silence
+     * on any failure.
+     */
+    Map<String, Object> acceptancePlaybook(UUID userId, Map<String, Object> offer, String locale);
+
+    /**
      * The gap analyst's voice (Epic 329): one paragraph written about the gap the
      * analysis just computed. The ai-service drafts it, keeps only sentences that
      * cite a digit-run already present in the payload, and answers `{note}` —

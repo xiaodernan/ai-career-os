@@ -52,12 +52,21 @@ const followUpLetterHook: {
   variables: undefined | { id: string; locale?: string };
 } = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
 
+const acceptancePlaybookHook: {
+  data: { playbook: string | null } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mutate: any;
+  isPending: boolean;
+  variables: undefined | { id: string; locale?: string };
+} = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
+
 vi.mock("@/lib/hooks/offers", () => ({
   useSaveOffer: () => ({ mutate: () => {}, isPending: false }),
   useDeleteOffer: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
   useOfferDecisionLetter: () => letterHook,
   useCounterOfferLetter: () => counterLetterHook,
   useFollowUpOfferLetter: () => followUpLetterHook,
+  useAcceptancePlaybook: () => acceptancePlaybookHook,
 }));
 vi.mock("@/lib/hooks/resources", () => ({
   useOfferShelf: () => ({

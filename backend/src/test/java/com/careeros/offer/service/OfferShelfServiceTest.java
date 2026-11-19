@@ -170,6 +170,29 @@ class OfferShelfServiceTest {
     }
 
     @Test
+    void theAcceptancePlaybookShipsTheOfferToTheProviderAndPassesTheAnswerThrough() {
+        UUID rowId = UUID.randomUUID();
+        OfferRow main = row(rowId, "Main Offer", 280000, 40000, 60000,
+                OffsetDateTime.now().plusDays(60));
+        main.setDecision("accepted");
+        when(repository.findByIdAndUserId(org.mockito.ArgumentMatchers.eq(rowId),
+                org.mockito.ArgumentMatchers.eq(userId)))
+                .thenReturn(Optional.of(main));
+        when(ai.acceptancePlaybook(org.mockito.ArgumentMatchers.eq(userId), any(),
+                org.mockito.ArgumentMatchers.eq("en")))
+                .thenReturn(java.util.Map.of("playbook",
+                        "Day 1: read the offer again. Day 90: you own it."));
+
+        String out = service.acceptancePlaybook(userId, rowId, "en");
+
+        assertThat(out).isEqualTo("Day 1: read the offer again. Day 90: you own it.");
+
+        assertThatThrownBy(() -> service.acceptancePlaybook(userId, UUID.randomUUID(), "en"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No such offer");
+    }
+
+    @Test
     void theCounterLetterShipsTheOfferAndTheSiblingBand_andAnotherAccountGetsA404() {
         UUID rowId = UUID.randomUUID();
         UUID sibId = UUID.randomUUID();

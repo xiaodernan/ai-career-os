@@ -2,6 +2,8 @@ package com.careeros.offer.web;
 
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
+import com.careeros.offer.dto.OfferShelfDtos.AcceptancePlaybookRequest;
+import com.careeros.offer.dto.OfferShelfDtos.AcceptancePlaybookResponse;
 import com.careeros.offer.dto.OfferShelfDtos.CounterLetterRequest;
 import com.careeros.offer.dto.OfferShelfDtos.CounterLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterRequest;
@@ -108,5 +110,18 @@ public class OfferShelfController {
                                                  @RequestBody(required = false) FollowUpLetterRequest request) {
         String locale = request == null ? null : request.locale();
         return new FollowUpLetterResponse(shelf.followUpLetter(user.id(), id, locale));
+    }
+
+    /**
+     * The acceptance playbook (Epic 335): the reader's first 90 days, written from the offer they just signed.
+     * The playbook is an aftercare surface — it is what the reader reaches for on the morning they start.
+     * `playbook` is null when nothing grounded survived.
+     */
+    @PostMapping("/shelf/{id}/acceptance-playbook")
+    public AcceptancePlaybookResponse acceptancePlaybook(@CurrentUser AuthUser user,
+                                                        @PathVariable UUID id,
+                                                        @RequestBody(required = false) AcceptancePlaybookRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new AcceptancePlaybookResponse(shelf.acceptancePlaybook(user.id(), id, locale));
     }
 }

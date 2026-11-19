@@ -484,6 +484,17 @@ public class FakeAiServiceClientConfig {
         }
 
         @Override
+        public Map<String, Object> acceptancePlaybook(UUID userId, Map<String, Object> offer,
+                                                      String locale) {
+            record("acceptancePlaybook");
+            Object total = offer == null ? null : offer.get("totalComp");
+            return map("playbook", "Day 1: read the offer again (" + total + "). "
+                    + "Day 30: ship the first small thing the customer reaches. "
+                    + "Day 60: close the feedback loop from your manager. "
+                    + "Day 90: you are a contributor now; the only review is your own.");
+        }
+
+        @Override
         public Map<String, Object> gapNote(UUID userId, Map<String, Object> payload,
                                            String locale) {
             record("gapNote");

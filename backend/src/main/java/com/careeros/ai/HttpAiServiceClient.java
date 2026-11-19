@@ -494,6 +494,17 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> acceptancePlaybook(UUID userId, Map<String, Object> offer,
+                                                    String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("offer", offer != null ? offer : Map.of());
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/acceptance-playbook", userId, body);
+    }
+
+    @Override
     public Map<String, Object> gapNote(UUID userId, Map<String, Object> payload,
                                        String locale) {
         Map<String, Object> body = new HashMap<>();

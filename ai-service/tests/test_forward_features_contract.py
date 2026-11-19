@@ -90,6 +90,8 @@ FORWARD = {
     "/internal/features/counter-offer-letter": ("CounterOfferLetterReq", {"offer"}),
     # Epic 334 -- the stalled-offer check-in letter. `offer` required.
     "/internal/features/follow-up-letter": ("FollowUpLetterReq", {"offer"}),
+    # Epic 335 -- the reader's first-90-days playbook. `offer` required.
+    "/internal/features/acceptance-playbook": ("AcceptancePlaybookReq", {"offer"}),
 }
 
 

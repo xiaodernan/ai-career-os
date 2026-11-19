@@ -69,4 +69,10 @@ public final class OfferShelfDtos {
 
   /** The stalled-offer letter (Epic 334). `letter` is null when nothing grounded survived. */
   public record FollowUpLetterResponse(String letter) {}
+
+  /** The acceptance playbook's request (Epic 335). */
+  public record AcceptancePlaybookRequest(@Size(max = 8) String locale) {}
+
+  /** The reader's first-90-days playbook (Epic 335). `playbook` is null when nothing grounded survived. */
+  public record AcceptancePlaybookResponse(String playbook) {}
 }

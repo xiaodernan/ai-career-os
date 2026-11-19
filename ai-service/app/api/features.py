@@ -14,6 +14,7 @@ from app.features import proactive_step as proactive_step_mod
 from app.features import reply_decode as reply_decode_mod
 from app.features import counter_letter as counter_letter_mod
 from app.features import follow_up_letter as follow_up_letter_mod
+from app.features import acceptance_playbook as acceptance_playbook_mod
 from app.features import offer_narrative as offer_narrative_mod
 from app.features import offer_letter as offer_letter_mod
 from app.features import export as export_mod
@@ -942,6 +943,31 @@ async def decode_reply_ep(req: ReplyDecodeReq, ctx: Ctx = Depends(require_intern
     result = await reply_decode_mod.decode_reply(payload, locale=req.locale,
                                                  user_id=str(ctx.user_id) if ctx.user_id else None,
                                                  run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class AcceptancePlaybookReq(BaseModel):
+    """Epic 335 -- the reader's first-90-days playbook.
+
+    `offer` is the newly accepted shelf row; the playbook keeps only digits already in the snapshot.
+    Locale (en/zh) picks the language."""
+    offer: dict
+    locale: str | None = None
+
+
+@router.post("/acceptance-playbook")
+async def acceptance_playbook_ep(req: AcceptancePlaybookReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 335 -- the first-90-days playbook for the offer the reader just signed.
+
+    Optional by contract: an ungrounded or silent relay answers `playbook: null`; the card renders
+    nothing rather than a cheerful list of confident lies.
+    """
+    run_id = await _run(ctx, "offers", "acceptance_playbook")
+    result = await acceptance_playbook_mod.acceptance_playbook(
+        req.offer if isinstance(req.offer, dict) else {}, locale=req.locale,
+        user_id=str(ctx.user_id) if ctx.user_id else None,
+        run_id=run_id)
     await observability.finish_run(run_id, "completed")
     return result
 
