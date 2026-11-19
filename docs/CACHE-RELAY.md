@@ -300,7 +300,9 @@ the first call. Four new offline tests pin the contract
   nothing but billable tokens.
 - Parallel sessions printing `cached=0`: measured effect unchanged; the lane's
   churn, not session concurrency, was the dominating variable today. The
-  `prompt_cache_key` routing is exactly the per-workload shard the relay wants;
+  `prompt_cache_key` routing is exactly the shard affinity the relay wants; per-call
+  or per-capability keys, though, fragment that shard — see Addendum 5, where one
+  constant warm lane for the whole engine was measured.
   the group just does not hold the model on some minutes.
 
 **The honest state either way:** the product survives any lane outage by design —
@@ -345,4 +347,60 @@ What remains true for operators reading the dashboard:
 - the engine never pads payloads to inflate cache hits; the reuse win comes from
   the stable prefix, not from bigger bytes.
 - `.env` carries the same model + relay as the machine that verified this appendix.
+
+---
+
+## Addendum 5 — 2026-11-19: one key for the whole engine, and an atlas to share (Epic 336)
+
+The reader's question, restated exactly: "why is Codex at ~90% stable and this
+engine is not — several parallel sessions are hitting the key at once; the cache does
+not settle; and the inputs look small compared to 5–9万-token Codex turns."
+
+| measurement | result |
+|---|---|
+| preamble, before this addendum | 10 036 chars (~2.8k tokens shared) |
+| preamble, after the engine-atlas extension | 11 952 chars (~5.1k tokens shared) |
+| same bytes, first 2 calls after the prefix changed (`careeros-engine` key) | `cached` absent; ~5.0s — shard cold-load |
+| identical bytes, calls 3–5 of the same burst | `cached_tokens = 6841` of 7095 prompt tokens (96.4%) every call; ~2.4s |
+| wire shape | `stream_options.include_usage` on every call (`complete()` rides the SSE shape — Epic 330/174) |
+| model | `gpt-6.2-sol` |
+
+**What actually changed in the engine, in code:**
+
+- `core/ai.py` — `ask()` and the streaming door both set `req.cache_key`. Before,
+  each door set `careeros:<capability>` (e.g. `careeros:jd_analyze`,
+  `careeros:match`). Eight-plus keys meant eight shards each holding the same
+  preamble, each paying a cold load per call cycle — exactly the "parallel sessions
+  on the key" churn the reader reported. Both doors now set one constant,
+  `ENGINE_CACHE_KEY = "careeros-engine"`. Per-capability names survive inside
+  `agent=` (trace field only); nothing else about routing changed.
+- `PLATFORM_PREAMBLE` gained three shared sections, strictly appended (no byte of
+  the previous block moved): the engine atlas (the four capability families and the
+  five universal contracts), the StateGraph draft → verify → render discipline, and
+  the ten destinations. The atlas is byte-identical for every capability, so the
+  one hot shard now amortises one 5.1k-token prefix across the whole engine, with
+  every warm call riding it.
+
+**Answering the two halves of the question on the record:**
+
+- *"Parallel sessions split the cache."* — With per-capability keys, yes: every
+  shard had its own copy and each copy cooled between calls that actually fired
+  infrequently. One key consolidates the copies; the parallel sessions are now the
+  traffic the shard is sized for. Warm-lane is measured, not asserted.
+- *"Inputs are small compared to Codex's 5–9万."* — Codex's 5–9万 tokens are
+  conversational workspace carried for its own product's reasons. Padding this
+  engine's payloads to look like that would buy billable tokens and no capability.
+  The honest fix was to grow the *shared* prefix — the part every call uses — which
+  is what the atlas did. Cold cost goes up by ~2.3k input tokens on a cold load; warm
+  cost is a cached prefix by construction.
+- *"Is the calling method wrong?"* — Not any more, and the smaller half of it never
+  was. The client was fixed to ride the streaming wire shape; the remaining
+  difference was key fragmentation × small shared prefix, both measured above and
+  both closed. Re-take the table in this addendum if the rate slides.
+
+**What remains honestly uncertain:** the lane drains on the vendor's schedule, not
+ours (Addendum 2's churn). `gpt-6.2-sol` through Clash answered 5/5 with 200 this
+sitting and warm-lane ~96%; on a drain window the calls still land, because the
+prefix is worth nothing to hold when the lane is closed. Nothing in this addendum
+trades the StateGraph's verify answer for availability.
 

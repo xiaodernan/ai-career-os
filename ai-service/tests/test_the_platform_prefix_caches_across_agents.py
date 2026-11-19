@@ -8,10 +8,12 @@ though nothing else about the request repeats.
 
 Statistical, not per-round: this gateway load-balances requests across upstream
 replicas, and a repeat only hits when it lands on the shard that holds the prefix.
-`prompt_cache_key` (which the production path sends, stable per capability) exists
-precisely to raise that affinity, and this probe measures how far it gets — the
-assertion is that the majority of warm rounds hit, not that every round does; a
-round that misses is the load balancer, not the calling method.
+`prompt_cache_key` (which the production path sends, now one constant warm lane for
+the whole engine — `ENGINE_CACHE_KEY`) exists precisely to raise that affinity, and this
+probe measures how far it gets — the assertion is that the majority of warm rounds
+hit, not that every round does; a round that misses is the load balancer, not the
+calling method. (Addendum 5 of CACHE-RELAY.md: one key replaces per-capability keys,
+and the warm lane measured 96.4% across a burst.)
 
 Opt-in (CAREEROS_REAL_LLM=1): costs a few thousand tokens on the real gateway.
 """
