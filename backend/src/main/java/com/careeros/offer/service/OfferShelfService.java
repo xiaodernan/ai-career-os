@@ -155,6 +155,24 @@ public class OfferShelfService {
     return prep.isEmpty() ? null : prep;
   }
 
+  /**
+   * The gracious decline (Epic 339): the one short email the reader sends when the answer
+   * is no �� gratitude, a clean final no, a door left open. The writer never sees siblings
+   * (a decline is not a negotiation tactic); digits must already exist in the row's own
+   * payload or the whole letter is dropped.
+   */
+  public String declineLetter(UUID userId, UUID id, String locale) {
+    OfferRow row = repository.findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
+    Map<String, Object> answer = aiService.declineLetter(userId, offerPayload(row), locale);
+    Object value = answer == null ? null : answer.get("letter");
+    if (value == null) {
+      return null;
+    }
+    String letter = value.toString().trim();
+    return letter.isEmpty() ? null : letter;
+  }
+
   private String letterOfRow(UUID userId, OfferRow row, String locale) {
     Map<String, Object> answer = aiService.offerDecisionLetter(userId, offerPayload(row),
             siblingPayloads(userId, row), locale);

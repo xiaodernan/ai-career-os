@@ -8,6 +8,8 @@ import com.careeros.offer.dto.OfferShelfDtos.CounterLetterRequest;
 import com.careeros.offer.dto.OfferShelfDtos.CounterLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterRequest;
 import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterResponse;
+import com.careeros.offer.dto.OfferShelfDtos.DeclineLetterRequest;
+import com.careeros.offer.dto.OfferShelfDtos.DeclineLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.NegotiationPrepRequest;
 import com.careeros.offer.dto.OfferShelfDtos.NegotiationPrepResponse;
 import com.careeros.offer.dto.OfferShelfDtos.DeleteOfferResponse;
@@ -139,5 +141,19 @@ public class OfferShelfController {
                                                    @RequestBody(required = false) NegotiationPrepRequest request) {
         String locale = request == null ? null : request.locale();
         return new NegotiationPrepResponse(shelf.negotiationPrep(user.id(), id, locale));
+    }
+
+    /**
+     * The gracious decline (Epic 339): the one short email the reader sends when the answer
+     * is no �� gratitude for the process, a clean and final no, a door left open. No invented
+     * reason, no named competition, no re-litigated numbers. `letter` is null when nothing
+     * grounded survived �� the card renders nothing rather than a polite fabrication.
+     */
+    @PostMapping("/shelf/{id}/decline-letter")
+    public DeclineLetterResponse declineLetter(@CurrentUser AuthUser user,
+                                               @PathVariable UUID id,
+                                               @RequestBody(required = false) DeclineLetterRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new DeclineLetterResponse(shelf.declineLetter(user.id(), id, locale));
     }
 }

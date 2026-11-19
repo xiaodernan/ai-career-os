@@ -207,5 +207,10 @@ def test_the_nightly_job_records_itself_even_when_it_fails():
 
     assert "--started-at" in run and "night-start" in run, \
         "the row needs the job's own start, not the recorder's clock"
-    assert '--url "$OPS_URL' in run, "the endpoint comes from the configured variable"
-    assert '--token "$OPS_TOKEN' in run, "the internal token comes from a secret"
+    # pwsh reads the configured variable as $env:OPS_URL; the old bash form is $OPS_URL.
+    # Both forms are accepted so the assertion checks *that the endpoint is configured*,
+    # not which shell the runner speaks.
+    assert '--url "$OPS_URL' in run or '--url "$env:OPS_URL' in run, \
+        "the endpoint comes from the configured variable"
+    assert '--token "$OPS_TOKEN' in run or '--token "$env:OPS_TOKEN' in run, \
+        "the internal token comes from a secret"

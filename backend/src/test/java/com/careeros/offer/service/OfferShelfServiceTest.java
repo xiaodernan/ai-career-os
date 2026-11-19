@@ -170,6 +170,39 @@ class OfferShelfServiceTest {
     }
 
     @Test
+    void theDeclineLetterShipsTheOfferToTheProviderAndPassesTheAnswerThrough() {
+        UUID rowId = UUID.randomUUID();
+        OfferRow main = row(rowId, "Main Offer", 280000, 40000, 60000,
+                OffsetDateTime.now().plusDays(60));
+        main.setDecision("declined");
+        when(repository.findByIdAndUserId(org.mockito.ArgumentMatchers.eq(rowId),
+                org.mockito.ArgumentMatchers.eq(userId)))
+                .thenReturn(Optional.of(main));
+        when(ai.declineLetter(org.mockito.ArgumentMatchers.eq(userId), any(),
+                org.mockito.ArgumentMatchers.eq("en")))
+                .thenReturn(java.util.Map.of("letter",
+                        "Thank you for the offer — after careful thought, not this time."));
+
+        String out = service.declineLetter(userId, rowId, "en");
+
+        assertThat(out).isEqualTo("Thank you for the offer — after careful thought, not this time.");
+
+        assertThatThrownBy(() -> service.declineLetter(userId, UUID.randomUUID(), "en"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("No such offer");
+
+        ArgumentCaptor<java.util.Map<String, Object>> offerCap =
+                ArgumentCaptor.forClass(java.util.Map.class);
+        org.mockito.Mockito.verify(ai).declineLetter(
+                org.mockito.ArgumentMatchers.eq(userId), offerCap.capture(),
+                org.mockito.ArgumentMatchers.eq("en"));
+        assertThat(offerCap.getValue())
+                .containsEntry("label", "Main Offer")
+                .containsEntry("decision", "declined")
+                .containsEntry("totalComp", 380000);
+    }
+
+    @Test
     void theAcceptancePlaybookShipsTheOfferToTheProviderAndPassesTheAnswerThrough() {
         UUID rowId = UUID.randomUUID();
         OfferRow main = row(rowId, "Main Offer", 280000, 40000, 60000,

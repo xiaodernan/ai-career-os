@@ -1135,8 +1135,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # same line); committed on the same walk the pin reddened, counted in the same pass.
     # 237 with Epic 333-335's: CounterLetterRequest/CounterLetterResponse, FollowUpLetterRequest/FollowUpLetterResponse
     # (same class, same reason) and AcceptancePlaybookRequest/AcceptancePlaybookResponse on OfferShelfDtos.
-    assert len(declared) == 243, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 243 measured"
+    # 243 with Epic 336's ThankYouLetterRequest/ThankYouLetterResponse and Epic 337's
+    # NegotiationPrepRequest/NegotiationPrepResponse (same class, same reason).
+    # Epic 339's DeclineLetterRequest/DeclineLetterResponse (same class, same reason) makes it 245.
+    assert len(declared) == 245, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 245 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

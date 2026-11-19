@@ -253,6 +253,14 @@ public interface AiServiceClient {
     Map<String, Object> acceptancePlaybook(UUID userId, Map<String, Object> offer, String locale);
 
     /**
+     * The gracious decline (Epic 339): the one short email the reader sends when the answer
+     * is no �� gratitude for the process, a clean final no, a door left open. No invented
+     * reason, no named competition, no re-litigated numbers. `letter` is null on any failure.
+     * `locale` is the reader's language.
+     */
+    Map<String, Object> declineLetter(UUID userId, Map<String, Object> offer, String locale);
+
+    /**
      * The gap analyst's voice (Epic 329): one paragraph written about the gap the
      * analysis just computed. The ai-service drafts it, keeps only sentences that
      * cite a digit-run already present in the payload, and answers `{note}` —

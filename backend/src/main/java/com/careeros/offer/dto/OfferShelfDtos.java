@@ -81,4 +81,10 @@ public final class OfferShelfDtos {
 
   /** The reader's twelve-line prep sheet (Epic 337). `prep` is null when nothing grounded survived. */
   public record NegotiationPrepResponse(String prep) {}
+
+  /** The gracious decline's request (Epic 339). */
+  public record DeclineLetterRequest(@Size(max = 8) String locale) {}
+
+  /** The gracious decline (Epic 339). `letter` is null when nothing grounded survived. */
+  public record DeclineLetterResponse(String letter) {}
 }

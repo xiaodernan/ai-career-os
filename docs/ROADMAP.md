@@ -6918,6 +6918,51 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **339** The gracious decline — the email the reader sends when the answer is no (2026-11-19).
+
+  (The shelf carries a writer for every other answer but this one: the decision letter
+  (327, the reader-facing keepsake), the counter-offer (333, the sendable ask), the
+  check-in (334, the opened silence), the playbook (335, the first ninety days) and
+  the prep sheet (337, the call before all of them). Nowhere on the shelf is the one
+  short email that passes on the offer to the company — gratitude for the process,
+  a clean and final no, a door left open, no invented reason, no named competitor,
+  no re-litigated numbers. Epic 339 adds `POST /api/v1/offers/shelf/{id}/decline-letter`
+  (en/zh). The writer does not see siblings (a decline is not a negotiation tactic);
+  every digit-run must already appear in the row's own payload or the whole letter is
+  dropped (`letter: null`, silence, never a polite fabrication). Same discipline as
+  327/333/334/335/337: `app/features/decline_letter.py`, one StateGraph draft →
+  verify → render (`kind="decline_letter"`, agent `offer_negotiator`);
+  `OfferShelfService.declineLetter(...)` reads the caller's own row (another account's
+  id is the same 404) and builds the payload server-side; the wire: internal
+  `POST /internal/features/decline-letter` reached via `HttpAiServiceClient.declineLetter`;
+  the fake client for ITs returns the same shape. `RateLimitFilter.isAiCost` gains the
+  decline lane (the six offer-letter writers); SECURITY.md updated to match.
+  `DeclineLetterRequest`/`DeclineLetterResponse` join `OfferShelfDtos`; record-shape
+  243 → 245. `failures.declineLetter`, `offers.declineLetter*` in both languages,
+  mutation roster 11 → 12 on offers.ts, `SENTENCES` 11 → 12, fail() uses 96 → 97,
+  census pins 111 → 112 sites / 99 → 100 declare (computed by the walk, not by hand).
+  Frontend: `<DeclineLetterBlock/>` mounted under the declined row beside the decision
+  letter — ask-first with a teaching Hint, Copy, silence line; `offer-shelf.test.tsx`
+  gains the declined-row case in both languages; `endpoints.test.ts` is unchanged — the
+  route reads fully resolvable through its own record, so the list only shrank.
+  Also in the same sitting: `test_nightly_report.py` learns the pwsh spelling of the
+  configured-variable assertions (`$env:OPS_URL`/`$env:OPS_TOKEN`) — the CI lane moved
+  from bash to pwsh on the self-hosted Windows runner and the pin was red on every
+  run since; the intent (the endpoint comes from the configured variable) is unchanged
+  and both shells are accepted. Verify pins green locally: `tests/test_decline_letter.py`
+  6/6; `test_forward_features_contract` gains `/internal/features/decline-letter`
+  (DeclineLetterReq); `test_failed_mutation_is_announced` 9/9; `test_response_shape_contract`
+  passes at 245; `test_nightly_report` green; `OfferShelfServiceTest` 10/10 (the
+  DeclineLetter ships-the-offer-to-the-provider case plus the foreign-row 404);
+  frontend `offer-shelf.test.tsx` 6/6, `i18n` gates 59/59, `endpoints.test.ts` 16/16,
+  `tsc --noEmit` clean. Honest limits: not probed live — this sitting rebuilds nothing
+  on the user's running stack (its ai-service container was already unhealthy this
+  sitting, and the user's containers are not this repo's to bounce); the live probe
+  awaits an `app`-profile rebuild, same as 333/334/335's own honest limits at the time.
+  The push CI now runs on a self-hosted Windows runner (`lenovo-career-os-2`) co-located
+  with the working tree; the earlier `ai-service` job failure this sitting was the stale
+  bash-form pin above, not the app.)
+
 - [x] **338** The warm lane — one key for the whole engine, an atlas to share (2026-11-19).
 
   (The reader asking why Codex rides ~90% stable on this relay while this engine does

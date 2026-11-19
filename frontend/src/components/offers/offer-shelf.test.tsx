@@ -68,6 +68,14 @@ const negotiationPrepHook: {
   variables: undefined | { id: string; locale?: string };
 } = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
 
+const declineLetterHook: {
+  data: { letter: string | null } | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mutate: any;
+  isPending: boolean;
+  variables: undefined | { id: string; locale?: string };
+} = { data: null, mutate: vi.fn(), isPending: false, variables: undefined };
+
 vi.mock("@/lib/hooks/offers", () => ({
   useSaveOffer: () => ({ mutate: () => {}, isPending: false }),
   useDeleteOffer: () => ({ mutate: () => {}, isPending: false, variables: undefined }),
@@ -76,6 +84,7 @@ vi.mock("@/lib/hooks/offers", () => ({
   useFollowUpOfferLetter: () => followUpLetterHook,
   useAcceptancePlaybook: () => acceptancePlaybookHook,
   useNegotiationPrep: () => negotiationPrepHook,
+  useOfferDeclineLetter: () => declineLetterHook,
 }));
 vi.mock("@/lib/hooks/resources", () => ({
   useOfferShelf: () => ({
@@ -141,6 +150,16 @@ describe("the offer shelf", () => {
     expect(en).toContain("the number you own");
     const zh = render("zh");
     expect(zh).toContain("写这份备忘单");
+  });
+
+  it("renders the gracious decline button on the declined row only", () => {
+    const en = render("en");
+    expect(en).toContain("Write the decline email");
+    expect(en).toContain("a clean and final no");
+    const zh = render("zh");
+    expect(zh).toContain("写这封婉拒信");
+    // The pending row carries the sending affordances, never the decline one.
+    expect(render("en").split("Write the decline email").length - 1).toBe(1);
   });
 
   it("renders the letter itself once the writer answers", () => {

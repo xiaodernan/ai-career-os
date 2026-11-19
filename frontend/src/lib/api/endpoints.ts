@@ -203,6 +203,8 @@ export const endpoints = {
   offerShelfAcceptancePlaybook: (id: string) => `/offers/shelf/${seg(id)}/acceptance-playbook`,
   /** Epic 337 — the negotiation prep one-pager, written for the reader (not to the company). */
   offerShelfNegotiationPrep: (id: string) => `/offers/shelf/${seg(id)}/negotiation-prep`,
+  /** Epic 339 — the gracious decline: the final no the reader sends to the company. */
+  offerShelfDeclineLetter: (id: string) => `/offers/shelf/${seg(id)}/decline-letter`,
   offerSalaryBenchmark: "/offers/salary-benchmark",
   offerNegotiate: "/offers/negotiate",
   offerCompare: "/offers/compare",

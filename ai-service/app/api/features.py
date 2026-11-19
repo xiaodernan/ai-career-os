@@ -15,6 +15,7 @@ from app.features import reply_decode as reply_decode_mod
 from app.features import counter_letter as counter_letter_mod
 from app.features import negotiation_prep as negotiation_prep_mod
 from app.features import follow_up_letter as follow_up_letter_mod
+from app.features import decline_letter as decline_letter_mod
 from app.features import acceptance_playbook as acceptance_playbook_mod
 from app.features import thank_you_letter as thank_you_letter_mod
 from app.features import offer_narrative as offer_narrative_mod
@@ -1046,6 +1047,31 @@ async def follow_up_letter_ep(req: FollowUpLetterReq, ctx: Ctx = Depends(require
     """
     run_id = await _run(ctx, "offers", "follow_up_letter")
     result = await follow_up_letter_mod.follow_up_letter(
+        req.offer if isinstance(req.offer, dict) else {}, locale=req.locale,
+        user_id=str(ctx.user_id) if ctx.user_id else None,
+        run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class DeclineLetterReq(BaseModel):
+    """Epic 339 -- the gracious decline.
+
+    `offer` is the shelf's own row; the letter keeps only digits already in the snapshot;
+    `locale` (en/zh) picks the language."""
+    offer: dict
+    locale: str | None = None
+
+
+@router.post("/decline-letter")
+async def decline_letter_ep(req: DeclineLetterReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 339 -- the gracious decline.
+
+    Optional by contract: an ungrounded or silent relay answers `letter: null`; the card renders
+    nothing rather than a decline that invents a reason.
+    """
+    run_id = await _run(ctx, "offers", "decline_letter")
+    result = await decline_letter_mod.decline_letter(
         req.offer if isinstance(req.offer, dict) else {}, locale=req.locale,
         user_id=str(ctx.user_id) if ctx.user_id else None,
         run_id=run_id)

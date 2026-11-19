@@ -96,6 +96,8 @@ FORWARD = {
     "/internal/features/thank-you-letter": ("ThankYouLetterReq", {"turns"}),
     # Epic 337 -- the negotiation prep one-pager. `offer` required.
     "/internal/features/negotiation-prep": ("NegotiationPrepReq", {"offer"}),
+    # Epic 339 -- the gracious decline. `offer` required.
+    "/internal/features/decline-letter": ("DeclineLetterReq", {"offer"}),
 }
 
 

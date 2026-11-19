@@ -265,6 +265,17 @@ export function useNegotiationPrep() {
   });
 }
 
+/** Epic 339 — the gracious decline for the offer the reader has decided not to take. */
+export function useOfferDeclineLetter() {
+  return useMutation({
+    mutationFn: async (input: { id: string; locale?: string }) =>
+      await api.create<{ letter?: string | null }>(
+        endpoints.offerShelfDeclineLetter(input.id),
+        { locale: input.locale }),
+    onError: fail("failures.declineLetter"),
+  });
+}
+
 /** 12.4 — the counter-offer draft. */
 export function useCounterOffer() {
   return useMutation({
