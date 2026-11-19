@@ -482,6 +482,19 @@ public class FakeAiServiceClientConfig {
         }
 
         @Override
+        public Map<String, Object> negotiationPrep(UUID userId, Map<String, Object> offer,
+                                                   List<Map<String, Object>> siblings,
+                                                   String locale) {
+            record("negotiationPrep");
+            Object total = offer == null ? null : offer.get("totalComp");
+            return map("prep", "The anchor read: " + total + " on the table. "
+                    + "The number you own: " + total + " is what the offer itself named, so it is yours to quote. "
+                    + "The pause: walk me through the full package once and how long the deadline leaves me. "
+                    + "The floor: the same " + total + " restructured, a written parity commitment in place. "
+                    + "If they pass: thank them, take the band you can live with, close the loop cleanly.");
+        }
+
+        @Override
         public Map<String, Object> followUpLetter(UUID userId, Map<String, Object> offer,
                                                   String locale) {
             record("followUpLetter");

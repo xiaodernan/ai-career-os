@@ -228,6 +228,16 @@ public interface AiServiceClient {
             List<Map<String, Object>> siblings, String locale);
 
     /**
+     * The negotiation prep one-pager (Epic 337): the twelve lines the reader carries into the
+     * call where they answer the offer on the table — anchor read, the number you own, the pause,
+     * the floor, the graceful no. Addressed to the reader, not to the company; every digit-run
+     * must appear in the snapshot or the note is absent (`prep` null). Optional by contract.
+     * `locale` is the reader's language.
+     */
+    Map<String, Object> negotiationPrep(UUID userId, Map<String, Object> offer,
+            List<Map<String, Object>> siblings, String locale);
+
+    /**
      * The stalled-offer letter (Epic 334): the one check-in email the reader sends when the
      * company has gone quiet on an offer on the shelf — same discipline, same verification
      * (every digit-run in the letter must appear in the offer payload, silence on any failure).

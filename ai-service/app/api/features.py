@@ -13,6 +13,7 @@ from app.features import gap_note as gap_note_mod
 from app.features import proactive_step as proactive_step_mod
 from app.features import reply_decode as reply_decode_mod
 from app.features import counter_letter as counter_letter_mod
+from app.features import negotiation_prep as negotiation_prep_mod
 from app.features import follow_up_letter as follow_up_letter_mod
 from app.features import acceptance_playbook as acceptance_playbook_mod
 from app.features import thank_you_letter as thank_you_letter_mod
@@ -992,6 +993,35 @@ async def acceptance_playbook_ep(req: AcceptancePlaybookReq, ctx: Ctx = Depends(
     run_id = await _run(ctx, "offers", "acceptance_playbook")
     result = await acceptance_playbook_mod.acceptance_playbook(
         req.offer if isinstance(req.offer, dict) else {}, locale=req.locale,
+        user_id=str(ctx.user_id) if ctx.user_id else None,
+        run_id=run_id)
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class NegotiationPrepReq(BaseModel):
+    """Epic 337 -- the one-pager the reader walks into the negotiation with.
+
+    `offer` is the shelf's answer, `siblings` up to four other shelf cards (shown for
+    context, never named as leverage), every digit-run in the note must already appear in
+    the snapshot; `locale` (en/zh) picks the language."""
+    offer: dict
+    siblings: list | None = None
+    locale: str | None = None
+
+
+@router.post("/negotiation-prep")
+async def negotiation_prep_ep(req: NegotiationPrepReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 337 -- the negotiation prep one-pager about one shelf offer.
+
+    Optional by contract: an ungrounded or silent relay answers `prep: null`; the card renders
+    nothing rather than a confident set of invented anchors.
+    """
+    run_id = await _run(ctx, "offers", "negotiation_prep")
+    result = await negotiation_prep_mod.negotiation_prep(
+        req.offer if isinstance(req.offer, dict) else {},
+        req.siblings if isinstance(req.siblings, list) else [],
+        locale=req.locale,
         user_id=str(ctx.user_id) if ctx.user_id else None,
         run_id=run_id)
     await observability.finish_run(run_id, "completed")

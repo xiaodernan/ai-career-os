@@ -19,6 +19,7 @@ import {
 import { useDeleteOffer, useSaveOffer, useOfferDecisionLetter, useCounterOfferLetter, useFollowUpOfferLetter, useAcceptancePlaybook } from "@/lib/hooks/offers";
 import { useOfferShelf } from "@/lib/hooks/resources";
 import { OfferCelebration } from "@/components/offers/offer-celebration";
+import { OfferNegotiationPrep } from "@/components/offers/offer-negotiation-prep";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { OfferShelfItem } from "@/lib/api/types";
 import { remoteTypeWord } from "@/lib/status-words";
@@ -571,6 +572,7 @@ export function OfferShelf() {
                     <>
                       <CounterLetterBlock rowId={row.id} locale={locale} t={t} />
                       <FollowUpLetterBlock rowId={row.id} locale={locale} t={t} />
+                      <OfferNegotiationPrep rowId={row.id} />
                     </>
                   )}
                 </li>

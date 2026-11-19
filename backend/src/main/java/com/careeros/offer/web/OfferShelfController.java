@@ -8,6 +8,8 @@ import com.careeros.offer.dto.OfferShelfDtos.CounterLetterRequest;
 import com.careeros.offer.dto.OfferShelfDtos.CounterLetterResponse;
 import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterRequest;
 import com.careeros.offer.dto.OfferShelfDtos.FollowUpLetterResponse;
+import com.careeros.offer.dto.OfferShelfDtos.NegotiationPrepRequest;
+import com.careeros.offer.dto.OfferShelfDtos.NegotiationPrepResponse;
 import com.careeros.offer.dto.OfferShelfDtos.DeleteOfferResponse;
 import com.careeros.offer.dto.OfferShelfDtos.OfferItem;
 import com.careeros.offer.dto.OfferShelfDtos.OfferLetterRequest;
@@ -123,5 +125,19 @@ public class OfferShelfController {
                                                         @RequestBody(required = false) AcceptancePlaybookRequest request) {
         String locale = request == null ? null : request.locale();
         return new AcceptancePlaybookResponse(shelf.acceptancePlaybook(user.id(), id, locale));
+    }
+
+    /**
+     * The negotiation prep one-pager (Epic 337): the twelve lines the reader carries into the call
+     * where they answer this offer — anchor read, the number you own, the pause, the floor, the
+     * graceful no. Addressed to the reader, not to the company. `prep` is null when nothing
+     * grounded survived — silence, never invented anchors.
+     */
+    @PostMapping("/shelf/{id}/negotiation-prep")
+    public NegotiationPrepResponse negotiationPrep(@CurrentUser AuthUser user,
+                                                   @PathVariable UUID id,
+                                                   @RequestBody(required = false) NegotiationPrepRequest request) {
+        String locale = request == null ? null : request.locale();
+        return new NegotiationPrepResponse(shelf.negotiationPrep(user.id(), id, locale));
     }
 }

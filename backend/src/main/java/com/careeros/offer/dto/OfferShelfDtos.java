@@ -75,4 +75,10 @@ public final class OfferShelfDtos {
 
   /** The reader's first-90-days playbook (Epic 335). `playbook` is null when nothing grounded survived. */
   public record AcceptancePlaybookResponse(String playbook) {}
+
+  /** The negotiation prep one-pager's request (Epic 337). */
+  public record NegotiationPrepRequest(@Size(max = 8) String locale) {}
+
+  /** The reader's twelve-line prep sheet (Epic 337). `prep` is null when nothing grounded survived. */
+  public record NegotiationPrepResponse(String prep) {}
 }

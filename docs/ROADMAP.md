@@ -6918,6 +6918,64 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **338** The warm lane — one key for the whole engine, an atlas to share (2026-11-19).
+
+  (The reader asking why Codex rides ~90% stable on this relay while this engine does
+  not land there was not a calling-method bug on the wire — Epic 330 measured that —
+  it was shard affinity × a small shared prefix: every capability carried `f"careeros:{agent}"`
+  as its `prompt_cache_key`, so eight-plus keys meant eight cold loads of the identical
+  preamble whenever the gateway load-balanced in any direction. Both doors now set one
+  constant, `ENGINE_CACHE_KEY = "careeros-engine"` — the engine is the conversation Codex
+  gives each of its users; every call the engine makes rides the same shard holding the
+  same prefix. And `PLATFORM_PREAMBLE` — strictly appended, no byte of the prior block
+  moved — gained three shared sections: the engine atlas (four capability families, five
+  universal contracts), the StateGraph draft → verify → render discipline, and the ten
+  destinations (routes to what happens next). Live measurement on this sitting's relay,
+  `gpt-6.2-sol` through Clash: preamble 10 036 → 11 952 chars (~2.8k → ~5.1k shared
+  tokens); after two cold shard-touches the warm burst read `cached_tokens` 6841 of 7095
+  (96.4%) on every call, ~2.4s (was ~5.0s cold). `CACHE-RELAY.md` gained Addendum 5 with
+  the full table and the honest caveat (the relay drains on its own schedule; a warm
+  burst measured here is one shard, one key, three calls). The fleet survives lane
+  outages by design — verify answers `null`, the letter is silence, nothing is fabricated
+  to look free. The classifier caught one of the same sitting's own letters:
+  `INTERVIEW_NOTHING_TO_FINALIZE` answered with two sentences ("Nothing to finalize",
+  "Nothing to thank"), so the thank-you path got its own code — `INTERVIEW_NOTHING_TO_THANK`
+  — one meaning, one sentence in both languages, the error-code classifier green as written.)
+
+- [x] **337** The negotiation prep one-pager — the twelve lines the reader carries in (2026-11-19).
+
+  (Before the reader sends the counter-offer (333) or even decides how to answer, every
+  phone call deserves the same groundwork Codex does before it produces a paragraph.
+  `POST /api/v1/offers/shelf/{id}/negotiation-prep` (en/zh) — the prep note is addressed to
+  the reader, second person, never to the company: The anchor read (what this offer
+  actually contains, in one breath, from the snapshot) / The number you own (the strongest
+  single figure in the snapshot the reader can lead with, named exactly) / The pause (one
+  sentence to buy time, bounded by the offer's own deadline fact when the snapshot carries
+  one) / The floor (an outcome shape that still counts as a yes — the same figure
+  restructured, a written parity commitment, a signing piece instead of a base jump; never
+  a number unless the snapshot carries it) / If they pass (the graceful no). The writer
+  never invents an anchor figure, a sign-on, a market rate, or a percentage — digits must
+  already appear in the offer payload (base/bonus/equity/totalComp/currency + the shelf's
+  deadline; siblings are shown only as band joins, never named as leverage). `prep` is null
+  when nothing grounded survives — silence, never an invented anchor. Same discipline as
+  327/333/334/335: `app/features/negotiation_prep.py`, one StateGraph draft → verify →
+  render (`kind="negotiation_prep"`, agent `offer_negotiator`); `OfferShelfService.negotiationPrep(...)`
+  reads the caller's own row (another account's id is the same 404); siblings visible to the
+  verifier as part of the digit set, never named as leverage. Frontend: `<OfferNegotiationPrep/>`
+  mounted under the pending row beside the counter-letter and check-in affordances — Hint,
+  ask-first, Copy, silence line. Census 217 → 218, `failures.negotiationPrep`,
+  `offers.negotiationPrep*` in both languages, mutation roster 10 → 11 on offers.ts, prose
+  110 → 111 sites / 98 → 99 declare / 96 uses (computed), record-shape 241 → 243. Live probe
+  on this sitting's relay (Clash, `gpt-6.2-sol`): `negotiation-prep` answered `200` in en and
+  in zh on a freshly created pending row, both notes grounded in `380000 CNY` and `2026-12-15`,
+  no invented figures; the verifier's keep-rate behaves exactly like the trio. One real bug
+  closed in the same sitting: the shelf date input posts bare `yyyy-MM-dd` and the stock
+  `OffsetDateTime` binding refused it, so every shelf write carrying a deadline was a 400 —
+  `JacksonConfig` gained a narrow `LenientOffsetDateTimeDeserializer` (ISO instant unchanged;
+  bare date = UTC-start-of-day; garbage still fails at the decode layer), pinned by
+  `JacksonConfigTest` 5/5 and verified end-to-end through the rebuilt container with the same
+  body the UI sends.)
+
 - [x] **336** The thank-you letter sent after the interview (2026-11-19).
 
   (`POST /api/v1/interview/sessions/{id}/thank-you-letter` — one letter from

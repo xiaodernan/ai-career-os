@@ -94,6 +94,8 @@ FORWARD = {
     "/internal/features/acceptance-playbook": ("AcceptancePlaybookReq", {"offer"}),
     # Epic 336 -- the thank-you letter after an interview. `turns` required.
     "/internal/features/thank-you-letter": ("ThankYouLetterReq", {"turns"}),
+    # Epic 337 -- the negotiation prep one-pager. `offer` required.
+    "/internal/features/negotiation-prep": ("NegotiationPrepReq", {"offer"}),
 }
 
 

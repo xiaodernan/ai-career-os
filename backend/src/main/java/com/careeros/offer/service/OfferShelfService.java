@@ -136,6 +136,25 @@ public class OfferShelfService {
     return letter.isEmpty() ? null : letter;
   }
 
+  /**
+   * The negotiation prep one-pager (Epic 337): the twelve lines the reader carries into the
+   * call where they answer the offer on the table — addressed to the reader (second person),
+   * never to the company. Same sibling-band discipline as the letter the reader will send.
+   */
+  public String negotiationPrep(UUID userId, UUID id, String locale) {
+    OfferRow row = repository.findByIdAndUserId(id, userId)
+        .orElseThrow(() -> new ApiException(ApiErrorCode.OFFER_NOT_FOUND, "No such offer on this shelf"));
+    Map<String, Object> offer = offerPayload(row);
+    List<Map<String, Object>> siblings = siblingPayloads(userId, row);
+    Map<String, Object> answer = aiService.negotiationPrep(userId, offer, siblings, locale);
+    Object value = answer == null ? null : answer.get("prep");
+    if (value == null) {
+      return null;
+    }
+    String prep = value.toString().trim();
+    return prep.isEmpty() ? null : prep;
+  }
+
   private String letterOfRow(UUID userId, OfferRow row, String locale) {
     Map<String, Object> answer = aiService.offerDecisionLetter(userId, offerPayload(row),
             siblingPayloads(userId, row), locale);

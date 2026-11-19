@@ -254,6 +254,17 @@ export function useAcceptancePlaybook() {
   });
 }
 
+/** Epic 337 — the negotiation prep one-pager for the offer on the table (second person, not the company). */
+export function useNegotiationPrep() {
+  return useMutation({
+    mutationFn: async (input: { id: string; locale?: string }) =>
+      await api.create<{ prep?: string | null }>(
+        endpoints.offerShelfNegotiationPrep(input.id),
+        { locale: input.locale }),
+    onError: fail("failures.negotiationPrep"),
+  });
+}
+
 /** 12.4 — the counter-offer draft. */
 export function useCounterOffer() {
   return useMutation({

@@ -493,6 +493,19 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> negotiationPrep(UUID userId, Map<String, Object> offer,
+                                               List<Map<String, Object>> siblings,
+                                               String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("offer", offer != null ? offer : Map.of());
+        body.put("siblings", siblings != null ? siblings : List.of());
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/negotiation-prep", userId, body);
+    }
+
+    @Override
     public Map<String, Object> followUpLetter(UUID userId, Map<String, Object> offer,
                                                String locale) {
         Map<String, Object> body = new HashMap<>();

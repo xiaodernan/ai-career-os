@@ -201,6 +201,8 @@ export const endpoints = {
   offerShelfFollowUpLetter: (id: string) => `/offers/shelf/${seg(id)}/follow-up-letter`,
   /** Epic 335 — the first-90-days playbook, written from the row the reader just accepted. */
   offerShelfAcceptancePlaybook: (id: string) => `/offers/shelf/${seg(id)}/acceptance-playbook`,
+  /** Epic 337 — the negotiation prep one-pager, written for the reader (not to the company). */
+  offerShelfNegotiationPrep: (id: string) => `/offers/shelf/${seg(id)}/negotiation-prep`,
   offerSalaryBenchmark: "/offers/salary-benchmark",
   offerNegotiate: "/offers/negotiate",
   offerCompare: "/offers/compare",
