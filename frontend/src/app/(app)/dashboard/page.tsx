@@ -1078,7 +1078,7 @@ function OnboardingCard({ hasResume }: { hasResume: boolean }) {
       title: t("dashboard.stepUpload"),
       description: t("dashboard.stepUploadDescription"),
       href: "/resumes",
-      cta: "Upload",
+      cta: t("dashboard.stepUploadCta"),
     },
     {
       done: false,

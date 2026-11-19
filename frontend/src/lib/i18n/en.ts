@@ -779,6 +779,7 @@ export const en = {
       resumeAwaitingParse: "{status} · the structured profile is not ready yet",
       straightFromTheBoard: "Straight from the job board — run a match to rank them.",
       ctaPasteJd: "Paste a JD",
+      stepUploadCta: "Upload",
       ctaMatch: "Match a job",
       skillGapsHint: "Ranked by the matching agent against your resume.",
       nextStepTitle: "Today's first step",
