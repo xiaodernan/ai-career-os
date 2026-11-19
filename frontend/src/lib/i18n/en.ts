@@ -2327,9 +2327,9 @@ export const en = {
     tour: {
       pageTitle: "Your first ten minutes with AI Career OS",
       description:
-        "Before you type a word into a resume, here's the whole loop in eight beats: what opens, what eats time, and what you walk away holding.",
+        "Before you type a word into a resume, here's the whole loop in ten beats: what opens, what eats time, and what you walk away holding.",
       eyebrow: "THE TEN-MINUTE START",
-      title: "Eight beats, open to close.",
+      title: "Ten beats, open to close.",
       intro:
         "Every beat below is a real screen in the product — and each one ends with you holding something you didn't have when you started.",
       caption: "The board at a glance, the match ring, the copilot's doorway — the same things you'll see after you sign up.",
@@ -2355,6 +2355,9 @@ export const en = {
       beat_track_title: "Track the application",
       beat_track_body: "One card per posting; Notes are journaled, reminders stay in your inbox, and the board moves itself.",
       beat_track_time: "ongoing",
+      beat_offer_title: "Read your offers",
+      beat_offer_body: "The shelf keeps each offer side-by-side — one number to compare; negotiation letters protect the deal when leverage is real and justice would be served; aftercare for day 1 when the signing lands.",
+      beat_offer_time: "~2 minutes",
       beat_ceremony_title: "Sign, and read the letter",
       beat_ceremony_body: "When you sign, the ceremony happens: your counts and a letter from the tool that watched you do it.",
       beat_ceremony_time: "the day it happens",

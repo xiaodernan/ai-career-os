@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
   Gauge,
+  Mail,
   MessageSquare,
   MoveRight,
   BookOpen,
@@ -39,6 +40,7 @@ const BEATS = [
   { icon: TrendingUp, key: "tailor" },
   { icon: Users, key: "rehearse" },
   { icon: MessageSquare, key: "track" },
+  { icon: Mail, key: "offer" },
   { icon: MoveRight, key: "ceremony" },
   { icon: BookOpen, key: "afterward" },
 ] as const;

@@ -2121,7 +2121,7 @@ export const zh = {
       description:
         "在你打一个字之前，这里把整圈路线图讲给你听：每一步打开什么、花多少时间、你拿到手里的是什么。",
       eyebrow: "十分钟入门",
-      title: "八拍，从进门到签字。",
+      title: "十拍，从进门到签字。",
       intro:
         "下面每一拍都是产品里真实存在的一屏——每一拍结束，你手里都多一样东西，是开始之前没有的。",
       caption: "一眼看板、匹配环、AI 副驾的入口——注册之后你看到的就是这些。",
@@ -2147,6 +2147,9 @@ export const zh = {
       beat_track_title: "追在这一份投递后面",
       beat_track_body: "每份岗位一张卡——记下的东西都是你手写的，提醒留在你的收件箱，看板自己往前挪。",
       beat_track_time: "持续",
+      beat_offer_title: "读你的报价",
+      beat_offer_body: "架子把每个报价并排放——一个数字对齐；谈判信保住交易，只在举证够足、条件相抗衡时写；签完字后，前 90 天手册跟你走一遍。",
+      beat_offer_time: "约 2 分钟",
       beat_ceremony_title: "签了字，读那封信",
       beat_ceremony_body: "当你签字的那一刻，收官仪式自动发生：你自己的数字刻上去、还有一封看着你走过来的工具写给你的信。",
       beat_ceremony_time: "签名的那天",
