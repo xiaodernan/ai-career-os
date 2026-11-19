@@ -37,6 +37,11 @@ env:
 jobs:
   # --------------------------------------------------------------------------- #
   # Offline fast gate — runs on every PR / push.
+  #
+  # These jobs use the Windows host's local toolchain. The default actions/setup-*
+  # family relies on the GitHub toolcache and a network fetch path that has been
+  # unreliable in this environment; the host already has what we need at the
+  # system level and every offline gate has been passing against it locally.
   # --------------------------------------------------------------------------- #
   ai-service:
     name: ai-service (pytest, offline)
@@ -46,16 +51,10 @@ jobs:
         working-directory: ai-service
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: ai-service/requirements*.txt
       - name: Install
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
-
       - name: Security advisories (pip-audit)
         run: |
           pip install pip-audit
@@ -71,12 +70,8 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      - name: Install
+        run: npm ci --prefer-offline --no-audit --no-fund
       - name: Unit tests
         run: npx vitest run
       - name: Type check
@@ -92,16 +87,11 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
       - name: Unit tests
         run: mvn -B -q test -Dtest='*Test'
 
   # --------------------------------------------------------------------------- #
-  # Spring Cloud microservices contracts — fast, push-only visibility
+  # Spring Cloud microservices contracts — fast, push-only visibility.
   # --------------------------------------------------------------------------- #
   springcloud:
     name: springcloud (microservices contract gates)
@@ -111,11 +101,6 @@ jobs:
         working-directory: ai-service
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: ai-service/requirements*.txt
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -146,11 +131,6 @@ jobs:
         working-directory: ${{ matrix.service }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
       - name: Unit tests
         run: mvn -B -q test -Dtest='*Test,*Tests'
 
@@ -162,12 +142,8 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      - name: Install
+        run: npm ci --prefer-offline --no-audit --no-fund
       - name: Build and check the budget
         run: npm run budget
 
@@ -200,9 +176,6 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
       - name: Regenerate the card from measured truth
         run: python scripts/showcase-sync.py
       - name: Commit it back, only when the numbers moved
@@ -242,17 +215,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Mark the night's start
-        run: date -u +%Y-%m-%dT%H:%M:%SZ > "$env:RUNNER_TEMP/night-start.txt"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: ai-service/requirements*.txt
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
+        run: |
+          if (-not (Test-Path $env:RUNNER_TEMP)) { New-Item -ItemType Directory -Path $env:RUNNER_TEMP | Out-Null }
+          (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") > "$env:RUNNER_TEMP/night-start.txt"
       - name: Start infra (postgres / redis / minio)
         id: infra
         run: docker compose up -d postgres redis minio
@@ -260,7 +225,7 @@ jobs:
         id: schema
         run: |
           docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -c "SELECT 1" || (docker compose restart postgres && Start-Sleep -Seconds 20 && docker compose exec -T postgres psql -U career_os -d career_os -c "SELECT 1")
-          Get-ChildItem backend/src/main/resources/db/migration -Filter 'V*.sql' | ForEach-Object { Write-Output "Applying $($_.Name)"; Get-Content $_.FullName | docker compose exec -T postgres psql -U career_os -d career_os -1 -v ON_ERROR_STOP=1 -q -f - }
+          Get-ChildItem backend/src/main/resources/db/migration -Filter 'V*.sql' | Sort-Object Name | ForEach-Object { Write-Output "Applying $($_.Name)"; Get-Content $_.FullName | docker compose exec -T postgres psql -U career_os -d career_os -1 -v ON_ERROR_STOP=1 -q -f - }
       - name: Seed the jobs corpus
         id: seed-jobs
         run: docker compose run --rm seed-jobs
@@ -321,7 +286,10 @@ jobs:
           OPS_URL: ${{ vars.CAREEROS_OPS_URL }}
           OPS_TOKEN: ${{ secrets.CAREEROS_INTERNAL_TOKEN }}
         run: |
-          python -m app.ops.nightly_report --started-at "$(Get-Content $env:RUNNER_TEMP/night-start.txt)" --commit "${{ github.sha }}" --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
+          $startedAt = Get-Content $env:RUNNER_TEMP/night-start.txt
+          $commit = "${{ github.sha }}"
+          $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          python -m app.ops.nightly_report --started-at "$startedAt" --commit "$commit" --run-url "$runUrl" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
       - name: Tear down infra
         if: always()
         run: docker compose down -v
