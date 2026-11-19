@@ -949,6 +949,9 @@ describe("endpoints ↔ backend route parity", () => {
     "POST /knowledge/notes": "forwards the note editor's `body`, which carries the whole note form",
     "POST /contacts": "same registry form, same contactBody() — blanks stay absent",
     "POST /interview/sessions": "forwards the setup form's `body`",
+    // Epic 336: the thank-you letter lane — its locale is the only thing the client sends,
+    // and the locale path is read through the fixed `{ locale }` record name on the route.
+    "POST /interview/sessions/{}/thank-you-letter": "forwards the writer's `{ locale }` object only; `locale` is bound by the RequestBody record on the thank-you route (Epic 336)",
     "PATCH /interview/sessions/{}": "the handler binds the patch as a `Map<String, Object>`, so no record names these keys -- and the session's own status is the only one the browser sends",
     "PATCH /users/me/profile": "forwards the profile editor's `patch`, one key per form field the user edited",
     "PATCH /contacts/{}": "the registry form posts its current values through contactBody(), which builds the record key by key — blanks stay absent",
