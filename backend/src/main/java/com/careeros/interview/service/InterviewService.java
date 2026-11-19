@@ -276,7 +276,7 @@ public class InterviewService {
         InterviewSession session = requireReadOnly(userId, sessionId);
         List<InterviewTurn> existing = turns.findBySessionIdOrderBySeqAsc(sessionId);
         if (existing.isEmpty()) {
-            throw new ApiException(ApiErrorCode.INTERVIEW_NOTHING_TO_FINALIZE, "Nothing to thank");
+            throw new ApiException(ApiErrorCode.INTERVIEW_NOTHING_TO_THANK, "Nothing to thank");
         }
         List<InterviewTurn> window = existing.size() > 8 ? existing.subList(existing.size() - 8, existing.size()) : existing;
 

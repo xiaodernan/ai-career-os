@@ -942,6 +942,12 @@ export const zh = {
       acceptancePlaybookCopy: "复制",
       acceptancePlaybookCopied: "已复制",
       acceptancePlaybookSilent: "没什么站得住能写——这份 offer 本身就已经是完整的真相了。",
+      negotiationPrepTitle: "开口之前",
+      negotiationPrepHint: "带进那通电话的十二行纸——锚点解读、你手里最硬的一位、缓一缓、底线，还有如果他们拒绝。",
+      negotiationPrepButton: "写这份备忘单",
+      negotiationPrepCopy: "复制",
+      negotiationPrepCopied: "已复制",
+      negotiationPrepSilent: "没什么站得住能写——这份 offer 的数字本身就是完整的那一页。",
       shelfTakingTitle: "{label}——是你的了。",
       shelfTakingNumber: "{total} 一年的总包——你做决定时看的那个数字。",
       shelfTakingBody: "最难的部分过去了。先喘口气，然后趁感谢信还没发完，把入职第一周——开始日期、设备、福利——安排好。",
@@ -2267,6 +2273,8 @@ export const zh = {
       INTERVIEW_ALREADY_STARTED: "这次面试已经开始了。",
 
       INTERVIEW_NOTHING_TO_FINALIZE: "现在还没有可以结束的内容。",
+
+      INTERVIEW_NOTHING_TO_THANK: "现在还没有可以感谢的内容——先结束这场面试。",
 
       INTERVIEW_NOT_STARTED: "先问出开场问题，再开始回答。",
 
@@ -4210,6 +4218,7 @@ export const zh = {
       counterLetter: "写不成这封反要价的信。",
       followUpLetter: "写不成这封跟进邮件。",
       acceptancePlaybook: "写不成这份前90天手册。",
+      negotiationPrep: "写不成这份备忘单。",
       counterOffer: "没能起草还价。",
       mfaEnroll: "没能开始两步验证的设置。",
       mfaActivate: "没能验证这个验证码——两步验证仍是关闭的。",

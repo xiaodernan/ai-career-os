@@ -1034,6 +1034,12 @@ export const en = {
       acceptancePlaybookCopy: "Copy",
       acceptancePlaybookCopied: "Copied",
       acceptancePlaybookSilent: "Nothing grounded enough to write — the offer itself stands as the whole truth.",
+      negotiationPrepTitle: "Before the call",
+      negotiationPrepHint: "Twelve lines to walk in with — the anchor read, the number you own, the pause, the floor, and the graceful no.",
+      negotiationPrepButton: "Write the prep sheet",
+      negotiationPrepCopy: "Copy",
+      negotiationPrepCopied: "Copied",
+      negotiationPrepSilent: "Nothing grounded enough to prepare from — the offer as it stands is the whole page.",
       shelfTakingTitle: "{label} — this is yours.",
       shelfTakingNumber: "{total} total compensation a year — the number you decided on.",
       shelfTakingBody: "The hard part is over. Take a breath, then build the first week of your new job — start dates, equipment, benefits — before the thank-you emails are done.",
@@ -2475,6 +2481,8 @@ export const en = {
       INTERVIEW_ALREADY_STARTED: "This interview has already started.",
 
       INTERVIEW_NOTHING_TO_FINALIZE: "There is nothing to finish yet.",
+
+      INTERVIEW_NOTHING_TO_THANK: "Nothing to thank just yet — finish the rehearsal first.",
 
       INTERVIEW_NOT_STARTED: "Start the interview with the opening question first.",
 
@@ -4502,6 +4510,7 @@ export const en = {
       counterLetter: "Couldn't write the counter letter.",
       followUpLetter: "Couldn't write the check-in email.",
       acceptancePlaybook: "Couldn't write the playbook.",
+      negotiationPrep: "Couldn't write the prep sheet.",
       counterOffer: "Couldn't draft the counter-offer.",
       mfaEnroll: "Couldn't start two-factor setup.",
       mfaActivate: "Couldn't prove the code — two-factor is still off.",
