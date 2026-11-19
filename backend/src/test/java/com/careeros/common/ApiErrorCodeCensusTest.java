@@ -104,7 +104,9 @@ class ApiErrorCodeCensusTest {
                 "INGESTION_FEED_NOT_FOUND",
                 "INGESTION_RUN_ALREADY_APPLIED", "INGESTION_RUN_NOT_APPLICABLE", "INGESTION_RUN_NOT_FOUND",
                 "INTERNAL_ERROR",
-                "INTERVIEW_ALREADY_STARTED", "INTERVIEW_NOTHING_TO_FINALIZE", "INTERVIEW_NOT_STARTED", "INTERVIEW_NO_QUESTION",
+                // 37.4: the thank-you lane learned to say "nothing to thank" with its own code —
+                // it is finer than the shared "nothing to finalize" and carries one meaning.
+                "INTERVIEW_ALREADY_STARTED", "INTERVIEW_NOTHING_TO_FINALIZE", "INTERVIEW_NOTHING_TO_THANK", "INTERVIEW_NOT_STARTED", "INTERVIEW_NO_QUESTION",
                 "INVALID_CREDENTIALS", "INVALID_FILE_TYPE", "INVALID_STATUS", "INVALID_TRANSITION",
                 "JD_NOT_FOUND", "JOB_NOT_FOUND",
                 // 30.5: the catch-all had three meanings; the session-row and the mail-link
