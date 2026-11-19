@@ -4117,10 +4117,10 @@ export const en = {
         "If the analyst has nothing to stand behind — the relay is down, the letter is shorter than a sentence, or a digit is invented somewhere — the card says so in one honest line. The letter itself is the record; a parse is a convenience, never a verdict.",
       decodeClosing:
         "The reader who keeps their own letters close holds their own negotiations — the analyst only hands you what is already in the letter.",
-      lettersEyebrow: "THE THREE LETTERS YOU WILL SEND",
+      lettersEyebrow: "THE FIVE LETTERS YOU WILL CARRY",
       lettersTitle: "The offer you keep, and the one you sign",
       lettersIntro:
-        "Every row on the shelf is the start of a signed deal or the end of one. The three letters the product writes are strictly about your own numbers — never a negotiation with the market, never a deadline on the table the reader does not carry.",
+        "Every row on the shelf is the start of a signed deal or the end of one. The letters the product writes are strictly about your own numbers — never a negotiation with the market, never a deadline on the table the reader does not carry.",
       lettersCounterTitle: "Counter: open the number",
       lettersCounterBody:
         "One email, addressed to the company, asking to align the package with what the offer already tells us — base, bonus, equity, deadline. Sibling cards appear only as a band, never as leverage; every digit-run in the letter already appears on your own shelf. If nothing survives the verifier, the letter does not write itself; the card stays quiet.",
@@ -4130,6 +4130,12 @@ export const en = {
       lettersAfterTitle: "Aftercare: the first 90 days",
       lettersAfterBody:
         "Once the row flips to accepted, one aftercare document the reader keeps: day 1, day 30, day 60, day 90, framed from the offer you just signed. Every number, deadline and headline is drawn from the same snapshot; nothing invented, nothing missing.",
+      lettersThankYouTitle: "Thank-you: keep the room",
+      lettersThankYouBody:
+        "After an interview, a real thank-you — one that lets the room remember what you actually heard and actually answered. Written from the turns the interview produced. If nothing in the transcript survives verification, the letters does not write itself; no one receives a polite nothing from this desk.",
+      lettersPrepTitle: "Prep sheet: twelve lines into the call",
+      lettersPrepBody:
+        "Before you answer the call, one sheet: the anchor read, the number you own, the pause, the floor, and the graceful no. Every figure on it comes from the offer on your shelf; an anchor we cannot verify does not get invented.",
       lettersClosing:
         "The shelf holds the facts; the letters only ever reuse them. A reader who trusts their own numbers and sends honest letters keeps both the deal and the dignity.",
       colophonTitle: "The close",

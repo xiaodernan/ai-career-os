@@ -627,7 +627,7 @@ export default function PlaybookPage() {
           </ul>
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.decodeClosing")}</p>
         </section>
-        {/* The three letters the product writes — counter, follow-up, aftercare (Epic 333/334/335) */}
+        {/* The five letters the product writes — counter, follow-up, aftercare, thank-you, prep (Epic 333/334/335/336/337) */}
         <section id="letters" className="mt-14 space-y-6 border-t border-border/50 pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.lettersEyebrow")}</p>
@@ -635,11 +635,13 @@ export default function PlaybookPage() {
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.lettersTitle")}</h2>
           <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.lettersIntro")}</p>
-          <ul className="grid gap-3 sm:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[
               { title: t("playbook.lettersCounterTitle"), body: t("playbook.lettersCounterBody") },
               { title: t("playbook.lettersFollowUpTitle"), body: t("playbook.lettersFollowUpBody") },
               { title: t("playbook.lettersAfterTitle"), body: t("playbook.lettersAfterBody") },
+              { title: t("playbook.lettersThankYouTitle"), body: t("playbook.lettersThankYouBody") },
+              { title: t("playbook.lettersPrepTitle"), body: t("playbook.lettersPrepBody") },
             ].map((item, index) => (
               <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-primary">
