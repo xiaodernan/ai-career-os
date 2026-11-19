@@ -6918,6 +6918,31 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   promised, or dropped. One sub-section added to the chapter, two keys in
   both languages, the existing section structure untouched.
 
+- [x] **335** The acceptance playbook — the offer that was just signed becomes a first quarter (2026-11-19).
+
+  (The shelf holds the offer they just signed; there is rarely anywhere else to go from here.
+  Epic 335 adds `POST /offers/shelf/{id}/acceptance-playbook` (en/zh) for accepted rows: the
+  writer drafts one reader-facing paragraph covering day 1 / day 30 / day 60 / day 90 of the
+  new job, grounded in the offer's own payload — what the reader accepted, what they will walk
+  into, and one concrete first move to lock down in the opening week. Same discipline as
+  327/333/334: `app/features/acceptance_playbook.py`, one StateGraph draft → verify → render
+  (`kind="acceptance_playbook"`), every digit-run inside the playbook must appear in the snapshot
+  (the offer payload includes a new `weekMarkers` field listing `[1, 30, 60, 90]` so the verify
+  gate can name each checkpoint; otherwise "Day 60" would be flagged as an invented number),
+  and `playbook: null` when nothing survived. `OfferShelfService.acceptancePlaybook(…)` reads
+  the caller's owned row (another account's id is the same 404), builds the snapshot server-side,
+  asks the ai-service exactly once, and returns `{playbook}` or nothing. The wire: internal
+  `POST /internal/features/acceptance-playbook` reached via `HttpAiServiceClient.acceptancePlaybook`;
+  the fake client for ITs returns the same shape. A fourth offer-letter instrument was added to
+  `RateLimitFilter.isAiCost` in the same sitting; SECURITY.md and API.md name it; the three first
+  pass doc gates updated likewise. Sibling flake caught earlier in this sitting — the response-shape
+  pin moved to 239 records (six new DTOs from 333/334/335). Verify pins green locally:
+  `tests/test_acceptance_playbook.py` 6/6, plus `OfferShelfServiceTest` gain the new call site;
+  frontend `offer-shelf.test.tsx` 4/4 as well (the acceptance branch asks only for the agent
+  button in both languages). Honest limits: not probed live; Docker Desktop is down this sitting;
+  the card's button ships shielded by the silent contract and awaits a Docker rebuild to be
+  callable from the live install.)
+
 - [x] **334** The stalled-offer check-in letter — the email that opens the silence on a quiet offer (2026-11-18).
 
   (The shelf already builds the offer payload (base, bonus, equity, totalComp, currency,
