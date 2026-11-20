@@ -2681,6 +2681,12 @@ export const zh = {
     },
     // Growth report
     growth: {
+      milestonesTitle: "里程碑",
+      milestonesDescription: "你已经做到的，以及架子正在推进的下一个。",
+      milestonesUnavailable: "里程碑架子暂时读不到。",
+      milestoneEarned: "已达成",
+      milestoneProgress: "{progress} / {target}",
+      milestoneCounters: "徽章背后：{applications} 份申请 · {interviews} 场演练 · {offers} 份 Offer",
       title: "成长报告",
       description: "准备度、背后的差距、市场的薪资带、分阶段学习计划，以及上次运行以来的变化。",
       buildReport: "生成报告",

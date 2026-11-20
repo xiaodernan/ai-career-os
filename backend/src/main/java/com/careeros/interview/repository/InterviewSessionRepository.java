@@ -12,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface InterviewSessionRepository extends JpaRepository<InterviewSession, UUID> {
 
+    /** The reader's completed rehearsals — the milestone shelf's rehearsal counters (Epic 273). */
+    long countByUserIdAndStatus(UUID userId, String status);
+
     /**
      * The rehearsal's own words, in the spelling a reader's characters survive (70.4).
      *

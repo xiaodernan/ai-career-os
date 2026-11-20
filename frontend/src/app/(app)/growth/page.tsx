@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { GrowthEnginesPanel } from "@/components/growth/growth-engines-panel";
 import { PageHeader } from "@/components/common/page-header";
+import { MilestoneShelf } from "@/components/growth/milestone-shelf";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useGrowthReport } from "@/lib/hooks/actions";
 import { formatSalary } from "@/lib/format";
@@ -84,6 +85,7 @@ export default function GrowthPage() {
         title={t("growth.title")}
         description={t("growth.description")}
       />
+      <MilestoneShelf />
       <Card>
         <CardHeader>
           <CardTitle>{t("growth.buildReport")}</CardTitle>

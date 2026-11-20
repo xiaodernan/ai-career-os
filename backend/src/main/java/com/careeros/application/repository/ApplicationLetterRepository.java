@@ -25,6 +25,9 @@ public interface ApplicationLetterRepository extends JpaRepository<ApplicationLe
     /** How many letters this application holds for this caller; another account's rows do not count. */
     long countByApplicationIdAndUserId(UUID applicationId, UUID userId);
 
+    /** The reader's kept letters, counted once — the milestone shelf's letter_wright (Epic 273). */
+    long countByUserId(UUID userId);
+
     /** One application's letter total; the board reads a whole page of them in a single query. */
     interface LetterTotal {
         UUID getApplicationId();

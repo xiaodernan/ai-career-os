@@ -15,6 +15,7 @@ import type {
   ActivityHeatmap,
   AiSpendToday,
   DeploymentHealth,
+  Milestones,
   NightlyReport,
   NightlyVerdict,
   ServiceResilience,
@@ -98,6 +99,16 @@ export function useActivityHeatmap(days = 182) {
     queryKey: ["reports", "activity-heatmap", days],
     queryFn: async (): Promise<ActivityHeatmap> =>
       (await api.get<unknown>(endpoints.activityHeatmap, { days })) as ActivityHeatmap,
+    staleTime: 60_000,
+  });
+}
+
+/** The milestone shelf (Epic 273): derived badges over counters the platform owns. */
+export function useMilestones() {
+  return useQuery({
+    queryKey: ["reports", "milestones"],
+    queryFn: async (): Promise<Milestones> =>
+      (await api.get<unknown>(endpoints.milestones)) as Milestones,
     staleTime: 60_000,
   });
 }

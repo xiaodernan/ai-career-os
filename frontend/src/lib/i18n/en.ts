@@ -2916,6 +2916,12 @@ export const en = {
     },
     // Growth report
     growth: {
+      milestonesTitle: "Milestones",
+      milestonesDescription: "What you have already done, and the one the shelf is working on next.",
+      milestonesUnavailable: "The milestone shelf could not be read.",
+      milestoneEarned: "Earned",
+      milestoneProgress: "{progress} of {target}",
+      milestoneCounters: "Behind every badge: {applications} applications · {interviews} rehearsals · {offers} offers",
       title: "Growth report",
       description:
         "Readiness, the gap behind it, the market's salary band, a phased learning plan, and what moved since your last run.",

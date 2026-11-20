@@ -10,6 +10,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface JobMatchRepository extends JpaRepository<JobMatch, UUID> {
 
+    /** The matches the engine computed for this reader — the grounded milestone (Epic 273). */
+    long countByUserId(UUID userId);
+
     Optional<JobMatch> findByIdAndUserId(UUID id, UUID userId);
 
     Optional<JobMatch> findFirstByUserIdAndJobIdOrderByCreatedAtDesc(UUID userId, UUID jobId);

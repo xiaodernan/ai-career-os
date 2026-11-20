@@ -155,6 +155,8 @@ export const endpoints = {
   reportsDashboard: "/reports/dashboard",
   /** Epic 184: the reader's pace as one dense day-grid; `days` is a query param. */
   activityHeatmap: "/reports/activity-heatmap",
+  /** Epic 273: the milestone shelf — derived badges over counters the platform owns. */
+  milestones: "/reports/milestones",
   /** legacy alias kept so existing hooks don't fork */
   dashboard: "/reports/dashboard",
   analysisInsightDigest: "/analysis/insight-digest",

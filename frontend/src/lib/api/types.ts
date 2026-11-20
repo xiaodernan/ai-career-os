@@ -2029,3 +2029,27 @@ export interface OfferShelf {
   items: OfferShelfItem[];
   total: number;
 }
+
+/** One milestone on the shelf (Epic 273): done rows carry no progress. */
+export interface Milestone {
+  key: string;
+  done: boolean;
+  progress: number | null;
+  target: number | null;
+}
+
+/** The real numbers behind every badge — the page quotes these, not invented ones. */
+export interface MilestoneCounters {
+  applications: number;
+  interviewsCompleted: number;
+  offers: number;
+  letters: number;
+  matches: number;
+  currentStreak: number;
+  offersOnShelf: number;
+}
+
+export interface Milestones {
+  milestones: Milestone[];
+  counters: MilestoneCounters;
+}
