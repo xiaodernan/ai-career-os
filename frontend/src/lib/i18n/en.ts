@@ -934,6 +934,8 @@ export const en = {
       cachedTokens: "Served from cache: {count} tokens",
       cacheHitRate: "direct cache hit",
       daysAgo: "{count}d ago",
+      progressedToday: "Touched it today",
+      progressedTitle: "Log a touch: the row re-dates and leaves this list",
       rowTokens: "{count} tokens",
       heatmapTitle: "Your search, at a glance",
       heatmapDescription: "Every day of the last six months: applications filed, interviews held, recruiter replies, AI calls.",

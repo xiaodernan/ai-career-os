@@ -29,8 +29,14 @@ const stale: AttentionItem = {
   updatedAt: "2026-10-10T12:00:00Z",
 };
 
-const render = (row: AttentionItem, busy = false) =>
-  renderToStaticMarkup(<AttentionRow row={row} busy={busy} onSnooze={() => {}} onClear={() => {}} />);
+const render = (
+  row: AttentionItem,
+  busy = false,
+  extra: Partial<Parameters<typeof AttentionRow>[0]> = {}
+) =>
+  renderToStaticMarkup(
+    <AttentionRow row={row} busy={busy} onSnooze={() => {}} onClear={() => {}} {...extra} />
+  );
 
 describe("AttentionRow", () => {
   it("offers both answers on a reminder that has come due", () => {
@@ -40,11 +46,27 @@ describe("AttentionRow", () => {
     expect(html).toContain("dashboard.clearReminder");
   });
 
-  it("leaves a stale row with nothing to press", () => {
-    const html = render(stale);
+  it("gives a stale row the one-press answer Epic 272 owes it", () => {
+    const html = render(stale, false, { onProgress: () => {} });
     expect(html).toContain("dashboard.lastStep");
     expect(html).not.toContain("dashboard.snoozeReminder");
     expect(html).not.toContain("dashboard.clearReminder");
+    // The stale row's answer: touch it today, and it leaves the list by having
+    // been acted on. The press carries the row's own status unchanged.
+    expect(html).toContain("dashboard.progressedToday");
+  });
+
+  it("renders no progress press when the caller wires none", () => {
+    const html = renderToStaticMarkup(
+      <AttentionRow row={stale} onSnooze={() => {}} onClear={() => {}} />
+    );
+    expect(html).not.toContain("dashboard.progressedToday");
+  });
+
+  it("keeps the progress press outside the link and honest while it writes", () => {
+    const html = render(stale, false, { onProgress: () => {} });
+    expect(html.indexOf("</a>")).toBeLessThan(html.indexOf("dashboard.progressedToday"));
+    expect(html).toContain('title="dashboard.progressedTitle"');
   });
 
   it("puts the presses outside the link, so answering does not open the application", () => {

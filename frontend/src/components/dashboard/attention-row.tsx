@@ -25,13 +25,24 @@ import type { AttentionItem } from "@/lib/api/types";
  */
 export interface AttentionRowProps {
   row: AttentionItem;
-  /** True while this row's own write is in flight — the two presses share one mutation. */
+  /** True while this row's own write is in flight — the presses share one mutation. */
   busy?: boolean;
+  /** True while the touch-this-today write is in flight (Epic 272). */
+  progressing?: boolean;
   onSnooze: () => void;
   onClear: () => void;
+  /** A stale row's one-press answer: touch the row so it stops being stale (Epic 272). */
+  onProgress?: () => void;
 }
 
-export function AttentionRow({ row, busy = false, onSnooze, onClear }: AttentionRowProps) {
+export function AttentionRow({
+  row,
+  busy = false,
+  progressing = false,
+  onSnooze,
+  onClear,
+  onProgress,
+}: AttentionRowProps) {
   const { t, locale } = useLocale();
   const meta = stageMeta(row.status ?? "");
   const due = row.reason === "reminder_due";
@@ -83,6 +94,23 @@ export function AttentionRow({ row, busy = false, onSnooze, onClear }: Attention
             </Button>
             <Button variant="ghost" size="xs" disabled={busy} onClick={onClear} aria-label={t("common.clear")} title={t("common.clear")}>
               {t("dashboard.clearReminder")}
+            </Button>
+          </span>
+        ) : onProgress ? (
+          // The stale row's one-press answer (Epic 272): touching the row re-dates it, so
+          // it leaves this list the honest way -- by having been acted on, not by hiding.
+          // The PATCH carries the row's own status unchanged; the trigger stamps the time.
+          <span className="flex shrink-0 items-center">
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={progressing}
+              loading={progressing}
+              onClick={onProgress}
+              aria-label={t("dashboard.progressedToday")}
+              title={t("dashboard.progressedTitle")}
+            >
+              {t("dashboard.progressedToday")}
             </Button>
           </span>
         ) : null}

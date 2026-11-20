@@ -66,7 +66,7 @@ import {
   resumeStatusWord,
   runTriggerWord,
 } from "@/lib/status-words";
-import type { ActivityRun, DashboardPayload, Job, Resume } from "@/lib/api/types";
+import type { ActivityRun, ApplicationStatus, DashboardPayload, Job, Resume } from "@/lib/api/types";
 
 /**
  * Time-of-day greeting, computed client-side only (no fake personalisation).
@@ -448,6 +448,19 @@ export default function DashboardPage() {
                           key={row.id}
                           row={row}
                           busy={settleReminder.isPending && settleReminder.variables?.id === row.id}
+                          progressing={
+                            settleReminder.isPending &&
+                            settleReminder.variables?.id === row.id &&
+                            "status" in (settleReminder.variables?.patch ?? {})
+                          }
+                          onProgress={() =>
+                            // The no-op status PATCH: the same write path the dialog uses,
+                            // and the row's updated_at trigger does the rest (Epic 272).
+                            settleReminder.mutate({
+                              id: row.id,
+                              patch: { status: row.status as ApplicationStatus },
+                            })
+                          }
                           onSnooze={() =>
                             settleReminder.mutate({ id: row.id, patch: { reminderAt: snoozeReminder() } })
                           }

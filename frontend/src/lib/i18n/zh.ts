@@ -851,6 +851,8 @@ export const zh = {
       cachedTokens: "来自缓存：{count} token",
       cacheHitRate: "直接命中",
       daysAgo: "{count} 天前",
+      progressedToday: "今天已推进",
+      progressedTitle: "记一次推进：该行重新记时并离开本列表",
       rowTokens: "{count} 个 token",
       heatmapTitle: "求职节奏一览",
       heatmapDescription: "近六个月的每一天：投出的申请、进行的面试、收到的回信、AI 调用。",
