@@ -230,6 +230,21 @@ export const zh = {
       openCopilot: "打开副驾",
       copiedToClipboard: "已复制到剪贴板。",
       copied: "已复制",
+      reset: "重置",
+      download: "下载",
+      refetch: "重新获取",
+      clear: "清除",
+      snooze: "稍后提醒",
+      pick: "选择",
+      analyze: "分析",
+      useText: "用文字输入",
+      generate: "生成",
+      import: "导入",
+      saveSearch: "保存搜索",
+      continue: "继续",
+      changeEmail: "更换邮箱",
+      changePassword: "修改密码",
+      activate: "激活",
       pageNotFound: "页面不存在",
       metaDescription:
         "你的个人求职操作系统——有证据支撑的匹配、简历情报，以及 AI 引导的面试。",
@@ -1985,6 +2000,7 @@ export const zh = {
       loading: "正在检查第二道门……",
       loadFailed: "没能读到两步验证的状态。刷新页面再试一次。",
       start: "开启两步验证",
+      startEnrollment: "开始两步验证设置",
       startOver: "重新开始",
       enrollHint:
         "把这把密钥加进你的验证器——扫下面的设置地址，或者手动输入密钥——再用应用里显示的六位数字证明它。",
@@ -2098,6 +2114,10 @@ export const zh = {
      * and with it the locale provider -- so it carries its own copy of the
      * provider rather than reading a context that is not there.
      */
+    sourceActions: {
+      reset: "清空来源列表",
+      resetTooltip: "移除本次会话加载的来源，重新开始",
+    },
     errors: {
       brokeOnThisScreen: "这个页面出问题了。",
       brokeOnThisScreenDescription: "错误已经记到控制台。再试一次会重新渲染这个页面，不会丢掉你的会话。",
@@ -3629,6 +3649,7 @@ export const zh = {
       keyboardEyebrow: "高手手法",
       keyboardTitle: "必背指令",
       faqEyebrow: "常见问题",
+      advance: "进入下一步",
       faqTitle: "问过的人都问了",
       quick1Title: "注册并登录",
       quick1Body: "邮箱+密码创建账号。所有数据都落在你自己的 Postgres；没有你的同意不出这一关。",

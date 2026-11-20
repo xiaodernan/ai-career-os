@@ -247,6 +247,21 @@ export const en = {
       openCopilot: "Open Copilot",
       copiedToClipboard: "Copied to the clipboard.",
       copied: "Copied",
+      reset: "Reset",
+      download: "Download",
+      refetch: "Refetch",
+      clear: "Clear",
+      snooze: "Snooze",
+      pick: "Choose",
+      analyze: "Analyze",
+      useText: "Use as text",
+      generate: "Generate",
+      import: "Import",
+      saveSearch: "Save search",
+      continue: "Continue",
+      changeEmail: "Change email",
+      changePassword: "Change password",
+      activate: "Activate",
       pageNotFound: "Page not found",
       /**
        * The site's own description.
@@ -2098,6 +2113,7 @@ export const en = {
       loading: "Checking the second door…",
       loadFailed: "The second factor's state could not be loaded. Reload the page and try again.",
       start: "Turn on two-factor",
+      startEnrollment: "Start two-factor enrollment",
       startOver: "Start over",
       enrollHint:
         "Add this key to your authenticator — scan the setup address or type the key by hand — then prove it with the six digits the app shows.",
@@ -2294,6 +2310,10 @@ export const en = {
      * and with it the locale provider -- so it carries its own copy of the
      * provider rather than reading a context that is not there.
      */
+    sourceActions: {
+      reset: "Clear the source list",
+      resetTooltip: "Remove the sources loaded in this session and start fresh",
+    },
     errors: {
       brokeOnThisScreen: "Something broke on this screen.",
       brokeOnThisScreenDescription:
@@ -3916,6 +3936,7 @@ export const en = {
       keyboardEyebrow: "POWER MOVES",
       keyboardTitle: "The commands worth memorising",
       faqEyebrow: "COMMON QUESTIONS",
+      advance: "Continue to the next step",
       faqTitle: "Asked and answered",
       quick1Title: "Register and sign in",
       quick1Body: "Create an account with email + password. The stack runs locally for you; your data lives in Postgres, and nothing leaves without your consent.",
