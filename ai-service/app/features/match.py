@@ -504,7 +504,7 @@ async def compute_match(resume_parsed: dict, jd: dict, *, user_id: str,
                     "or restate numbers beyond those given; do not invent "
                     "experience. Plain text.",
                     LLMMessage("user", user_prompt),
-                ), temperature=0.4, max_tokens=500),
+                ), temperature=0.0, max_tokens=500),
                 user_id=user_id, run_id=run_id, agent="jd_analyst",
                 kind="match_narrative")
             draft = {"text": llm.text, "model": llm.model}
