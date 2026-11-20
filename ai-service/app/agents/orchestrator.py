@@ -16,7 +16,10 @@ from app.agents.stategraph import NodeResult, StateGraph
 from app.agents.tools import (SUBAGENT_TOOLS, TOOL_INDEX, Tool, drop_absent_optionals,
                               validate_tool_args)
 from app.core import ai, taskbus
+from app.core.ai import wrap_untrusted
+from app.rag.pipeline import retrieve as rag_retrieve
 from app.core.ai import stable_messages
+from app.core.config import get_settings
 from app.db import observability
 from app.providers.base import LLMMessage, LLMRequest, LLMResponse, ToolSpec
 
@@ -564,6 +567,20 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
         if role in ("user", "assistant") and h.get("content"):
             tail.append(LLMMessage(role, str(h["content"])[:4000]))
     tail.append(LLMMessage("user", message))
+
+    # Epic 271: ground the FIRST answer. The search tool lets the model fetch evidence
+    # itself, but that costs a round-trip and the first reply would reason ungrounded.
+    # Retrieving for the reader's question up front (best-effort, budgeted) puts the
+    # evidence in the prefix where the tool loop can also see it.
+    if message.strip():
+        try:
+            rag = await rag_retrieve(message[:400], user_id=user_id, run_id=run_id, top_k=6)
+            evidence = rag.get("context_block") if isinstance(rag, dict) else None
+            if evidence:
+                system += "\n\n" + wrap_untrusted("RETRIEVED EVIDENCE", str(evidence)[:8000])
+        except Exception as e:
+            log.warning("pre-retrieval failed, the search tool remains available: %s", e)
+
     # Epic 182: the platform preamble opens every conversation, byte-identical
     # across agents, so the copilot's hot prefix starts with the same bytes the
     # one-shot features warm.

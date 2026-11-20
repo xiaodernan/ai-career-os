@@ -39,6 +39,13 @@ def env(monkeypatch):
         return ""
 
     monkeypatch.setattr(orchestrator.memory, "build_memory_context", fake_memory)
+    # The pre-retrieval (Epic 271) would run the real pipeline and its query
+    # rewriter, which would consume the scripted provider answers below. The
+    # fixture answers empty: the evidence seam is the copilot's own tests' seam.
+    async def fake_retrieve(query, **kwargs):
+        return {}
+
+    monkeypatch.setattr(orchestrator, "rag_retrieve", fake_retrieve)
     return traces, calls
 
 

@@ -151,6 +151,14 @@ async def test_a_subagent_report_stays_off_the_token_channel(monkeypatch, quiet)
     monkeypatch.setattr(orchestrator.ai, "ask_stream", fake_ask_stream)
     monkeypatch.setattr(orchestrator.ai, "ask", fake_ask)
 
+    # The pre-retrieval (Epic 271) would run the real pipeline and consume a
+    # scripted answer through its query rewriter; the stream's own script is
+    # what this test pins, so the evidence seam answers empty here.
+    async def fake_retrieve(query, **kwargs):
+        return {}
+
+    monkeypatch.setattr(orchestrator, "rag_retrieve", fake_retrieve)
+
     task_id = taskbus.new_task("agent_chat", "u1")
     out = await orchestrator.career_turn(user_id="u1", message="find roles",
                                          task_id=task_id, stream=True)
