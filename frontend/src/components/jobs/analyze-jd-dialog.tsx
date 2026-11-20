@@ -166,11 +166,11 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
 
         <DialogFooter className="gap-2">
           {onUseText && result && (
-            <Button variant="ghost" size="sm" onClick={() => onUseText(text)}>
+            <Button variant="ghost" size="sm" onClick={() => onUseText(text)} aria-label={t("common.useText")} title={t("common.useText")}>
               {t("jd.keepText")}
             </Button>
           )}
-          <Button variant="ai" onClick={run} loading={analyze.isPending} disabled={issue !== undefined}>
+          <Button variant="ai" onClick={run} loading={analyze.isPending} disabled={issue !== undefined} aria-label={t("common.analyze")} title={t("common.analyze")}>
             <Sparkles aria-hidden />
             {t("jd.analyzeAction")}
           </Button>

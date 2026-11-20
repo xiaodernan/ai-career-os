@@ -162,6 +162,16 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- Epic 85.3: asynchronous inter-service communication via Spring Cloud Stream. -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-stream-kafka</artifactId>
+    </dependency>
+    <!-- Epic 85.4: Redis caching annotations (@Cacheable, @CachePut, @CacheEvict). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
     <!--
       Epic 98.1: the backend can be a citizen of the registry instead of an address the
       edge was told about. Disabled by default (`eureka.client.enabled`), so the local

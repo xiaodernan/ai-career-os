@@ -78,10 +78,10 @@ export function AttentionRow({ row, busy = false, onSnooze, onClear }: Attention
             move, and offering a "clear" that clears nothing would teach a dead press. */}
         {due ? (
           <span className="flex shrink-0 items-center">
-            <Button variant="ghost" size="xs" disabled={busy} onClick={onSnooze}>
+            <Button variant="ghost" size="xs" disabled={busy} onClick={onSnooze} aria-label={t("common.snooze")} title={t("common.snooze")}>
               {t("dashboard.snoozeReminder")}
             </Button>
-            <Button variant="ghost" size="xs" disabled={busy} onClick={onClear}>
+            <Button variant="ghost" size="xs" disabled={busy} onClick={onClear} aria-label={t("common.clear")} title={t("common.clear")}>
               {t("dashboard.clearReminder")}
             </Button>
           </span>

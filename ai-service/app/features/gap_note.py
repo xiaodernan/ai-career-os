@@ -102,7 +102,7 @@ async def gap_note(coverage_payload: dict, *, locale: str = "en",
                                              "SNAPSHOT", json.dumps(snapshot,
                                                          ensure_ascii=False,
                                                          default=str)[:2400]))),
-                temperature=0.3, max_tokens=180),
+                temperature=0.0, max_tokens=180),
                 user_id=user_id, run_id=run_id, agent="gap_editor", kind="gap_note")
         except Exception:
             out = {}

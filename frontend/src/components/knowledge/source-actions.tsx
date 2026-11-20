@@ -428,7 +428,7 @@ export function SourceUploadCard() {
               ))}
             </ul>
             {!running && (
-              <Button variant="ghost" size="xs" onClick={reset}>
+              <Button variant="ghost" size="xs" onClick={reset} aria-label={t("sourceActions.reset")} title={t("sourceActions.resetTooltip")}>
                 {t("knowledge.sources.clearList")}
               </Button>
             )}

@@ -109,7 +109,7 @@ async def generate(resume_structured: dict, resume_text: str, jd: dict,
                        f"{state['verifier_feedback']}")
         resp = await ask(LLMRequest(
             messages=stable_messages(BASE_SYSTEM, LLMMessage("user", prompt)),
-            temperature=0.6 if mode in ("regenerate",) else 0.4, max_tokens=900),
+            temperature=0.0 if mode in ("regenerate",) else 0.0, max_tokens=900),
             user_id=user_id, run_id=run_id, agent="resume", kind="cover_letter")
         return NodeResult(state={"letter": resp.text, "model": resp.model,
                                  "attempts": state["attempts"] + 1},

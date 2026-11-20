@@ -53,7 +53,7 @@ export function ConfirmDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} aria-label={t("common.close")} title={t("common.close")}>
             {resolvedCancelLabel}
           </Button>
           <Button

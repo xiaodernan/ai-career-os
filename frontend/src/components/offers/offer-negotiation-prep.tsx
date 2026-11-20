@@ -40,7 +40,7 @@ export function OfferNegotiationPrep({ rowId }: { rowId: string }) {
       {text ? (
         <>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
-          <Button variant="ghost" size="sm" className="mt-2" onClick={() => void copy()}>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => void copy()} aria-label={t("common.copy")} title={t("common.copy")}>
             {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
             {copied ? t("offers.negotiationPrepCopied") : t("offers.negotiationPrepCopy")}
           </Button>

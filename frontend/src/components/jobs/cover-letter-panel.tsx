@@ -93,7 +93,7 @@ export function CoverLetterPanel({
           title={t("coverLetter.title")}
           description={t("coverLetter.description")}
           action={
-            <Button variant="ai" size="sm" onClick={run} loading={mutation.isPending}>
+            <Button variant="ai" size="sm" onClick={run} loading={mutation.isPending} aria-label={t("common.generate")} title={t("common.generate")}>
               {result ? <RefreshCw aria-hidden /> : <Sparkles aria-hidden />}
               {result ? t("coverLetter.regenerate") : t("coverLetter.generate")}
             </Button>

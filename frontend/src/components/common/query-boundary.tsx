@@ -99,7 +99,7 @@ export function QueryBoundary<T>({
             {...notLive}
             description={notLive?.description ?? missingEndpointMessage()}
             action={
-              <Button variant="outline" size="sm" onClick={retry}>
+              <Button variant="outline" size="sm" onClick={retry} aria-label={t("common.retry")} title={t("common.retry")}>
                 <RotateCcw aria-hidden />
                 {t("common.checkAgain")}
               </Button>

@@ -133,7 +133,7 @@ export function OfferCelebration({ open, role, company, onContinue, variant = "o
           <Button variant="ai" size="lg" asChild className="glow-on-hover">
             <Link href={primaryHref} onClick={onContinue}>{primaryLabel}</Link>
           </Button>
-          <Button variant="ghost" size="lg" onClick={onContinue}>
+          <Button variant="ghost" size="lg" onClick={onContinue} aria-label={t("common.continue")} title={t("common.continue")}>
             {t("offers.celebrationContinue")}
           </Button>
         </div>

@@ -64,7 +64,7 @@ export function OfferCommitmentCard() {
         </div>
         {filled && (
                     <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.commitmentReset")}>
+<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.commitmentReset")} title={t("offers.commitmentReset")}>
             <RotateCcw aria-hidden className="size-4" />
           </Button>
           </Hint>

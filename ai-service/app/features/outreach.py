@@ -107,7 +107,7 @@ async def draft_message(contact: dict, purpose: str, resume_structured, *, conte
         req = LLMRequest(
             messages=stable_messages(SYSTEM,
                                       LLMMessage("user", _prompt(contact, purpose, ev, context))),
-            temperature=0.3, max_tokens=900)
+            temperature=0.0, max_tokens=900)
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent="outreach",
                              kind="outreach")
         if not isinstance(out, dict):

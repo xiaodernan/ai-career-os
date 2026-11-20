@@ -105,11 +105,11 @@ export function PocketCard() {
           <p className="text-sm text-muted-foreground">{t("data.pocketEmpty")}</p>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="ai" size="sm" onClick={download}>
+          <Button variant="ai" size="sm" onClick={download} aria-label={t("common.download")} title={t("common.download")}>
             <Download aria-hidden />
             {t("data.pocketDownload")}
           </Button>
-          <Button variant="outline" size="sm" onClick={pick}>
+          <Button variant="outline" size="sm" onClick={pick} aria-label={t("common.pick")} title={t("common.pick")}>
             <Upload aria-hidden />
             {t("data.pocketRestore")}
           </Button>

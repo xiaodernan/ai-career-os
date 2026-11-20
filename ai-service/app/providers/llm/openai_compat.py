@@ -79,8 +79,7 @@ class OpenAICompatProvider:
         # bytes as the non-streamed twin). Non-streamed calls answer with NO
         # `prompt_tokens_details` at all (0 of 6) — so `complete()` assembles its
         # reply over the streaming shape too and every call carries the detail.
-        if stream:
-            p["stream_options"] = {"include_usage": True}
+        p["stream_options"] = {"include_usage": True}
         if req.cache_key:
             # The provider's own routing hint: identical prefixes asked with the same
             # key land on the cache shard that already holds them, instead of

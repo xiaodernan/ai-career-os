@@ -69,7 +69,8 @@ export function BarChart({
 
   // The scale is the caller's, or the largest value: a bar that always fills
   // the width would make a 1-of-100 and a 50-of-100 look the same.
-  const top = max ?? Math.max(...data.map((d) => d.value), 1);
+  const values = data.map((d) => Number(d.value) || 0);
+const top = max ?? Math.max(...values, 1);
   const format = valueFormat ?? ((v: number) => String(v));
 
   return (
@@ -77,7 +78,7 @@ export function BarChart({
       {data.map((row) => {
         // A negative value is not a bar; a zero is an empty one. Both render
         // the number and neither renders a negative width.
-        const ratio = row.value > 0 ? Math.min(1, row.value / top) : 0;
+        const ratio = row.value > 0 ? Math.min(1, (row.value || 0) / Math.max(1, top)) : 0;
         return (
           <li key={row.label} className="space-y-1">
             <div className="flex items-baseline justify-between gap-3">
@@ -129,7 +130,8 @@ export function ShareChart({
       </p>
     );
   }
-  const total = data.reduce((sum, d) => sum + Math.max(0, d.value), 0);
+  const cleanValues = data.map((d) => Number(d.value) || 0);
+const total = cleanValues.reduce((sum, v) => sum + v, 0);
   return (
     <div className={cn("space-y-2", className)}>
       <div

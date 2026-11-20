@@ -144,7 +144,7 @@ export function ImportJobDialog() {
         )}
 
         <DialogFooter>
-          <Button variant="ai" onClick={run} loading={importJob.isPending} disabled={issue !== undefined}>
+          <Button variant="ai" onClick={run} loading={importJob.isPending} disabled={issue !== undefined} aria-label={t("common.import")} title={t("common.import")}>
             <Sparkles aria-hidden />
             {t("import.importAction")}
           </Button>

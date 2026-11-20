@@ -102,7 +102,7 @@ export function YearInReviewCard({ numbers }: { numbers: ReviewCardNumbers }) {
           </div>
         </div>
         <p className="sr-only">{t("ceremony.reviewAriaHint", { total: numbers.grandTotal, days: numbers.daysShowed })}</p>
-        <Button variant="ai" size="sm" onClick={download}>
+        <Button variant="ai" size="sm" onClick={download} aria-label={t("common.download")} title={t("common.download")}>
           <Download aria-hidden className="size-4" />
           {t("ceremony.reviewDownload")}
         </Button>

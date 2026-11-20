@@ -120,7 +120,7 @@ async def negotiation_prep(offer: dict, siblings: list | None, *, locale: str = 
                                              "SNAPSHOT", json.dumps(snapshot,
                                                           ensure_ascii=False,
                                                           default=str)[:2400]))),
-                temperature=0.2, max_tokens=900),
+                temperature=0.0, max_tokens=900),
                 user_id=user_id, run_id=run_id, agent="offer_negotiator",
                 kind="negotiation_prep")
         except Exception:

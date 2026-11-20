@@ -199,7 +199,7 @@ function CareerProfileForm({ initial }: { initial: Record<string, unknown> | nul
         </p>
       )}
       <div className="flex justify-end">
-        <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save}>
+        <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save} aria-label={t("common.save")} title={t("common.save")}>
           <Save aria-hidden />
           {t("profile.saveProfile")}
         </Button>
@@ -314,7 +314,7 @@ function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> |
                 </Button>
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={() => addRow(name)}>
+            <Button variant="outline" size="sm" onClick={() => addRow(name)} aria-label={t("profile.addRow")} title={t("profile.addRow")}>
               <Plus aria-hidden />
               {t("profile.addRow")}
             </Button>
@@ -322,7 +322,7 @@ function CareerProfileMapsForm({ initial }: { initial: Record<string, unknown> |
         );
       })}
       <div className="flex justify-end">
-        <Button variant="ai" size="sm" loading={update.isPending} disabled={!dirty || update.isPending} onClick={save}>
+        <Button variant="ai" size="sm" loading={update.isPending} disabled={!dirty || update.isPending} onClick={save} aria-label={t("common.save")} title={t("common.save")}>
           <Save aria-hidden />
           {t("profile.saveMaps")}
         </Button>

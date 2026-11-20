@@ -55,7 +55,7 @@ export default function Error({
         ) : null}
       </div>
       <div className="animate-fade-up mt-2" style={{ animationDelay: "240ms" }}>
-        <Button variant="ai" size="lg" className="glow-halo glow-on-hover" onClick={reset}>
+        <Button variant="ai" size="lg" className="glow-halo glow-on-hover" onClick={reset} aria-label={t("common.reset")} title={t("common.reset")}>
           <RotateCcw className="size-4" aria-hidden />
           {t("common.tryAgain")}
         </Button>

@@ -176,7 +176,7 @@ export function FirstWeekGame() {
               })}
             </div>
             {picked && (
-              <Button variant="ai" size="sm" onClick={advance} className="w-full">
+              <Button variant="ai" size="sm" onClick={advance} className="w-full" aria-label={t("playbook.advance")} title={t("playbook.advance")}>
                 {step === FIRST_WEEK_SCENE_COUNT - 1 ? t("playbook.firstweekSeeVerdict") : t("playbook.firstweekNext")}
               </Button>
             )}

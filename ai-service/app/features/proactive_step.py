@@ -86,7 +86,7 @@ async def proactive_step(workspace_payload: dict, *, locale: str = "en",
                                              "WORKSPACE", json.dumps(snapshot,
                                                   ensure_ascii=False,
                                                   default=str)[:2400]))),
-                temperature=0.3, max_tokens=140),
+                temperature=0.0, max_tokens=140),
                 user_id=user_id, run_id=run_id, agent="assistant", kind="proactive_step")
         except Exception:
             out = {}

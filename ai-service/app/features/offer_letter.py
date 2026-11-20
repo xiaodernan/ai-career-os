@@ -101,7 +101,7 @@ async def letter(offer: dict, siblings: list[dict] | None = None, *,
                                              "SNAPSHOT", json.dumps(payload,
                                                          ensure_ascii=False,
                                                          default=str)[:3000]))),
-                temperature=0.3, max_tokens=220),
+                temperature=0.0, max_tokens=220),
                 user_id=user_id, run_id=run_id, agent="decision_letter",
                 kind="offer_letter")
         except Exception:

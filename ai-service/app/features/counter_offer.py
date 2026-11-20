@@ -101,7 +101,7 @@ async def draft_counter_offer(offer: int, report: dict, *, match_score=None,
         req = LLMRequest(
             messages=stable_messages(SYSTEM,
                                      LLMMessage("user", _prompt(offer, ask, rationale, currency))),
-            temperature=0.3, max_tokens=800)
+            temperature=0.0, max_tokens=800)
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent="job_research",
                              kind="counter_offer")
         if not isinstance(out, dict):

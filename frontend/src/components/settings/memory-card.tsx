@@ -229,7 +229,7 @@ function MemoryEditor({
         </p>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={update.isPending}>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={update.isPending} aria-label={t("common.cancel")} title={t("common.cancel")}>
           {t("common.cancel")}
         </Button>
         <Button
@@ -238,6 +238,8 @@ function MemoryEditor({
           onClick={save}
           loading={update.isPending}
           disabled={!draft.trim()}
+          aria-label={t("common.save")}
+          title={t("common.save")}
         >
           {t("common.save")}
         </Button>

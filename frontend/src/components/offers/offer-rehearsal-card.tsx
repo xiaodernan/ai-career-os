@@ -96,7 +96,7 @@ export function OfferRehearsalCard() {
         </div>
         {Object.keys(state.scores).length > 0 && (
                     <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.rehearsalReset")}>
+<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.rehearsalReset")} title={t("offers.rehearsalReset")}>
             <RotateCcw aria-hidden className="size-4" />
           </Button>
           </Hint>

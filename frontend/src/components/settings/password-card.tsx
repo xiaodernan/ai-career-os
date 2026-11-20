@@ -94,7 +94,7 @@ export function PasswordCard() {
           <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-4">
             <p className="text-sm font-medium">{t("passwordChange.changedTitle")}</p>
             <p className="text-sm text-muted-foreground">{t("passwordChange.changedBody")}</p>
-            <Button size="sm" variant="ghost" onClick={again}>
+            <Button size="sm" variant="ghost" onClick={again} aria-label={t("common.changePassword")} title={t("common.changePassword")}>
               {t("passwordChange.again")}
             </Button>
           </div>

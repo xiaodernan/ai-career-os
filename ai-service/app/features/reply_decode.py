@@ -96,7 +96,7 @@ async def decode_reply(body: dict, *, locale: str = "en",
                                              "MESSAGE", json.dumps(snapshot,
                                                           ensure_ascii=False,
                                                           default=str)[:2600]))),
-                temperature=0.2, max_tokens=600),
+                temperature=0.0, max_tokens=600),
                 user_id=user_id, run_id=run_id, agent="reply_editor", kind="reply_decode")
         except Exception:
             out = {}

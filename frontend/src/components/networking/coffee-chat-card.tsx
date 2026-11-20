@@ -98,7 +98,7 @@ export function CoffeeChatCard() {
         </div>
         {Object.keys(state.scores).length > 0 && (
                     <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("networking.coffeeReset")}>
+<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("networking.coffeeReset")} title={t("networking.coffeeReset")}>
             <RotateCcw aria-hidden className="size-4" />
           </Button>
           </Hint>

@@ -185,6 +185,9 @@
   }
   html {
     @apply font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    font-kerning: auto;
+    text-rendering: optimizeLegibility;
     scroll-behavior: smooth;
   }
   body {
@@ -584,7 +587,7 @@
 /* Latin tuning (negative tracking, 1.0-1.08 line-height) that makes    */
 /* display headings look designed in English reads as cut in half in   */
 /* Chinese -- the counters touch, the tails sheared off by the next    */
-/* line. Every rule here applies only under html[lang="zh"];           */
+// line. Every rule here applies only under html[lang="zh"];           */
 /* English keeps its own kerning.                                      */
 /* ------------------------------------------------------------------ */
 html[lang="zh"] .tracking-tight,
@@ -603,3 +606,5 @@ html[lang="zh"] .leading-[1.08] { line-height: 1.35; }
 /* balanced wrap reads worse on CJK at display size; pretty fills better */
 html[lang="zh"] .text-balance,
 html[lang="zh"] .text-pretty { text-wrap: pretty; }
+/* Font smoothing — apply across all language trees */
+html { -webkit-font-smoothing: antialiased; font-kerning: auto; text-rendering: optimizeLegibility; }

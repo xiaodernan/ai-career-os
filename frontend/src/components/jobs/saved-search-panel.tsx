@@ -158,7 +158,7 @@ export function SavedSearchPanel({ value, onApply }: SavedSearchPanelProps) {
             >
               {t("common.cancel")}
             </Button>
-            <Button onClick={save} loading={create.isPending} disabled={!name.trim()}>
+            <Button onClick={save} loading={create.isPending} disabled={!name.trim()} aria-label={t("common.saveSearch")} title={t("common.saveSearch")}>
               {t("common.save")}
             </Button>
           </DialogFooter>

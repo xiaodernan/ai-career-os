@@ -113,7 +113,7 @@ export function ModuleView<T>({
                 title={t("common.notLiveTitle")}
                 description={missingEndpointMessage()}
                 action={
-                  <Button variant="outline" size="sm" onClick={() => query.refetch()}>
+                  <Button variant="outline" size="sm" onClick={() => query.refetch()} aria-label={t("common.refetch")} title={t("common.refetch")}>
                     <RotateCcw aria-hidden />
                     {t("common.checkAgain")}
                   </Button>

@@ -86,7 +86,7 @@ export function SessionsCard() {
         ) : sessions.isError ? (
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-danger">{t("sessions.loadFailed")}</p>
-            <Button size="sm" variant="outline" onClick={() => void sessions.refetch()}>
+            <Button size="sm" variant="outline" onClick={() => void sessions.refetch()} aria-label={t("common.refresh")} title={t("common.refresh")}>
               {t("common.retry")}
             </Button>
           </div>

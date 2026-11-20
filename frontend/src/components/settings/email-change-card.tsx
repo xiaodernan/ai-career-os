@@ -96,7 +96,7 @@ export function EmailChangeCard() {
             <p className="text-sm text-muted-foreground">
               {t("emailMove.sentBody", { newEmail: sentTo, oldEmail: current })}
             </p>
-            <Button size="sm" variant="ghost" onClick={again}>
+            <Button size="sm" variant="ghost" onClick={again} aria-label={t("common.changeEmail")} title={t("common.changeEmail")}>
               {t("emailMove.askAgain")}
             </Button>
           </div>

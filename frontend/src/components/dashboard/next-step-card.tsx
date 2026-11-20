@@ -45,6 +45,8 @@ export function NextStepCard() {
               size="sm"
               loading={nextStep.isPending}
               onClick={() => nextStep.mutate({ locale })}
+              aria-label={t("dashboard.nextStepRun")}
+              title={t("dashboard.nextStepRun")}
             >
               {step ? t("dashboard.nextStepAgain") : t("dashboard.nextStepRun")}
             </Button>

@@ -287,7 +287,7 @@ export function CommandPaletteProvider({
                 <span className="text-muted-foreground">
                   {t("chrome.searchFailed")}
                 </span>
-                <Button variant="ghost" size="xs" onClick={() => void results.refetch()} loading={results.isFetching}>
+                <Button variant="ghost" size="xs" onClick={() => void results.refetch()} loading={results.isFetching} aria-label={t("common.refetch")} title={t("common.refetch")}>
                   {t("common.retry")}
                 </Button>
               </div>

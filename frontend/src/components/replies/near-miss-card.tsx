@@ -74,7 +74,7 @@ export function NearMissCard() {
         </div>
         {loaded && (state.role || state.learned || state.changed) && (
           <Hint side="left" label={t("chrome.resetHint")}>
-            <Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("replies.nearReset")}>
+            <Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("replies.nearReset")} title={t("replies.nearReset")}>
               <RotateCcw aria-hidden className="size-4" />
             </Button>
           </Hint>

@@ -53,14 +53,10 @@ export function readWheelDirection(storage: StorageLike | null = defaultStorage(
   if (!storage) return "standard";
   try {
     const v2 = storage.getItem(STORAGE_KEY_V2);
+    // If v2 is explicitly "natural" or "standard", respect the user's explicit choice
     if (v2 === "natural" || v2 === "standard") return v2;
-    if (storage.getItem(STORAGE_KEY) !== null) {
-      try {
-        storage.setItem(STORAGE_KEY_V2, "standard");
-      } catch {
-        /* best effort — the reader still gets the corrected default this load */
-      }
-    }
+    // Legacy key or unknown value: migrate to standard (the corrected default)
+    storage.setItem(STORAGE_KEY_V2, "standard");
     return "standard";
   } catch {
     return "standard";

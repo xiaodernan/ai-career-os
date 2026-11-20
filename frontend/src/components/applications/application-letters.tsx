@@ -205,6 +205,8 @@ export function ApplicationLettersPanel({
                           size="sm"
                           disabled={!letter.id}
                           onClick={() => letter.id && setEditingId(letter.id)}
+                          aria-label={t("applications.dialog.letterEdit")}
+                          title={t("applications.dialog.letterEdit")}
                         >
                           <Pencil aria-hidden />
                           {t("applications.dialog.letterEdit")}
@@ -225,6 +227,8 @@ export function ApplicationLettersPanel({
                       size="sm"
                       disabled={isEditing}
                       onClick={() => setPendingRemoval(letter)}
+                      aria-label={t("applications.dialog.letterDelete")}
+                      title={t("applications.dialog.letterDelete")}
                     >
                       <Trash2 aria-hidden />
                       {t("applications.dialog.letterDelete")}
@@ -335,7 +339,7 @@ export function LetterEditor({
         </div>
       </div>
       <div className="flex justify-end gap-1.5">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving} aria-label={t("common.cancel")} title={t("common.cancel")}>
           <X aria-hidden />
           {t("applications.dialog.letterCancel")}
         </Button>
@@ -346,6 +350,8 @@ export function LetterEditor({
           loading={saving}
           disabled={!body.trim()}
           onClick={() => onSave(body, dials)}
+          aria-label={t("common.save")}
+          title={t("common.save")}
         >
           <Check aria-hidden />
           {t("applications.dialog.letterSave")}

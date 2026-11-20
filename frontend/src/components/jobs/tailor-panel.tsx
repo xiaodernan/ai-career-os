@@ -75,7 +75,7 @@ export function TailorPanel({
               : `${t("tailor.description")} ${t("tailor.neverInvented")}.`
           }
           action={
-            <Button variant="ai" size="sm" onClick={run} loading={tailor.isPending}>
+            <Button variant="ai" size="sm" onClick={run} loading={tailor.isPending} aria-label={t("common.generate")} title={t("common.generate")}>
               {result ? <RefreshCw aria-hidden /> : <Sparkles aria-hidden />}
               {result ? t("tailor.runAgain") : t("tailor.tailorNow")}
             </Button>

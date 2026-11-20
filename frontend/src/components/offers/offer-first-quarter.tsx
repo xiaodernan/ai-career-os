@@ -130,7 +130,7 @@ export function OfferFirstQuarter() {
         </div>
         {checked > 0 && (
                     <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.quarterReset")}>
+<Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.quarterReset")} title={t("offers.quarterReset")}>
             <RotateCcw aria-hidden className="size-4" />
           </Button>
           </Hint>

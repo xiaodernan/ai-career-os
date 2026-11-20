@@ -52,7 +52,7 @@ export function ForgotPasswordForm() {
           <Button asChild variant="outline" size="lg" className="w-full">
             <Link href="/reset-password">{t("recovery.alreadyHaveToken")}</Link>
           </Button>
-          <Button variant="ghost" size="lg" className="w-full" onClick={() => setAccepted(null)}>
+          <Button variant="ghost" size="lg" className="w-full" onClick={() => setAccepted(null)} aria-label={t("common.cancel")} title={t("common.cancel")}>
             {t("recovery.differentAddress")}
           </Button>
         </div>

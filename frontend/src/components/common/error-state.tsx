@@ -55,7 +55,7 @@ function ErrorState({
       <h3 className="text-sm font-semibold">{heading}</h3>
       {detail && <p className="max-w-sm text-sm text-muted-foreground">{detail}</p>}
       {onRetry && (
-        <Button variant="outline" size="sm" className="mt-3" onClick={onRetry} loading={retrying}>
+        <Button variant="outline" size="sm" className="mt-3" onClick={onRetry} loading={retrying} aria-label={t("common.retry")} title={t("common.retry")}>
           <RotateCcw aria-hidden />
           {t("common.tryAgain")}
         </Button>

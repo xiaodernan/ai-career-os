@@ -428,6 +428,8 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 loading={startInterview.isPending}
                 disabled={startInterview.isPending}
                 onClick={startRehearsal}
+                aria-label={t("applications.dialog.rehearseAction")}
+                title={t("applications.dialog.rehearseAction")}
               >
                 <MessagesSquare aria-hidden />
                 {t("applications.dialog.rehearseAction")}

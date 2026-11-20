@@ -194,7 +194,7 @@ export function SecurityCard() {
                     text={recoveryCodesText(sheet)}
                     label={t("security.copyAll")}
                   />
-                  <Button size="sm" variant="ghost" onClick={() => setSheet(null)}>
+                  <Button size="sm" variant="ghost" onClick={() => setSheet(null)} aria-label={t("common.close")} title={t("common-close")}>
                     {t("security.codesDone")}
                   </Button>
                 </div>
@@ -263,10 +263,10 @@ export function SecurityCard() {
                 />
 
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" loading={activate.isPending} disabled={activate.isPending} onClick={activateNow}>
+                  <Button size="sm" loading={activate.isPending} disabled={activate.isPending} onClick={activateNow} aria-label={t("common.activate")} title={t("common.activate")}>
                     {t("security.activate")}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={closePanels}>
+                  <Button size="sm" variant="ghost" onClick={closePanels} aria-label={t("common.close")} title={t("common.close")}>
                     {t("security.cancel")}
                   </Button>
                 </div>
@@ -313,7 +313,7 @@ export function SecurityCard() {
                   >
                     {panel === "replace" ? t("security.replace") : t("security.disable")}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={closePanels}>
+                  <Button size="sm" variant="ghost" onClick={closePanels} aria-label={t("common.close")} title={t("common.close")}>
                     {t("security.cancel")}
                   </Button>
                 </div>
@@ -322,15 +322,15 @@ export function SecurityCard() {
 
             {enabled ? (
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => openPanel("replace")}>
+                <Button size="sm" variant="outline" onClick={() => openPanel("replace")} aria-label={t("security.replace")} title={t("security.replace")}>
                   {t("security.replace")}
                 </Button>
-                <Button size="sm" variant="danger" onClick={() => openPanel("disable")}>
+                <Button size="sm" variant="danger" onClick={() => openPanel("disable")} aria-label={t("security.disable")} title={t("security.disable")}>
                   {t("security.disable")}
                 </Button>
               </div>
             ) : (
-              <Button size="sm" variant="outline" loading={enroll.isPending} disabled={enroll.isPending} onClick={startEnrollment}>
+              <Button size="sm" variant="outline" loading={enroll.isPending} disabled={enroll.isPending} onClick={startEnrollment} aria-label={t("security.startEnrollment")} title={t("security.startEnrollment")}>
                 {pending ? t("security.startOver") : t("security.start")}
               </Button>
             )}

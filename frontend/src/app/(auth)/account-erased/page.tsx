@@ -39,7 +39,7 @@ export default async function AccountErasedPage() {
       </div>
 
       <div className="space-y-3">
-        <Button asChild variant="ai" size="lg" className="w-full">
+        <Button asChild variant="ai" size="lg" className="w-full" aria-label={readKey(locale, "accountErased.startAgain")} title={readKey(locale, "accountErased.startAgain")}>
           <Link href="/register">{readKey(locale, "accountErased.startAgain")}</Link>
         </Button>
         <p className="text-center text-sm text-muted-foreground">
