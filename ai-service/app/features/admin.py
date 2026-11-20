@@ -5,7 +5,7 @@ shows aggregate user statistics, behavior trends, and optimization recommendatio
 All data is read-only; no modifications are written to the database or usage logs.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 
 router = APIRouter(prefix="/internal/features", tags=["admin"])
