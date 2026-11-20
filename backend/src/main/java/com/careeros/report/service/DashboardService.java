@@ -7,6 +7,8 @@ import com.careeros.application.entity.ApplicationEvent;
 import com.careeros.application.repository.ApplicationEventRepository;
 import com.careeros.application.repository.ApplicationRepository;
 import com.careeros.application.service.ApplicationService;
+import com.careeros.algorithm.Recommendation;
+import com.careeros.algorithm.TopK;
 import com.careeros.common.Paging;
 import com.careeros.interview.repository.InterviewSessionRepository;
 import com.careeros.job.entity.Job;
@@ -18,6 +20,7 @@ import com.careeros.report.dto.DashboardDtos.FollowUpItem;
 import com.careeros.report.dto.DashboardDtos.Kanban;
 import com.careeros.report.dto.DashboardDtos.RecentActivity;
 import com.careeros.report.dto.DashboardDtos.RecentRun;
+import com.careeros.report.dto.DashboardDtos.RecommendedJob;
 import com.careeros.report.dto.DashboardDtos.ResumeSummary;
 import com.careeros.report.dto.DashboardDtos.SkillGapDigest;
 import com.careeros.report.repository.DashboardRepository;
@@ -97,9 +100,56 @@ public class DashboardService {
                 followUps(userId),
                 currentResume(userId),
                 skillGaps(userId),
-                dashboard.recommendedJobs(userId, RECOMMENDED_LIMIT),
+                recommendedJobs(userId),
                 recentRuns(userId),
                 recentActivity(userId));
+    }
+
+    /**
+     * The recommended list (Epic 186): the SQL answers a wider pool ordered by the
+     * computed match; rows the reader never scored — the null-overall tail — are
+     * ranked here by the deterministic skill-overlap score, and {@link TopK} keeps
+     * the strongest of them to fill the window. A matched row keeps its SQL order:
+     * the computed match is the authority, the overlap score is only the order of
+     * the rows the engine has not measured yet.
+     */
+    private List<RecommendedJob> recommendedJobs(UUID userId) {
+        List<RecommendedJob> pool = dashboard.recommendedJobs(userId, RECOMMENDED_LIMIT * 4);
+        if (pool.size() <= RECOMMENDED_LIMIT) {
+            return pool;
+        }
+        List<RecommendedJob> matched = new java.util.ArrayList<>();
+        List<RecommendedJob> unmatched = new java.util.ArrayList<>();
+        for (RecommendedJob job : pool) {
+            (job.matchOverall() != null ? matched : unmatched).add(job);
+        }
+        if (unmatched.size() > RECOMMENDED_LIMIT) {
+            String readerSkills = resumeSkillText(userId);
+            RecommendedJob[] ranked = unmatched.toArray(RecommendedJob[]::new);
+            int[] kept = TopK.select(ranked, RECOMMENDED_LIMIT,
+                    job -> Recommendation.score(readerSkills, job.skills(), 0, 0));
+            List<RecommendedJob> best = new java.util.ArrayList<>();
+            for (int index : kept) {
+                best.add(ranked[index]);
+            }
+            unmatched = best;
+        }
+        List<RecommendedJob> out = new java.util.ArrayList<>(matched);
+        out.addAll(unmatched);
+        return out.subList(0, Math.min(RECOMMENDED_LIMIT, out.size()));
+    }
+
+    /** The reader's current skills as one comma-joined string, or "" when there is no resume. */
+    private String resumeSkillText(UUID userId) {
+        return resumes.currentResumeWithVersion(userId)
+                .flatMap(r -> r.getCurrentVersionId() == null
+                        ? java.util.Optional.<UUID>empty()
+                        : java.util.Optional.of(r.getCurrentVersionId()))
+                .map(resumes::versionSkills)
+                .map(items -> items.stream()
+                        .map(com.careeros.resume.dto.ResumeDtos.SkillItem::name)
+                        .collect(java.util.stream.Collectors.joining(", ")))
+                .orElse("");
     }
 
     private Kanban kanban(UUID userId) {

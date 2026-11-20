@@ -25,7 +25,7 @@ public class DashboardRepository {
      */
     public List<RecommendedJob> recommendedJobs(UUID userId, int limit) {
         String sql = """
-                SELECT j.id, j.title, c.name, j.location, j.remote_type, j.posted_at, m.overall, m.id
+                SELECT j.id, j.title, c.name, j.location, j.remote_type, j.posted_at, m.overall, m.id, j.skills
                   FROM jobs j
                   JOIN companies c ON c.id = j.company_id
                   LEFT JOIN LATERAL (
@@ -46,7 +46,7 @@ public class DashboardRepository {
                         (UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
                         (String) row[4], Times.offset(row[5]),
                         row[6] == null ? null : ((Number) row[6]).floatValue(),
-                        (UUID) row[7]))
+                        (UUID) row[7], (String) row[8]))
                 .toList();
     }
 

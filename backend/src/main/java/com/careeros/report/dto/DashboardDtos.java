@@ -26,7 +26,7 @@ public final class DashboardDtos {
 
     public record RecommendedJob(UUID id, String title, String companyName, String location,
                                  String remoteType, OffsetDateTime postedAt, Float matchOverall,
-                                 UUID matchId) {
+                                 UUID matchId, String skills) {
     }
 
     public record RecentRun(UUID id, String agent, String trigger, String status, String model,

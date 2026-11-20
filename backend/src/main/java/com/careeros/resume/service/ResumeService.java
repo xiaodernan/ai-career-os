@@ -545,6 +545,12 @@ public class ResumeService {
         return versions.save(version);
     }
 
+    /** The named skills one version carries — the deterministic ranker's input (Epic 186). */
+    @Transactional(readOnly = true)
+    public List<SkillItem> versionSkills(UUID versionId) {
+        return skillItems(versionId);
+    }
+
     private List<SkillItem> skillItems(UUID versionId) {
         // One batched read for every skill the version's links point at: a parsed resume
         // carries dozens of skills, and a per-link findById turned the detail route into
