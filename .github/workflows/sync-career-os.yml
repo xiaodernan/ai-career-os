@@ -1,0 +1,104 @@
+name: sync-career-os
+
+# Epic 266 — keep the personal site's AI Career OS card current.
+#
+# The owner's public entry point is https://xiaodernan.github.io/. Its career-os
+# project card live-fetches raw.githubusercontent.com/.../docs/LATEST.json on
+# page load and falls back to assets/career-os/latest.json in the Pages repo.
+# This workflow refreshes that fallback once a week so the card stays truthful
+# even when the live fetch is cached or blocked. It is deliberately LOW FREQUENCY
+# and pushes ONLY when the measured head moved — no churn, no rebuild storm.
+#
+# Required secret: SITE_SYNC_TOKEN — a PAT with `repo` scope on the target repo
+# (xiaodernan/xiaodernan.github.io). Stored encrypted in this repo's settings;
+# never written into the source tree. The workflow file itself carries no token.
+
+on:
+  schedule:
+    # Monday 13:30 UTC — 30 min after the sibling site syncs at 13:00.
+    - cron: "30 13 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: push the fact pack to the personal site when the head moved
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout this repo (source of the fact pack)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Read the source head and validate the fact pack
+        id: facts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pack = Get-Content docs/LATEST.json -Raw | ConvertFrom-Json
+          if (-not $pack.head -or -not $pack.schema_version) {
+            throw 'docs/LATEST.json is missing head/schema_version — refusing to sync'
+          }
+          "head=$($pack.head)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "generated=$($pack.generated_at)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Checkout the personal site
+        uses: actions/checkout@v4
+        with:
+          repository: xiaodernan/xiaodernan.github.io
+          ref: master
+          token: ${{ secrets.SITE_SYNC_TOKEN }}
+          path: site
+          fetch-depth: 0
+
+      - name: Read the site's current fact head
+        id: current
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'site/assets/career-os/latest.json'
+          $old = ''
+          if (Test-Path $path) {
+            $cur = Get-Content $path -Raw | ConvertFrom-Json
+            $old = [string]$cur.head
+          }
+          "head=$old" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Skip when the measured head did not move
+        id: diff
+        shell: pwsh
+        run: |
+          $src = '${{ steps.facts.outputs.head }}'
+          $old = '${{ steps.current.outputs.head }}'
+          if ($src -eq $old) {
+            Write-Output "head $src already on the site — nothing to do"
+            "changed=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            Write-Output "head moved $old -> $src — syncing"
+            "changed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+
+      - name: Copy the fact pack and push only if it moved
+        if: steps.diff.outputs.changed == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path site/assets/career-os | Out-Null
+          Copy-Item docs/LATEST.json site/assets/career-os/latest.json -Force
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          Set-Location site
+          git add assets/career-os/latest.json
+          if (git diff --cached --quiet) {
+            Write-Output 'bytes identical after copy — nothing to commit'
+            exit 0
+          }
+          git commit -m "chore(career-os): sync fact pack to ${{ steps.facts.outputs.head }} [skip ci]"
+          # Sibling crons share this window; rebase past whoever touched index.html first.
+          git pull --rebase origin master
+          git push origin HEAD:master
