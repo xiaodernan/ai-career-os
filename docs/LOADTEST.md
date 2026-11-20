@@ -143,6 +143,32 @@ numbers this file carries. If the numbers regress, the first questions are: is
 Redis `up`, is the budget at the yml default, and has the corpus grown past where
 `COUNT(*)` stays an index scan — the freshness row tells you which.
 
+### The dependency-free probe, and its CI verdict (2026-11-20)
+
+`scripts/load_probe.py` is a second, k6-free way to pressure a **running** stack.
+It needs only `httpx` and hits four shapes: a concurrency ramp on `/health`
+(1→100 workers), an authenticated read burst, and — the one k6 does not cover in
+isolation — a 100-way wrong-password storm against `/auth/login` that must answer
+429/401, never 5xx or a dropped connection, with health still green afterwards.
+It registers at most one account and never touches the LLM budget.
+
+```bash
+python scripts/load_probe.py --base http://127.0.0.1:8080            # measure: prints rows, exits 0
+python scripts/load_probe.py --base http://127.0.0.1:8080 --strict   # gate: exits 1 on a broken invariant
+```
+
+`--strict` turns the measurements into a machine-readable verdict. It fails when
+any ramp step returns a 5xx or a connection error, when registration fails, when
+an authed read errors, when a wrong-password login **succeeds** (that is a
+security failure, not a load one), when the storm raises a 5xx or drops a
+connection, or when health does not answer 200 after the storm. The final line is
+`{"verdict":"PASS"|"FAIL","failures":[...]}`; the exit code matches. The judgement
+is the pure function `_strict_failures`, pinned offline by
+`ai-service/tests/test_load_probe_verdict.py` so the gate cannot silently go
+soft. This is what makes the pressure run safe to wire into a nightly or a
+dispatch-only workflow later — until then it is an explicit operator step, not a
+claim of a running CI gate.
+
 ---
 
 ## The siege — the credential-stuffing shape, 2026-11-18

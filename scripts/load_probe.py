@@ -30,7 +30,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import statistics
 import sys
 import time
 import uuid
@@ -158,9 +157,47 @@ async def _phase_authed_read(client: httpx.AsyncClient, base: str,
     }
 
 
+def _strict_failures(ramp: list[dict], authed: dict, gate: dict) -> list[str]:
+    """Turn measurements into a PASS/FAIL verdict.
+
+    A load probe that only prints numbers cannot gate CI. These are the
+    invariants the install must hold under pressure — saturation is fine, falling
+    over is not: no 5xx anywhere, the credential storm must be answered (never a
+    connection error), no wrong password may succeed, and health must recover.
+    Kept as a pure function so the verdict is unit-testable without a live stack.
+    """
+    failures: list[str] = []
+    for row in ramp:
+        server_errors = {s: n for s, n in row["status"].items() if s >= 500}
+        conn_errors = row["status"].get(0, 0)
+        if server_errors:
+            failures.append(f"health@{row['workers']} 5xx={server_errors}")
+        if conn_errors:
+            failures.append(f"health@{row['workers']} connection_errors={conn_errors}")
+    if not authed.get("registered"):
+        failures.append(f"authed read: registration failed http={authed.get('http')}")
+    else:
+        bad = {s: n for s, n in authed["status"].items() if s >= 400}
+        if bad:
+            failures.append(f"authed read: unexpected errors={bad}")
+    gate_status = gate["status"]
+    if 200 in gate_status:
+        failures.append(f"auth gate: {gate_status[200]} wrong-password logins SUCCEEDED")
+    bad_gate = {s: n for s, n in gate_status.items() if s >= 500}
+    if bad_gate:
+        failures.append(f"auth gate: 5xx={bad_gate}")
+    if gate_status.get(0):
+        failures.append(f"auth gate: connection_errors={gate_status[0]}")
+    if gate["post_storm_health_http"] != 200:
+        failures.append(f"health after storm http={gate['post_storm_health_http']}")
+    return failures
+
+
 async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8080")
+    ap.add_argument("--strict", action="store_true",
+                    help="exit non-zero when a pressure invariant is violated (CI gate)")
     args = ap.parse_args()
     base = args.base.rstrip("/")
     counter = {"total": 0}
@@ -182,6 +219,11 @@ async def main() -> int:
         print(json.dumps(gate, ensure_ascii=False), flush=True)
 
     print(json.dumps({"total_requests": counter["total"]}))
+    if args.strict:
+        failures = _strict_failures(ramp, authed, gate)
+        print(json.dumps({"verdict": "FAIL" if failures else "PASS",
+                          "failures": failures}, ensure_ascii=False), flush=True)
+        return 1 if failures else 0
     return 0
 
 
