@@ -235,6 +235,38 @@ async def build_dossier_context(user_id: str) -> str:
             f"- applications on file: {digest_apps if digest_apps is not None else 'unknown'}\n"
             f"- mock-interview sessions practiced: {digest_interviews if digest_interviews is not None else 'unknown'}")
 
+    # Epic 270: the NOW sections — what is about to bite and what just arrived. The
+    # dossier's other halves are the record; these are the live edge, the two things
+    # a copilot turn most often needs to know without a tool round-trip.
+    try:
+        deadlines = await db.fetch(
+            """SELECT reminder_at, title, company_name FROM applications
+               WHERE user_id = $1::uuid AND reminder_at IS NOT NULL AND reminder_at > now()
+               ORDER BY reminder_at ASC LIMIT 5""",
+            user_id)
+        if deadlines:
+            out.append("### deadlines ahead (the offers and follow-ups about to bite)")
+            for r in deadlines:
+                when = str(r.get("reminder_at", ""))[:16]
+                out.append(f"- {when} · {r.get('title', '')}"
+                           + (f" @ {r.get('company_name')}" if r.get("company_name") else ""))
+    except Exception as e:
+        log.warning("dossier: deadlines fetch failed, continuing: %s", e)
+
+    try:
+        replies = await db.fetch(
+            """SELECT received_at, company, intent, body_text FROM inbound_mails
+               WHERE user_id = $1::uuid ORDER BY received_at DESC LIMIT 3""",
+            user_id)
+        if replies:
+            out.append("### newest recruiter replies (the live edge of the search)")
+            for r in replies:
+                snippet = str(r.get("body_text", ""))[:200].replace("\n", " ")
+                out.append(f"- {str(r.get('received_at', ''))[:10]} · "
+                           f"{r.get('company') or '?'} · intent={r.get('intent') or '?'} · {snippet}")
+    except Exception as e:
+        log.warning("dossier: replies fetch failed, continuing: %s", e)
+
     return "\n".join(out) if len(out) > 1 else ""
 
 

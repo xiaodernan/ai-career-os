@@ -78,6 +78,7 @@ All five app services (discovery and gateway included) + infra run via `docker-c
 │       ├── activity/             # agent runs + traces, AI usage events, token-cost accounting
 │       ├── attention/            # the attention spine: land/dwell/act rows the install reads to itself (Epic 267)
 │       ├── ai/                   # typed ai-service client + SSE relay
+│       ├── algorithm/             # the deterministic rankers: skill-overlap scoring for the dashboard's unscored jobs (186)
 │       ├── application/          # applications + kanban statuses + notes + reminders
 │       ├── auth/                 # register/login/refresh/logout/reset, JWT, roles
 │       ├── boot/                 # readiness line: what this process became, hosts and choices, no secrets (39.3)
