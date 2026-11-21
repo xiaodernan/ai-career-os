@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **371** What this search leaves behind for the next one (2026-11-22).
+
+  Brief VI asks for "新的后续环节" — and the honest one is that a search ends and
+  another begins. The ceremony (Epic 212) says what the loop WAS; this card reads the
+  same ledgers the page already fetched and says what it LEFT: the material worth
+  reusing (reports, letters, notes, offers — each a door onto its own screen), the
+  stage that cost the most applications, and the one lesson the numbers support.
+
+  Three rules, each naming the facts that fired it and silent when its input is
+  absent. The lesson is ordered by what the ledger can actually prove: rehearsals
+  that outran the reports they produced, notes kept and never read back, letters that
+  did the work. A thin ledger gets no lesson at all rather than a platitude — and the
+  card renders nothing at all, because a reader who did one thing should not be
+  handed a retrospective.
+
+  EN+ZH, eighteen keys each. Nine pure tests on the rule, three on the card. Copy
+  census 230 → 231; ceremony suites 82/82, tsc clean, eslint clean.
+
 - [x] **370** A chapter opens onto the region its own anchor names (2026-11-22).
 
   The chronicle (Epic 354) is the story and the atlas (Epic 357) is the world, and nothing
