@@ -8198,6 +8198,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **364** Every charted region carries a door to the room that writes it (2026-11-22).
+
+  Brief VI: "同时给用户足够充分的引导，防止迷失、失去耐心". The Career Atlas named
+  every room the reader had been — and then stopped. The only way out was the
+  frontier strip at the bottom, which by design offers rooms *nobody* has been
+  to; a reader standing in the map had no way back into the rooms they had
+  already built, which is the "看着很大、里面很空" failure in a new costume.
+
+  Each region now carries the link to the screen that writes its facts, beside
+  the count of what is already there, so any room the reader has built is one
+  click from the map. Six doors — applications, interviews, jobs, networking,
+  resumes, knowledge — each with its own copy key rather than the frontier's,
+  because a frontier is a room nobody has been to and a door is the way back
+  into one they have. Conflating them would make "every frontier is charted"
+  claim there is nowhere left to go. The engine's own `unknown` bucket carries
+  no door rather than a link that would 404: an honest gap beats a dead one.
+
+  EN+ZH, seven keys each. 13 atlas tests green (+2: a charted region carries a
+  door that is not the frontier's, and the unknown region carries none at all),
+  tsc clean, eslint clean, i18n/copy-parity gates 66/66.
+
 - [x] **363** One flight per key — parallel readers no longer each pay (2026-11-22).
 
   Brief IV: "排查并行会话同时打 API 导致缓存互相干扰、命中混乱的问题，妥善处理并行会话".
