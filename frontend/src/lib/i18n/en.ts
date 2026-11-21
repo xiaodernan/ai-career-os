@@ -154,6 +154,9 @@ export const en = {
       atlasDoorResumes: "Open your resumes",
       atlasDoorNotes: "Open the knowledge base",
       atlasRegionDoor: "Go to {region}",
+      // 365: the dashed line is the reader's own route through the world, in the
+      // order the ledger says they walked it -- a path taken, not a road that exists.
+      atlasRouteLength: "{count} steps along the route you walked",
       atlasAllCharted: "Every frontier the map knows is charted. New kinds of facts will open new ground.",
       kindFilter: "Narrow the timeline by kind",
       filterAll: "All kinds",

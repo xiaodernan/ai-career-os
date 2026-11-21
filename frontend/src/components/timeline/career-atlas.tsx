@@ -59,6 +59,32 @@ export interface AtlasSite {
   y: number;
 }
 
+/**
+ * 365: the route the reader actually walked, in the order they walked it.
+ *
+ * A map that says where you have been is half a map; the other half is how one
+ * room led to the next. This reads the ledger in its own time order and keeps the
+ * first moment each region appeared, so the path is the reader's own sequence --
+ * resume first, then a posting, then the match, then the interview -- and never an
+ * invented one. A region that only ever appeared once still gets its stop.
+ */
+export interface AtlasLeg {
+  from: string;
+  to: string;
+}
+
+export function buildRoute(events: TimelineEntry[]): string[] {
+  const ordered = [...events].sort((a, b) => a.at.localeCompare(b.at));
+  const seen: string[] = [];
+  for (const event of ordered) {
+    const kind = (REGION_ORDER as readonly string[]).includes(event.kind)
+      ? event.kind
+      : "unknown";
+    if (!seen.includes(kind)) seen.push(kind);
+  }
+  return seen;
+}
+
 export interface AtlasRegion {
   kind: string;
   labelKey: string;
@@ -145,6 +171,30 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
   const active = regions.find((region) => region.kind === selected) ?? regions[0];
   const site = active?.sites.find((row) => row.id === openSite) ?? active?.sites[active.sites.length - 1];
   const charted = React.useMemo(() => new Set(regions.map((region) => region.kind)), [regions]);
+  // 365: the reader's own route through the world, in the order they walked it. It
+  // is drawn over every region rather than the selected one, because the sequence
+  // is a fact about the whole ledger -- narrowing the fold narrows what is drawn,
+  // exactly as the sites do.
+  const route = React.useMemo(() => buildRoute(events), [events]);
+  // Each region's centre is the mean of the sites drawn for it, so a leg joins
+  // where the reader's facts actually sit rather than a point invented for the
+  // region. A region with no drawn sites contributes no leg.
+  const legs = React.useMemo(() => {
+    const centre = new Map(regions.map((region) => {
+      const rows = region.sites;
+      const x = rows.reduce((sum, site) => sum + site.x, 0) / Math.max(1, rows.length);
+      const y = rows.reduce((sum, site) => sum + site.y, 0) / Math.max(1, rows.length);
+      return [region.kind, { x, y }] as const;
+    }));
+    const out: Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }> = [];
+    for (let i = 1; i < route.length; i += 1) {
+      const a = centre.get(route[i - 1]);
+      const b = centre.get(route[i]);
+      if (!a || !b) continue;
+      out.push({ from: route[i - 1], to: route[i], x1: a.x, y1: a.y, x2: b.x, y2: b.y });
+    }
+    return out;
+  }, [regions, route]);
   const openFrontiers = FRONTIERS.filter((frontier) => !charted.has(frontier.kind));
 
   return (
@@ -219,6 +269,24 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
                     <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeOpacity="0.2" />
                     <line x1="50" y1="4" x2="50" y2="96" stroke="currentColor" strokeOpacity="0.12" />
                     <line x1="4" y1="50" x2="96" y2="50" stroke="currentColor" strokeOpacity="0.12" />
+                    {/* 365: the route the reader walked. Each leg joins one
+                        region's centre to the next region they actually reached,
+                        in the order the ledger says they reached it -- a dashed
+                        line, because it is a path taken rather than a road that
+                        exists. */}
+                    {legs.map((leg) => (
+                      <line
+                        key={`${leg.from}-${leg.to}`}
+                        x1={leg.x1}
+                        y1={leg.y1}
+                        x2={leg.x2}
+                        y2={leg.y2}
+                        stroke="currentColor"
+                        strokeWidth="0.4"
+                        strokeDasharray="1.5 1.5"
+                        strokeOpacity="0.5"
+                      />
+                    ))}
                     {/* 361: a site is a door, not a dot. Every circle is inside a
                         focusable button, so the map can be walked with the keyboard
                         and a click lands on the fact itself -- the list below is the
@@ -255,6 +323,13 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
                       </g>
                     ))}
                   </svg>
+                  {/* 365: the dashed line is a path taken, and a path the reader
+                      cannot see the shape of is a line they will not trust. */}
+                  {legs.length > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t("timeline.atlasRouteLength", { count: legs.length })}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     {t("timeline.atlasSiteCount", { count: active.count })}
                     {active.hidden > 0 ? ` · ${t("timeline.atlasHiddenSites", { count: active.hidden })}` : ""}

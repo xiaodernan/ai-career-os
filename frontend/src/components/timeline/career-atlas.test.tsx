@@ -6,7 +6,7 @@ vi.mock("@/lib/i18n/locale-context", () => ({
   useLocale: () => ({ locale: "en", t: (key: string) => `[${key}]`, setLocale: () => undefined }),
 }));
 
-import { buildAtlas, CareerAtlas } from "./career-atlas";
+import { buildAtlas, buildRoute, CareerAtlas } from "./career-atlas";
 
 const EVENTS: TimelineEntry[] = [
   { at: "2026-09-01T09:00:00Z", kind: "application", title: "Backend Engineer · Acme", refId: "a-1", summary: "applied" },
@@ -80,6 +80,35 @@ describe("CareerAtlas", () => {
     // The frontier's own key is a different claim -- a room nobody has been to --
     // and must not be what a charted region's door answers with.
     expect(html).not.toContain("[timeline.atlasFrontierApplications]");
+  });
+
+  it("365: draws the route the reader walked, in the ledger's own order", () => {
+    // A map that says where you have been is half a map; the other half is how one
+    // room led to the next. The route is the reader's own sequence, never invented.
+    const route = buildRoute(EVENTS);
+    expect(route).toEqual(["application", "interview", "unknown"]);
+    // A single-fact ledger is one stop and no legs -- the route is honest about
+    // having nowhere to have walked from.
+    expect(buildRoute([EVENTS[0]])).toEqual(["application"]);
+    expect(buildRoute([])).toEqual([]);
+  });
+
+  it("365: keeps the route in time order even when the kinds arrive shuffled", () => {
+    const shuffled: TimelineEntry[] = [
+      { at: "2026-05-01T09:00:00Z", kind: "match", title: "match", refId: "m", summary: "" },
+      { at: "2026-01-01T09:00:00Z", kind: "resume_version", title: "resume", refId: "r", summary: "" },
+      { at: "2026-09-01T09:00:00Z", kind: "interview", title: "interview", refId: "i", summary: "" },
+    ];
+    expect(buildRoute(shuffled)).toEqual(["resume_version", "match", "interview"]);
+  });
+
+  it("365: the drawn legs join region centres, so the line follows the facts", () => {
+    const html = renderToStaticMarkup(<CareerAtlas events={EVENTS} />);
+    // Two legs for three regions, dashed because it is a path taken rather than a
+    // road that exists.
+    const dashed = html.match(/stroke-dasharray="1\.5 1\.5"/g) ?? [];
+    expect(dashed).toHaveLength(2);
+    expect(html).toContain("[timeline.atlasRouteLength]");
   });
 
   it("364: the unknown region is offered no door, because it has no room", () => {

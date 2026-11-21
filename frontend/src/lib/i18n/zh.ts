@@ -134,6 +134,9 @@ export const zh = {
       atlasDoorResumes: "打开你的简历",
       atlasDoorNotes: "打开知识库",
       atlasRegionDoor: "去{region}",
+      // 365: 那条虚线是读者自己走过的路，顺序按台账记录的来——走过的路径，不是
+      // 存在那里的道路。
+      atlasRouteLength: "你走过的路上有 {count} 段",
       atlasAllCharted: "地图已知的前沿都已探索。新的事实类型会开辟新的疆域。",
       kindFilter: "按类型收窄时间线",
       filterAll: "全部类型",
