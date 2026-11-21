@@ -32,6 +32,9 @@ class AttentionAdminServiceTest {
         assertThat(summary).containsEntry("landings", 0L);
         assertThat(summary).containsEntry("dwells", 0L);
         assertThat(summary).containsEntry("acts", 0L);
+        assertThat(summary).containsEntry("bounces", 0L);
+        assertThat(summary).containsEntry("bounceRatePct", 0.0);
+        assertThat(summary).containsEntry("aimless", 0L);
         assertThat(summary).containsEntry("signedLandings", 0L);
         assertThat(summary).containsEntry("anonymousLandings", 0L);
         assertThat(summary).containsEntry("dwellPerLandingMs", 0L);

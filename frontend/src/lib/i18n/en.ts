@@ -4468,6 +4468,7 @@ export const en = {
       aiEventsLabel: "AI calls",
       attentionLandsLabel: "Attention landings",
       attentionDwellsLabel: "Dwell reads",
+      attentionBouncesLabel: "Bounces (week)",
       weeklyDigestsLabel: "Letters composed",
       weeklyDigestsDeliveredLabel: "Letters delivered",
       aiUsageCachedLabel: "Cache-served calls (week)",
@@ -4509,11 +4510,14 @@ export const en = {
         "The gap between the two columns is the quietest step in the funnel, spelled out. Fixing it is the first fix the install could make.",
       attentionTitle: "The eye of the install",
       attentionLede:
-        "Landings, dwells, and acts — the three numbers that tell the truth about whether this product earns its keep, measured off the browser clock across the trailing thirty days. No per-user rows ever leave the wire.",
+        "Landings, dwells, acts — and the two ways a reader is lost: a bounce (left almost as soon as they arrived) and an aimless hop (clicked around without settling). All measured off the browser clock across the trailing thirty days. No per-user rows ever leave the wire.",
       attentionDays: "Trailing 30 days",
       attentionLandings: "Landings",
       attentionDwells: "Dwell reads",
       attentionActs: "Acts",
+      attentionBounces: "Impatient bounces",
+      attentionBounceRate: "Bounce rate",
+      attentionAimless: "Aimless clicks",
       attentionAnonymousLandings: "Anonymous landings",
       attentionSignedLandings: "Signed landings",
       attentionAvgDwell: "Average dwell (ms)",
@@ -4529,6 +4533,10 @@ export const en = {
         "Of the twelve most-landed paths, these are the three where the fewest landings became an act — where a redesign earns its keep next.",
       attentionWeakestNoneLede:
         "No path has three landings yet — a finding needs enough reader before it earns one.",
+      attentionLostTitle: "Where readers get lost",
+      attentionLostLede:
+        "Rooms with the most impatient bounces and aimless hops. A high count here is the next thing to fix: the door opened, but the reader did not find their way.",
+      attentionLostCount: "{bounces} bounce(s) · {aimless} aimless click(s)",
 
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",

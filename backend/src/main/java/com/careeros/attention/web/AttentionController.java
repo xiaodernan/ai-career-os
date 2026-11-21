@@ -60,7 +60,10 @@ public class AttentionController {
             return Map.of("recorded", false);
         }
         String event = body.event() == null ? "land" : body.event().trim();
-        if (!Set.of("land", "dwell", "act").contains(event)) {
+        // land/dwell/act are the original sensor verbs; bounce and aimless are the two
+        // real behaviours the overseer asked to see: leave almost as soon as you arrived,
+        // and click around without settling. Both are counted, never tied to a reader.
+        if (!Set.of("land", "dwell", "act", "bounce", "aimless").contains(event)) {
             return Map.of("recorded", false);
         }
         String value = body.value() == null ? null : body.value().trim();

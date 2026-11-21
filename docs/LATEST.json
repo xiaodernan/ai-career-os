@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T12:18:25.293217Z",
+  "generated_at": "2026-11-21T13:15:21.530908Z",
   "branch": "main",
-  "head": "b3b577b",
-  "total_commits": 1731,
-  "milestone": "Epic 352",
-  "milestone_full": "the ledger of done epics (through 505 items), closed at Epic 352 — Ask your evidence",
+  "head": "c3dee0d",
+  "total_commits": 1735,
+  "milestone": "Epic 353",
+  "milestone_full": "the ledger of done epics (through 506 items), closed at Epic 353 — The lost reader, made visible",
   "pushed_at": "2026-11-21",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
-  "tests": "1575+",
-  "test_files": 200,
-  "work_items": 505,
-  "epics": 218,
+  "tests": "1581+",
+  "test_files": 202,
+  "work_items": 506,
+  "epics": 219,
   "feature_surface": [
+    "Epic 353 — The lost reader, made visible",
     "Epic 352 — Ask your evidence",
     "Epic 351 — The manual speaks",
     "Epic 350 — The journey, at a glance",
     "Epic 349 — Skills, not silence",
-    "Epic 348 — Language scores, real",
-    "Epic 347 — The first open teaches"
+    "Epic 348 — Language scores, real"
   ]
 }

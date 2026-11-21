@@ -36,6 +36,9 @@ public class AdminTrendsService {
     // series reads worse than silence, and the trailing-30-day door counts the number.
     new Series("attention_events", "created_at", "attentionLands", "event = 'land'"),
     new Series("attention_events", "created_at", "attentionDwells", "event = 'dwell'"),
+    // The impatient-leave line: a bounce is its own event now (the reader who left as soon as
+    // they landed), counted weekly alongside landings so a widening gap is visible over time.
+    new Series("attention_events", "created_at", "attentionBounces", "event = 'bounce'"),
     // The cache economy (Epic 319): the number of provider calls whose prefix was served
     // at least partially from the relay's cache. Counting these against `aiUsageEvents`
     // is the weekly warm-vs-cold picture — 1,400 calls with zero cached bytes reads

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { trackAct } from "./attention";
+import { trackAct, leaveRoom } from "./attention";
 
 describe("trackAct", () => {
   afterEach(() => {
@@ -49,5 +49,47 @@ describe("trackAct", () => {
       throw new Error("detached realm");
     }));
     expect(() => trackAct("/", "public")).not.toThrow();
+  });
+});
+
+describe("leaveRoom — impatient bounce vs an honest dwell", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function capture(): { calls: Array<Record<string, unknown>> } {
+    const calls: Array<Record<string, unknown>> = [];
+    vi.stubGlobal("fetch", vi.fn((_url: string, init: RequestInit) => {
+      calls.push(JSON.parse(String(init.body)));
+      return Promise.resolve({});
+    }));
+    return { calls };
+  }
+
+  it("records a bounce with the time-on-page when the reader left early", () => {
+    const { calls } = capture();
+    const now = Date.now();
+    // Force a short stay by anchoring `start` in the near future is not possible; instead
+    // use a start so that Date.now()-start is small (the call happens immediately).
+    leaveRoom("/jobs", now, "app", true, { done: false });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].event).toBe("bounce");
+    expect(calls[0].path).toBe("/jobs");
+    expect(Number(calls[0].value)).toBeGreaterThanOrEqual(0);
+    expect(Number(calls[0].value)).toBeLessThan(4_000);
+  });
+
+  it("records an honest dwell when the reader stayed", () => {
+    const { calls } = capture();
+    leaveRoom("/jobs", Date.now() - 30_000, "app", false, { done: false });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].event).toBe("dwell");
+    expect(Number(calls[0].value)).toBeGreaterThanOrEqual(30_000);
+  });
+
+  it("never double-counts a visit that both hid and unmounted", () => {
+    const { calls } = capture();
+    const reported = { done: false };
+    leaveRoom("/jobs", Date.now(), "app", true, reported);
+    leaveRoom("/jobs", Date.now(), "app", false, reported);
+    expect(calls).toHaveLength(1);
   });
 });

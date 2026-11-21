@@ -89,6 +89,8 @@ interface AdminAttentionItem {
   landings: number;
   dwells: number;
   acts: number;
+  bounces?: number;
+  aimless?: number;
 }
 
 interface AdminCacheEconomyKind {
@@ -115,6 +117,9 @@ interface AdminAttention {
   landings?: number;
   dwells?: number;
   acts?: number;
+  bounces?: number;
+  bounceRatePct?: number;
+  aimless?: number;
   signedLandings?: number;
   anonymousLandings?: number;
   dwellPerLandingMs?: number;
@@ -155,6 +160,8 @@ const TREND_SERIES = [
   // and the trailing-30-day door counts the number for readers who check it.
   { key: "attentionLands", labelKey: "admin.attentionLandsLabel", icon: Eye },
   { key: "attentionDwells", labelKey: "admin.attentionDwellsLabel", icon: Timer },
+  // The impatient-leave line: readers who bounced, weekly (Block IX).
+  { key: "attentionBounces", labelKey: "admin.attentionBouncesLabel", icon: Eye },
   // The Monday letter (Epic 305): every row in weekly_digests is a letter the backend attempted;
   // delivered_at IS NOT NULL marks the ones that went out. attempts − delivered is the refusal
   // rate this install wears — not inferred from counters inside one JVM, but read off the rows.
@@ -616,13 +623,16 @@ export default function AdminPage() {
             { labelKey: "admin.attentionLandings", value: attention?.landings },
             { labelKey: "admin.attentionDwells", value: attention?.dwells },
             { labelKey: "admin.attentionActs", value: attention?.acts },
+            { labelKey: "admin.attentionBounces", value: attention?.bounces },
+            { labelKey: "admin.attentionBounceRate", value: attention?.bounceRatePct !== undefined ? attention.bounceRatePct : undefined, suffix: "%" },
+            { labelKey: "admin.attentionAimless", value: attention?.aimless },
             { labelKey: "admin.attentionAvgDwell", value: attention?.dwellPerLandingMs !== undefined ? Math.round(attention.dwellPerLandingMs) : undefined },
             { labelKey: "admin.attentionSignedLandings", value: attention?.signedLandings },
             { labelKey: "admin.attentionAnonymousLandings", value: attention?.anonymousLandings },
           ].map((item, index) => (
             <div key={index} className="rounded-2xl border border-border/60 bg-card/60 p-4">
               <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t(item.labelKey)}</p>
-              <p className="mt-2 font-serif text-2xl font-semibold tabular-nums">{item.value === undefined ? "—" : formatNumber(item.value)}</p>
+              <p className="mt-2 font-serif text-2xl font-semibold tabular-nums">{item.value === undefined ? "—" : `${formatNumber(item.value)}${item.suffix ?? ""}`}</p>
             </div>
           ))}
         </div>
@@ -647,6 +657,28 @@ export default function AdminPage() {
                   ))}
                 </ul>
               )}
+              {/* The second optimization signal: rooms where readers leave almost as soon as
+                  they land, or click around without settling (Block IX's real behaviours). */}
+              {(() => {
+                const loss = [...rows]
+                  .sort((a, b) => ((b.bounces ?? 0) + (b.aimless ?? 0)) - ((a.bounces ?? 0) + (a.aimless ?? 0)))
+                  .filter((r) => (r.bounces ?? 0) + (r.aimless ?? 0) > 0)
+                  .slice(0, 3);
+                return loss.length ? (
+                  <div className="mt-4 border-t border-warning/15 pt-3">
+                    <p className="text-2xs font-semibold uppercase tracking-widest text-warning">{t("admin.attentionLostTitle")}</p>
+                    <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">{t("admin.attentionLostLede")}</p>
+                    <ul className="mt-2 space-y-1">
+                      {loss.map((row) => (
+                        <li key={row.path} className="flex items-center justify-between gap-3 font-mono text-2xs tabular-nums text-muted-foreground">
+                          <span className="truncate">{row.path}</span>
+                          <span>{t("admin.attentionLostCount", { bounces: formatNumber(row.bounces ?? 0), aimless: formatNumber(row.aimless ?? 0) })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null;
+              })()}
             </div>
           );
         })()}

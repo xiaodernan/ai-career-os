@@ -39,6 +39,15 @@ public class AttentionAdminService {
         out.put("landings", one("SELECT count(*) FROM attention_events WHERE event='land' AND created_at >= now() - interval '" + days + " days'"));
         out.put("dwells",   one("SELECT count(*) FROM attention_events WHERE event='dwell' AND created_at >= now() - interval '" + days + " days'"));
         out.put("acts",     one("SELECT count(*) FROM attention_events WHERE event='act' AND created_at >= now() - interval '" + days + " days'"));
+        // The two behaviours the operator explicitly asked to observe: a reader who leaves
+        // almost as soon as they land, and one who clicks around without settling. Both are
+        // first-class events now, counted straight off the rows — never inferred from a dwell.
+        out.put("bounces", one("SELECT count(*) FROM attention_events WHERE event='bounce' AND created_at >= now() - interval '" + days + " days'"));
+        long landings = (long) out.get("landings");
+        long bounces = (long) out.get("bounces");
+        out.put("bounceRatePct", landings == 0L ? 0.0
+                : Math.round((10000.0 * bounces / landings)) / 100.0);
+        out.put("aimless", one("SELECT count(*) FROM attention_events WHERE event='aimless' AND created_at >= now() - interval '" + days + " days'"));
         out.put("signedLandings",    one("SELECT count(*) FROM attention_events WHERE event='land' AND user_id IS NOT NULL AND created_at >= now() - interval '" + days + " days'"));
         out.put("anonymousLandings", one("SELECT count(*) FROM attention_events WHERE event='land' AND user_id IS NULL AND created_at >= now() - interval '" + days + " days'"));
 
@@ -53,7 +62,9 @@ public class AttentionAdminService {
         List<Map<String, Object>> topLandings = jdbc.queryForList(
             "SELECT path, count(*) FILTER (WHERE event='land') AS landings,"
                     + " count(*) FILTER (WHERE event='dwell') AS dwells,"
-                    + " count(*) FILTER (WHERE event='act') AS acts"
+                    + " count(*) FILTER (WHERE event='act') AS acts,"
+                    + " count(*) FILTER (WHERE event='bounce') AS bounces,"
+                    + " count(*) FILTER (WHERE event='aimless') AS aimless"
                     + " FROM attention_events"
                     + " WHERE created_at >= now() - interval '" + days + " days'"
                     + "   AND path NOT LIKE '/admin%'"
@@ -78,8 +89,9 @@ public class AttentionAdminService {
             "/growth", "/letters", "/interviews", "/applications"};
     private static final int[] SIM_WEIGHTS = {30, 22, 12, 10, 8, 6, 5, 4, 3};
 
-    /** Session flavors: 30% leave almost as fast as they landed; 45% browse; 25% settle in. */
-    private static final int BOUNCE = 30;
+    /** Session flavors: 25% bounce, 12% click around lost, 38% browse, 25% settle in. */
+    private static final int BOUNCE = 25;
+    private static final int AIMLESS_UNTIL = 37;
     private static final int BROWSER_UNTIL = 75;
 
     /**
@@ -108,8 +120,23 @@ public class AttentionAdminService {
             rows.add(new AttentionEvent(null, "synthetic", path, "land", null));
             int roll = random.nextInt(100);
             if (roll < BOUNCE) {
-                if (random.nextDouble() < 0.6) {
-                    rows.add(dwellRow(random, path, 700, 8_000));
+                // Impatient bounce: land then leave almost immediately. The close is now a
+                // first-class event carrying the time-on-page, not a guess from a short dwell.
+                rows.add(bounceRow(random, path));
+                continue;
+            }
+            if (roll < AIMLESS_UNTIL) {
+                // Disorientation: a random walk with back-and-forth hops and no settled read.
+                // Each hop is an `aimless` row so the overseer can see a lost reader, not just
+                // another landing. A→B→A repeats are the signature the user described.
+                rows.add(dwellRow(random, path, 400, 2_000));
+                String first = pickPath(random);
+                rows.add(new AttentionEvent(null, "synthetic", first, "aimless", null));
+                String back = path;
+                rows.add(new AttentionEvent(null, "synthetic", back, "aimless", null));
+                int hops = 1 + random.nextInt(3);
+                for (int j = 0; j < hops; j += 1) {
+                    rows.add(new AttentionEvent(null, "synthetic", pickPath(random), "aimless", null));
                 }
                 continue;
             }
@@ -146,6 +173,12 @@ public class AttentionAdminService {
         long span = Math.max(1, maxMs - minMs);
         long dwell = minMs + Math.abs(random.nextLong() % (span + 1));
         return new AttentionEvent(null, "synthetic", path, "dwell", String.valueOf(dwell));
+    }
+
+    /** An impatient leave: the bounce row carries how long the reader was actually there. */
+    private static AttentionEvent bounceRow(Random random, String path) {
+        long ms = 300 + Math.abs(random.nextLong() % 4_000); // 0.3–4.3s: left as soon as they landed
+        return new AttentionEvent(null, "synthetic", path, "bounce", String.valueOf(ms));
     }
 
     private static String pickPath(Random random) {

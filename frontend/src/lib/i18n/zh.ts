@@ -4174,6 +4174,7 @@ export const zh = {
       aiEventsLabel: "AI 调用",
       attentionLandsLabel: "注意力落点",
       attentionDwellsLabel: "停留读数",
+      attentionBouncesLabel: "跳出（每周）",
       weeklyDigestsLabel: "信件组合数",
       weeklyDigestsDeliveredLabel: "信件送达数",
       aiUsageCachedLabel: "缓存命中的调用（周）",
@@ -4215,11 +4216,14 @@ export const zh = {
         "这两列之间的差，就是漏斗里最安静的一步——把它摆出来，比它藏起来好。这是这颗实例能先动的第一刀。",
       attentionTitle: "实例的眼睛",
       attentionLede:
-        "落点、停留、动作——这是三个数，能看这个产品有没有站得住脚，是浏览器自己的钟，在最近三十天里读出来的。没有任何一行用户数据离开这台机器。",
+        "落点、停留、动作——还有读者迷失的两种方式：跳出（刚到就离开）和瞎点（四处点击却不停留）。都是浏览器自己的钟在最近三十天里读出来的。没有任何一行用户数据离开这台机器。",
       attentionDays: "最近 30 天",
       attentionLandings: "落点",
       attentionDwells: "停留",
       attentionActs: "动作",
+      attentionBounces: "没耐心跳出",
+      attentionBounceRate: "跳出率",
+      attentionAimless: "瞎点次数",
       attentionAnonymousLandings: "匿名落点",
       attentionSignedLandings: "注册用户落点",
       attentionAvgDwell: "平均停留（毫秒）",
@@ -4235,6 +4239,10 @@ export const zh = {
         "陆点数最多的这十二条路径里，这三条的读者把手最不肯伸出去——这是下一步重做最该动的地方。",
       attentionWeakestNoneLede:
         "还没有路径有三次陆点——等读者够了，再下结论。",
+      attentionLostTitle: "读者在哪迷了路",
+      attentionLostLede:
+        "跳出和瞎点最多的房间。这里数字高，就是下一步该动的地方：门开了，可读者没找到路。",
+      attentionLostCount: "{bounces} 次跳出 · {aimless} 次瞎点",
 
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",

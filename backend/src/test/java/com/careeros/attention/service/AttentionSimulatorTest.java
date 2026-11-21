@@ -54,12 +54,16 @@ class AttentionSimulatorTest {
     }
 
     @Test
-    void flavorsSpanBounceBrowserAndEngaged() {
+    void flavorsSpanBounceAimlessBrowserAndEngaged() {
         List<AttentionEvent> rows = AttentionAdminService.simulateRows(200, new Random(1234L));
-        boolean anyBounce = rows.stream().anyMatch(r -> "dwell".equals(r.getEvent())
+        // Impatience is a real `bounce` event now, not a short dwell guessed after the fact.
+        boolean anyBounce = rows.stream().anyMatch(r -> "bounce".equals(r.getEvent())
                 && Long.parseLong(r.getValue()) < 8_000);
+        // Disorientation is a first-class `aimless` event — the reader who clicks around lost.
+        boolean anyAimless = rows.stream().anyMatch(r -> "aimless".equals(r.getEvent()));
         boolean anyEngaged = rows.stream().filter(r -> "act".equals(r.getEvent())).count() >= 6;
         assertThat(anyBounce).isTrue();
+        assertThat(anyAimless).isTrue();
         assertThat(anyEngaged).isTrue();
     }
 }

@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **353** The lost reader, made visible — bounce and aimless clicks become real events (2026-11-21).
+
+  Brief IX: "模拟真实用户行为：打开页面没耐心就关掉、不知道去哪就瞎点等，把这些真实行为模拟出来".
+  Audit found the attention spine had only land/dwell/act: "impatient bounce" was modeled
+  merely as a 0.7–8s dwell in one simulator flavour, with no browser close detection, and
+  "aimless clicking" did not exist at all. Made both first-class, end-to-end:
+  - backend allowlist accepts `bounce` and `aimless` (varchar(32) column, no migration needed);
+    `AttentionAdminService` counts bounces/aimless + bounceRatePct, adds FILTER columns to
+    topLandings, and the simulator's bounce flavour now emits a real `bounce` row while a
+    new aimless flavour generates A→B→A back-and-forth hops; `AdminTrendsService` gains an
+    attentionBounces weekly line.
+  - frontend `AttentionSensor` posts `bounce` on leave/visibilitychange/pagehide when the
+    stay is under 4s (guarded against double-count), and `aimless` on rapid room-hops inside
+    6s; `leaveRoom` exported for a focused 3-case test.
+  - admin door: bounce/rate/aimless tiles + a weekly bounce trend + a "where readers get lost"
+    list ranked by bounce+aimless per path; bilingual copy (en/zh).
+  - gates: API.md + architecture.md event vocab, attention hook tests, simulator/admin tests.
+  Verified: backend attention+contract tests green, frontend **1581 passed**, tsc green.
+  (The two HealthIT failures remain environment-dependent — they need the live IT DB/Redis.)
+
 - [x] **352** Ask your evidence — the grounded RAG answer engine finally gets a front door (2026-11-21).
 
   The deepest LLM-integration gap left in the product: `POST /internal/rag/answer`

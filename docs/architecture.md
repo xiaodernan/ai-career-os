@@ -335,10 +335,13 @@ user-scoped table (ownership is enforced in backend layer + a single SQL predica
 
 ### 4.7 Attention (Epic 267)
 - `attention_events(id, user_id nullable, journey varchar, path varchar, event enum[land,
-   dwell, act], value text, created_at)` — the one table the attention spine writes. No
-   foreign key on `user_id` because a signed-out landing is honest data, not a violation;
-   counts-only reads join to `users` only through the aggregate. `value` is whatever the
-   client measured (ms for `dwell`, the clicked tile name for `act`, nothing for `land`).
+   dwell, act, bounce, aimless], value text, created_at)` — the one table the attention spine
+   writes. No foreign key on `user_id` because a signed-out landing is honest data, not a
+   violation; counts-only reads join to `users` only through the aggregate. `value` is whatever
+   the client measured (ms for `dwell`, ms for `bounce`, the clicked tile name for `act`,
+   nothing for `land`/`aimless`). `bounce` (left under four seconds) and `aimless` (hopped
+   rooms within six seconds without settling) are the two lost-reader behaviours the operator
+   asked to observe (Block IX) — first-class events, not inferred from short dwells.
    Indexes on user_id with created_at DESC, path with created_at DESC, event with
    created_at DESC — the admin panel's twelve top paths by landings is a scan over the
    path index with a created_at predicate, not a table scan.
