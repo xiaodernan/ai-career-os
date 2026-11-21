@@ -10,6 +10,7 @@ from typing import Any
 
 from app.core import llm_cache
 from app.core.config import get_settings
+from app.core.context_budget import fit_input
 from app.core.errors import SERVICE_DEADLINE_EXCEEDED, raise_refusal
 from app.core.preamble import PLATFORM_PREAMBLE
 from app.core.request_id import deadline_remaining_ms
@@ -55,17 +56,27 @@ def wrap_untrusted(label: str, content: str | None) -> str:
     return f"<<<BEGIN UNTRUSTED {label}>>>\n{safe}\n<<<END UNTRUSTED {label}>>>"
 
 
-def evidence_block(items: list[dict[str, Any]]) -> str:
+def evidence_block(items: list[dict[str, Any]], *, share: float = 0.5) -> str:
+    """Render retrieved chunks as one fenced block, fitted to the input budget.
+
+    Epic 340: the old cap was 1800 chars *per chunk* with no ceiling on the joined
+    block — a dozen chunks could blow the window, while three short ones left it
+    mostly empty. Fit the WHOLE block instead so a reader's evidence layer actually
+    uses the configured context without ever crossing it. The header and each
+    chunk's provenance line stay; only the volatile tail is cut, after the stable
+    prefix the caller prepends.
+    """
     parts = [UNTRUSTED_HEADER, ""]
+    per_chunk = max(1200, int(fit_input("").cap * share / max(1, len(items or []))))
     for i, it in enumerate([x for x in (items or []) if isinstance(x, dict)], 1):
         parts.append(f"[Evidence {i}] (chunk_id={it.get('chunk_id','')} "
                      f"source={it.get('source','')} section={it.get('section','')})")
         # `or ""` and not a `.get` default: a present-null `text` slices as None.
         text = it.get("text")
         parts.append(wrap_untrusted("EVIDENCE",
-                                    (text if isinstance(text, str) else "")[:1800]))
+                                    fit_input(text, ceiling=per_chunk).text))
         parts.append("")
-    return "\n".join(parts)
+    return fit_input("\n".join(parts), share=share).text
 
 
 def stable_messages(agent_system: str, *rest: LLMMessage) -> list[LLMMessage]:

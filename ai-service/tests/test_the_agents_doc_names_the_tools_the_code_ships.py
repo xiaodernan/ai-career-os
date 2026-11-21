@@ -220,10 +220,10 @@ def test_the_budget_numbers_the_doc_states_are_the_ones_the_code_uses():
     assert wrong == [], f"AGENTS.md states {wrong} and the orchestrator disagrees"
     for phrase in ("MAX_STEPS = 8", "MAX_SUB_STEPS = 5", "RESULT_CHARS = 6000"):
         assert phrase in text, f"AGENTS.md no longer states {phrase}"
-    assert "last 12 turns" in text and "4 000 chars each" in text
-    assert re.search(r'str\(h\["content"\]\)\[:4000\]', read(ORCHESTRATOR)), (
-        "the orchestrator no longer caps each history message at 4000 characters, which "
-        "AGENTS.md §3 states as the window's shape"
+    assert "last 12 turns" in text and "LLM_INPUT_CHAR_BUDGET" in text
+    assert re.search(r'fit_input\(str\(h\["content"\]\),\s*share=0\.15\)', read(ORCHESTRATOR)), (
+        "the orchestrator no longer fits each history message to a share of the input "
+        "budget, which AGENTS.md §3 states as the window's shape (Epic 340)"
     )
     assert constant(CONVERSATION, "HISTORY_TURNS") == "12"
 

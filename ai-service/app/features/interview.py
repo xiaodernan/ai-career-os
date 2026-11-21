@@ -10,6 +10,7 @@ import json
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask, ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 from app.providers.base import LLMMessage, LLMRequest
 
 # These keys ARE the mode vocabulary: `opening_question` and `advance` fall back to the `mixed`
@@ -70,7 +71,7 @@ def _state_brief(persona: str, mode: str, turns: list[dict], difficulty: float,
     return (f"Persona: {persona}\nMode: {mode}\nQuestion {qnum} asked so far / target "
             f"{max_q}. Difficulty now: {diff:.2f}.\n"
             f"Suggested topics: {jd_topics}\nCandidate context:\n"
-            f"{wrap_untrusted('CANDIDATE_CONTEXT', ctx[:7500])}\n\nConversation:\n{convo}")
+            f"{wrap_untrusted('CANDIDATE_CONTEXT', fit_input(ctx, share=0.4).text)}\n\nConversation:\n{convo}")
 
 
 def opening_meta(topic: str) -> dict:
@@ -198,7 +199,7 @@ async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: 
     ctx = resume_ctx if isinstance(resume_ctx, str) else ""
     ans = answer if isinstance(answer, str) else ""
     prompt = (f"Interview context (candidate's real background, untrusted):\n"
-              f"{wrap_untrusted('CANDIDATE_CONTEXT', ctx[:7500])}\n\n"
+              f"{wrap_untrusted('CANDIDATE_CONTEXT', fit_input(ctx, share=0.4).text)}\n\n"
               f"QUESTION: {question}\n\nCANDIDATE ANSWER:\n"
               f"{wrap_untrusted('ANSWER', ans[:4000])}")
 
@@ -407,7 +408,7 @@ async def finalize(*, mode: str, turns: list[dict], resume_ctx: str,
         for t in rows)
     ctx = resume_ctx if isinstance(resume_ctx, str) else ""
     prompt = (f"Mode {mode}. Candidate context (untrusted):\n"
-              f"{wrap_untrusted('CTX', ctx[:7500])}\n\nTRANSCRIPT:\n{convo}")
+              f"{wrap_untrusted('CTX', fit_input(ctx, share=0.4).text)}\n\nTRANSCRIPT:\n{convo}")
 
     # The report rides the bounded StateGraph (Epic 302) — retrieve-shaped: the model drafts,
     # the graph bounds, the renderer lands. Verify is deterministic by design: everything the

@@ -4,6 +4,7 @@ import re
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 from app.core.skills import extract_skills, normalize
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -43,15 +44,20 @@ async def analyze_jd(raw_text: str, *, user_id=None, run_id=None) -> dict:
     """
 
     async def _extract(state: dict) -> NodeResult:
+        # Epic 340: fit the posting to the configured input budget instead of a
+        # hard 20k cap — a long JD now reaches the model in full. The byte-identical
+        # preamble (stable_messages) is untouched, so the prefix cache still fires.
+        fitted = fit_input(raw_text)
         req = LLMRequest(
             messages=stable_messages(SYSTEM,
-                                     LLMMessage("user", wrap_untrusted("JOB_DESCRIPTION", raw_text[:20000]))),
+                                     LLMMessage("user", wrap_untrusted("JOB_DESCRIPTION", fitted.text))),
             temperature=0.0, max_tokens=3000)
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent="jd_analyst",
                              kind="jd_analyze")
         if not isinstance(out, dict):
             out = {}
-        return NodeResult({"model": out}, "verify", trace={"kind": "jd_analyze"})
+        return NodeResult({"model": out}, "verify",
+                          trace={"kind": "jd_analyze", **fitted.as_trace()})
 
     async def _verify(state: dict) -> NodeResult:
         out = state.get("model") or {}

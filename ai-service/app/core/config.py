@@ -28,6 +28,14 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_timeout_s: float = 120.0
     llm_max_retries: int = 2
+    # Epic 340: the character budget for volatile model INPUT (documents, notes,
+    # transcripts). The gateway's prompt cache bills by the byte prefix, and the
+    # model accepts a long context (Codex-class relays carry 5万-9万 tokens), so the
+    # old 20k/24k char caps left most of that capacity unused. This is a shared ceiling
+    # that the per-feature helpers in core.context_budget divide up; ~200k chars is
+    # roughly 50k mixed CJK/Latin tokens, inside a 6.2-sol-class window with room for
+    # output. Set it lower on a smaller model without touching every feature.
+    llm_input_char_budget: int = 200_000
 
     # Embeddings
     embedding_provider: str = "openai"  # openai | ollama | hash

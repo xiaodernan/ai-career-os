@@ -75,8 +75,10 @@ flowchart TD
 
 ## 3. Memory (PRD §17)
 
-- **Short-term** — the conversation window (last 12 turns, 4 000 chars each) passed
-  in by the backend, plus `context` pins (a specific job/resume/conversation scope).
+- **Short-term** — the conversation window (last 12 turns, each turn fitted to a
+  share of the configured `LLM_INPUT_CHAR_BUDGET` via `core.context_budget`, so a
+  long message is no longer cut at a fixed 4 000 chars) passed in by the backend,
+  plus `context` pins (a specific job/resume/conversation scope).
 - **Long-term** — `user_memories` rows, grouped by kind (`profile`, `skill`,
   `preference`, `interview`, `goal`, `fact`). `memory.build_memory_context()` reads
   up to 40 and renders them as a `## Long-term memory about this user` section

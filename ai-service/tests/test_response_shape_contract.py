@@ -3219,7 +3219,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # noun vocabulary, not a second definer. They went uncounted while this was a full-suite
         # gate; Epic 147's census pass brought them into the ledger rather than renaming honest
         # comments to dodge a count.
-        ("ai-service/app/core/config.py", 87),
+        # 95 rather than 87 since Epic 340 added the llm_input_char_budget setting
+        # above this comment; the sentence itself did not change.
+        ("ai-service/app/core/config.py", 95),
         ("ai-service/app/core/workqueue.py", 569),
         ("ai-service/app/ops/embed_workers.py", 314),
         # Epic 279's attention-pulse rows: the admin trends javadoc names the

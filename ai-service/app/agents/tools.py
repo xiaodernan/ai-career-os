@@ -9,6 +9,7 @@ from typing import Any, Callable, Awaitable
 import json
 
 from app.core import db
+from app.core.context_budget import fit_input
 from app.db import domain
 from app.providers.base import ToolSpec
 from app.providers.registry import embed_text
@@ -436,7 +437,7 @@ async def search_knowledge_base(user_id: str, *, query: str, top_k: int = 8,
 
     r = await retrieve(query, user_id=user_id, top_k=_clamp_limit(top_k, 8),
                        kinds=_clean_kinds(kinds))
-    return {"evidence": r["evidence"], "context": r.get("context_block", "")[:6000]}
+    return {"evidence": r["evidence"], "context": fit_input(r.get("context_block", ""), share=0.25).text}
 
 
 async def analyze_jd(user_id: str, *, raw_text: str) -> dict:

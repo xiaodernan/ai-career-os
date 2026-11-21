@@ -2,6 +2,7 @@
 
 
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 from app.core.skills import category, extract_skills, normalize
 from app.features.schemas import ResumeParseResult
 from app.providers.base import LLMMessage, LLMRequest
@@ -41,17 +42,21 @@ async def parse_resume(text: str, *, user_id=None, run_id=None) -> dict:
     corpus = " ".join(str(text).lower().split())
 
     async def _extract(state: dict) -> NodeResult:
+        # Epic 340: the whole resume reaches the model under the configured input
+        # budget (was a hard 24k). Fitted text goes after the stable prefix.
+        fitted = fit_input(text)
         req = LLMRequest(
             messages=stable_messages(
                 SYSTEM,
-                LLMMessage("user", wrap_untrusted("RESUME", text[:24000])),
+                LLMMessage("user", wrap_untrusted("RESUME", fitted.text)),
             ),
             temperature=0.0, max_tokens=4000)
         raw = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume",
                              kind="resume_parse")
         if not isinstance(raw, dict):
             raw = {}
-        return NodeResult({"model": raw}, "verify", trace={"kind": "resume_parse"})
+        return NodeResult({"model": raw}, "verify",
+                          trace={"kind": "resume_parse", **fitted.as_trace()})
 
     _PROVENANCE_KEYS = (
         ("experience", "company"),

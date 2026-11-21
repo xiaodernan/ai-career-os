@@ -53,11 +53,26 @@ def test_evidence_block_numbers_refs_and_carries_metadata():
     assert block.index("[Evidence 1]") < block.index("[Evidence 2]")
 
 
-def test_evidence_block_caps_each_quote_at_1800_chars():
+def test_evidence_block_fits_the_whole_block_to_the_input_budget():
+    # Epic 340: no hard 1800-per-chunk cap. A single chunk now fits under the
+    # configured whole-input budget (200k chars default), so a 2000-char quote
+    # arrives in full. Fit the budget down and the joined block is capped instead.
     items = [{"chunk_id": "c", "source": "s", "section": "x", "text": "a" * 2000}]
     block = evidence_block(items)
-    assert "a" * 1800 in block
-    assert "a" * 1801 not in block
+    assert "a" * 2000 in block  # the generous default keeps the whole quote
+
+    from app.core.config import get_settings
+    s = get_settings()
+    original = s.llm_input_char_budget
+    try:
+        s.llm_input_char_budget = 4000
+        block = evidence_block(items, share=0.5)
+        # 0.5 * 4000 = 2000 cap for the block; provenance + header leave less than
+        # that for the quote, so it must be shorter than the full 2000 a's.
+        assert "a" * 2000 not in block
+        assert len(block) <= 2000
+    finally:
+        s.llm_input_char_budget = original
 
 
 def test_evidence_block_defends_fence_in_item_text():

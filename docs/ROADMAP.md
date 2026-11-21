@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **340** The whole context — one config-driven budget ends the scattered small input caps (2026-11-21).
+
+  (The complaint was concrete: Codex-class relays carry 5万-9万 tokens of context,
+  but the engine cut a JD at 20 000 chars, a resume at 24 000, an interview context
+  at 7 500, and each evidence quote at 1 800 — most of the window the reader paid
+  for was thrown away. `core/context_budget.py` now owns ONE ceiling
+  (`LLM_INPUT_CHAR_BUDGET`, default 200 000 chars ≈ 50k mixed tokens) that the
+  features divide by share: JD analysis, resume parse, interview context, retrieved
+  evidence and the copilot's conversation turns all fit through it. The cut is
+  honest — kept/dropped/cap are traced on the run — and the byte-identical preamble
+  is never touched, so the provider's prefix cache still fires. Measured live on
+  gpt-6.2-sol via the 7897 Clash Verge proxy: a 30 000-char input reached the model
+  intact (9 201 prompt_tokens reported), previously it would have been truncated to
+  20 000. `test_context_budget.py` (6 cases) holds the helper and a source gate that
+  the four old magic caps never return. ai-service **2992 passed**, tsc + next build
+  green.)
+
 - [x] **274** The story forge — a traced LLM StateGraph turns one career note into a grounded STAR story (2026-11-21).
 
   (A new capability that puts the model through five explicit states rather than one

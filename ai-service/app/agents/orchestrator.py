@@ -17,6 +17,7 @@ from app.agents.tools import (SUBAGENT_TOOLS, TOOL_INDEX, Tool, drop_absent_opti
                               validate_tool_args)
 from app.core import ai, taskbus
 from app.core.ai import wrap_untrusted
+from app.core.context_budget import fit_input
 from app.rag.pipeline import retrieve as rag_retrieve
 from app.core.ai import stable_messages
 from app.core.config import get_settings
@@ -559,13 +560,13 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
         # context is actually there — not because we'd turn it up by token by token.
         system += "\n\n" + dossier
     if context:
-        system += "\n\n## Pinned conversation context\n" + json.dumps(
-            context, ensure_ascii=False, default=str)[:2000]
+        system += "\n\n## Pinned conversation context\n" + fit_input(
+            json.dumps(context, ensure_ascii=False, default=str), share=0.1).text
     tail: list[LLMMessage] = []
     for h in (history or [])[-HISTORY_TURNS:]:
         role = h.get("role")
         if role in ("user", "assistant") and h.get("content"):
-            tail.append(LLMMessage(role, str(h["content"])[:4000]))
+            tail.append(LLMMessage(role, fit_input(str(h["content"]), share=0.15).text))
     tail.append(LLMMessage("user", message))
 
     # Epic 271: ground the FIRST answer. The search tool lets the model fetch evidence
@@ -577,7 +578,7 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
             rag = await rag_retrieve(message[:400], user_id=user_id, run_id=run_id, top_k=6)
             evidence = rag.get("context_block") if isinstance(rag, dict) else None
             if evidence:
-                system += "\n\n" + wrap_untrusted("RETRIEVED EVIDENCE", str(evidence)[:8000])
+                system += "\n\n" + wrap_untrusted("RETRIEVED EVIDENCE", fit_input(str(evidence), share=0.3).text)
         except Exception as e:
             log.warning("pre-retrieval failed, the search tool remains available: %s", e)
 
