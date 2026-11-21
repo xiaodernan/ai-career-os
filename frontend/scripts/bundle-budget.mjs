@@ -104,7 +104,20 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MANIFEST = join(ROOT, ".next", "app-build-manifest.json");
-const BUDGET_KIB = 366;
+/**
+ * 2026-11-22 -- the shared-table debt is PAID (Epic 358). The bilingual tables rode in the
+ * client bundle for every route, whatever language it painted: ~152 kB gzip of the two, and the
+ * reason every raise in this header was needed. The reader's own table now arrives with the HTML
+ * (the server layout reads the locale cookie and hands it to the provider), and the other one is
+ * a chunk the reader only ever pays for if they switch. Measured on this host, before and after,
+ * on the same tree:
+ *   knowledge 374.1 -> 222.2   jobs 372.9 -> 221.0   applications 371.9 -> 220.1
+ *   jobs/[id] 370.4 -> 218.5   offers 370.3 -> 218.5   replies 368.9 -> 217.1
+ * The budget is therefore TIGHTENED 366 -> 230 rather than raised: the line is set where the
+ * heaviest route now sits (222.2), with ~7 kB of host-to-host gzip variance above it, exactly the
+ * doctrine this header has always stated. A future raise needs its own reason written here.
+ */
+const BUDGET_KIB = 230;
 
 if (!existsSync(MANIFEST)) {
   console.error("bundle-budget: no .next/app-build-manifest.json -- run `next build` first (or `npm run budget`)");

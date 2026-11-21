@@ -1,13 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { translations, type Locale } from "./translations";
 import { localeFromCookie, LOCALE_COOKIE, writeLocaleCookie } from "./locale-cookie";
+import { installedTable } from "./installed-tables";
+import type { Locale, LocaleTable } from "./translations";
 
 /**
  * Locale context (17.1): provides the current locale and a translation function.
  * The product is CN-context but English content; this context lets the user
  * switch between the two.
+ *
+ * 358: the tables no longer ship with the JavaScript. Both of them did until now,
+ * whatever language the page painted, and they are the heaviest thing in the client
+ * bundle -- six routes crossed the bundle budget on shared table alone. The reader's
+ * own table now arrives with the HTML (the server layout reads the cookie and passes
+ * it here), and the other one is a chunk the reader only ever pays for if they
+ * switch. Nothing in this module imports a table statically.
  */
 
 interface LocaleContextValue {
@@ -22,6 +30,15 @@ interface LocaleContextValue {
    */
   adoptLocale: (locale: Locale) => void;
   /**
+   * 358: warm the other language's table before the reader commits to it.
+   *
+   * A switch is a chunk away, so the button that offers one asks for the chunk on
+   * hover and focus -- the reader who moves the pointer at the switch pays nothing,
+   * and the one who presses it finds the words already there. Nothing else in the
+   * app prefetches anything.
+   */
+  prepareLocale: (locale: Locale) => void;
+  /**
    * Read a string out of the table.
    *
    * `vars` fills `{name}` holes in the string, so a sentence that wraps a value
@@ -35,6 +52,21 @@ interface LocaleContextValue {
 const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 
 const STORAGE_KEY = "careeros.locale";
+
+/** The other language's module, as the chunk webpack splits it into. */
+const otherModule = (locale: Locale) => (locale === "zh" ? import("./en") : import("./zh"));
+const otherTable = (locale: Locale, mod: { en: LocaleTable; zh: LocaleTable }) =>
+  locale === "zh" ? mod.en : mod.zh;
+
+/**
+ * The table the last render used, for the readers that are outside React.
+ *
+ * A toast is raised from an event handler, long after the render that knew the
+ * language, so `translate` cannot ask a hook. The provider keeps this mirror
+ * current on every render; a browser that has rendered nothing yet falls back to
+ * whatever table it was handed.
+ */
+let renderedTable: LocaleTable | undefined;
 
 /**
  * The string at a dotted key, or undefined when the table has none.
@@ -65,8 +97,8 @@ export function fill(value: string, vars?: Record<string, string | number>): str
  *
  * Exported because the distinction is a rule, not an implementation detail (roadmap 21.4):
  * `localStorage` holds the reader's own switch and the cookie holds what this browser paints.
- * A device that only adopted the account's language has the cookie and not this, which is
- * how a later account change can still reach it -- and how an explicit switch wins over it.
+ * A device that only adopted the account's language has the cookie and not this, which
+ * is how a later account change can still reach it -- and how an explicit switch wins over it.
  */
 export function readStoredLocale(): Locale | null {
   if (typeof window === "undefined") return null;
@@ -131,7 +163,11 @@ export function translate(
   key: string,
   vars?: Record<string, string | number>
 ): string | undefined {
-  const value = lookup(translations[currentLocale()], key);
+  // A test installs both tables, and its own locale is the one its cookie names --
+  // so the installed table wins there and the answer follows the store. In a browser
+  // nothing is installed, and the mirror of the last render is the only table there is.
+  const table = installedTable(currentLocale()) ?? renderedTable;
+  const value = table === undefined ? undefined : lookup(table, key);
   return value === undefined ? undefined : fill(value, vars);
 }
 
@@ -151,17 +187,52 @@ export function applyDocumentLang(locale: Locale): void {
 export function LocaleProvider({
   children,
   initialLocale,
+  table,
 }: {
   children: React.ReactNode;
   /** The locale the server read from the cookie — the first render has to match the HTML it sent. */
   initialLocale?: Locale;
+  /**
+   * 358: the reader's own table, sent with the HTML. Absent in a test that renders the
+   * provider directly, where the installed tables answer instead.
+   */
+  table?: LocaleTable;
 }) {
+  const first = initialLocale ?? getInitialLocale();
   // Deliberately not `getInitialLocale` when the server named a locale: the browser's copy
   // can disagree with the cookie (one of the two stores was cleared), and a first render
   // that disagrees with the server's markup makes React tear the tree down to hydrate it.
-  const [locale, setLocaleState] = React.useState<Locale>(initialLocale ?? getInitialLocale);
+  const [locale, setLocaleState] = React.useState<Locale>(first);
+  // The table the server sent, held once: it belongs to `first`, and a later render must
+  // not quietly re-read a prop that only described the first paint.
+  const [served] = React.useState<LocaleTable | undefined>(
+    () => table ?? installedTable(first)
+  );
+  // 358: the other language's table, once the reader has asked for it. It arrives as a
+  // chunk of its own, so a reader who never switches never downloads it.
+  const [spare, setSpare] = React.useState<Partial<Record<Locale, LocaleTable>>>({});
 
-  const setLocale = React.useCallback((next: Locale) => {
+  const loadSpare = React.useCallback(
+    (next: Locale): Promise<LocaleTable | undefined> => {
+      if (next === first) return Promise.resolve(served);
+      const have = spare[next];
+      if (have) return Promise.resolve(have);
+      return otherModule(next).then((mod) => {
+        const value = otherTable(next, mod as { en: LocaleTable; zh: LocaleTable });
+        setSpare((prev) => (prev[next] ? prev : { ...prev, [next]: value }));
+        return value;
+      });
+    },
+    [first, served, spare]
+  );
+
+  // 358: the table this render speaks. The served one until the reader moves to the
+  // other language and its chunk has landed -- and never nothing, because a screen
+  // that lost its table would print keys instead of words.
+  const active = (locale === first ? served : spare[locale]) ?? served;
+  renderedTable = active;
+
+  const apply = React.useCallback((next: Locale) => {
     setLocaleState(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
@@ -175,22 +246,55 @@ export function LocaleProvider({
     applyDocumentLang(next);
   }, []);
 
+  const setLocale = React.useCallback(
+    (next: Locale) => {
+      // The words are either already here or one chunk away; the stores are written
+      // either way, so the next request the server answers is already in the new
+      // language even if this screen has not repainted yet.
+      if (next === first || spare[next]) {
+        apply(next);
+        return;
+      }
+      void loadSpare(next).then((loaded) => {
+        if (loaded) apply(next);
+      });
+    },
+    [apply, first, loadSpare, spare]
+  );
+
   // The account's language reaching a browser that never chose one: paint it and let the
   // next request's server render agree, but do not write the reader's choice -- this browser
   // has not made one, and an `localStorage` entry would keep it from later adopting a change.
-  const adoptLocale = React.useCallback((next: Locale) => {
-    setLocaleState(next);
-    writeLocaleCookie(next);
-    applyDocumentLang(next);
-  }, []);
+  const adoptLocale = React.useCallback(
+    (next: Locale) => {
+      writeLocaleCookie(next);
+      applyDocumentLang(next);
+      if (next === first || spare[next]) {
+        setLocaleState(next);
+        return;
+      }
+      void loadSpare(next).then((loaded) => {
+        if (loaded) setLocaleState(next);
+      });
+    },
+    [first, loadSpare, spare]
+  );
+
+  const prepareLocale = React.useCallback(
+    (next: Locale) => {
+      if (next === first || spare[next]) return;
+      void loadSpare(next).catch(() => undefined);
+    },
+    [first, loadSpare, spare]
+  );
 
   // After hydration the browser's copy wins when it disagrees with the cookie's: it is the
   // copy the reader's own last switch wrote. The cookie is rewritten by the effect below,
   // so the next request's server render agrees.
   React.useEffect(() => {
     const stored = readStoredLocale();
-    if (stored && stored !== initialLocale) setLocaleState(stored);
-  }, [initialLocale]);
+    if (stored && stored !== initialLocale) setLocale(stored);
+  }, [initialLocale, setLocale]);
 
   // The cookie is written on the first render too, so a reader whose
   // cookie was cleared but whose localStorage survived still gets a title
@@ -203,16 +307,16 @@ export function LocaleProvider({
 
   const t = React.useCallback(
     (key: string, vars?: Record<string, string | number>): string => {
-      const value = lookup(translations[locale], key);
+      const value = active === undefined ? undefined : lookup(active, key);
       if (value === undefined) return key;
       return fill(value, vars);
     },
-    [locale]
+    [active]
   );
 
   const value = React.useMemo(
-    () => ({ locale, setLocale, adoptLocale, t }),
-    [locale, setLocale, adoptLocale, t]
+    () => ({ locale, setLocale, adoptLocale, prepareLocale, t }),
+    [locale, setLocale, adoptLocale, prepareLocale, t]
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

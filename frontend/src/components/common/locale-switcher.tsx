@@ -28,9 +28,14 @@ export function LocaleSwitcher({
   /** The collapsed sidebar shows the globe alone; the icon is the whole button. */
   showLabel?: boolean;
 }) {
-  const { locale, setLocale, t } = useLocale();
+  const { locale, setLocale, prepareLocale, t } = useLocale();
   const toChinese = locale === "en";
   const localeLabel = toChinese ? "中文" : "EN";
+  // 358: the other language's words are a chunk away, so the button that offers them
+  // asks for that chunk the moment the reader moves towards it. A pointer that merely
+  // passes over costs one request the reader will probably want; a reader who never
+  // switches never sends it.
+  const warm = () => prepareLocale(toChinese ? "zh" : "en");
 
   return (
     <Button
@@ -38,6 +43,8 @@ export function LocaleSwitcher({
       variant="ghost"
       size="sm"
       onClick={() => setLocale(toChinese ? "zh" : "en")}
+      onMouseEnter={warm}
+      onFocus={warm}
       aria-label={localeLabel + " · " + (toChinese ? t("chrome.switchToChinese") : t("chrome.switchToEnglish"))}
       className={cn("text-muted-foreground", className)}
     >

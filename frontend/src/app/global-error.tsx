@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LocaleProvider, useLocale } from "@/lib/i18n/locale-context";
+import { currentLocale, LocaleProvider, useLocale } from "@/lib/i18n/locale-context";
+import { translations } from "@/lib/i18n/translations";
 import "./globals.css";
 
 /**
@@ -16,6 +17,10 @@ import "./globals.css";
  * has to bring its own: a screen that replaces the shell and then throws on
  * a missing context is a screen that shows the wrong thing exactly when it
  * most needs to be right.
+ *
+ * 358: every other shell receives its table with the HTML; this one stands where the
+ * shell used to be, so it brings its own. That costs the error entry both tables and
+ * costs no reader anything -- this boundary loads only when the layout itself threw.
  *
  * Visually it carries the same front-door language as the other failure
  * surfaces (Epic 142): the aurora is fully decorative and hidden from AT,
@@ -39,7 +44,7 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body className="min-h-dvh bg-background text-foreground">
-        <LocaleProvider>
+        <LocaleProvider table={translations[currentLocale()]}>
           <GlobalErrorBody error={error} reset={reset} />
         </LocaleProvider>
       </body>
