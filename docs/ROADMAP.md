@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **345** The ledger becomes a story — the timeline's grounded second voice (2026-11-21).
+
+  The deepest reading of "把大模型能力完整深度地嵌入项目整体能力": the timeline is
+  the one screen that holds the outputs of EVERY other engine (applications, matches,
+  rehearsals, notes, resume versions, contacts) — `career_timeline.py` is explicitly
+  "pure and deterministic, no LLM". `career_narrative.py` is that ledger's second
+  voice: a bounded StateGraph over the same events the page already drew, writing one
+  paragraph on the arc, the turn and the open thread — every claim cites a date the
+  ledger carries, silence on failure. Live-probed on gpt-6.2-sol via the 7897 proxy:
+  a five-event search produced "moved from applied 2026-11-03 to a fit check on
+  2026-11-10 and rehearsal on 2026-11-12… the turn recorded is moved to interview on
+  2026-11-20" — all real dates, zero invented. Pass-through bridge (the browser sends
+  the events it renders, no new DB read): internal route → `POST /api/v1/timeline/narrative`
+  (AI-cost throttled) → `CareerNarrativeCard` on `/timeline`, en/zh keyed. Tests: new
+  `test_career_narrative.py` (5), frontend card test, all censuses re-pinned. ai-service
+  **3011 passed**, frontend 1569, tsc + next build green.
+
 - [x] **344** The first value gets a voice — resume first-impression, grounded (2026-11-21).
 
   The strongest reading of "把大模型能力深度嵌入项目整体能力": the surface EVERY

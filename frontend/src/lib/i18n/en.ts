@@ -105,6 +105,12 @@ export const en = {
       emptyTitle: "Nothing written down yet",
       emptyDescription:
         "Every step you take feeds this list: keep a job, write a note, add a contact, or rehearse an interview — they show up here in the order they happened.",
+      narrativeTitle: "What this search has been",
+      narrativeDescription:
+        "One paragraph the reviewer writes over the dates and labels already on this timeline — the arc, the turn, and the thread still open. Every claim cites a date the ledger carries.",
+      narrativeAction: "Tell me this search",
+      narrativeWorking: "Reading the timeline…",
+      narrativeEmpty: "Nothing worth telling came back — not a verdict, just no grounded story to show.",
       kindFilter: "Narrow the timeline by kind",
       filterAll: "All kinds",
       noKindRows: "No {kind} rows yet for this account.",
@@ -4581,6 +4587,7 @@ export const en = {
       gapNote: "Couldn't write the gap note.",
       storyForge: "Couldn't forge the STAR story from your note.",
       resumeImpression: "Couldn't read this resume back to you.",
+      careerNarrative: "Couldn't tell the story of this search.",
       nextStep: "Couldn't read your week for the assistant.",
       replyDecode: "Couldn't read that letter.",
       roleReadiness: "Couldn't read that role's readiness.",

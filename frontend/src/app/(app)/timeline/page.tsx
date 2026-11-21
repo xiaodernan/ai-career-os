@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VirtualList } from "@/components/common/virtual-list";
 import { useTimeline } from "@/lib/hooks/timeline";
+import { CareerNarrativeCard } from "@/components/timeline/career-narrative-card";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateTime, formatTime } from "@/lib/format";
@@ -226,6 +227,10 @@ export default function TimelinePage() {
           ))}
         </section>
       ) : null}
+      {/* Epic 345 — one grounded story over the whole ledger, in the reader's language. */}
+      {query.data && query.data.length > 0 && (
+        <CareerNarrativeCard events={query.data} />
+      )}
       <QueryBoundary
         query={query}
         boxed={false}

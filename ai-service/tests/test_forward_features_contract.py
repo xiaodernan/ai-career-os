@@ -104,6 +104,9 @@ FORWARD = {
     # Epic 344 -- the resume first-impression. `payload` is the PII-light summary the
     # backend builds from the owned resume row; `locale` optional.
     "/internal/features/resume/impression": ("ResumeImpressionReq", {"payload"}),
+    # Epic 345 -- the timeline's grounded second voice. `events` is optional (an
+    # empty ledger narrates nothing); `locale` optional.
+    "/internal/features/career-narrative": ("CareerNarrativeReq", set()),
 }
 
 

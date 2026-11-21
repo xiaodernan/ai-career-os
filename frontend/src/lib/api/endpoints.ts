@@ -149,6 +149,7 @@ export const endpoints = {
   /* ---------------- One timeline over the whole loop (Epic 81) -------------- */
   /** The reader's whole search as one ordered list of what already happened — groups, not screens. */
   timeline: "/timeline",
+  timelineNarrative: "/timeline/narrative",
 
   /* ---------------- Activity / reports / search / chat history ----------- */
   activityRuns: "/activity/runs",

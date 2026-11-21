@@ -8,14 +8,14 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 114 mutation sites in sixteen files
+What the shipped code says, measured rather than assumed: 115 mutation sites in seventeen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
 second door, the account and replies screens' hooks, 42.2's mail dials, the kept letter's
 save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair,
 Epic 327's decision letter writer, Epic 331's assistant ask, Epic 332's analyst ask,
 Epic 333's counter offer letter, Epic 334's check-in email, Epic 335's playbook,
 Epic 337's prep sheet, and Epic 339's gracious decline).
-102 declare their failure at the hook; the twelve that do not sit in
+103 declare their failure at the hook; the twelve that do not sit in
 ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -30,7 +30,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 99 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 100 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -84,6 +84,8 @@ BRIDGE_HOOKS = {
     "frontend/src/lib/hooks/mail-settings.ts",
     # Epic 331: the assistant's ask joins the bridges it rides.
     "frontend/src/lib/hooks/assistant.ts",
+    # Epic 345: the timeline's grounded narrative writer announces at its hook.
+    "frontend/src/lib/hooks/timeline.ts",
 }
 #: 33.1's push switch: one write, and the only one whose failure is announced by its
 #: caller's try/catch instead of the hook's ``onError``.
@@ -122,6 +124,8 @@ ROSTER = {
     # 14 since Epic 274's useStoryForge joined the growth engines.
     "frontend/src/lib/hooks/growth.ts": 14,
     "frontend/src/lib/hooks/ingestion.ts": 9,
+    # Epic 345: the timeline's grounded narrative writer, announced at the hook.
+    "frontend/src/lib/hooks/timeline.ts": 1,
     "frontend/src/lib/hooks/mfa.ts": 4,
     # 42.2: the settings card's one dial write, announced at the hook.
     "frontend/src/lib/hooks/mail-settings.ts": 1,
@@ -170,6 +174,8 @@ SENTENCES = {
     # 14 since Epic 274's useStoryForge spends its own failure sentence.
     "frontend/src/lib/hooks/growth.ts": 14,
     "frontend/src/lib/hooks/ingestion.ts": 8,
+    # Epic 345: the timeline narrative spends its own failure sentence.
+    "frontend/src/lib/hooks/timeline.ts": 1,
     # 4 since 45.4: the fourth inbox write spends the same key the read, mark-all and dismiss share.
     "frontend/src/lib/hooks/notifications.ts": 4,
     # 6 rather than 4 since Epic 185's shelf pair joined the four offer verbs
@@ -208,7 +214,7 @@ RECOVERY = "frontend/src/lib/auth-recovery.ts"
 #: walk and looks for the sentence it would have to have written today.
 NUM_WORDS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
              8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve", 13: "thirteen",
-             14: "fourteen", 15: "fifteen", 16: "sixteen"}
+             14: "fourteen", 15: "fifteen", 16: "sixteen", 17: "seventeen"}
 
 
 def object_literal(text: str, pos: int) -> str:

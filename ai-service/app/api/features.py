@@ -48,6 +48,7 @@ from app.features import prioritize as prioritize_mod
 from app.features import interview_prep as interview_prep_mod
 from app.features import analytics as analytics_mod
 from app.features import career_timeline as career_timeline_mod
+from app.features import career_narrative as career_narrative_mod
 from app.features import ingestion as ingestion_mod
 from app.features import monitoring as monitoring_mod
 from app.features import import_plan as import_plan_mod
@@ -1294,6 +1295,23 @@ async def career_timeline_ep(req: CareerTimelineReq, ctx: Ctx = Depends(require_
     result = career_timeline_mod.build_timeline([a for a in (req.events or [])])
     await observability.finish_run(run_id, "completed")
     return result
+
+
+class CareerNarrativeReq(BaseModel):
+    """Epic 345 -- the timeline's second voice: the events the reader already sees."""
+    events: list[dict] = Field(default_factory=list)
+    locale: str | None = None
+
+
+@router.post("/career-narrative")
+async def career_narrative_ep(req: CareerNarrativeReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 345 -- one grounded story over the reader's own timeline. No run/usage
+    row: an install narrating its own ledger. Silence on failure, never a guess.
+    """
+    payload = {"events": [e for e in (req.events or []) if isinstance(e, dict)]}
+    return await career_narrative_mod.career_narrative(
+        payload, locale=req.locale or "en",
+        user_id=str(ctx.user_id) if ctx.user_id else None)
 
 
 class ClassifyReplyReq(BaseModel):

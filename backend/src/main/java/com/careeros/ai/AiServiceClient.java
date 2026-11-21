@@ -484,6 +484,15 @@ public interface AiServiceClient {
     Map<String, Object> careerTimeline(UUID userId, List<Map<String, Object>> events);
 
     /**
+     * Epic 345 — the timeline's grounded second voice: one paragraph over the
+     * reader's own events, in the reader's language. Silence (null narrative) is
+     * the failure mode, never invented prose. No run/usage row.
+     */
+    default Map<String, Object> careerNarrative(UUID userId, List<Map<String, Object>> events, String locale) {
+        return Map.of();
+    }
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is.
      */

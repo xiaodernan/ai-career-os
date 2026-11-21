@@ -242,7 +242,8 @@ that rejects invented skills/numbers not present in the source evidence.
     names the assistant's one proactive step — it re-reads a workspace's worth of
     counts on every tap), `/knowledge/text`,
     `/resumes/{id}/parse`, `/resumes/{id}/impression` (Epic 344 — the grounded
-    first-impression writer) and
+    first-impression writer), `/timeline/narrative` (Epic 345 — the timeline's
+    grounded story) and
     `/jobs/{id}/(match|tailor|cover-letter)`. It also covers the two that spend
     money without living under an "AI-looking" path: `/jobs/import` (importing a JD
     runs the analyst) and `/knowledge/documents` and `/resumes/upload` (both embed

@@ -17,6 +17,15 @@ const state = vi.hoisted(() => ({
 
 vi.mock("@/lib/hooks/timeline", () => ({
   useTimeline: () => state.timeline,
+  // Epic 345: the card's mutation must be stubbed too — the page test only grades
+  // the ledger, never the narrative call.
+  useCareerNarrative: () => ({
+    mutate: () => undefined,
+    isPending: false,
+    isSuccess: false,
+    isError: false,
+    data: undefined,
+  }),
 }));
 
 vi.mock("@/lib/hooks/use-url-state", () => ({

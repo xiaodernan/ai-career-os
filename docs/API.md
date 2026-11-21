@@ -734,6 +734,7 @@ contract does not mistake a payload shape for a filter).
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/timeline` | the caller's timeline: the dated facts this account owns merged by the ai-service into one ordered list — applications (dated by `applied_at` when the application was actually submitted, otherwise by when the row was created), their status-transition log (`→ oa` and friends, read from `application_events`), notes, contacts, resume versions, matches and interview rehearsals. The events travel as at, kind, title, refId and summary; an unparseable at sorts first rather than being dropped; each source contributes at most 50 rows, newest first. The answer is `{timeline: [...]}` — an account that has not started answers the same list with nothing in it rather than an error |
+| POST | `/timeline/narrative` | Epic 345 — the timeline's grounded second voice: accepts the events the page already drew plus an optional `locale`, answers one `narrative` paragraph over their own labels and dates (the arc, the turn, the open thread). Every claim cites a date the ledger carries; a null narrative means nothing grounded survived, never invented prose. No run/usage row (backend `careerNarrative`) |
 
 ### Dashboard, activity, search, AI usage
 
@@ -824,6 +825,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/response-rate` | Epic 15.2 -- reply / interview / offer rates and per-stage durations (backend `responseRate`) |
 | POST | `/internal/features/company-brief` | Epic 4.8 -- what the corpus says about one company (backend `companyBrief`) |
 | POST | `/internal/features/career-timeline` | Epic 81 -- one timeline over the whole loop: the caller's event rows (applications, notes, contacts, resume versions, matches, interview rehearsals) merged into a single deterministic `{at, kind, title, refId, summary}` list, no LLM (backend `careerTimeline`) |
+| POST | `/internal/features/career-narrative` | Epic 345 -- one grounded story over the same event list; the request carries `events` and optional `locale`, the answer carries a `narrative` field (null when nothing grounded survives); no run/usage row (backend `careerNarrative`) |
 | GET | `/internal/memories` | the copilot's own memories, `?kinds` filtered, for the settings panel (backend `listMemories`) |
 | PATCH | `/internal/memories/{memory_id}` | correct one memory's text, or lower the weight it is quoted at (backend `patchMemory`) |
 | DELETE | `/internal/memories/{memory_id}` | forget one memory; the row is gone, not hidden (backend `deleteMemory`) |

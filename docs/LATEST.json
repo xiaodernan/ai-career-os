@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T09:23:42.726548Z",
+  "generated_at": "2026-11-21T09:57:55.892119Z",
   "branch": "main",
-  "head": "f00a510",
-  "total_commits": 1717,
-  "milestone": "Epic 344",
-  "milestone_full": "the ledger of done epics (through 497 items), closed at Epic 344 — The first value gets a voice",
+  "head": "5ae03fe",
+  "total_commits": 1718,
+  "milestone": "Epic 345",
+  "milestone_full": "the ledger of done epics (through 498 items), closed at Epic 345 — The ledger becomes a story",
   "pushed_at": "2026-11-21",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
-  "tests": "1564+",
-  "test_files": 196,
-  "work_items": 497,
-  "epics": 210,
+  "tests": "1566+",
+  "test_files": 197,
+  "work_items": 498,
+  "epics": 211,
   "feature_surface": [
+    "Epic 345 — The ledger becomes a story",
     "Epic 344 — The first value gets a voice",
     "Epic 343 — The stub that lied is gone",
     "Epic 342 — The second voice sees the whole install",
     "Epic 341 — The gate that reports",
-    "Epic 340 — The whole context",
-    "Epic 339 — The gracious decline"
+    "Epic 340 — The whole context"
   ]
 }

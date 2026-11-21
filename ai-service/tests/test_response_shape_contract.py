@@ -408,7 +408,9 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "GrowthService.java", "InboundDecodeService.java", "InboundMailService.java", "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
         "RagCacheInvalidator.java", "ResumeService.java", "ScheduledIngestionService.java",
-        "TimelineService.java", "VoiceService.java",
+        # Epic 345: TimelineController threads the whole narrative result out to the
+        # browser (no key reads), like AdminCounselController before it.
+        "TimelineController.java", "TimelineService.java", "VoiceService.java",
     ]
 
 
@@ -1143,9 +1145,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # Step triple the shelf derives its progress from — all declared through the shared opener,
     # so the census was 249. Epic 274's StoryForgeRequest (the `{rawNote, locale}` body the
     # growth controller binds) makes it 250. Epic 344's ImpressionRequest (the `{locale}`
-    # body the resume controller binds) makes it 251. This pass counts after that bridge.
-    assert len(declared) == 251, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 251 measured"
+    # body the resume controller binds) makes it 251. Epic 345's NarrativeRequest (the
+    # `{events, locale}` body the timeline controller binds) makes it 252.
+    assert len(declared) == 252, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 252 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
