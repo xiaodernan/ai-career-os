@@ -8198,6 +8198,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **369** The one direction the world points, read off this reader's ledger (2026-11-22).
+
+  Brief VI asks for a world that feels endless AND for enough guidance that a reader never
+  feels lost — the same requirement from two sides. The nine quests (Epic 235) teach the
+  map by walking nine fixed rooms; they cannot say where THIS reader is. This card reads the
+  two ledgers that already exist — the board and the rehearsal history — folds them through
+  a pure ordered rule (`lib/next-frontier.ts`), and names the single next thing worth doing
+  with the reason it chose that one.
+
+  The order is the claim, and it is ordered by what costs the reader most to leave undone
+  rather than by what is easiest to measure: a rehearsal left half-finished outranks a
+  resume to polish, because a door that closes while you are not looking is not the same as
+  one that stays open. An unanswered letter outranks a board row, because a reply window
+  closes and a row does not.
+
+  Silence is a real answer, not a bug: a reader with nothing waiting is not handed an errand
+  they do not have, and a rule that cannot see its input stays silent. Seven pure tests pin
+  the order, the silence, the non-number case and the determinism. Copy census 229 → 230 for
+  the new component; full frontend suite **210 files / 1626 tests** green, tsc clean, eslint
+  clean.
+
 - [x] **368** The author card — a portfolio artifact with the facts as given (2026-11-22).
 
   Brief X: "把所有项目都列入我的 github io 页面" and "极致装修和宣传我的 io 页面和 GitHub
