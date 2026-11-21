@@ -176,7 +176,8 @@ describe("the browser's copy", () => {
     // 221 with Epic 344: `components/resumes/resume-impression-card.tsx`, the first-value second voice.
     // 222 with Epic 345: `components/timeline/career-narrative-card.tsx`, the timeline's second voice.
     // 223 with Epic 347: `components/layout/quick-start.tsx`, the first-run guided hello.
-    expect(browserSources().length).toBe(223);
+    // 226 with Epic 348-350: language-proficiency-card, skill-summary-card, nine-quests-progress-card.
+    expect(browserSources().length).toBe(226);
   });
 
   it("finds a sentence, however long it is", () => {

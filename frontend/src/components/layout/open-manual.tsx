@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 const GROUPS = [
   {
     labelKey: "playbook.surfacesFind",
+    descriptionKey: "chrome.manualSurfacesFind",
     routes: [
       { href: "/jobs", icon: Briefcase, labelKey: "nav.jobs", subKey: "navDescriptions.jobs" },
       { href: "/studio", icon: Target, labelKey: "nav.studio", subKey: "navDescriptions.studio" },
@@ -26,6 +27,7 @@ const GROUPS = [
   },
   {
     labelKey: "playbook.surfacesPrepare",
+    descriptionKey: "chrome.manualSurfacesPrepare",
     routes: [
       { href: "/resumes", icon: FileText, labelKey: "nav.resumes", subKey: "navDescriptions.resumes" },
       { href: "/knowledge", icon: History, labelKey: "nav.knowledge", subKey: "navDescriptions.knowledge" },
@@ -35,6 +37,7 @@ const GROUPS = [
   },
   {
     labelKey: "playbook.surfacesTrack",
+    descriptionKey: "chrome.manualSurfacesTrack",
     routes: [
       { href: "/applications", icon: CalendarClock, labelKey: "nav.applications", subKey: "navDescriptions.applications" },
       { href: "/letters", icon: Feather, labelKey: "nav.letters", subKey: "navDescriptions.letters" },
@@ -43,6 +46,7 @@ const GROUPS = [
   },
   {
     labelKey: "playbook.surfacesDecide",
+    descriptionKey: "chrome.manualSurfacesDecide",
     routes: [
       { href: "/offers", icon: Handshake, labelKey: "nav.offers", subKey: "navDescriptions.offers" },
       { href: "/replies", icon: MailOpen, labelKey: "nav.replies", subKey: "navDescriptions.replies" },
@@ -51,6 +55,7 @@ const GROUPS = [
   },
   {
     labelKey: "playbook.surfacesSee",
+    descriptionKey: "chrome.manualSurfacesSee",
     routes: [
       { href: "/analysis", icon: BarChart3, labelKey: "nav.analysis", subKey: "navDescriptions.analysis" },
       { href: "/monitoring", icon: Activity, labelKey: "nav.monitoring", subKey: "navDescriptions.monitoring" },
@@ -130,6 +135,9 @@ export function ManualSheet() {
                 <p className="mb-1.5 px-1 text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
                   {t(group.labelKey)}
                 </p>
+                {group.descriptionKey && (
+                  <p className="mb-2 text-xs text-muted-foreground capitalize">{t(group.descriptionKey)}</p>
+                )}
                 <ul className="space-y-1">
                   {group.routes.map((route) => {
                     const Icon = route.icon;

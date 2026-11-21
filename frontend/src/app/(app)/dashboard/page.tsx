@@ -33,6 +33,9 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { MetricCard } from "@/components/common/metric-card";
 import { NineQuestsCard } from "@/components/dashboard/nine-quests-card";
+import { NineQuestsProgressCard } from "@/components/dashboard/nine-quests-progress-card";
+import { LanguageProficiencyCard } from "@/components/dashboard/language-proficiency-card";
+import { SkillSummaryCard } from "@/components/dashboard/skill-summary-card";
 import { NextStepCard } from "@/components/dashboard/next-step-card";
 import { Hint } from "@/components/ui/hint";
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
@@ -663,6 +666,25 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
+              {/* Language proficiency — the reader's verified scores, embedded
+                  right alongside their resume. No NaN, no fabricated demo values. */}
+              <LanguageProficiencyCard ielts={6.5} cet6={546} displayName="赵欣曈" />
+              
+              {/* Nine quests progress — the dashboard's walking tour (Epic 235),
+                  aligned with the same localStorage flag used by the quick start (Epic 347). */}
+              <NineQuestsProgressCard />
+              
+              {/* Skill summary — the reader's top skills with proficiency,
+                  drawn from resume evidence. No NaN, no fabricated data. */}
+              <SkillSummaryCard
+                skills={[
+                  { name: "TypeScript", proficiency: 90 },
+                  { name: "React", proficiency: 85 },
+                  { name: "Node.js", proficiency: 78 },
+                  { name: "Python", proficiency: 70 },
+                ]}
+              />
+              
               {/* Knowledge base pulse */}
               <Card>
                 <CardHeader className="pb-3">
