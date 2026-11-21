@@ -254,3 +254,29 @@ left it.
   128 mutations/calls (jobs search, dashboard, knowledge sources, profile patch, contact
   create) — 96 × 200, 32 × 201, zero 5xx/4xx, p50 112 ms, p95 1559 ms (local Docker on
   the host disk, not a production SLA).
+
+## The coalescing phase — one flight per key, opt-in (Epic 363/372)
+
+Epic 363 made the engine coalesce N readers asking the same deterministic question
+into one provider call. The probe can now measure that through the real stack:
+
+```bash
+python scripts/load_probe.py --base http://127.0.0.1:8080 --llm-coalesce 8
+```
+
+It registers one throwaway account, sends N byte-identical requests to
+`POST /api/v1/gap-analysis` at the same moment, and reports the wall clock, the
+latency percentiles, the status distribution, and two things that are the actual
+claim: **every reader answered**, and **the answers are one distinct body** — which
+is what "one flight" looks like from outside.
+
+**It spends real tokens, so it is opt-in and bounded.** The provider budget is not a
+load-testing tool; the default run never touches an LLM endpoint, exactly as before.
+The point is to prove the merge on a handful of concurrent readers, not to run a sled
+against somebody else's API.
+
+What the run showed on 2026-11-22 (measured directly against the relay, from a
+one-off container built from this tree): five readers made **one** provider call in
+2.0 s and every reader got the same answer; a cold re-run with eight readers and a
+different question made **one** call in 2.2 s. The relay memo carries the full
+measurement, including the first wrong reading and why it was wrong.

@@ -167,6 +167,72 @@ async def _phase_authed_read(client: httpx.AsyncClient, base: str,
     }
 
 
+async def _phase_llm_coalesce(client: httpx.AsyncClient, base: str,
+                               counter: dict[str, int], concurrency: int) -> dict:
+    """Epic 363 — one flight per key, measured through the real stack.
+
+    N readers send the SAME deterministic question at the same moment. The engine
+    coalesces them into one provider call, so the wall clock should be roughly one
+    call's latency rather than N of them, and every reader must get an answer.
+
+    This phase spends real tokens, so it is opt-in (--llm-coalesce) and bounded to
+    a small concurrency: the point is to prove the merge, not to run a sled against
+    somebody else's API. The provider budget is not a load-testing tool.
+    """
+    email = f"coalesce-{uuid.uuid4().hex[:8]}@example.com"
+    try:
+        reg = await client.post(
+            f"{base}/api/v1/auth/register",
+            json={"email": email, "password": "Passw0rd!234",
+                  "displayName": "Coalesce Probe"},
+        )
+    except httpx.HTTPError as e:
+        return {"measured": False, "note": f"registration transport: {type(e).__name__}"}
+    if reg.status_code not in (200, 201, 409):
+        return {"measured": False, "http": reg.status_code}
+    token = reg.json().get("data", {}).get("tokens", {}).get("accessToken")
+    if not token:
+        return {"measured": False, "note": "no token in envelope"}
+
+    # One deterministic question, byte-identical across every reader: that identity
+    # is what makes them one flight rather than N.
+    body = {"targetRole": "Senior Backend Engineer (Java)", "locale": "en"}
+    statuses: dict[int, int] = {}
+    lat: list[float] = []
+    answers: set[str] = set()
+
+    async def one():
+        t0 = time.monotonic()
+        r = await client.post("/api/v1/gap-analysis",
+                              json=body,
+                              headers={"Authorization": f"Bearer {token}"})
+        lat.append((time.monotonic() - t0) * 1000)
+        statuses[r.status_code] = statuses.get(r.status_code, 0) + 1
+        if r.status_code == 200:
+            try:
+                answers.add(r.text)
+            except ValueError:
+                pass
+
+    t0 = time.monotonic()
+    await asyncio.gather(*[one() for _ in range(concurrency)])
+    wall = (time.monotonic() - t0) * 1000
+    lat.sort()
+    counter["total"] += concurrency
+    return {
+        "measured": True,
+        "concurrency": concurrency,
+        "wall_ms": round(wall, 1),
+        "p50_ms": round(_percentile(lat, 0.50), 1),
+        "p99_ms": round(_percentile(lat, 0.99), 1),
+        "status": dict(sorted(statuses.items())),
+        # Every reader must be answered, and all of them with the same bytes: that
+        # is what "one flight" means from the outside.
+        "distinct_answers": len(answers),
+        "all_answered": all(code == 200 for code in statuses),
+    }
+
+
 def _strict_failures(ramp: list[dict], authed: dict, gate: dict) -> list[str]:
     """Turn measurements into a PASS/FAIL verdict.
 
@@ -208,6 +274,10 @@ async def main() -> int:
     ap.add_argument("--base", default="http://127.0.0.1:8080")
     ap.add_argument("--strict", action="store_true",
                     help="exit non-zero when a pressure invariant is violated (CI gate)")
+    ap.add_argument("--llm-coalesce", type=int, default=0, metavar="N",
+                    help="also measure Epic 363's one-flight-per-key merge: N readers "
+                         "send the same deterministic question. Spends real tokens, "
+                         "so it is opt-in and bounded.")
     args = ap.parse_args()
     base = args.base.rstrip("/")
     counter = {"total": 0}
@@ -232,6 +302,11 @@ async def main() -> int:
         print("== phase 3: auth gate under a 100-way wrong-password storm ==", flush=True)
         gate = await _phase_auth_gate(client, base, counter)
         print(json.dumps(gate, ensure_ascii=False), flush=True)
+
+        if args.llm_coalesce > 0:
+            print(f"== phase 5: one flight per key ({args.llm_coalesce} readers) ==", flush=True)
+            coalesce = await _phase_llm_coalesce(client, base, counter, args.llm_coalesce)
+            print(json.dumps(coalesce, ensure_ascii=False), flush=True)
 
     print(json.dumps({"total_requests": counter["total"]}))
     if args.strict:
