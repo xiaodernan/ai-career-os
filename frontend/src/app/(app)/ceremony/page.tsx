@@ -14,6 +14,7 @@ import {
 import { useLetters } from "@/lib/hooks/letters";
 import { YearInReviewCard } from "@/components/ceremony/year-in-review-card";
 import { AfterwardCard } from "@/components/ceremony/afterward-card";
+import { LegacyCard } from "@/components/ceremony/legacy-card";
 import { useActivityHeatmap } from "@/lib/hooks/monitoring";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateOnly } from "@/lib/format";
@@ -108,6 +109,26 @@ export default function CeremonyPage() {
       accent: "text-primary border-primary/30 bg-primary/10",
     },
   ];
+
+  // 371: the same ledgers, folded into the shape the legacy rule reads.
+  const legacyInput = React.useMemo(() => {
+    const stageCounts: Record<string, number> = {};
+    for (const row of applications.data?.items ?? []) {
+      const stage = row.status ?? "";
+      if (stage) stageCounts[stage] = (stageCounts[stage] ?? 0) + 1;
+    }
+    const sessions = interviews.data?.items ?? [];
+    const notesKept = notes.data?.total ?? 0;
+    const lettersKept = letters.data?.total ?? 0;
+    return {
+      stages: stageCounts,
+      rehearsals: sessions.length,
+      reportsWritten: sessions.filter((s) => s.status === "completed").length,
+      letters: lettersKept,
+      notesKept,
+      offers: offers.data?.items?.length ?? 0,
+    };
+  }, [applications.data, interviews.data, notes.data, letters.data, offers.data]);
 
   return (
     <div className="flex flex-col gap-8 print:gap-0">
@@ -229,6 +250,11 @@ export default function CeremonyPage() {
       <YearInReviewCard numbers={reviewNumbers} />
 
       {/* Afterward (Epic 276): what the reader still carries away, and why it is heavier. */}
+      {/* 371: what this search leaves for the next one. Reads the same
+          ledgers the page already fetched; renders nothing at all when the
+          ledger is thin, because a reader who did one thing should not be
+          handed a retrospective. */}
+      <LegacyCard input={legacyInput} />
       <AfterwardCard />
     </div>
   );

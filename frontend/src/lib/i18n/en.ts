@@ -177,6 +177,31 @@ export const en = {
       },
     },
     // 369: the one direction the world points, read off the reader's own ledger.
+    legacy: {
+      title: "What this search leaves behind",
+      description:
+        "The next one starts from here rather than from nothing — the material worth reusing, the stage that cost the most, and the one lesson the numbers support.",
+      lessonEyebrow: "The lesson the numbers support",
+      lessonUnfinishedTitle: "Finish what you start",
+      lessonUnfinishedBody:
+        "You rehearsed more than you reported. The report is the whole point of a rehearsal — it is the only part the next answer can quote.",
+      lessonUnusedTitle: "Read back what you kept",
+      lessonUnusedBody:
+        "You kept the advice and never opened it. A note only pays off when the next answer cites it.",
+      lessonReusedTitle: "Your letters did the work",
+      lessonReusedBody:
+        "You wrote and kept several. The next search starts with them on the shelf rather than a blank page.",
+      costliestStage: "Most of your applications stopped at {stage} ({count}).",
+      open: "Open",
+      reuseReportsTitle: "{count} rehearsal report(s)",
+      reuseReportsBody: "What the grader said, in your own words — the evidence a next round cites.",
+      reuseLettersTitle: "{count} letter(s)",
+      reuseLettersBody: "Written, kept and printable — the shape a next one starts from.",
+      reuseNotesTitle: "{count} kept note(s)",
+      reuseNotesBody: "Advice you saved from your own rehearsals, ingested so the copilot can quote it.",
+      reuseOffersTitle: "{count} offer(s) on the shelf",
+      reuseOffersBody: "The decisions you already weighed — and the ledger that weighed them.",
+    },
     frontier: {
       eyebrow: "Where the world points next",
       finishRehearsalTitle: "{count} rehearsal(s) still open",

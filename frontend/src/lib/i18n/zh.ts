@@ -158,6 +158,31 @@ export const zh = {
     },
     // 信笺间（Epic 210）：读者保留的每一封信，一间展厅看完。
     // 369: 世界接下来指向的方向，读的是读者自己的台账。
+    legacy: {
+      title: "这一场寻职留下了什么",
+      description:
+        "下一场从这里开始，而不是从零开始——值得复用的材料、付出最多的那个阶段，以及数字唯一支持的那条教训。",
+      lessonEyebrow: "数字支持的教训",
+      lessonUnfinishedTitle: "把开始的事做完",
+      lessonUnfinishedBody:
+        "你演练的次数比写出的报告多。报告才是演练的全部意义——它是下一个答案唯一引得到的部分。",
+      lessonUnusedTitle: "把存下的东西读回去",
+      lessonUnusedBody:
+        "你存下了建议，却再没打开。一条笔记只有被下一个答案引用，才算还了债。",
+      lessonReusedTitle: "是你的信起了作用",
+      lessonReusedBody:
+        "你写并留下了好几封。下一场从架子上的它们开始，而不是一张白纸。",
+      costliestStage: "你的申请大多停在{stage}（{count} 个）。",
+      open: "打开",
+      reuseReportsTitle: "{count} 份演练报告",
+      reuseReportsBody: "评分者用你自己的话说了什么——下一轮会引用的证据。",
+      reuseLettersTitle: "{count} 封信",
+      reuseLettersBody: "写过、留下、可打印——下一封的起点形状。",
+      reuseNotesTitle: "{count} 条存下的笔记",
+      reuseNotesBody: "你从自己的演练里存下的建议，已摄取，助手引用得到。",
+      reuseOffersTitle: "架子上有 {count} 个 offer",
+      reuseOffersBody: "你已经权衡过的决定——以及权衡它们的那个账本。",
+    },
     frontier: {
       eyebrow: "世界接下来指向哪里",
       finishRehearsalTitle: "还有 {count} 场演练没练完",
