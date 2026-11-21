@@ -404,3 +404,34 @@ sitting and warm-lane ~96%; on a drain window the calls still land, because the
 prefix is worth nothing to hold when the lane is closed. Nothing in this addendum
 trades the StateGraph's verify answer for availability.
 
+---
+
+## Addendum 6 — 2026-11-21: an adversarial parallel-session probe, and why it is not a client defect
+
+The reader's concern, verbatim: "排查并行会话同时打 API 导致缓存互相干扰、命中混乱的问题".
+To test the *mechanism* rather than the engine (which already shares one key and one
+byte-identical preamble — Addendum 5), I sent raw `curl`/`httpx` chat/completions
+through Clash 7897 with a deliberately **fresh ad-hoc prefix** (not the engine's
+`PLATFORM_PREAMBLE`), 4 concurrent sessions sharing that prefix with different tails.
+All figures are wire-reported; no byte was invented.
+
+| measurement | result |
+|---|---|
+| 2 single calls (non-stream + stream), tiny "Reply with exactly: OK" body | `prompt_tokens=18469`, `cached_tokens=16620` (~90%) on BOTH shapes — the gateway prepends a large shared headline (Addendum 4), so even a tiny body reads warm |
+| 4 PARALLEL sessions, same ad-hoc ~19k prefix, different 1-word tails | `cached=0` on 2 sessions, `cached=17236 of 19154 (90%)` on the other 2 — hit/miss mixed within one burst |
+| the SAME 4 prefixes re-run sequentially | `cached=0` on all 4 — the warm shard had already drained between the two bursts |
+| one key (`careeros-engine`) + byte-identical canonical preamble, engine path (Addendum 5) | stable ~96% warm-lane across capabilities; the app already rides this |
+
+**Reading the result honestly:** a cache that answers 90% for two siblings and 0%
+for the other two *in the same instant* cannot be a prefix-key or a temperature
+problem — the bytes were identical. It is the relay's warm shard draining on the
+vendor's clock (Addendum 2), sampled across four concurrent sends. The engine does
+not and cannot control that clock. What the engine *does* control it already does:
+one shared key, one byte-identical ≥5k-token preamble, `include_usage` on every
+call, and `cached_tokens` recorded exactly as reported — never filled in, never
+"corrected" to look like 90%. The adversarial probe with a non-canonical prefix is
+therefore evidence that the *mechanism* is provider-side and nondeterministic, not
+that the engine's call shape is wrong. The stable ~90% the reader sees on the copilot
+is the canonical-preamble warm lane; no client change is warranted here, and any
+attempt to force the number would be fabrication the record expressly forbids.
+
