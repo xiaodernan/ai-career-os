@@ -174,7 +174,30 @@ export const en = {
         unknown: "Something else",
       },
     },
-    // The ink desk (Epic 210): every letter the reader kept, in one gallery.
+    // 369: the one direction the world points, read off the reader's own ledger.
+    frontier: {
+      eyebrow: "Where the world points next",
+      finishRehearsalTitle: "{count} rehearsal(s) still open",
+      finishRehearsalBody:
+        "A rehearsal left half-done is the one thing a search regrets: the report it would have written is the whole point of taking it. Finish one and the world moves on.",
+      finishRehearsalCta: "Open your rehearsals",
+      answerReplyTitle: "{count} letter(s) waiting on you",
+      answerReplyBody:
+        "An employer wrote back and nobody has answered. The window for a good reply is short, and the reply is the reader's to send.",
+      answerReplyCta: "Read what came back",
+      moveApplicationTitle: "{count} application(s) in your court",
+      moveApplicationBody:
+        "These are sitting in stages where the next move is the reader's — a follow-up, a nudge, a decision to let one go.",
+      moveApplicationCta: "Open the board",
+      readMatchesTitle: "{count} new match(es) nobody has opened",
+      readMatchesBody:
+        "A saved search found these. They will keep, but the ones worth chasing are the ones read while they are fresh.",
+      readMatchesCta: "Open the job board",
+      readNotesTitle: "{count} note(s) you kept and have not read back",
+      readNotesBody:
+        "Advice you saved from a rehearsal. It only pays off when the next answer quotes it.",
+      readNotesCta: "Open the knowledge base",
+    },
     letters: {
       title: "Letters",
       description:

@@ -155,6 +155,30 @@ export const zh = {
       },
     },
     // 信笺间（Epic 210）：读者保留的每一封信，一间展厅看完。
+    // 369: 世界接下来指向的方向，读的是读者自己的台账。
+    frontier: {
+      eyebrow: "世界接下来指向哪里",
+      finishRehearsalTitle: "还有 {count} 场演练没练完",
+      finishRehearsalBody:
+        "半途而废的演练是一场寻职最后悔的事：它本该写出的那份报告，正是练它的全部意义。练完一场，世界就往前挪一步。",
+      finishRehearsalCta: "打开你的演练",
+      answerReplyTitle: "有 {count} 封信在等你回",
+      answerReplyBody:
+        "招聘方回了信，还没有人答复。回得好窗口很短，而这一封是该由读者自己回的。",
+      answerReplyCta: "看看谁回了信",
+      moveApplicationTitle: "有 {count} 个申请轮到你动",
+      moveApplicationBody:
+        "它们停在下一步归读者的阶段——一次跟进、一次催问，或者一次决定放手。",
+      moveApplicationCta: "打开申请看板",
+      readMatchesTitle: "有 {count} 个新匹配没人点开",
+      readMatchesBody:
+        "收藏的搜索找到了它们。它们会一直在，但值得追的那些，要趁新鲜的时候读。",
+      readMatchesCta: "打开职位板",
+      readNotesTitle: "你存了 {count} 条笔记，还没读回去",
+      readNotesBody:
+        "从一场演练里留下的建议。只有下一个答案引用了它，它才算还了债。",
+      readNotesCta: "打开知识库",
+    },
     letters: {
       title: "求职信",
       description:

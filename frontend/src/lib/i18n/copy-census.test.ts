@@ -180,7 +180,8 @@ describe("the browser's copy", () => {
     // 227 with the grounded RAG answer bridge: components/knowledge/ask-knowledge-card.tsx.
     // 228 with Epic 354: components/timeline/career-chronicle-card.tsx.
     // 229 with Epic 357: components/timeline/career-atlas.tsx.
-    expect(browserSources().length).toBe(229);
+    // 230 with Epic 369: components/dashboard/frontier-card.tsx.
+    expect(browserSources().length).toBe(230);
   });
 
   it("finds a sentence, however long it is", () => {

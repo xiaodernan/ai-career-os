@@ -33,6 +33,7 @@ import { MatchRing, scoreBand } from "@/components/ai/match-ring";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { MetricCard } from "@/components/common/metric-card";
 import { NineQuestsCard } from "@/components/dashboard/nine-quests-card";
+import { FrontierCard } from "@/components/dashboard/frontier-card";
 import { NineQuestsProgressCard } from "@/components/dashboard/nine-quests-progress-card";
 import { LanguageProficiencyCard } from "@/components/dashboard/language-proficiency-card";
 import { SkillSummaryCard } from "@/components/dashboard/skill-summary-card";
@@ -215,7 +216,11 @@ export default function DashboardPage() {
       </section>
 
       {/* The nine quests (Epic 235): the walking tour for every reader, new or seasoned. */}
-      <NineQuestsCard />
+      {/* 369: the one direction the world points, read off this reader's own
+            ledgers — it says nothing when nothing is waiting, rather than
+            handing a reader an errand they do not have. */}
+        <FrontierCard />
+<NineQuestsCard />
 
       {/* Adaptive onboarding when the workspace holds nothing yet */}
       {workspaceEmpty ? (
