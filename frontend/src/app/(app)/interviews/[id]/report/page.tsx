@@ -31,6 +31,7 @@ import { BetterAnswerNoteButton } from "@/components/interviews/better-answer-no
 import { StudyNoteButton } from "@/components/interviews/study-note-button";
 import { GapNoteButton } from "@/components/interviews/gap-note-button";
 import { PrepareNoteButton } from "@/components/interviews/prepare-note-button";
+import { StoryForgeCard } from "@/components/interviews/story-forge-card";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -471,6 +472,11 @@ export default function InterviewReportPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Epic 274 — turn what this interview established into an interview-ready STAR
+          story. The model writes, challenges itself, revises from the note, and a
+          deterministic verifier strikes any figure the source never carried. */}
+      <StoryForgeCard />
 
       {/* Actions */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-muted/20 p-4">

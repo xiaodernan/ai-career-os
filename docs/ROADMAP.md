@@ -8198,6 +8198,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **274** The story forge — a traced LLM StateGraph turns one career note into a grounded STAR story (2026-11-21).
+
+  (A new capability that puts the model through five explicit states rather than one
+  call: `draft → challenge → revise → verify → render`. The model writes a STAR story
+  from the reader's own note; then plays a skeptical interview panel naming the
+  concrete weak spots a real panel would push on; then revises using only the note,
+  honestly recording the challenges it cannot close rather than inventing a fact.
+  `verify` is deterministic — every digit-run in the story must appear in the note,
+  or the field is struck and flagged. The open challenges survive into the result as
+  `open` follow-ups and a truthful `complete` flag, so an indefensible story says what
+  the reader still has to supply. All five nodes emit `graph_node` traces into the
+  existing Activity ledger. Bridged end to end: `POST /internal/features/story-forge`
+  → backend `/api/v1/growth/story-forge` → `StoryForgeCard` embedded in the interview
+  report, where the reader already keeps the material. EN+ZH throughout, every word
+  through the locale table. Live-probed on gpt-6.2-sol via the 7897 Clash Verge proxy:
+  a payment-gateway note produced a grounded STAR story, three sharp follow-ups, and
+  zero struck fields. Measured: ai-service **2986 passed**, frontend **1564**, tsc
+  clean, `next build` green.)
+
 - [x] **273** The edge of the map — where the map ends and you begin (2026-11-16).
 
   (A new chapter inside the manual teaches honesty as a feature: where this

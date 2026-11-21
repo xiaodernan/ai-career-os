@@ -4,6 +4,7 @@ import com.careeros.ai.dto.GapNoteRequest;
 import com.careeros.ai.dto.GrowthEngineRequest;
 import com.careeros.ai.dto.ProfileEngineRequest;
 import com.careeros.ai.dto.ProgressRequest;
+import com.careeros.ai.dto.StoryForgeRequest;
 import com.careeros.ai.service.GrowthEngineService;
 import com.careeros.common.AuthUser;
 import com.careeros.common.CurrentUser;
@@ -40,6 +41,13 @@ public class GrowthEngineController {
     public Map<String, Object> gapNote(@CurrentUser AuthUser user,
                                        @RequestBody @Valid GapNoteRequest request) {
         return growth.gapNote(user.id(), request);
+    }
+
+    /** Epic 274 — forge a grounded STAR story from the reader's own career note. */
+    @PostMapping("/story-forge")
+    public Map<String, Object> storyForge(@CurrentUser AuthUser user,
+                                          @RequestBody @Valid StoryForgeRequest request) {
+        return growth.storyForge(user.id(), request);
     }
 
     /** 10.1 — the distance between the profile and the target role. */

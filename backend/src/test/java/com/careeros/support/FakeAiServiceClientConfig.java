@@ -541,6 +541,20 @@ public class FakeAiServiceClientConfig {
         }
 
         @Override
+        public Map<String, Object> storyForge(UUID userId, String rawNote, String locale) {
+            record("storyForge");
+            return map("story", map("situation", "A project needed attention",
+                                    "task", "I owned the delivery",
+                                    "action", "I designed and built the solution",
+                                    "result", "The outcome improved"),
+                       "open", java.util.List.of(),
+                       "closed", java.util.List.of(),
+                       "struck_fields", java.util.List.of(),
+                       "complete", true,
+                       "locale", locale == null ? "en" : locale);
+        }
+
+        @Override
         public Map<String, Object> decodeReply(UUID userId, Map<String, Object> mail,
                                                String locale) {
             record("decodeReply");

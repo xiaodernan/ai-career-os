@@ -1575,6 +1575,24 @@ export interface StoryBank {
   skillsCovered?: string[];
 }
 
+/** Epic 274 — one STAR story forged from a career note. */
+export interface ForgedStory {
+  situation?: string;
+  task?: string;
+  action?: string;
+  result?: string;
+}
+
+/** Epic 274 — the LLM story forge's grounded answer. */
+export interface StoryForgeResult {
+  story?: ForgedStory;
+  open?: Array<{ question?: string; reason?: string }>;
+  closed?: string[];
+  struck_fields?: string[];
+  complete?: boolean;
+  locale?: string;
+}
+
 /** One suggested target role family (10.10). */
 export interface SuggestedRole {
   family?: string;

@@ -581,6 +581,7 @@ that narrow the question.
 | POST | `/growth/progression` | the same request → the stepping-stone role families that build the dream role's missing skills, each with the skills it builds, its current coverage and the bridge score that ranks it. `targetRole` is the role being aimed at |
 | POST | `/growth/interview-prep` | the same request → the pre-interview checklist: the weak areas to study, the strength stories to rehearse, and the likely topics |
 | POST | `/growth/story-bank` | `{resumeVersionId?, top?}` → the STAR stories drawn from the profile's own evidence |
+| POST | `/growth/story-forge` | Epic 274 -- `{rawNote, locale?}` → a grounded STAR story forged by a traced LLM StateGraph. The model writes, plays a skeptical interviewer naming what a panel will push on, then revises using only the note; a deterministic verifier strikes any digit-run the note did not carry. Answers `{story{situation,task,action,result}, open[{question,reason}], closed[], struck_fields[], complete, locale}` -- `open` are the honest follow-ups the reader still has to supply, so an indefensible story never invents a fact. `rawNote` is required (10-12000 chars); `locale` en/zh, en otherwise |
 | POST | `/growth/role-suggestions` | `{resumeVersionId?, top?}` → the target roles this profile could plausibly aim at |
 | POST | `/growth/progress` | `{targetRole?, seniority?, resumeVersionId?, previous?}` → the skill progress: closed / improved / regressed / still open, and the coverage delta. `previous` is a prior gap report's own shape, for the diff; without it the answer is a baseline |
 
@@ -806,6 +807,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/features/acceptance-playbook` | Epic 335 -- the first-90-days playbook for the reader's shelf: `{offer, locale?}`; every digit-run in the playbook must already appear in the offer payload (base/bonus/equity/totalComp/currency + deadline + the shelf's own week markers); a foreign digit anywhere drops the playbook, `playbook: null` — silence instead of a confident list of confident lies (backend `acceptancePlaybook`) |
 | POST | `/internal/features/negotiation-prep` | Epic 337 -- the negotiation prep one-pager about the reader's shelf: `{offer, siblings, locale?}`; siblings up to four (shown for the band, never named as leverage); every digit-run in the note must already appear in the snapshot (the writer never invents an anchor, a sign-on, or a percentage); a foreign digit anywhere drops the one-pager, `prep: null` — silence instead of an invented anchor (backend `negotiationPrep`) |
 | POST | `/internal/features/decline-letter` | Epic 339 -- the gracious decline about the reader's shelf: `{offer, locale?}`; every digit-run in the letter must already appear in the offer payload (base/bonus/equity/totalComp/currency + deadline); a foreign digit anywhere drops the letter, `letter: null` �� silence, not a polite fabrication (backend `declineLetter`) |
+| POST | `/internal/features/story-forge` | Epic 274 -- a traced LLM StateGraph forges a grounded STAR story from one career note: `{raw_note, locale?}`; the model writes, plays a skeptical interviewer, revises from the note, and a deterministic verifier strikes any digit-run the note did not carry. Answers `{story, open, closed, struck_fields, complete, locale}` -- `open` are the honest follow-ups, so an indefensible story never invents a fact (backend `storyForge`) |
 | POST | `/internal/features/readiness` | Epic 10.7 -- target-role readiness, as one verdict (backend `readiness`) |
 | POST | `/internal/features/learning-plan` | Epic 10.5 -- the plan that closes the gaps readiness named (backend `learningPlan`) |
 | POST | `/internal/features/skill-demand` | Epic 10.9 -- which skills the market asks for, counted from the corpus (backend `skillDemand`) |
@@ -872,14 +874,12 @@ Eight routes that no backend caller builds do sit in section 3, and each says so
 Purpose cell; the gate that partitions the unreached surface charges those seven with
 carrying the marker and every other row with not carrying it.
 
-The split is re-measured on every run. Epic 274 ships ahead of its bridge, so the
-story forge — a traced LLM StateGraph (write → challenge → revise → verify) that turns
-one career note into a grounded STAR story with honest follow-ups — is the one row here
-until a screen calls it.
+Every engine now has a backend caller, so this table is empty — a new engine that ships
+ahead of its bridge joins it again, and the split is re-measured. Epic 274's story forge
+was such a row until the interview report began calling it through `/growth/story-forge`.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/internal/features/story-forge` | Epic 274 -- the LLM story forge: a career note in, a grounded STAR story out, with unverifiable figures struck and the panel's unanswered challenges kept as honest follow-ups |
 
 ## 4. Worked examples
 

@@ -16,6 +16,7 @@ import type {
   RoleSuggestions,
   SkillDemand,
   SkillProgress,
+  StoryForgeResult,
   StoryBank,
 } from "@/lib/api/types";
 
@@ -86,6 +87,23 @@ export function useGapNote() {
         locale: input.locale,
       })) as GapReport,
     onError: fail("failures.gapNote"),
+  });
+}
+
+/**
+ * Epic 274 — forge one grounded STAR story from the reader's raw career note.
+ * The engine writes, challenges itself, revises from the note, and a deterministic
+ * verifier strikes any figure the note did not carry. The answer keeps the honest
+ * follow-ups the reader still has to supply, so an indefensible story never invents.
+ */
+export function useStoryForge() {
+  return useMutation({
+    mutationFn: async (input: { rawNote: string; locale?: string }) =>
+      (await api.create<unknown>(endpoints.growthStoryForge, {
+        rawNote: input.rawNote,
+        locale: input.locale,
+      })) as StoryForgeResult,
+    onError: fail("failures.storyForge"),
   });
 }
 

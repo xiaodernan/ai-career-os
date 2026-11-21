@@ -279,6 +279,15 @@ public interface AiServiceClient {
     Map<String, Object> proactiveStep(UUID userId, Map<String, Object> payload, String locale);
 
     /**
+     * The LLM story forge (Epic 274): a traced StateGraph turns the reader's raw career note
+     * into a grounded STAR story. The model writes, then plays a skeptical interviewer, then
+     * revises; a deterministic verifier strikes any figure the note did not carry. The answer
+     * is the engine's own shape — story, open follow-ups, closed, struck_fields, complete,
+     * locale. `locale` is the reader's language.
+     */
+    Map<String, Object> storyForge(UUID userId, String rawNote, String locale);
+
+    /**
      * The analyst's read of one inbound letter (Epic 332): who wrote it, what they want, which
      * one date they actually state, the concrete next action, what they ask for, and a drafted
      * reply ready to edit. Same law as the other grounded voices: the intent is the words' own

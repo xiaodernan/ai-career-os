@@ -1141,9 +1141,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # Epic 273's milestone shelf adds four records on the growth DTO — Milestone,
     # MilestoneCounters, MilestonesResponse (the wire the growth page binds) and the private
     # Step triple the shelf derives its progress from — all declared through the shared opener,
-    # so the census is now 249. This pass counts the records after that merge.
-    assert len(declared) == 249, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 249 measured"
+    # so the census was 249. Epic 274's StoryForgeRequest (the `{rawNote, locale}` body the
+    # growth controller binds) makes it 250. This pass counts the records after that bridge.
+    assert len(declared) == 250, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 250 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3677,7 +3678,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # 1839 rather than 1819 since Epic 332's `InboundMailDecode` / `InboundDecodeResponse`
         # joined types.ts above the union (+20 lines with their doc comments); the union its-
         # self did not change.
-        ("types.ts", 1839, "kind:"),
+        # 1857 rather than 1839 since Epic 274 added ForgedStory/StoryForgeResult above
+        # the trace-step union (+18 lines with their doc comments); the union did not move.
+        ("types.ts", 1857, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "

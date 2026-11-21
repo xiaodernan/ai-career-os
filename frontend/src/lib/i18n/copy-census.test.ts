@@ -172,7 +172,8 @@ describe("the browser's copy", () => {
     // 218 with Epic 337: `components/offers/offer-negotiation-prep.tsx`, the twelve lines the reader carries into the negotiation call.
     // 219 with Epic 273: `components/growth/milestone-shelf.tsx`, the earned badge strip — its
     // milestone wording now reads from the locale table instead of a hard-coded English map.
-    expect(browserSources().length).toBe(219);
+    // 220 with Epic 274: `components/interviews/story-forge-card.tsx`, the embedded LLM STAR forge.
+    expect(browserSources().length).toBe(220);
   });
 
   it("finds a sentence, however long it is", () => {

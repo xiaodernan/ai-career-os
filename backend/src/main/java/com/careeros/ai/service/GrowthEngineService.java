@@ -5,6 +5,7 @@ import com.careeros.ai.dto.GapNoteRequest;
 import com.careeros.ai.dto.GrowthEngineRequest;
 import com.careeros.ai.dto.ProfileEngineRequest;
 import com.careeros.ai.dto.ProgressRequest;
+import com.careeros.ai.dto.StoryForgeRequest;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -86,6 +87,18 @@ public class GrowthEngineService {
             payload.put("note", note);
         }
         return payload;
+    }
+
+    /**
+     * Epic 274 — forge one grounded STAR story from the reader's own note. The bridge
+     * owns none of the logic: the note and the reader's language go to the engine and
+     * the engine's own shape (story, open, closed, struck_fields, complete, locale)
+     * comes back unchanged.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> storyForge(UUID userId, StoryForgeRequest request) {
+        Map<String, Object> answered = aiService.storyForge(userId, request.rawNote(), request.locale());
+        return answered == null ? java.util.Map.of() : answered;
     }
 
     /** 10.7 — target-role readiness, as one verdict. */

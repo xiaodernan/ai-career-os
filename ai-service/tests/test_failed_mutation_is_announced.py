@@ -8,14 +8,14 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 112 mutation sites in sixteen files
+What the shipped code says, measured rather than assumed: 113 mutation sites in sixteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
 second door, the account and replies screens' hooks, 42.2's mail dials, the kept letter's
 save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair,
 Epic 327's decision letter writer, Epic 331's assistant ask, Epic 332's analyst ask,
 Epic 333's counter offer letter, Epic 334's check-in email, Epic 335's playbook,
 Epic 337's prep sheet, and Epic 339's gracious decline).
-100 declare their failure at the hook; the twelve that do not sit in
+101 declare their failure at the hook; the twelve that do not sit in
 ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -30,7 +30,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 97 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 98 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -117,7 +117,8 @@ ROSTER = {
     ACCOUNT_HOOKS: 5,
     "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
-    "frontend/src/lib/hooks/growth.ts": 13,
+    # 14 since Epic 274's useStoryForge joined the growth engines.
+    "frontend/src/lib/hooks/growth.ts": 14,
     "frontend/src/lib/hooks/ingestion.ts": 9,
     "frontend/src/lib/hooks/mfa.ts": 4,
     # 42.2: the settings card's one dial write, announced at the hook.
@@ -163,7 +164,8 @@ SENTENCES = {
     ACTIONS: 44,
     "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
-    "frontend/src/lib/hooks/growth.ts": 13,
+    # 14 since Epic 274's useStoryForge spends its own failure sentence.
+    "frontend/src/lib/hooks/growth.ts": 14,
     "frontend/src/lib/hooks/ingestion.ts": 8,
     # 4 since 45.4: the fourth inbox write spends the same key the read, mark-all and dismiss share.
     "frontend/src/lib/hooks/notifications.ts": 4,

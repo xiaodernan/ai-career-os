@@ -561,6 +561,16 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> storyForge(UUID userId, String rawNote, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("raw_note", rawNote != null ? rawNote : "");
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/story-forge", userId, body);
+    }
+
+    @Override
     public Map<String, Object> decodeReply(UUID userId, Map<String, Object> mail,
                                            String locale) {
         Map<String, Object> body = new HashMap<>();
