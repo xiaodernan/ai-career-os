@@ -435,3 +435,19 @@ that the engine's call shape is wrong. The stable ~90% the reader sees on the co
 is the canonical-preamble warm lane; no client change is warranted here, and any
 attempt to force the number would be fabrication the record expressly forbids.
 
+## Addendum (2026-11-22) — the parallel-session half of the same question
+
+The relay's own reporting instability is measured above and is not the client's to
+fix. The parallel half was, and is now closed (Epic 363): the exact-match cache
+answered a repeated deterministic call only after the first caller had paid for it,
+so two readers pasting the same posting both missed, both called the relay and both
+wrote the same answer. The model door coalesces per key now — the cache is read
+first, a miss runs the relay exactly once for everyone waiting, and the leader's
+answer is the one stored. Ten parallel readers, one model call, measured by a gate
+that drives the real entry point with a counting relay.
+
+Per-process, deliberately: the engine runs several uvicorn workers and two readers
+on two workers still both call once. A cross-process lock would need a Redis lease,
+a different trade with a different failure mode, and the duplicated call inside one
+worker is where parallel sessions land. Nothing here reads or writes
+`cached_tokens`; the accounting discipline above is unchanged.

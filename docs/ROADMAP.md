@@ -8198,6 +8198,36 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **363** One flight per key — parallel readers no longer each pay (2026-11-22).
+
+  Brief IV: "排查并行会话同时打 API 导致缓存互相干扰、命中混乱的问题，妥善处理并行会话".
+  The exact-match cache (Epic 174) answered a repeated *deterministic* call from
+  Redis, but only after the first caller had already paid for it. Two readers
+  pasting the same posting, two resumes parsing at once, the same gap analysis
+  requested twice by one impatient click: both missed, both called the relay,
+  both wrote the same answer. Two model calls for one piece of work, and two
+  writes racing on one key — the reader pays twice and the cache still holds one
+  answer, whichever writer landed last.
+
+  The model door now coalesces. The cache is read first, so a hit still costs
+  nothing; a miss runs the relay **exactly once** for everyone waiting on that
+  key. The leader's answer is the one stored, so the cache holds one answer
+  rather than a race. A leader that fails propagates to its waiters as a miss,
+  never as a fabricated answer, and leaves no future behind for a later reader
+  to await.
+
+  Scope is stated rather than implied: per-process, because the engine runs
+  several uvicorn workers and two readers on two workers still both call once —
+  a cross-process lock would need a Redis lease, which is a different trade with
+  a different failure mode. What this removes is the duplicated call inside one
+  worker, which is where parallel sessions land.
+
+  The gate is behavioural, not structural: it drives the real entry point
+  (`llm_cache.get_or_produce`) with a relay that counts its calls and sleeps long
+  enough for the others to arrive. **Ten parallel readers, one model call**, and
+  the second wave served from what the first wrote. ai-service **3024 passed,
+  8 skipped** (full suite, offline).
+
 - [x] **362** Every payload the model reads is fitted by one budget (2026-11-22).
 
   Brief IV: "我这边输入上下文总是太少，要充分利用上下文容量". Epic 340 put one
