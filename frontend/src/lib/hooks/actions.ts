@@ -127,6 +127,18 @@ export function useParseResume(resumeId: string) {
   });
 }
 
+/** Epic 344 — one grounded first-impression paragraph over the parsed resume.
+ *  Reads the reader's language from the locale context; a silent relay answers null. */
+export function useResumeImpression(resumeId: string) {
+  const { locale } = useLocale();
+  return useMutation({
+    mutationFn: async (): Promise<{ impression?: string | null }> =>
+      (await api.request<{ impression?: string | null }>(
+        endpoints.resumeImpression(resumeId), { method: "POST", body: { locale } })) ?? {},
+    onError: fail("failures.resumeImpression"),
+  });
+}
+
 export function useSetCurrentResume(resumeId: string) {
   const qc = useQueryClient();
   return useMutation({

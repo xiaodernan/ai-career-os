@@ -101,6 +101,9 @@ FORWARD = {
     # Epic 274 -- the LLM story forge. `raw_note` is the reader's own material and
     # the only source the verifier trusts; `locale` optional.
     "/internal/features/story-forge": ("StoryForgeReq", {"raw_note"}),
+    # Epic 344 -- the resume first-impression. `payload` is the PII-light summary the
+    # backend builds from the owned resume row; `locale` optional.
+    "/internal/features/resume/impression": ("ResumeImpressionReq", {"payload"}),
 }
 
 

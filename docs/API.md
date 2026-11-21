@@ -227,6 +227,7 @@ was already written (the retry re-sends the stored letter as it was).
 | PATCH | `/resumes/{id}` | rename / relabel |
 | DELETE | `/resumes/{id}` | |
 | POST | `/resumes/{id}/parse` | run structured parse → profile + rows + score |
+| POST | `/resumes/{id}/impression` | Epic 344 — accepts an optional `locale`, answers one grounded first-impression paragraph over the resume's own facts (counts + rubric score, no names/companies/dates) in an `impression` field. Every claim cites a number the document carries; the engine answers null when nothing grounded survives. The reader's own row supplies the facts; the backend builds a PII-light summary |
 | POST | `/resumes/{id}/set-current` | mark current version |
 | GET | `/resumes/{id}/versions` | version history (original + tailored) |
 | GET | `/resume-versions` | all versions for the user |
@@ -770,6 +771,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | GET | `/internal/agents/runs` | runs list (no backend caller: the Activity panel reads agent_runs over the shared database instead) |
 | GET | `/internal/agents/runs/{run_id}` | run + traces (no backend caller: same, for one run's detail) |
 | POST | `/internal/features/resume/parse` | structured resume parse + score |
+| POST | `/internal/features/resume/impression` | Epic 344 — one grounded first-impression paragraph over a PII-light resume summary; the request carries `payload` and optional `locale`, the answer carries an `impression` field (null on failure); no run/usage row (backend `resumeImpression`) |
 | POST | `/internal/features/jd/analyze` | JD intelligence |
 | POST | `/internal/features/match` | deterministic match |
 | POST | `/internal/features/tailor` | tailoring + diff (no fabrication) |

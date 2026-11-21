@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
@@ -103,6 +104,17 @@ public class ResumeController {
     @PostMapping("/{id}/parse")
     public ParseResumeResponse parse(@CurrentUser AuthUser user, @PathVariable UUID id) {
         return resumes.parse(user.id(), id);
+    }
+
+    /** Epic 344 — one grounded first-impression paragraph over the reader's own resume. */
+    @PostMapping("/{id}/impression")
+    public Map<String, Object> impression(@CurrentUser AuthUser user, @PathVariable UUID id,
+                                          @RequestBody(required = false) ImpressionRequest request) {
+        return resumes.impression(user.id(), id, request == null ? null : request.locale());
+    }
+
+    /** Epic 344 — body of the impression route; locale only, like the other grounded writers. */
+    public record ImpressionRequest(String locale) {
     }
 
     @PostMapping("/{id}/set-current")

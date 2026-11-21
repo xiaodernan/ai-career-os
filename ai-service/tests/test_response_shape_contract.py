@@ -1142,9 +1142,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # MilestoneCounters, MilestonesResponse (the wire the growth page binds) and the private
     # Step triple the shelf derives its progress from — all declared through the shared opener,
     # so the census was 249. Epic 274's StoryForgeRequest (the `{rawNote, locale}` body the
-    # growth controller binds) makes it 250. This pass counts the records after that bridge.
-    assert len(declared) == 250, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 250 measured"
+    # growth controller binds) makes it 250. Epic 344's ImpressionRequest (the `{locale}`
+    # body the resume controller binds) makes it 251. This pass counts after that bridge.
+    assert len(declared) == 251, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 251 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

@@ -35,6 +35,7 @@ from app.features import readiness as readiness_mod
 from app.features import reminders as reminders_mod
 from app.features import reply_classify as reply_classify_mod
 from app.features import resume_parse as rp
+from app.features import resume_impression as resume_impression_mod
 from app.features import roles as roles_mod
 from app.features import salary as salary_mod
 from app.features import stories as stories_mod
@@ -75,6 +76,25 @@ async def _resume_payload(user_id: str, resume_version_id: str | None) -> tuple[
 
 class ParseReq(BaseModel):
     text: str = Field(min_length=20)
+
+
+class ResumeImpressionReq(BaseModel):
+    """Epic 344 — a compact, PII-light summary of the reader's parsed resume plus
+    its rubric score. The backend builds it from the row it already owns."""
+    payload: dict
+    locale: str | None = None
+
+
+@router.post("/resume/impression")
+async def resume_impression_ep(req: ResumeImpressionReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 344 — one grounded first-impression paragraph over the reader's resume.
+    Optional by contract: a silent or ungrounded relay answers null, never invented
+    prose. Keeps no run/usage row — an install reflecting on its own first value.
+    """
+    payload = req.payload if isinstance(req.payload, dict) else {}
+    return await resume_impression_mod.resume_impression(
+        payload, locale=req.locale or "en",
+        user_id=str(ctx.user_id) if ctx.user_id else None)
 
 
 @router.post("/resume/parse")

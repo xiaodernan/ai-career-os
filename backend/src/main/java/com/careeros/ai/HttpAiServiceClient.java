@@ -302,6 +302,16 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> resumeImpression(Map<String, Object> payload, UUID userId, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("payload", payload == null ? Map.of() : payload);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/resume/impression", userId, body);
+    }
+
+    @Override
     public Map<String, Object> interviewOpening(UUID sessionId, UUID userId) {
         return post("/internal/interview/opening", userId, Map.of("session_id", sessionId.toString()));
     }

@@ -8,14 +8,14 @@ this request fails, does anyone say so?". This file answers it per mutation site
 the caller's options through the one indirection the app actually uses: a named object handed to two
 different mutations.
 
-What the shipped code says, measured rather than assumed: 113 mutation sites in sixteen files
+What the shipped code says, measured rather than assumed: 114 mutation sites in sixteen files
 (the hook libraries, the knowledge uploader's own actions, 33.1's push switch, 36.4's
 second door, the account and replies screens' hooks, 42.2's mail dials, the kept letter's
 save/delete/correct trio, 66.1/67.2's delete and abandon, Epic 185's offer pair,
 Epic 327's decision letter writer, Epic 331's assistant ask, Epic 332's analyst ask,
 Epic 333's counter offer letter, Epic 334's check-in email, Epic 335's playbook,
 Epic 337's prep sheet, and Epic 339's gracious decline).
-101 declare their failure at the hook; the twelve that do not sit in
+102 declare their failure at the hook; the twelve that do not sit in
 ``account.ts`` and ``auth.ts`` and ``push.ts``.
 Eleven of those twelve are announced by their caller -- the password forms pass inline call
 options, the credentials form passes one shared ``handlers`` object to both ``login.mutate``
@@ -30,7 +30,7 @@ choice -- a local sign-out always happens -- so this file characterises it rathe
 changing it: it is the one place in the app where "you are signed out" is not a claim about
 the server.
 
-The same walk covers the failure helper: ``fail(...)`` has a single author and 98 uses, and
+The same walk covers the failure helper: ``fail(...)`` has a single author and 99 uses, and
 every use names a key the browser's table answers -- the sentence is resolved when the toast
 is raised, in the reader's language. All but four name a different key: the inbox's read,
 mark-all-read, dismiss and 45.4's dismiss-read-in-one-press share ``notifications.actionFailed``
@@ -111,7 +111,9 @@ ROSTER = {
     # 42 with the kept letter's three writes (1076949's save, 5080e67's delete and bff366d's
     # correction), each announcing its failure at the hook through the shared `fail`; 44 with
     # 66.1's delete and 67.2's abandon, the two verbs the interview list and runner gained.
-    ACTIONS: 45,
+    # 46 since Epic 344's useResumeImpression joined the first-value path, with its
+    # own fail() sentence at the hook.
+    ACTIONS: 46,
     # 5 since 38.1's confirmation joined the four credential writes.
     AUTH_HOOKS: 6,
     ACCOUNT_HOOKS: 5,
@@ -161,7 +163,8 @@ QUIET = ["useChangePassword", "useConfirmEmailChange", "useEraseAccount",
 SENTENCES = {
     # 41 with the kept letter's three writes, each spending a sentence of its own; 43 with
     # 66.1's "Couldn't delete the rehearsal." and 67.2's "Couldn't end the rehearsal.".
-    ACTIONS: 44,
+    # 45 since Epic 344's useResumeImpression spends its own failure sentence.
+    ACTIONS: 45,
     "frontend/src/lib/hooks/analytics.ts": 1,
     "frontend/src/lib/hooks/data-portability.ts": 5,
     # 14 since Epic 274's useStoryForge spends its own failure sentence.

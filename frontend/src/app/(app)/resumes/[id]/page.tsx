@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { SectionHeading } from "@/components/common/export-buttons";
+import { ResumeImpressionCard } from "@/components/resumes/resume-impression-card";
 import { DiffView } from "@/components/common/diff-view";
 import { DimensionBars } from "@/components/common/skill-chips";
 import { MatchRing } from "@/components/ai/match-ring";
@@ -260,6 +261,9 @@ export default function ResumeDetailPage() {
               <ScorePanel score={r.score ?? null} />
             </CardContent>
           </Card>
+
+          {/* Epic 344 — one grounded paragraph over the resume's own facts. */}
+          <ResumeImpressionCard resumeId={id ?? ""} hasScore={Boolean(r.score)} />
 
           {/* Versions */}
           <Card>

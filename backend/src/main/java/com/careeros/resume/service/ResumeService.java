@@ -371,6 +371,35 @@ public class ResumeService {
     private record ParsedContext(UUID resumeId, UUID versionId, String text) {
     }
 
+    /**
+     * Epic 344 — one grounded first-impression paragraph over the reader's parsed
+     * resume. Builds a PII-light summary (counts + rubric score, no names/companies/
+     * dates) from the row this reader owns, and hands it to the engine's second voice.
+     * A silent or ungrounded relay answers null, never invented prose.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> impression(UUID userId, UUID resumeId, String locale) {
+        Resume resume = requireResume(userId, resumeId);
+        ResumeVersion version = currentVersion(resume)
+                .orElseThrow(() -> new ApiException(ApiErrorCode.RESUME_VERSION_MISSING,
+                        "Resume has no version to parse"));
+        Map<String, Object> payload = new java.util.HashMap<>();
+        Map<String, Object> score = version.getScore();
+        payload.put("score", score == null ? Map.of() : score);
+        payload.put("profile", Map.of(
+                "skills_count", resumeSkills.findByResumeVersionId(version.getId()).size()));
+        payload.put("experience", Map.of("count",
+                experiences.findByResumeVersionIdOrderByOrdinalAsc(version.getId()).size()));
+        payload.put("projects", Map.of("count",
+                projects.findByResumeVersionIdOrderByOrdinalAsc(version.getId()).size()));
+        payload.put("education", Map.of("count",
+                educations.findByResumeVersionIdOrderByOrdinalAsc(version.getId()).size()));
+        payload.put("achievements", Map.of("count",
+                achievements.findByResumeVersionIdOrderByOrdinalAsc(version.getId()).size()));
+        Map<String, Object> answered = ai.resumeImpression(payload, userId, locale);
+        return answered == null ? Map.of() : answered;
+    }
+
     @Transactional(readOnly = true)
     public ParsedContext parseContext(UUID userId, UUID resumeId) {
         Resume resume = requireResume(userId, resumeId);

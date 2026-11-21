@@ -99,6 +99,15 @@ public interface AiServiceClient {
         return Map.of();
     }
 
+    /**
+     * Epic 344 — one grounded first-impression paragraph over the reader's parsed
+     * resume. The payload is a PII-light summary the backend builds from the owned
+     * row; the engine answers {impression} or null when nothing grounded survives.
+     */
+    default Map<String, Object> resumeImpression(Map<String, Object> payload, UUID userId, String locale) {
+        return Map.of();
+    }
+
     Map<String, Object> interviewOpening(UUID sessionId, UUID userId);
 
     Map<String, Object> interviewAnswer(UUID sessionId, String answer, String question,

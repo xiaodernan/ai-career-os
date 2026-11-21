@@ -8198,6 +8198,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **344** The first value gets a voice — resume first-impression, grounded (2026-11-21).
+
+  The strongest reading of "把大模型能力深度嵌入项目整体能力": the surface EVERY
+  reader hits first — a just-parsed resume — offered only a number and five bars, and
+  `compute_resume_score` is explicitly "no LLM by design". `resume_impression.py`
+  is that engine's second voice: a bounded StateGraph (draft → verify → render) over
+  a PII-light summary (counts + rubric score, no names/companies/dates), keeping one
+  paragraph only if it cites a number the resume actually carries — silence on any
+  failure, never a generic compliment. Live-probed on gpt-6.2-sol via the 7897 proxy:
+  "5 years, 14 skills, 3 roles, 2 projects… score 78, skills 85, impact 62 is the
+  clearest gap" — every figure real, zero invented. Bridged end-to-end: internal
+  route → backend `/api/v1/resumes/{id}/impression` (AI-cost throttled) →
+  `ResumeImpressionCard` on the resume detail page, en/zh keyed. Tests: new
+  `test_resume_impression.py` (5), frontend card test, all i18n/endpoint/mutation/
+  response-shape censuses re-pinned. ai-service **3004 passed**, frontend 1566,
+  tsc + next build green.
+
+  Also verified this run: the 23-spec Playwright suite against the LIVE stack scored
+  **71 passed / 6 failed** — all six are AI-output-shape assertions (skill headings,
+  dimension scores, drafted message) written for `LLM_PROVIDER=mock` per `e2e/README`,
+  while the running service is on `openai_compat + gpt-6.2-sol`. An env mismatch, not
+  a product regression; no product code was changed to accommodate it.
+
 - [x] **343** The stub that lied is gone — one honest owner for the admin surface (2026-11-21).
 
   The consolidated WIP batch had shipped `app/features/admin.py`: a router that was

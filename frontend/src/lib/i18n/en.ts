@@ -1817,6 +1817,12 @@ export const en = {
         quality: "Resume quality",
         qualityDescription:
           "Only shown when the reviewer has actually scored this document.",
+        impressionTitle: "What this resume says",
+        impressionDescription:
+          "One paragraph the reviewer writes over this document's own facts — the shape of the experience and the clearest gap, every claim anchored to a number in the resume.",
+        impressionAction: "Read me this resume",
+        impressionWorking: "Reading the resume…",
+        impressionEmpty: "Nothing worth naming came back — not a verdict, just no grounded paragraph to show.",
         versions: "Versions",
         versionsDescription: "Original parses and tailored drafts.",
         versionsLoadFailed: "Couldn't load versions",
@@ -4574,6 +4580,7 @@ export const en = {
       gapAnalyze: "Couldn't analyze the gap.",
       gapNote: "Couldn't write the gap note.",
       storyForge: "Couldn't forge the STAR story from your note.",
+      resumeImpression: "Couldn't read this resume back to you.",
       nextStep: "Couldn't read your week for the assistant.",
       replyDecode: "Couldn't read that letter.",
       roleReadiness: "Couldn't read that role's readiness.",

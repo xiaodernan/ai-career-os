@@ -173,7 +173,8 @@ describe("the browser's copy", () => {
     // 219 with Epic 273: `components/growth/milestone-shelf.tsx`, the earned badge strip — its
     // milestone wording now reads from the locale table instead of a hard-coded English map.
     // 220 with Epic 274: `components/interviews/story-forge-card.tsx`, the embedded LLM STAR forge.
-    expect(browserSources().length).toBe(220);
+    // 221 with Epic 344: `components/resumes/resume-impression-card.tsx`, the first-value second voice.
+    expect(browserSources().length).toBe(221);
   });
 
   it("finds a sentence, however long it is", () => {
