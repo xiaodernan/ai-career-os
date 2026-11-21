@@ -35,17 +35,22 @@ jobs:
           ref: main
           fetch-depth: 1
 
+      # Windows PowerShell 5.1 is present on every Windows runner; PowerShell 7
+      # (`pwsh`) is not installed on this install's self-hosted runner — the first
+      # run of this workflow died with `pwsh: command not found`. `-Encoding utf8`
+      # in 5.1 writes a BOM that breaks GITHUB_OUTPUT parsing, so append through
+      # .NET (BOM-free) instead of Out-File.
       - name: Read the source head and validate the fact pack
         id: facts
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $pack = Get-Content docs/LATEST.json -Raw | ConvertFrom-Json
           if (-not $pack.head -or -not $pack.schema_version) {
             throw 'docs/LATEST.json is missing head/schema_version — refusing to sync'
           }
-          "head=$($pack.head)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "generated=$($pack.generated_at)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "head=$($pack.head)`n")
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "generated=$($pack.generated_at)`n")
 
       - name: Checkout the personal site
         uses: actions/checkout@v4
@@ -58,7 +63,7 @@ jobs:
 
       - name: Read the site's current fact head
         id: current
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $path = 'site/assets/career-os/latest.json'
@@ -67,25 +72,25 @@ jobs:
             $cur = Get-Content $path -Raw | ConvertFrom-Json
             $old = [string]$cur.head
           }
-          "head=$old" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "head=$old`n")
 
       - name: Skip when the measured head did not move
         id: diff
-        shell: pwsh
+        shell: powershell
         run: |
           $src = '${{ steps.facts.outputs.head }}'
           $old = '${{ steps.current.outputs.head }}'
           if ($src -eq $old) {
             Write-Output "head $src already on the site — nothing to do"
-            "changed=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "changed=false`n")
           } else {
             Write-Output "head moved $old -> $src — syncing"
-            "changed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "changed=true`n")
           }
 
       - name: Copy the fact pack and push only if it moved
         if: steps.diff.outputs.changed == 'true'
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path site/assets/career-os | Out-Null
