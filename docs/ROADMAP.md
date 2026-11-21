@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **365** The route the reader walked, drawn over the map (2026-11-22).
+
+  Brief VI: "无尽开放世界感". A map that says where you have been is half a map;
+  the other half is how one room led to the next. The atlas now draws the reader's
+  own route as dashed legs joining each region's centre to the next one the ledger
+  says they reached — resume, then a posting, then the match, then the interview —
+  in time order and never invented. A leg joins the mean of the sites actually
+  drawn for a region, so the line follows the facts rather than a point made up
+  for the region.
+
+  Dashed because it is a path taken rather than a road that exists, and captioned
+  with its step count: a line whose shape the reader cannot read is a line they
+  will not trust. A single-fact ledger draws one stop and no legs — the route is
+  honest about having nowhere to have walked from, and a shuffled ledger is sorted
+  by its own timestamps rather than by arrival order in the payload.
+
+  EN+ZH, one key. 16 atlas tests green (+3: the order is the ledger's, a single
+  fact draws no legs, and two legs are actually drawn for three regions), tsc
+  clean, eslint clean, i18n/copy-parity 66/66.
+
 - [x] **364** Every charted region carries a door to the room that writes it (2026-11-22).
 
   Brief VI: "同时给用户足够充分的引导，防止迷失、失去耐心". The Career Atlas named
