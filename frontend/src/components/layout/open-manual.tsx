@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { HelpCircle, FileText, Target, TrendingUp, Briefcase, CalendarClock, Feather, Handshake, Mic, MailOpen, Sparkles, BarChart3, Activity, History } from "lucide-react";
+import { HelpCircle, FileText, Target, TrendingUp, Briefcase, CalendarClock, Feather, Handshake, Mic, MailOpen, Sparkles, BarChart3, Activity, History, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,7 @@ const GROUPS = [
       { href: "/analysis", icon: BarChart3, labelKey: "nav.analysis", subKey: "navDescriptions.analysis" },
       { href: "/monitoring", icon: Activity, labelKey: "nav.monitoring", subKey: "navDescriptions.monitoring" },
       { href: "/activity", icon: History, labelKey: "nav.activity", subKey: "navDescriptions.activity" },
+      { href: "/admin", icon: Shield, labelKey: "nav.admin", subKey: "navDescriptions.admin" },
     ],
   },
 ] as const;
