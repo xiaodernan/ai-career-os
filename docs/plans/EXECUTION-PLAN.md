@@ -33,8 +33,8 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 14 | 各种缓存合理运用 | DONE | 125 dashboard, 253 admin (off default, fail-open, ±10% jitter), client-side exact-cache warm-up named; `cached_tokens` recorded as reported, never invented |
 | 15 | 消息队列合理运用 | DONE (built, disabled default) | Redis Streams job queue (162), DLQ, jitter retries; OFF by default — enablement is a real decision with real money; documented |
 | 16 | RAG / langchain / langgraph | DONE (deliberate) | home-grown orchestrator + subagents + 26 tools + hybrid retrieve/rerank/compress (AGENTS.md); no framework, on purpose; documented rationale |
-| 17 | 接入真实大模型测试 | DONE (used continuously) | live probes and evidence: docs/CACHE-RELAY.md |
-| 18 | 缓存命中率/非流显示异常 | DONE (diagnosed + measured) | 9 identical calls today: hit rate 95.6% when reported; field appears at random on both stream and non-stream; relay's meter varies (857 / 5220 / 19300) — no client fix exists; evidence in docs/CACHE-RELAY.md |
+| 17 | 接入真实大模型测试 | DONE (2026-11-22, re-measured on the real relay) | one-off container built from the tree, `openai_compat` + `gpt-6.2-sol` on the user's key: `ask` → `ENGINE-OK` at 95.1% cached tokens; `analyze_gap` end to end in 2.7 s; 5 parallel readers → **1** real call (Epic 363). Evidence in docs/CACHE-RELAY.md |
+| 18 | 缓存命中率/非流显示异常 | DONE (diagnosed + measured) | 95.1% measured on the real relay 2026-11-22; 9 identical calls today: hit rate 95.6% when reported; field appears at random on both stream and non-stream; relay's meter varies (857 / 5220 / 19300) — no client fix exists; evidence in docs/CACHE-RELAY.md |
 | 19 | 压力测试/高并发/容灾 | MEASURED | Epic 256: k6 siege at 10/100/200 VUs, zero 5xx at every level, saturation-not-failure at 200; cache-on vs cache-off comparison; docs/LOADTEST.md |
 | 20 | 联网搜索真实数据 | BLOCKED (host relay 402) | never invented; the install's own numbers are measured and pinned; documented in the relay memo |
 | 21 | 真实实验数据而非演示堆砌 | DONE | admin counts live; heatmap dense-fill real; seeded corpus flagged as demo vs. real feed design (Epic 248 recommendation) |

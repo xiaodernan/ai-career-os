@@ -451,3 +451,37 @@ on two workers still both call once. A cross-process lock would need a Redis lea
 a different trade with a different failure mode, and the duplicated call inside one
 worker is where parallel sessions land. Nothing here reads or writes
 `cached_tokens`; the accounting discipline above is unchanged.
+
+## Addendum (2026-11-22, measured against the real relay on the user's own key)
+
+Everything below was taken on the dev machine against `https://api.aizzz.xyz/v1`,
+model `gpt-6.2-sol`, with the key from `.env`, from inside a one-off container built
+from the tree at this commit (`LLM_PROVIDER=openai_compat`, `APP_ENV=prod`). No mock,
+no stub: the provider is the relay the product talks to.
+
+### 1. The relay answers, and its prefix cache fires
+
+A single call through `app.core.ai.ask` returned `ENGINE-OK` in 2.6 s with
+`prompt_tokens 4393` and `cached_tokens 4180` — a **95.1%** hit rate on the engine's
+own preamble, measured rather than assumed. The preamble discipline (Epic 182/336) is
+what makes that number exist.
+
+### 2. A real business engine runs end to end on it
+
+`gap_analysis.analyze_gap("Senior Backend Engineer (Java)", ...)` answered in 2.7 s
+with its full structured shape — `coverage 0.5`, `expectedSkillCount`, `gaps`,
+`strengths`, `developmentPlan`, `responsibilities`. This is the path Epic 362 re-routed
+through `fit_json`, so the measurement is also proof the change works on the real relay.
+
+### 3. Parallel readers call once (Epic 363), measured not asserted
+
+Five readers sending the same deterministic question concurrently: **1** real provider
+call, 2.0 s, every reader answered `Blue`. Re-run cold with eight readers and a
+different question: **1** call, 2.2 s, every reader answered `Mars`. The coalescing is
+real on the relay, not only in the unit test — and each reader is still billed its own
+usage row (`cached_tokens 4180` on every one), because the accounting is per caller.
+
+The first attempt at measurement 3 said 5 calls for 5 readers. That was not the change
+failing: the container was built from an image that predated it. The image was rebuilt
+from the tree and the measurement re-taken. Recording it because the wrong reading was
+plausible, and a plausible wrong reading is what a memo is for.
