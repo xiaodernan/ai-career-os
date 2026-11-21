@@ -63,6 +63,8 @@ export interface AtlasRegion {
   labelKey: string;
   count: number;
   hidden: number;
+  firstAt: string;
+  lastAt: string;
   sites: AtlasSite[];
 }
 
@@ -99,6 +101,11 @@ export function buildAtlas(events: TimelineEntry[]): AtlasRegion[] {
       labelKey: LABEL_KEYS[kind],
       count: ordered.length,
       hidden: Math.max(0, ordered.length - sites.length),
+      // 361: the region's span -- when the first and the newest fact in it were
+      // written. A count says how much is here; a span says how long the reader
+      // has been building it, which is the thing a map is for.
+      firstAt: ordered[0].at,
+      lastAt: ordered[ordered.length - 1].at,
       sites,
     }];
   });
@@ -177,21 +184,54 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
                     <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeOpacity="0.2" />
                     <line x1="50" y1="4" x2="50" y2="96" stroke="currentColor" strokeOpacity="0.12" />
                     <line x1="4" y1="50" x2="96" y2="50" stroke="currentColor" strokeOpacity="0.12" />
+                    {/* 361: a site is a door, not a dot. Every circle is inside a
+                        focusable button, so the map can be walked with the keyboard
+                        and a click lands on the fact itself -- the list below is the
+                        same doors in words for a reader who would rather read than
+                        point. */}
                     {active.sites.map((row) => (
-                      <circle
-                        key={row.id}
-                        cx={row.x}
-                        cy={row.y}
-                        r={row.id === site?.id ? 2.8 : 1.7}
-                        className={row.id === site?.id ? "fill-primary" : "fill-primary/50"}
-                      >
-                        <title>{row.title}</title>
-                      </circle>
+                      <g key={row.id}>
+                        <circle
+                          cx={row.x}
+                          cy={row.y}
+                          r={row.id === site?.id ? 2.8 : 1.7}
+                          className={row.id === site?.id ? "fill-primary" : "fill-primary/50"}
+                        />
+                        <circle
+                          cx={row.x}
+                          cy={row.y}
+                          r={4}
+                          fill="transparent"
+                          className="cursor-pointer"
+                          tabIndex={0}
+                          role="button"
+                          aria-pressed={row.id === site?.id}
+                          aria-label={row.title}
+                          onClick={() => setOpenSite(row.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setOpenSite(row.id);
+                            }
+                          }}
+                        >
+                          <title>{row.title}</title>
+                        </circle>
+                      </g>
                     ))}
                   </svg>
                   <p className="text-xs text-muted-foreground">
                     {t("timeline.atlasSiteCount", { count: active.count })}
                     {active.hidden > 0 ? ` · ${t("timeline.atlasHiddenSites", { count: active.hidden })}` : ""}
+                    {/* 361: how long this stretch of the world took to build. The
+                        span is the reader's own, read off the first and newest fact
+                        in the region -- never invented. */}
+                    <span className="block sm:inline sm:before:content-['_·_']">
+                      {t("timeline.atlasSpan", {
+                        from: formatDate(active.firstAt, locale),
+                        to: formatDate(active.lastAt, locale),
+                      })}
+                    </span>
                   </p>
                   <ul className="flex flex-wrap gap-1.5">
                     {active.sites.map((row) => (

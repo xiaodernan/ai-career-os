@@ -114,6 +114,9 @@ export const zh = {
       atlasMapLabel: "所选区域中各处地点的分布图",
       atlasSiteCount: "此区域已记录 {count} 处地点",
       atlasHiddenSites: "另有 {count} 处未画在图上",
+      // 361: 这一段世界是多久铺出来的，读的是这个区域自己最早和最新的一条事实——
+      // 绝不是编的。
+      atlasSpan: "从 {from} 记录到 {to}",
       atlasFrontierTitle: "世界从这里继续扩张",
       atlasFrontierDescription: "每一扇门都会往账本里写入一种新事实。走进去一次，版图就多出一个地点。",
       atlasFrontierJobs: "发现职位",

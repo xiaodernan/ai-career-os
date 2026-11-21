@@ -55,6 +55,38 @@ describe("CareerAtlas", () => {
     expect(html).toContain('role="img"');
   });
 
+  it("361: makes every site on the map a door a keyboard can walk to", () => {
+    // The map used to be dots: a reader could look at the world but not step into
+    // it, and the only way in was the word list underneath. Each site is now a
+    // focusable button with its own accessible name, so the map is explorable.
+    const html = renderToStaticMarkup(<CareerAtlas events={EVENTS} />);
+    // Only the selected region is drawn, so the doors are that region's sites --
+    // one per site, each with its own accessible name.
+    const drawn = buildAtlas(EVENTS).find((region) => region.kind === "application");
+    const doors = html.match(/role="button"/g) ?? [];
+    expect(doors.length).toBe(drawn?.sites.length ?? 0);
+    expect(html).toContain('aria-label="Backend Engineer · Acme"');
+    // The pressed state is the same fact the word list below shows, so the two
+    // readings of the map cannot disagree about where the reader is.
+    expect(html).toContain("aria-pressed=");
+  });
+
+  it("361: reads a region's span off its own first and newest fact", () => {
+    const regions = buildAtlas(EVENTS);
+    const application = regions.find((r) => r.kind === "application");
+    expect(application?.firstAt).toBe("2026-09-01T09:00:00Z");
+    expect(application?.lastAt).toBe("2026-09-01T09:00:00Z");
+    // A region with a history says so: the span is the reader's own, and a
+    // one-fact region's span is that fact rather than an invented range.
+    const notes: TimelineEntry[] = [
+      { at: "2026-01-01T09:00:00Z", kind: "note", title: "first", refId: "n-1", summary: "" },
+      { at: "2026-06-01T09:00:00Z", kind: "note", title: "newest", refId: "n-2", summary: "" },
+    ];
+    const span = buildAtlas(notes)[0];
+    expect(span.firstAt).toBe("2026-01-01T09:00:00Z");
+    expect(span.lastAt).toBe("2026-06-01T09:00:00Z");
+  });
+
   it("says every known frontier is charted instead of offering doors to visited regions", () => {
     const charted: TimelineEntry[] = ["match", "application", "interview", "contact", "resume_version"].map(
       (kind, i) => ({

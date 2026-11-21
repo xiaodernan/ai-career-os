@@ -132,6 +132,9 @@ export const en = {
       atlasMapLabel: "A map of the sites in the selected region",
       atlasSiteCount: "{count} sites charted in this region",
       atlasHiddenSites: "{count} more are not drawn on this map",
+      // 361: how long this stretch of the world took to build, read off the
+      // region's own first and newest fact -- never invented.
+      atlasSpan: "charted from {from} to {to}",
       atlasFrontierTitle: "Where this world expands",
       atlasFrontierDescription: "Each door writes a new kind of fact into the ledger. Walk through one and the atlas gains a site.",
       atlasFrontierJobs: "Discover jobs",
