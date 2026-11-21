@@ -8198,6 +8198,46 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **362** Every payload the model reads is fitted by one budget (2026-11-22).
+
+  Brief IV: "我这边输入上下文总是太少，要充分利用上下文容量". Epic 340 put one
+  ceiling in `app/core/context_budget.py` and fitted the main paths through it,
+  but seventeen features still hand-wrote a slice — `[:8000]` for a chronicle,
+  `[:2400]` for a letter, `[:6000]` for the counsel snapshot, and `[:16000]` for
+  the tailor's resume, the single largest one. On a relay whose window is
+  measured in the tens of thousands of tokens, a long resume or a detailed
+  posting arrived as a stub — the reader paid for the window and the product
+  spent a twentieth of it.
+
+  They all route through `fit_json` / `fit_input` now, so the budget decides
+  instead of a guess. Where a feature packs several sources into one prompt it
+  keeps its own number as `ceiling=`, which is a floor with a reason rather than
+  a guess: the smaller of the two constraints still wins. A new gate
+  (`test_no_feature_hand_writes_an_input_cap.py`) walks the tree and fails on the
+  serialise-then-slice idiom and on a bare slice handed to `wrap_untrusted`, so a
+  new feature that reaches for a magic number reddens in CI rather than in
+  production, where the symptom is a model that was never shown the reader's
+  resume. Output fields, previews and trace snippets are deliberately untouched:
+  those caps are about what a human sees.
+
+  Verified: ai-service **3020 passed, 8 skipped** (full suite, offline), the new
+  gate 3/3, and `fit_json` measured directly — a 10 kB payload is kept whole at
+  the default cap, and `ceiling=2400` still cuts to 2400 with an honest account
+  of what was dropped.
+
+- [x] **361** A site on the map is a door, not a dot (2026-11-22).
+
+  Brief VI: "不要'看着很大、里面很空'". Epic 357 drew the world but the reader
+  could only look at it — every site was a static circle and the only way in was
+  the word list underneath. Each site is now a focusable button with its own
+  accessible name, so the map can be walked with the keyboard and a click lands
+  on the fact itself; the word list stays, for a reader who would rather read
+  than point, and the two cannot disagree about where the reader is. The region
+  card also says how long that stretch of the world took to build — its own first
+  and newest fact, never an invented range.
+
+  EN+ZH, one key. 11 atlas tests green, tsc clean, eslint clean.
+
 - [x] **360** The reader's avatar fits instead of being cropped (2026-11-22).
 
   Brief V names it word for word: "我的头像被压缩变小、边缘被裁掉，修复". The cause was
