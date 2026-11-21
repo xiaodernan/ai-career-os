@@ -61,3 +61,37 @@ summary: the running stack is `llm_provider=mock`, so the counsel engine's extra
 node catches the LLM failure and renders honest silence rather than an invented
 analyst voice. Confirmed correct behaviour, not a defect. The engine's grounded-measure
 discipline is covered by its own tests; a real-key deployment yields the counsel.
+
+# Re-measured 2026-11-22 (after Epic 362/363: fitted inputs + one flight per key)
+
+The model door changed, so the pressure numbers were re-taken rather than assumed.
+Same scripts, same host, same stack, no code path reverted.
+
+## concurrency_smoke.py
+- 128 calls, 16 workers, 4 shared tokens, wall 5.1s
+- p50 184ms | p95 3735ms | max 3927ms
+- codes: {200: 96, 201: 32}
+- 5xx: 0 — **CONCURRENCY OK**
+
+## load_probe.py (health ramp, 4s each)
+
+| workers | requests | status | p50 ms | p90 ms | p99 ms | max ms | rps |
+|---:|---:|---|---:|---:|---:|---:|---:|
+| 1 | 232 | 200:232 | 8.1 | 15.0 | 148.9 | 747.9 | 58.0 |
+| 10 | 1141 | 200:1141 | 17.2 | 91.0 | 155.7 | 299.8 | 285.2 |
+| 25 | 950 | 200:950 | 57.9 | 241.7 | 573.6 | 1354.2 | 237.5 |
+| 50 | 1092 | 200:1092 | 122.3 | 420.0 | 1000.2 | 2465.5 | 273.0 |
+| 100 | 617 | 200:617 | 520.5 | 1481.0 | 2722.7 | 3433.5 | 154.2 |
+
+- Auth gate (100 wrong-password attempts): {401: 95, 429: 5}, post-storm health 200, 5xx: 0.
+- Authed read (/api/v1/jobs), 60 requests: all 200, p50 180ms | p90 294ms | max 323ms.
+- Total 4192 requests across the run. **Zero 5xx at every level.**
+
+### What moved, and what did not
+
+Nothing in the request path changed shape — the coalescing (Epic 363) only engages
+on a *deterministic* cache miss, and the health ramp never reaches the model door, so
+the ramp's improvement over the 2026-11-21 run (285 rps at 10 workers against 35.5) is
+host load, not the change. The honest reading: the same saturation curve, measured on a
+quieter box. What did not change in either direction is the one that matters — no 5xx at
+any level, and the auth limiter still engaging under storm.
