@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **372** A search that found nothing is a reader who could not find their way (2026-11-22).
+
+  Brief IX names the behaviour directly: "不知道去哪就瞎点". A room-hop (Epic 353) says
+  the reader moved; a search with no result says they *asked* and the product had no
+  answer — the stronger signal, and the one an operator can act on. The command
+  palette's empty state now records the word they used, once per query.
+
+  The word travels because a word is what makes the row actionable: "no result" tells
+  an operator nothing, "no result for kubernetes" tells them what to add. It stays
+  anonymous and identity-free like every other row here. A paste is dropped whole
+  rather than truncated — the first eighty characters of one is a word no reader
+  typed and no operator could act on.
+
+  The admin wall gains the count and the five most-searched words, so the line reads
+  as a to-do rather than a metric. Backend compiles; 152 frontend tests across the
+  sensor, the component, the admin page and the i18n gates. Copy census 231 → 232.
+
 - [x] **371** What this search leaves behind for the next one (2026-11-22).
 
   Brief VI asks for "新的后续环节" — and the honest one is that a search ends and
