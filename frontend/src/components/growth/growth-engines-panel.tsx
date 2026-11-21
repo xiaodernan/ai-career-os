@@ -52,6 +52,7 @@ import { str } from "@/lib/api/normalize";
 import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import { interviewModeName, marketPriorityWord, requirementPriorityWord } from "@/lib/status-words";
 import { growthEngineLabel } from "@/lib/growth-engines";
+import { Hint } from "@/components/ui/hint";
 
 /**
  * The granular growth engines, one at a time (10.1-10.13).
@@ -64,6 +65,41 @@ import { growthEngineLabel } from "@/lib/growth-engines";
  * seeded corpus — the panel never states a fact the engine did not.
  */
 
+/**
+ * 359: what each engine is for, in the reader's language, next to the button that
+ * runs it.
+ *
+ * Nine engines on one panel are nine questions, and a reader who has not read the
+ * manual has no way to tell them apart from the label alone -- "gap" and "progress"
+ * are one word each and one is a snapshot while the other is a trend. The hint is
+ * the sentence the engine answers, plus what it needs typed in, so a click is never
+ * a guess. It is a translation key, not prose here: the census owns the words.
+ */
+const ENGINE_HINT: Record<EngineKeyAlias, string> = {
+  gap: "growthEngines.hintGap",
+  demand: "growthEngines.hintDemand",
+  priority: "growthEngines.hintPriority",
+  plan: "growthEngines.hintPlan",
+  prep: "growthEngines.hintPrep",
+  progression: "growthEngines.hintProgression",
+  stories: "growthEngines.hintStories",
+  roles: "growthEngines.hintRoles",
+  progress: "growthEngines.hintProgress",
+};
+
+/** Which engines need a role typed in before they can run. */
+const NEEDS_ROLE: Record<EngineKeyAlias, boolean> = {
+  gap: true,
+  demand: true,
+  priority: true,
+  plan: true,
+  prep: true,
+  progression: true,
+  stories: false,
+  roles: false,
+  progress: true,
+};
+
 const ENGINES = [
   { key: "gap", icon: TrendingUp },
   { key: "demand", icon: Compass },
@@ -75,6 +111,8 @@ const ENGINES = [
   { key: "roles", icon: Compass },
   { key: "progress", icon: TrendingUp },
 ] as const;
+
+type EngineKeyAlias = (typeof ENGINES)[number]["key"];
 
 type EngineKey = (typeof ENGINES)[number]["key"];
 
@@ -153,17 +191,18 @@ export function GrowthEnginesPanel() {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-1.5">
           {ENGINES.map((e) => (
-            <Button
-              key={e.key}
-              type="button"
-              size="xs"
-              variant={engine === e.key ? "ai" : "outline"}
-              onClick={() => setEngine(e.key)}
-              aria-pressed={engine === e.key}
-            >
-              <e.icon aria-hidden />
-              {growthEngineLabel(t, e.key)}
-            </Button>
+            <Hint key={e.key} label={t(ENGINE_HINT[e.key])}>
+              <Button
+                type="button"
+                size="xs"
+                variant={engine === e.key ? "ai" : "outline"}
+                onClick={() => setEngine(e.key)}
+                aria-pressed={engine === e.key}
+              >
+                <e.icon aria-hidden />
+                {growthEngineLabel(t, e.key)}
+              </Button>
+            </Hint>
           ))}
         </div>
 
@@ -190,15 +229,27 @@ export function GrowthEnginesPanel() {
           </div>
         </div>
 
-        <Button
-          variant="ai"
-          size="sm"
-          loading={pending}
-          disabled={!roleOk && engine !== "stories" && engine !== "roles"}
-          onClick={run}
+        {/* 359: the run button's hint names what it is about to ask for, in the
+            language of the engine that is selected -- and says so while the role
+            field is still too short to run, which is the moment the reader most
+            wants to know why the button will not answer. */}
+        <Hint
+          label={
+            NEEDS_ROLE[engine] && !roleOk
+              ? t("growthEngines.hintNeedsRole")
+              : t(ENGINE_HINT[engine])
+          }
         >
-          {t("growthEngines.run")} {growthEngineLabel(t, engine)}
-        </Button>
+          <Button
+            variant="ai"
+            size="sm"
+            loading={pending}
+            disabled={!roleOk && engine !== "stories" && engine !== "roles"}
+            onClick={run}
+          >
+            {t("growthEngines.run")} {growthEngineLabel(t, engine)}
+          </Button>
+        </Hint>
 
         <EngineResult
           engine={engine}

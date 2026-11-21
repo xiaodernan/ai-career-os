@@ -1790,6 +1790,24 @@ export const en = {
        * rather than losing it, which is the same rule `stageLabel` follows
        * for the pipeline's seven stages.
        */
+      /**
+       * 359: the sentence each engine answers, on the button that runs it.
+       *
+       * Nine engines, nine questions, and the labels are one word each -- a
+       * reader who has not read the manual cannot tell a snapshot from a trend.
+       * The hint says what the engine answers and what it needs typed in, so a
+       * click is never a guess. The words are the reader's, in both languages.
+       */
+      hintGap: "What you are missing for this role, and how much of it you already cover. Needs the role.",
+      hintDemand: "Which skills this role is actually asked for, and how often. Needs the role; location sharpens it.",
+      hintPriority: "Which of your gaps is worth learning first, ranked by how much the market pays for it. Needs the role.",
+      hintPlan: "A phased plan that closes those gaps in order, week by week. Needs the role.",
+      hintPrep: "What to study and what to rehearse before the interview, with the stories to practise. Needs the role.",
+      hintProgression: "The stepping-stone roles between here and the one you want, in order. Needs the role.",
+      hintStories: "Your strongest past work, written as STAR stories you can reuse. Reads your resume -- no role needed.",
+      hintRoles: "Roles worth aiming at, drawn from what you have already done. Reads your resume -- no role needed.",
+      hintProgress: "How your coverage of this role has moved since the last run. Needs the role.",
+      hintNeedsRole: "Type the role first -- at least ten characters, so the engine knows what to measure against.",
       engines: {
         gap: "Gap analysis",
         demand: "Market demand",
