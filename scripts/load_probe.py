@@ -125,14 +125,24 @@ async def _phase_auth_gate(client: httpx.AsyncClient, base: str,
 async def _phase_authed_read(client: httpx.AsyncClient, base: str,
                              counter: dict[str, int]) -> dict:
     email = f"pressure-{uuid.uuid4().hex[:8]}@example.com"
-    reg = await client.post(
+    # A probe reports, never crashes: right after a saturation ramp the registration
+    # can miss the client timeout while the server thread pool drains. That is a
+    # measured FAIL for --strict, not a traceback that hides the whole verdict.
+    try:
+        reg = await client.post(
         f"{base}/api/v1/auth/register",
         json={"email": email, "password": "Passw0rd!234",
               "displayName": "Pressure Probe"},
-    )
+        )
+    except httpx.HTTPError as e:
+        return {"registered": False, "http": 0,
+                "note": f"registration transport: {type(e).__name__}"}
     if reg.status_code not in (200, 201, 409):
         return {"registered": False, "http": reg.status_code}
-    token = reg.json().get("data", {}).get("tokens", {}).get("accessToken")
+    try:
+        token = reg.json().get("data", {}).get("tokens", {}).get("accessToken")
+    except ValueError:
+        return {"registered": False, "http": reg.status_code, "note": "non-JSON envelope"}
     if not token:
         return {"registered": False, "http": reg.status_code, "note": "no token in envelope"}
     statuses: dict[int, int] = {}
@@ -209,6 +219,11 @@ async def main() -> int:
         ramp = await _phase_ceiling(client, base, counter)
         for row in ramp:
             print(json.dumps(row, ensure_ascii=False), flush=True)
+
+        # Let the server drain the saturation ramp before the write-heavy authed
+        # phase: a burst probe should measure each phase, not the previous one's
+        # thread-pool debt. One second is enough for in-flight health reads to finish.
+        await asyncio.sleep(1.0)
 
         print("== phase 4: authed read ==", flush=True)
         authed = await _phase_authed_read(client, base, counter)

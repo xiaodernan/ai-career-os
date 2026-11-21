@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **341** The gate that reports — the pressure probe survives its own saturation (2026-11-21).
+
+  Brief item #11 asks for a real pressure run: "模拟海量用户、高并发、瞬间大数据量冲击系统
+  (撞库)". `scripts/load_probe.py --strict` was run against the live stack (8080/8000/Redis
+  16380, self-hosted). Measured, not assumed: a 1→100-worker read-health ramp held 100%
+  200s with **zero 5xx and zero dropped connections** (p99 grew 16ms→6.2s — the deep
+  readiness report's known ceiling, Epic 314 — but no failure); a **100-way wrong-password
+  credential-stuffing storm** answered 99×401 + 1×429 with no wrong password succeeding,
+  no 5xx, and health back at 200 immediately after; a 60-way authed read burst was all 200.
+  Verdict **PASS**, 1174 requests.
+
+  The run also found a real defect in the probe: a registration that missed the 8 s client
+  timeout right after the ramp raised an uncaught `ReadTimeout`, killing the process before
+  it could print a verdict — a pressure gate that crashes cannot gate anything. The
+  registration is now caught as a measured (http=0) FAIL, the verdict names it, and a 1 s
+  drain between the saturation and write phases stops one phase's thread-pool debt being
+  charged to the next. `test_load_probe_verdict.py` 11/11 (new timeout case included).
+
 - [x] **340** The whole context — one config-driven budget ends the scattered small input caps (2026-11-21).
 
   (The complaint was concrete: Codex-class relays carry 5万-9万 tokens of context,

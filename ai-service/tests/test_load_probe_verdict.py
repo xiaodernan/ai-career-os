@@ -59,6 +59,15 @@ def test_a_failed_registration_is_named():
     assert any("registration failed" in x for x in out)
 
 
+def test_a_registration_timeout_is_named_not_a_crash():
+    # A registration that misses the client timeout right after a saturation ramp
+    # returns http=0 with a note; the strict verdict must name it, so a probe run
+    # reports FAIL rather than dying with a traceback (which hides every other row).
+    timed_out = {"registered": False, "http": 0, "note": "registration transport: ReadTimeout"}
+    out = lp._strict_failures(_ramp(), timed_out, _gate())
+    assert any("registration failed http=0" in x for x in out)
+
+
 def test_unexpected_errors_on_the_authed_read_fail():
     out = lp._strict_failures(_ramp(), _authed({200: 58, 500: 2}), _gate())
     assert any("authed read" in x for x in out)

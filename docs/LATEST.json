@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T07:22:28.399369Z",
+  "generated_at": "2026-11-21T07:31:37.319400Z",
   "branch": "main",
-  "head": "303030f",
-  "total_commits": 1712,
-  "milestone": "Epic 340",
-  "milestone_full": "the ledger of done epics (through 493 items), closed at Epic 340 — The whole context",
+  "head": "a45a7b2",
+  "total_commits": 1714,
+  "milestone": "Epic 341",
+  "milestone_full": "the ledger of done epics (through 494 items), closed at Epic 341 — The gate that reports",
   "pushed_at": "2026-11-21",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1564+",
   "test_files": 196,
-  "work_items": 493,
-  "epics": 206,
+  "work_items": 494,
+  "epics": 207,
   "feature_surface": [
+    "Epic 341 — The gate that reports",
     "Epic 340 — The whole context",
     "Epic 339 — The gracious decline",
     "Epic 338 — The warm lane",
     "Epic 337 — The negotiation prep one-pager",
-    "Epic 336 — The thank-you letter sent after the interview (2026-11-19)",
-    "Epic 335 — The acceptance playbook"
+    "Epic 336 — The thank-you letter sent after the interview (2026-11-19)"
   ]
 }
