@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { LogOut, Search, Settings as SettingsIcon, User as UserIcon } from "lucide-react";
+import { Compass, LogOut, Search, Settings as SettingsIcon, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,6 +17,7 @@ import {
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { Hint } from "@/components/ui/hint";
 import { ManualSheet } from "@/components/layout/open-manual";
+import { QUICK_START_EVENT } from "@/components/layout/quick-start";
 import { useCommandPalette } from "@/components/common/command-palette";
 import { MobileSidebar } from "./sidebar";
 import { useLogout, useUser } from "@/lib/hooks/auth";
@@ -89,6 +90,17 @@ export function Topbar() {
 
       <Hint side="bottom" label={t("chrome.manualOpen")}>
         <ManualSheet />
+      </Hint>
+      <Hint side="bottom" label={t("chrome.quickStartReplay")}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("chrome.quickStartReplay")}
+          title={t("chrome.quickStartReplay")}
+          onClick={() => window.dispatchEvent(new Event(QUICK_START_EVENT))}
+        >
+          <Compass aria-hidden />
+        </Button>
       </Hint>
       <Hint side="bottom" label={t("chrome.themeToggle")}>
         <ThemeToggle />

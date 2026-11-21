@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **347** The first open teaches — a one-time, in-app quick start (2026-11-21).
+
+  Brief VII: "新用户要有简单的新手教程、快速上手演示，教会用户怎么玩、怎么用" and
+  "用户打开项目就能看到". An audit found the teaching material all exists
+  (/tour beats, /playbook manual, the manual sheet behind `?`, the nine quests,
+  the seeded job corpus) but NOTHING walked a new reader through the real UI on
+  first open — the manual was closed, the checklist passive. Added
+  `lib/onboarding.ts` (persisted `careeros.onboard.v1` seen-flag, like tour.ts)
+  and `components/layout/quick-start.tsx`: a four-step guided Sheet mounted in
+  the signed-in layout that opens once on first login, each step naming a real
+  control and linking to a real route, with Next/Back/Skip/Done; the topbar
+  compass replays it on demand through a DOM event. All copy locale-keyed en/zh.
+  E2E fixtures set the seen flag globally so the guide never covers journeys that
+  test other things (golden-journey restores it after its localStorage.clear).
+  Verified: frontend **1575 passed** (new onboarding 4 cases + quick-start SSR),
+  tsc + next build green; 77 e2e specs list clean. The dedicated first-run e2e
+  spec was not committed — the local Docker frontend image is stale and its
+  rebuild hit a daemon RPC error, so it could not be verified against a fresh
+  build; the feature is covered by unit/SSR tests instead.
+
 - [x] **346** The public door stops lying — gh-pages synced to the measured head (2026-11-21).
 
   Brief II ("把多个工作分支、worktree 合并起来，汇到一个主分支") and X ("用户每次点进去

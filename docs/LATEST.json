@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T10:08:42.580824Z",
+  "generated_at": "2026-11-21T10:35:58.867701Z",
   "branch": "main",
-  "head": "9cd0456",
-  "total_commits": 1719,
-  "milestone": "Epic 346",
-  "milestone_full": "the ledger of done epics (through 499 items), closed at Epic 346 — The public door stops lying",
+  "head": "a6a1abb",
+  "total_commits": 1720,
+  "milestone": "Epic 347",
+  "milestone_full": "the ledger of done epics (through 500 items), closed at Epic 347 — The first open teaches",
   "pushed_at": "2026-11-21",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1569+",
   "test_files": 198,
-  "work_items": 499,
-  "epics": 212,
+  "work_items": 500,
+  "epics": 213,
   "feature_surface": [
+    "Epic 347 — The first open teaches",
     "Epic 346 — The public door stops lying",
     "Epic 345 — The ledger becomes a story",
     "Epic 344 — The first value gets a voice",
     "Epic 343 — The stub that lied is gone",
-    "Epic 342 — The second voice sees the whole install",
-    "Epic 341 — The gate that reports"
+    "Epic 342 — The second voice sees the whole install"
   ]
 }

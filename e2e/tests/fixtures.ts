@@ -203,6 +203,15 @@ export type Fixtures = {
 };
 
 export const test = base.extend<Fixtures>({
+  // Epic 347: the one-time quick start auto-opens on a fresh browser. These
+  // journeys test OTHER things, so suppress it globally; the guide has its own
+  // unit/SSR coverage. A test that clears localStorage must restore this flag.
+  page: async ({ page }, use) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem("careeros.onboard.v1", "seen");
+    });
+    await use(page);
+  },
   user: async ({ request }, use) => {
     await waitForService(request, `${AI_URL}/health`);
     await waitForService(request, `${API_URL}/health`);
@@ -215,6 +224,7 @@ export const test = base.extend<Fixtures>({
   },
 
   authedPage: async ({ page, user }, use) => {
+    // The quick-start flag is set globally by the base `page` fixture (Epic 347).
     // Log in through the real form so the JWT is stored exactly the way the app
     // stores it. This also covers the login screen itself on every run.
     await page.goto("/login");

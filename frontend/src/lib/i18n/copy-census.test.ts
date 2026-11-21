@@ -175,7 +175,8 @@ describe("the browser's copy", () => {
     // 220 with Epic 274: `components/interviews/story-forge-card.tsx`, the embedded LLM STAR forge.
     // 221 with Epic 344: `components/resumes/resume-impression-card.tsx`, the first-value second voice.
     // 222 with Epic 345: `components/timeline/career-narrative-card.tsx`, the timeline's second voice.
-    expect(browserSources().length).toBe(222);
+    // 223 with Epic 347: `components/layout/quick-start.tsx`, the first-run guided hello.
+    expect(browserSources().length).toBe(223);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -8,6 +8,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { CommandPaletteProvider } from "@/components/common/command-palette";
 import { WheelDirection } from "@/components/layout/wheel-direction";
 import { TourVisitMarker } from "@/components/layout/tour-visit-marker";
+import { QuickStart } from "@/components/layout/quick-start";
 import { SkipLink } from "@/components/layout/skip-link";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { tokenStore } from "@/lib/api/token-store";
@@ -113,6 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <PushRenewals />
       <WheelDirection />
       <TourVisitMarker />
+      <QuickStart />
       <TooltipProvider delayDuration={200}>
       <CommandPaletteProvider>
         <SkipLink />

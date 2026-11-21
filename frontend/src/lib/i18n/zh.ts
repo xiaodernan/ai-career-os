@@ -356,6 +356,7 @@ export const zh = {
       commandPaletteDescription: "搜索你的求职工作区，在各个板块之间跳转",
       commandPalettePlaceholder: "输入命令或搜索…",
       manualOpen: "说明书——怎么玩",
+      quickStartReplay: "重看快速上手",
       themeToggle: "切换深浅色",
       manualTitle: "说明书",
       manualDescription: "和 /playbook 里同一本，揣在口袋里。一页纸，九个房间，你的语言。",
@@ -2161,6 +2162,33 @@ export const zh = {
      * `translate`——它在 React 之外读语言。
      */
 
+    /** Epic 347 —— 新读者首次打开时那一次性的、嵌入应用内的引导。 */
+    quickstart: {
+      title: "你的头四步",
+      description: "用 30 秒走一遍真实的工作台。每一步都会打开它提到的页面；随时可以点指南针按钮回到这份引导。",
+      progress: "第 {current} 步 / 共 {total} 步",
+      stepsLabel: "快速上手步骤",
+      step1Title: "从工作台开始",
+      step1Body: "这个仪表盘就是大本营。它显示你做过什么、以及唯一推荐的下一步——这里没有任何预填内容，所以每个数字都属于你自己。",
+      step1Href: "/dashboard",
+      step1HrefLabel: "打开工作台",
+      step2Title: "给它你的证据",
+      step2Body: "上传一份简历，评审代理会把它变成结构化、带引用的事实——后面每一步都引用这些证据。也可以粘贴一份职位描述，看看一个岗位到底要求什么。",
+      step2Href: "/resumes",
+      step2HrefLabel: "添加你的简历",
+      step3Title: "找到匹配，然后演练",
+      step3Body: "用你自己的证据匹配一个职位，在不编造的前提下定制简历版本，然后出声演练面试，获得自适应反馈。",
+      step3Href: "/jobs",
+      step3HrefLabel: "浏览职位板",
+      step4Title: "一路跟到 Offer",
+      step4Body: "在看板上移动职位、给招聘方回信、把每个 Offer 都放在同一个架子上。想要完整地图时，说明书（? 键）随时都在。",
+      step4Href: "/applications",
+      step4HrefLabel: "查看求职流水线",
+      skip: "暂时跳过",
+      back: "返回",
+      next: "下一步",
+      done: "开始探索",
+    },
     /** 十分钟入门（Epic 244）：这个打开就能看清楚产品的对外前页。 */
     tour: {
       pageTitle: "AI Career OS——十分钟上手",

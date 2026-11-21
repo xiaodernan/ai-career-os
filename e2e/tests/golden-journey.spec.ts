@@ -79,7 +79,12 @@ test.describe("golden journey — account and session", () => {
 
     // Prove the stored credentials work through the login form.
     await page.context().clearCookies();
-    await page.evaluate(() => window.localStorage.clear());
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      // Epic 347: keep the one-time quick start from covering this journey —
+      // it has its own first-run spec; here we are testing stored credentials.
+      window.localStorage.setItem("careeros.onboard.v1", "seen");
+    });
     await page.goto("/login");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);

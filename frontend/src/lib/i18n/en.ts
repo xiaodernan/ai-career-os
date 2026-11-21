@@ -401,6 +401,7 @@ export const en = {
       commandPaletteDescription: "Search your career workspace and jump between sections",
       commandPalettePlaceholder: "Type a command or search…",
       manualOpen: "The manual — how to play",
+      quickStartReplay: "Replay the quick start",
       themeToggle: "Toggle dark and light",
       manualTitle: "The manual",
       manualDescription: "The same doors as /playbook, in your pocket. One sheet, nine rooms, in your language.",
@@ -2371,6 +2372,33 @@ export const en = {
      * which reads the language outside React.
      */
 
+    /** Epic 347 — the one-time, in-app guided hello on a new reader's first open. */
+    quickstart: {
+      title: "Your first four steps",
+      description: "A 30-second walk through the real workspace. Each step opens the screen it names; come back to the guide any time from the compass button.",
+      progress: "Step {current} of {total}",
+      stepsLabel: "Quick start steps",
+      step1Title: "Start at your workspace",
+      step1Body: "This dashboard is home. It shows what you've done and the single next thing to do — nothing here is pre-filled, so every number is yours.",
+      step1Href: "/dashboard",
+      step1HrefLabel: "Open the dashboard",
+      step2Title: "Give it your evidence",
+      step2Body: "Upload a resume and the reviewer turns it into structured, cited facts — the evidence every later step quotes. Or paste a job posting to see what a role asks for.",
+      step2Href: "/resumes",
+      step2HrefLabel: "Add your resume",
+      step3Title: "Find your fit, then rehearse",
+      step3Body: "Match a job against your own evidence, tailor a version without inventing anything, then rehearse the interview out loud with adaptive feedback.",
+      step3Href: "/jobs",
+      step3HrefLabel: "Explore the job board",
+      step4Title: "Track it to the offer",
+      step4Body: "Move roles across the board, write back to recruiters, and keep every offer on one shelf. The manual (the ? key) is always there when you want the full map.",
+      step4Href: "/applications",
+      step4HrefLabel: "See the pipeline",
+      skip: "Skip for now",
+      back: "Back",
+      next: "Next",
+      done: "Start exploring",
+    },
     /** The ten-minute start (Epic 244): the public front door for a brand-new reader. */
     tour: {
       pageTitle: "Your first ten minutes with AI Career OS",
