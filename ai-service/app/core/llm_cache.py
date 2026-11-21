@@ -70,6 +70,59 @@ def exact_cache_key(req: LLMRequest, model: str) -> str:
     return _PREFIX + hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
+# Epic 363: one flight per key, in this process.
+#
+# Two readers asking the same deterministic question at the same moment used to
+# both miss the cache, both call the relay, and both write the same answer --
+# which is two model calls for one piece of work, and two cache writes racing on
+# the same key. The product is multi-worker (uvicorn, several processes), so this
+# is per-process by construction: it removes the duplicated call inside one
+# worker, which is where the parallel sessions land, and it never claims to
+# coordinate across workers. A cross-process lock would need Redis and a lease,
+# which is a different trade -- and this one is free.
+#
+# The rule that keeps it honest: the FIRST caller's answer is the one that is
+# stored and returned. A second caller that arrives mid-flight waits for it and
+# reads the same bytes, so the cache holds one answer rather than whichever
+# writer landed last. A failure in the leader is propagated to the waiters as a
+# miss, never as a fabricated answer.
+_inflight: dict[str, "asyncio.Future[LLMResponse | None]"] = {}
+
+
+async def _coalesce(key: str, produce):
+    """Run `produce` once for `key`; everyone else waits for that one answer."""
+    import asyncio
+
+    existing = _inflight.get(key)
+    if existing is not None:
+        # A waiter, not a second caller: it costs a Redis-free wait, not a model.
+        return await asyncio.shield(existing)
+    loop = asyncio.get_running_loop()
+    future: "asyncio.Future[LLMResponse | None]" = loop.create_future()
+    _inflight[key] = future
+    try:
+        value = await produce()
+    except BaseException as exc:  # noqa: BLE001 - the waiters must see the same wall
+        if not future.done():
+            future.set_exception(exc)
+        raise
+    else:
+        if not future.done():
+            future.set_result(value)
+        return value
+    finally:
+        # A leader that failed has set the exception on the future; if no waiter
+        # ever arrived to read it, Python logs "exception was never retrieved" --
+        # noise that looks like a bug in the cache rather than a relay that was
+        # down. Consume it here, where the wall is known.
+        if future.done() and not future.cancelled():
+            future.exception()
+        # Only the leader removes its own entry: a waiter that arrives after the
+        # answer landed finds the cache, not a stale future.
+        if _inflight.get(key) is future:
+            del _inflight[key]
+
+
 def _serialize(resp: LLMResponse) -> str | None:
     if not resp.text or resp.tool_calls:
         return None
@@ -118,6 +171,31 @@ async def get(req: LLMRequest, model: str) -> LLMResponse | None:
                     cached_tokens=int(value.get("in") or 0)),
         latency_ms=1,
         tool_calls=[])
+
+
+async def get_or_produce(req: LLMRequest, model: str, produce) -> tuple[LLMResponse | None, bool]:
+    """A cached answer, or one produced exactly once for everyone waiting on it.
+
+    Returns `(response, from_cache)`. `produce` is the caller's own call to the
+    relay; it runs only when the cache misses, and only the first waiter runs it.
+    The fresh answer is written back before anyone sees it, so the next caller --
+    in this worker or the next -- finds it.
+    """
+    if not eligible(req):
+        # Not replayable: nothing to coalesce, and nothing to store.
+        return await produce(), False
+    key = exact_cache_key(req, model)
+    hit = await get(req, model)
+    if hit is not None:
+        return hit, True
+
+    async def _one() -> LLMResponse | None:
+        fresh = await produce()
+        if fresh is not None:
+            await put(req, fresh)
+        return fresh
+
+    return await _coalesce(key, _one), False
 
 
 async def put(req: LLMRequest, resp: LLMResponse) -> None:

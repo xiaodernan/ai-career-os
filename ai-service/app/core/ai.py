@@ -115,19 +115,25 @@ async def ask(req: LLMRequest, *, user_id: str | None = None, run_id: str | None
     # A byte-identical deterministic call is byte-identical work. Serving it
     # from the exact-match cache costs a Redis lookup instead of a model;
     # with caching off this is None and the path is exactly as before.
-    replay = await llm_cache.get(req, provider.model or s.llm_model)
-    if replay is not None:
-        resp = replay
+    # Epic 363: one flight per key. Two readers asking the same deterministic
+    # question in the same moment used to both miss, both call the relay and both
+    # write the same answer -- two model calls for one piece of work, and two
+    # writes racing on one key. The cache read happens first (a hit still costs
+    # nothing), and a miss runs the relay exactly once for everyone waiting.
+    resp, from_cache = await llm_cache.get_or_produce(
+        req, provider.model or s.llm_model, lambda: provider.complete(req)
+    )
+    if from_cache:
         cost = 0.0  # no provider call was made; nothing was billed
         trace_extra = {"served_from": "exact_cache"}
     else:
         try:
-            resp = await provider.complete(req)
+            if resp is None:
+                raise RuntimeError("the provider returned no answer")
         except Exception as e:
             if run_id:
                 await observability.trace(run_id, "error", agent, {"stage": kind, "error": str(e)[:800]})
             raise
-        await llm_cache.put(req, resp)
         cost = estimate_cost(resp.model, resp.usage.input_tokens, resp.usage.output_tokens,
                              resp.usage.cached_tokens)
         trace_extra = {}
