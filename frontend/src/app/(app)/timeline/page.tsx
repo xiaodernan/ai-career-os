@@ -21,6 +21,7 @@ import { useTimeline } from "@/lib/hooks/timeline";
 import { useMilestones } from "@/lib/hooks/monitoring";
 import { CareerNarrativeCard } from "@/components/timeline/career-narrative-card";
 import { CareerChronicleCard } from "@/components/timeline/career-chronicle-card";
+import { CareerAtlas } from "@/components/timeline/career-atlas";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateTime, formatTime } from "@/lib/format";
@@ -230,6 +231,9 @@ export default function TimelinePage() {
           ))}
         </section>
       ) : null}
+      {/* Epic 357 — the open world built only from this reader's own ledger. It follows
+          the active narrowing, so the map cannot show a site the fold has hidden. */}
+      <CareerAtlas events={visible} />
       {/* Epic 345 — one grounded story over the whole ledger, in the reader's language. */}
       {query.data && query.data.length > 0 && (
         <CareerNarrativeCard events={query.data} />

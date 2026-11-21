@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **357** The Career Atlas — an open world drawn only from facts the reader made (2026-11-21).
+
+  Brief VI: "无尽开放世界……辽阔的土地上要有足够多细节". The ledger already held the
+  places a search had been — applications, rehearsals, matches, contacts, resumes,
+  notes — but the reader could only read them as a flat list. This is the first
+  explorable map of that world, on `/timeline` (no new route to get lost in):
+  - `components/timeline/career-atlas.tsx` groups the active timeline fold into six
+    real regions plus an honest "unknown" region, projects each event to a stable
+    site (order, not randomness, so a reload puts it back), caps the drawing at 24
+    sites per region and says how many more exist, and never invents a place. An
+    empty ledger gets an uncharted-map sentence and four working doors into the
+    screens that write the first facts.
+  - Follows `?kind=` narrowing: the map cannot display a site the fold has hidden.
+  - EN+ZH throughout (13 new keys × 2); copy census re-pinned 228→229 sources.
+  Verified: atlas 4/4, timeline page 7/7, translation/census gates 26/26, tsc clean.
+  This is a real increment toward the open world, not a claim that the world is
+  finished: the map grows only when the reader acts, which is the point.
+
 - [x] **356** The auto-sync measures what it ships — the checked-in pack was a snapshot (2026-11-21).
 
   Brief X: "用户每次点进去看到的都是最新成果". Epic 355 made the sync workflow
@@ -8214,7 +8232,9 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   in `GITHUB_OUTPUT`. Gate: `test_ci_referenced_paths_and_modules_exist.py` now
   pins the step order, the head check, and the BOM-free output. Verified locally:
   generator ran under the runner's Python 3.11, emitted head `115bd9b`, and the
-  guard tests passed.
+  guard tests passed. End-to-end on the self-hosted runner: dispatch 44917033269
+  completed green and moved the site from `83399b9` (Epic 354) to `115bd9b` —
+  note that it publishes the head it checked out at run start, not a later commit.
 
 - [x] **355** The auto-sync actually runs — pwsh was never on this runner (2026-11-21).
 
