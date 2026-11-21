@@ -4316,6 +4316,9 @@ export const en = {
       atlasSiteTitle: "Sites",
       atlasSiteBody:
         "Each dot is one fact, placed by order rather than by chance: the first event of a region sits due north and later ones wind outward. A dot is a door — click it, or tab to it and press Enter, and the card below names what happened and when. The same doors are listed in words underneath, for a reader who would rather read than point.",
+      atlasSiteMomentTitle: "What else was going on",
+      atlasSiteMomentBody:
+        "The card also says what else was going on: the same region's own rows nearest in time, two either side. They are buttons too, so one dot leads to the next and the moment reads as a run of work rather than an isolated fact.",
       atlasRouteTitle: "The route you walked",
       atlasRouteBody:
         "The dashed line joins one region to the next one you actually reached, in the order the ledger says you reached it — a resume, then a posting, then the match, then the interview. It is dashed because it is a path taken, not a road that exists, and the caption counts its steps. A ledger with one fact draws one stop and no line.",

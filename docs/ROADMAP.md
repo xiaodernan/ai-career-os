@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **367** A site opens onto what else was going on around it (2026-11-22).
+
+  Brief VI: "不要'看着很大、里面很空'". A fact on its own is a dot; a fact in its
+  moment is a place. Opening a site on the atlas now also answers what else was
+  true at the time — the same region's own rows nearest in time, two either side,
+  so the reader sees the run of work a single dot belongs to rather than one
+  isolated row. They are buttons, because a neighbour is another door: that is
+  what makes the map walkable rather than merely readable.
+
+  The neighbours are the reader's own rows and never invented, the open site is
+  never among them, the ends of a region have only the neighbours they have, and a
+  lone fact has none at all. Bounded to two either side on purpose: a reader
+  opening one dot wants the shape of its moment, not the whole region again.
+
+  EN+ZH, one key. 19 atlas tests green (+3), tsc clean, eslint clean,
+  i18n/copy-parity 66/66.
+
 - [x] **366** The manual teaches the atlas (2026-11-22).
 
   Brief VII: "里面简明描述用户如何充分体验、使用项目的所有完整功能". The Career

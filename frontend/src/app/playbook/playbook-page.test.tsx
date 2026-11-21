@@ -54,6 +54,7 @@ describe("/playbook — the manual", () => {
       "playbook.atlasIntro",
       "playbook.atlasRegionTitle",
       "playbook.atlasSiteTitle",
+      "playbook.atlasSiteMomentTitle",
       "playbook.atlasRouteTitle",
       "playbook.atlasFrontierTitle",
       "playbook.atlasNothingTitle",

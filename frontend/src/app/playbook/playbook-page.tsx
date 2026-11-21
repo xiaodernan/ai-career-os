@@ -555,6 +555,10 @@ export default function PlaybookPage() {
             ))}
           </ol>
 
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-5">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("playbook.atlasSiteMomentTitle")}</p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.atlasSiteMomentBody")}</p>
+          </div>
           <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-5">
             <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("playbook.atlasNothingTitle")}</p>
             <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.atlasNothingBody")}</p>
