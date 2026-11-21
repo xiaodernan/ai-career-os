@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **370** A chapter opens onto the region its own anchor names (2026-11-22).
+
+  The chronicle (Epic 354) is the story and the atlas (Epic 357) is the world, and nothing
+  connected them: a chapter named what happened and never said where, so a reader who
+  believed it had no way to stand in the room it described. The engine already anchors
+  every chapter to the milestone or event it was written from — that anchor is the join.
+
+  A chapter now names the regions its anchor places it in, each a door onto the map
+  narrowed there. The join is matched three ways because the engine writes the anchor as
+  whatever it had: an event's own refId, a number the payload spelled, or a date the
+  chapter cited — tried in that order, so a refId is never misread as a number. Where the
+  anchor names nothing the ledger carries, the chapter keeps its quiet number rather than
+  a guessed region.
+
+  EN+ZH, one key. Seven pure tests on the join (refId, number, date, unmatched,
+  no-anchor, multi-region, the region bucket) plus two on the card (the door, and the
+  honest silence); timeline suites 101/101, tsc clean, eslint clean.
+
 - [x] **369** The one direction the world points, read off this reader's ledger (2026-11-22).
 
   Brief VI asks for a world that feels endless AND for enough guidance that a reader never
