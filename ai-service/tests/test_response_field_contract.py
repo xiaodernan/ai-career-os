@@ -3403,14 +3403,25 @@ def test_every_bar_label_belongs_to_a_dimension_somebody_scores():
 
 # --------------------------------------------- a tolerated alias whose only author cannot be reached
 
-# `citations` is the name #152 deleted, and it is the shape the per-site rule is structurally blind to:
+# `citations` is the name #152 deleted, and it was the shape the per-site rule is structurally blind to:
 # it sat beside a live `evidence`/`sources` in three mappers, so every one of those sites stayed live on
 # its sibling's strength while the name itself answered nothing the browser can receive. What such a
-# name claims is reachability, so that is what gets checked -- against the handler's own return
+# name claims is reachability, so that is what was checked -- against the handler's own return
 # statement and against the app's real call sites, not against a sentence written here.
-REPLIED_ONLY_BY_UNREACHED_ROUTES = {
+#
+# Epic 352 retired the ban: the knowledge page's "Ask your evidence" card now bridges
+# POST /internal/rag/answer, so `citations` is a real spelling the browser receives again.
+# The retirement is checked below -- the route is reachable AND the browser consumes the name.
+RETIRED_BANS = {
     "citations": ("POST", "/internal/rag/answer"),
 }
+
+
+def _browser_sources():
+    files = [p for p in sorted(list(ROOT_FRONTEND.rglob("*.ts")) + list(ROOT_FRONTEND.rglob("*.tsx")))
+             if ".test." not in p.name]
+    assert len(files) >= 60, f"the browser scan saw {len(files)} files, not the whole app"
+    return files
 
 
 def _browser_names(literal: str) -> list[str]:
@@ -3420,41 +3431,57 @@ def _browser_names(literal: str) -> list[str]:
     call used, and a false red costs one look at a line. Test files are excluded because #151 and #152
     both keep fixtures that put the forbidden spelling *in* a payload to prove it renders nothing.
     """
-    files = [p for p in sorted(list(ROOT_FRONTEND.rglob("*.ts")) + list(ROOT_FRONTEND.rglob("*.tsx")))
-             if ".test." not in p.name]
-    assert len(files) >= 60, f"the browser scan saw {len(files)} files, not the whole app"
     needle = f'"{literal}"'
     return [f"{p.relative_to(ROOT_FRONTEND.parent)}:{i}"
-            for p in files
+            for p in _browser_sources()
             for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
             if needle in line]
 
 
-def test_a_key_only_an_unreached_route_answers_is_read_by_nobody():
-    """The reachability half of the contract: who answers this name, and can the app ask them?
+def _browser_field_names(literal: str) -> list[str]:
+    """Every browser source that spells `literal` as a typed field/member, as `file:line`.
 
-    Two ends, both read out of code. The producer end is `doc._returned`, which parses the handler's
-    own `return` statement in `app/api/rag.py`, so a rename there is caught here rather than
-    remembered here. The consumer end is the browser's source. Between them sits the route table the
-    #114 gate already derives: if the backend ever starts calling `/internal/rag/answer`, the ban has
-    to be retired, and this test is where that becomes loud.
+    A typed payload field is consumed by member access (`.literal`, `?.literal`) and declared
+    through a field (`literal?: T`, `literal: T`) rather than as a quoted mapper key. The quoted
+    scan above cannot see that shape; this one reads it so a retired ban can be checked against
+    the real consumer of a typed field.
+    """
+    patterns = [re.compile(pf % re.escape(literal)) for pf in
+                (r"\.%s\b", r"\?\.%s\b", r"\b%s\s*\??\s*:")]
+    return [f"{p.relative_to(ROOT_FRONTEND.parent)}:{i}"
+            for p in _browser_sources()
+            for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+            if any(rx.search(line) for rx in patterns)]
+
+
+def test_a_retired_ban_name_is_now_a_reachable_and_consumed_spelling():
+    """The reachability half of the contract, after Epic 352 retired the only ban.
+
+    #152 banned `citations` because its only author (/internal/rag/answer) was a route
+    the app never called. Epic 352 bridged that route to the knowledge page, so the ban
+    was retired. This test now proves the retirement was legitimate, reading both ends
+    out of code: the producer is `doc._returned` on rag.py's own return statement, and
+    the consumer is the browser's real source. A name the app receives has to be findable
+    on both ends, or the retirement is a claim that costs nothing to make.
     """
     from tests import test_api_doc_contract as doc  # crosses back; safe at call time
 
-    assert REPLIED_ONLY_BY_UNREACHED_ROUTES, "the ban table was emptied; the rule below proves nothing"
+    assert RETIRED_BANS, "the retired-ban table was emptied; the rule below proves nothing"
     routes, unreached = doc._routes(), doc.unreached_paths()
-    for key, (verb, path) in REPLIED_ONLY_BY_UNREACHED_ROUTES.items():
-        assert (verb, path) in routes, (f"{verb} {path} is not served any more, so this ban has no "
-                                        "author left to reason about -- delete the entry with the route")
-        assert path in unreached, (f"{verb} {path} became reachable, which makes `{key}` a real spelling "
-                                   "again: this entry has to go and the mappers need the name back")
+    for key, (verb, path) in RETIRED_BANS.items():
+        assert (verb, path) in routes, (f"{verb} {path} is not served any more, so the retired ban has "
+                                        "no author left to reason about -- delete the entry with the route")
+        assert path not in unreached, (f"{verb} {path} is still unreached; the ban on `{key}` should not "
+                                       "have been retired while nobody can ask that route")
         shape = doc._returned(routes[(verb, path)]) or {}
         assert key in shape, (f"{verb} {path} no longer answers `{key}` (it returns {sorted(shape)}), so "
-                              "this entry is now asserting a fact the service stopped writing")
-        sites = _browser_names(key)
-        assert sites == [], (f"`{key}` is answered only by {verb} {path}, which the app never calls, yet "
-                             f"the browser still names it at {sites} -- those reads can only ever answer "
-                             "undefined, and they hide the shape of the payload they are wrapped around")
+                              "the retired ban is asserting a fact the service stopped writing")
+        # A typed payload field is consumed via member access / a field declaration, not a
+        # quoted mapper key -- read both spellings so the retirement is checked against the
+        # real consumer rather than against the one shape the old ban happened to use.
+        sites = _browser_names(key) + _browser_field_names(key)
+        assert sites, (f"`{key}` is answered by the now-reachable {verb} {path}, but the browser never "
+                       f"names it -- the retired ban hid the shape of the payload without a reader")
     # Positive control on the consumer scan: a name the app really does receive has to be findable,
     # or every assertion above passes on a reader that reads nothing at all.
     seen = _browser_names("evidence")

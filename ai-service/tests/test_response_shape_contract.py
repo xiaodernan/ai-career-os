@@ -1146,9 +1146,11 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # so the census was 249. Epic 274's StoryForgeRequest (the `{rawNote, locale}` body the
     # growth controller binds) makes it 250. Epic 344's ImpressionRequest (the `{locale}`
     # body the resume controller binds) makes it 251. Epic 345's NarrativeRequest (the
-    # `{events, locale}` body the timeline controller binds) makes it 252.
-    assert len(declared) == 252, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 252 measured"
+    # `{events, locale}` body the timeline controller binds) makes it 252. Epic 352's
+    # RagAnswerRequest (the `{query, kinds?, documentIds?, topK?, contextSummary?}` body the
+    # knowledge controller binds) makes it 253.
+    assert len(declared) == 253, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 253 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3688,7 +3690,9 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
         # self did not change.
         # 1857 rather than 1839 since Epic 274 added ForgedStory/StoryForgeResult above
         # the trace-step union (+18 lines with their doc comments); the union did not move.
-        ("types.ts", 1857, "kind:"),
+        # 1870 rather than 1857 since Epic 352's RagAnswerResult interface joined above
+        # the trace-step union (+13 lines with its doc comment); the union did not move.
+        ("types.ts", 1870, "kind:"),
         ('use-sse.ts', 15, 'event: SSEEventName | "message" | "progress" | "ping";'),
     ], (f"{[(r['file'], r['line'], r['head']) for r in by_role['type-union-member']]}: two type unions "
         "spell `message` now, and only one of them names a frame -- the other is the trace step kind "
