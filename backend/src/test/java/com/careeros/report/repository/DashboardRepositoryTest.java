@@ -93,8 +93,11 @@ class DashboardRepositoryTest {
 
     @Test
     void mapsFullRowToRecommendedJobInColumnOrder() {
+        // The query returns NINE columns: id, title, company, location, remote_type,
+        // posted_at, overall, match id, skills. The skills column rides at index 8.
         Object[] row = new Object[]{jobId, "Backend Eng", "Acme", "Remote", "remote",
-                Timestamp.from(Instant.parse("2026-01-02T03:04:05Z")), 0.75, matchId};
+                Timestamp.from(Instant.parse("2026-01-02T03:04:05Z")), 0.75, matchId,
+                "Java, Kafka, Spring Boot"};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
@@ -108,12 +111,13 @@ class DashboardRepositoryTest {
         assertThat(job.postedAt().toInstant()).isEqualTo(Instant.parse("2026-01-02T03:04:05Z"));
         assertThat(job.matchOverall()).isEqualTo(0.75f);
         assertThat(job.matchId()).isEqualTo(matchId);
+        assertThat(job.skills()).isEqualTo("Java, Kafka, Spring Boot");
     }
 
     @Test
     void nullMatchBecomesNullScoreAndIdWithoutNpe() {
         Object[] row = new Object[]{jobId, "T", "C", "L", "onsite",
-                Timestamp.from(Instant.now()), null, null};
+                Timestamp.from(Instant.now()), null, null, null};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
@@ -121,13 +125,14 @@ class DashboardRepositoryTest {
         RecommendedJob job = repo.recommendedJobs(userId, 8).get(0);
         assertThat(job.matchOverall()).isNull();
         assertThat(job.matchId()).isNull();
+        assertThat(job.skills()).isNull();
     }
 
     @Test
     void matchScoreAcceptsAnyNumericColumnRepresentation() {
         // pg may surface the float as Double, Float or BigDecimal — the cast is via Number
         Object[] row = new Object[]{jobId, "T", "C", "L", "onsite",
-                Timestamp.from(Instant.now()), new BigDecimal("0.62"), matchId};
+                Timestamp.from(Instant.now()), new BigDecimal("0.62"), matchId, null};
         List<Object[]> data = new ArrayList<>();
         data.add(row);
         rows(data);
