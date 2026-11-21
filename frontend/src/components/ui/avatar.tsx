@@ -24,6 +24,22 @@ function Avatar({
   )
 }
 
+/**
+ * 360: the reader's picture, whole.
+ *
+ * This was `object-cover`, which fills the circle by cropping whatever does not
+ * fit -- a wide picture lost its top and bottom, a tall one its sides, and the
+ * reader saw a slice of their own face with the edges cut off. The brief names
+ * exactly that ("我的头像被压缩变小、边缘被裁掉"), so the image now fits *inside*
+ * the frame instead: `object-contain` scales it to the smaller dimension and
+ * leaves the rest as background, and `object-position: center` keeps it centred
+ * while it loads and after it lands.
+ *
+ * The trade is honest and stated: a non-square picture no longer fills the
+ * circle edge to edge, and a letterboxed strip of background shows beside it.
+ * That is a whole picture with room around it, which is what was asked for --
+ * a crop is a picture the reader did not choose.
+ */
 function AvatarImage({
   className,
   ...props
@@ -31,7 +47,12 @@ function AvatarImage({
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn("aspect-square size-full object-cover", className)}
+      className={cn(
+        // `bg-muted` is what fills the letterbox, so a transparent PNG does not
+        // show the fallback's initials through the gap beside it.
+        "aspect-square size-full bg-muted object-contain object-center",
+        className
+      )}
       {...props}
     />
   )

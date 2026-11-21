@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const prepareLocale = vi.fn();
 const setLocale = vi.fn();
@@ -34,8 +36,6 @@ describe("LocaleSwitcher", () => {
   });
 
   it("carries the hover and focus warmers on the button", () => {
-    const { readFileSync } = require("node:fs") as typeof import("node:fs");
-    const { fileURLToPath } = require("node:url") as typeof import("node:url");
     const src = readFileSync(fileURLToPath(new URL("./locale-switcher.tsx", import.meta.url)), "utf8");
     expect(src).toContain("onMouseEnter={warm}");
     expect(src).toContain("onFocus={warm}");

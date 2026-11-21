@@ -422,6 +422,9 @@ export const en = {
       commandPaletteHint: "Jump anywhere — type what you want to do, or the page you want.",
       accountMenuHint: "Your account: profile, settings, or sign out.",
       accountMenu: "Account menu",
+      // 360: the avatar is identity, not decoration, so it is named for a reader
+      // who cannot see it -- and whose picture it is.
+      yourAvatar: "{name}'s picture",
       resetHint: "Replay — start this card over",
       editHint: "Edit — fix it in place",
       deleteHint: "Delete — gone for good",

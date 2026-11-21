@@ -114,8 +114,17 @@ export function Topbar() {
               aria-label={`${initials} · ${t("chrome.accountMenu")}`}
               className="rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/35"
             >
-              <Avatar className="size-8 ring-1 ring-border">
-                {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
+              {/* 360: size-9 rather than size-8 -- the picture is the reader's own
+                  face, and 32px is small enough to read as "compressed". The alt names
+                  whose picture it is rather than being empty: it is identity, not
+                  decoration, and a screen reader should say so. */}
+              <Avatar className="size-9 ring-1 ring-border">
+                {user?.avatarUrl && (
+                  <AvatarImage
+                    src={user.avatarUrl}
+                    alt={t("chrome.yourAvatar", { name: initials })}
+                  />
+                )}
                 <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
                   {initials}
                 </AvatarFallback>
