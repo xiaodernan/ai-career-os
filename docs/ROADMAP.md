@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **366** The manual teaches the atlas (2026-11-22).
+
+  Brief VII: "里面简明描述用户如何充分体验、使用项目的所有完整功能". The Career
+  Atlas is the one surface that is a *world* rather than a list, and the manual
+  did not mention it — four epics (357, 361, 364, 365) had grown a whole room
+  with no chapter about how to stand in it. A reader who found the map had no
+  way to know that a dot was a door, that the dashed line was their own route,
+  or that the frontier strip was a list of rooms they had not been to.
+
+  Chapter 21 teaches the four things the map can tell you — regions, sites, the
+  route, the frontier — each with how to read it, and closes on the one promise
+  the component already keeps: it never invents a place. Placed where the reader
+  meets it (after the ledger, before the colophon), and the rail follows the
+  page's own order, which is the promise that gate already pins — the first
+  attempt put the chapter at the end and the order gate reddened, which is the
+  gate doing its job.
+
+  EN+ZH, eleven keys each. Playbook suites 7/7 (a new case pins the chapter's
+  anchors and every one of its keys), i18n/copy-parity 66/66, tsc clean.
+
 - [x] **365** The route the reader walked, drawn over the map (2026-11-22).
 
   Brief VI: "无尽开放世界感". A map that says where you have been is half a map;
