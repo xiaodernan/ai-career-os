@@ -18,6 +18,7 @@ import re
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import digit_runs, snapshot_digits
 from app.features.reply_classify import INTENTS, rule_intent
 from app.providers.base import LLMMessage, LLMRequest
@@ -93,9 +94,7 @@ async def decode_reply(body: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "MESSAGE", json.dumps(snapshot,
-                                                          ensure_ascii=False,
-                                                          default=str)[:2600]))),
+                                             "MESSAGE", fit_json(snapshot, ceiling=2600).text))),
                 temperature=0.2, max_tokens=600),
                 user_id=user_id, run_id=run_id, agent="reply_editor", kind="reply_decode")
         except Exception:

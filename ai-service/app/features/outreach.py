@@ -12,6 +12,7 @@ simply carries no evidence, and says so by citing nothing.
 """
 
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 from app.core.skills import normalize
 from app.agents.stategraph import NodeResult, StateGraph
 from app.providers.base import LLMMessage, LLMRequest
@@ -67,7 +68,7 @@ def _prompt(contact: dict, purpose: str, evidence: dict, context: str) -> str:
         f"CANDIDATE HIGHLIGHT: {evidence.get('highlight') or '(none listed)'}",
     ]
     if context:
-        parts.append(wrap_untrusted("CONTEXT", context[:1000]))
+        parts.append(wrap_untrusted("CONTEXT", fit_input(context).text))
     return "\n".join(parts)
 
 

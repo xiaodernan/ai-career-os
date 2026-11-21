@@ -9,6 +9,7 @@ import logging
 
 from app.core import db
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 from app.core.skills import normalize
 from app.db import domain, observability
 from app.providers.base import LLMMessage, LLMRequest
@@ -282,8 +283,8 @@ interview|goal|fact", "key": "short-slug", "content": "one sentence",
 async def extract_and_store(user_id: str, user_text: str, answer: str,
                             run_id: str | None = None) -> int:
     """Distill long-term memories from a completed turn; best-effort, never raises."""
-    prompt = (f"User message:\n{wrap_untrusted('USER_MESSAGE', user_text[:3000])}\n\n"
-              f"Assistant reply:\n{answer[:2000]}")
+    prompt = (f"User message:\n{wrap_untrusted('USER_MESSAGE', fit_input(user_text).text)}\n\n"
+              f"Assistant reply:\n{fit_input(answer).text}")
 
     async def _extract(state: dict) -> NodeResult:
         try:

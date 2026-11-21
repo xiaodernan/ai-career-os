@@ -16,6 +16,7 @@ import json
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import snapshot_digits, grounded
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -62,9 +63,7 @@ async def narrate(payload: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(NARRATE_SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "SNAPSHOT", json.dumps(payload,
-                                                         ensure_ascii=False,
-                                                         default=str)[:3600]))),
+                                             "SNAPSHOT", fit_json(payload, ceiling=3600).text))),
                 temperature=0.2, max_tokens=200),
                 user_id=user_id, run_id=run_id, agent="offers_editor", kind="offer_narrative")
         except Exception:

@@ -37,6 +37,7 @@ import re
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 from app.providers.base import LLMMessage, LLMRequest
 
 
@@ -109,7 +110,7 @@ async def forge_story(raw_note: str, *, locale: str | None = None,
                       user_id=None, run_id=None) -> dict:
     """Forge one grounded STAR story through a bounded, traced state graph."""
     raw_note = raw_note if isinstance(raw_note, str) else ""
-    fenced = wrap_untrusted("CAREER_NOTE", raw_note[:12000])
+    fenced = wrap_untrusted("CAREER_NOTE", fit_input(raw_note).text)
 
     async def _draft(state: dict) -> NodeResult:
         req = LLMRequest(

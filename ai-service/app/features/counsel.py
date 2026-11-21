@@ -17,6 +17,7 @@ import json
 from app.features.grounding import digit_runs as _digit_runs, snapshot_digits as _snapshot_digits, grounded as _grounded
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.providers.base import LLMMessage, LLMRequest
 
 COUNSEL_SYSTEM = """You are the analyst reading an install's own aggregates for the
@@ -64,9 +65,7 @@ async def recommend(snapshot: dict, *, user_id: str | None = None,
             out = await ask_json(LLMRequest(
                 messages=stable_messages(COUNSEL_SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "SNAPSHOT", json.dumps(snapshot,
-                                                                  ensure_ascii=False,
-                                                                  default=str)[:6000]))),
+                                             "SNAPSHOT", fit_json(snapshot, ceiling=6000).text))),
                 temperature=0.2, max_tokens=700),
                 user_id=user_id, run_id=run_id, agent="admin", kind="counsel")
         except Exception:

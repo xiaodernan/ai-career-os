@@ -23,6 +23,7 @@ import json
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import digit_runs as _digit_runs, snapshot_digits as _payload_digits, grounded as _grounded
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -77,7 +78,7 @@ async def career_chronicle(payload: dict, *, locale: str = "en",
     locale = "zh" if locale.startswith("zh") else "en"
     payload = {**payload, "locale": locale}
     digits = _payload_digits(payload)
-    wire = json.dumps(payload, ensure_ascii=False, default=str)[:8000]
+    wire = fit_json(payload, ceiling=8000).text
 
     async def _draft(state: dict) -> NodeResult:
         try:
@@ -98,7 +99,7 @@ async def career_chronicle(payload: dict, *, locale: str = "en",
                 messages=stable_messages(CHALLENGE_SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
                                              "PAYLOAD", wire) + "\n\nBOOK\n"
-                                             + json.dumps(book, ensure_ascii=False, default=str)[:4000])),
+                                             + fit_json(book, ceiling=4000).text)),
                 temperature=0.0, max_tokens=300),
                 user_id=user_id, run_id=run_id, agent="career_chronicle", kind="chronicle_challenge")
         except Exception:

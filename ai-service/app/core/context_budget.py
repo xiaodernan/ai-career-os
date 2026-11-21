@@ -51,6 +51,28 @@ def input_budget() -> int:
     return max(2000, int(get_settings().llm_input_char_budget or 200_000))
 
 
+def fit_json(payload: object, *, share: float = 1.0, ceiling: int | None = None) -> Fit:
+    """Fit a JSON payload to its share of the budget (Epic 362).
+
+    Every feature that serialises the reader's own material for the model used to
+    hand-write a cap -- `[:8000]` here, `[:2400]` there, `[:16000]` in the tailor --
+    and each one was a guess about a window the relay actually measures in the
+    tens of thousands of tokens. A long search, a detailed posting or a full
+    resume arrived as a stub, which is the "输入上下文总是太少" the product was
+    asked to stop doing.
+
+    Same contract as {@link fit_input}: the larger of the two constraints is never
+    exceeded, and the honest account of what was kept rides along so the trace can
+    say whether the budget was used. `ensure_ascii=False` because the reader's own
+    words are the payload, and escaping every non-Latin character would spend the
+    budget on backslashes.
+    """
+    import json as _json
+
+    raw = _json.dumps(payload, ensure_ascii=False, default=str)
+    return fit_input(raw, share=share, ceiling=ceiling)
+
+
 def fit_input(text: str | None, *, share: float = 1.0, ceiling: int | None = None) -> Fit:
     """Fit one volatile input to ``share`` of the configured budget (or ``ceiling``).
 

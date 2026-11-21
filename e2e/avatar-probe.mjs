@@ -8,7 +8,13 @@
 
 import { chromium } from "playwright";
 
-const APP = process.env.E2E_BASE_URL ?? "http://localhost:3999";
+// No origin default is asserted by the file -- pass the endpoint in, or the script
+// refuses. The CORS census in ai-service reads every checked-in text file for a
+// loopback origin, and a hardcoded one here would be a claim about a port this
+// repository does not own. The same discipline the overlap and occlusion audits
+// already follow.
+const APP = process.env.E2E_BASE_URL;
+if (!APP) throw new Error("pass E2E_BASE_URL (this file asserts no origin of its own)");
 
 // A 3:1 wide picture with two markers at its far left and far right: under a crop
 // only the middle survives, and the markers are the proof that it did not.

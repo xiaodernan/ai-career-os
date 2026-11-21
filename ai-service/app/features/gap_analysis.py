@@ -17,6 +17,7 @@ from matching a single JD to planning a whole career move.
 import re
 
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_input
 import re
 
 from app.agents.stategraph import NodeResult, StateGraph
@@ -57,7 +58,7 @@ async def extract_expected_skills(target_role: str, *, user_id=None, run_id=None
     async def _extract(state: dict) -> NodeResult:
         req = LLMRequest(
             messages=stable_messages(SYSTEM,
-                                     LLMMessage("user", wrap_untrusted("TARGET_ROLE", target_role[:4000]))),
+                                     LLMMessage("user", wrap_untrusted("TARGET_ROLE", fit_input(target_role).text))),
             temperature=0.0, max_tokens=2000)
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent="learning",
                              kind="gap_expected")

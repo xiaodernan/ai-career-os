@@ -17,6 +17,7 @@ import re
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import snapshot_digits, grounded
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -99,9 +100,7 @@ async def gap_note(coverage_payload: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(NOTE_SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "SNAPSHOT", json.dumps(snapshot,
-                                                         ensure_ascii=False,
-                                                         default=str)[:2400]))),
+                                             "SNAPSHOT", fit_json(snapshot, ceiling=2400).text))),
                 temperature=0.3, max_tokens=180),
                 user_id=user_id, run_id=run_id, agent="gap_editor", kind="gap_note")
         except Exception:

@@ -20,6 +20,7 @@ import json
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import digit_runs as _digit_runs, snapshot_digits as _payload_digits, grounded as _grounded
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -64,9 +65,7 @@ async def resume_impression(payload: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(IMPRESSION_SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "RESUME_FACTS", json.dumps(
-                                                 payload, ensure_ascii=False,
-                                                 default=str)[:6000]))),
+                                             "RESUME_FACTS", fit_json(payload, ceiling=6000).text))),
                 temperature=0.2, max_tokens=260),
                 user_id=user_id, run_id=run_id, agent="resume", kind="resume_impression")
         except Exception:

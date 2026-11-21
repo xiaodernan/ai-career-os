@@ -12,6 +12,7 @@ import re
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
 from app.core.skills import extract_skills, normalize
+from app.core.context_budget import fit_input
 from app.providers.base import LLMMessage, LLMRequest
 from app.rag.pipeline import retrieve
 
@@ -82,7 +83,7 @@ async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id
             f"JD REQUIRED: {[s.get('name') for s in (jd.get('requiredSkills') or []) if isinstance(s, dict)]}\n"
             f"JD PREFERRED: {[s.get('name') for s in (jd.get('preferredSkills') or []) if isinstance(s, dict)]}\n\n"
             f"CAREER KNOWLEDGE (evidence you may foreground):\n{r.get('context_block','')}\n\n"
-            f"ORIGINAL RESUME JSON:\n{wrap_untrusted('RESUME', str(resume_structured)[:16000])}")
+            f"ORIGINAL RESUME JSON:\n{wrap_untrusted('RESUME', fit_input(str(resume_structured)).text)}")
         return NodeResult(state={"context": context, "evidence": r["evidence"]},
                           goto="draft",
                           trace={"context_chars": len(context)})

@@ -12,6 +12,7 @@ import re
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import digit_runs, snapshot_digits
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -81,9 +82,7 @@ async def thank_you_letter(turn_payload: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "TURNS", json.dumps(snapshot,
-                                                                 ensure_ascii=False,
-                                                                 default=str)[:2400]))),
+                                             "TURNS", fit_json(snapshot, ceiling=2400).text))),
                 temperature=0.2, max_tokens=600),
                 user_id=user_id, run_id=run_id, agent="interviewer_thanks",
                 kind="thank_you_letter")

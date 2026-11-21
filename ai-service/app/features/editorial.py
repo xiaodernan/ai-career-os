@@ -15,6 +15,7 @@ import json
 from app.features.grounding import digit_runs as _digit_runs, snapshot_digits as _payload_digits, grounded as _grounded
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.providers.base import LLMMessage, LLMRequest
 
 EDITORIAL_SYSTEM = """You are the editor of a weekly job-search letter for one reader.
@@ -61,9 +62,7 @@ async def editorial(payload: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(EDITORIAL_SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "SNAPSHOT", json.dumps(payload,
-                                                         ensure_ascii=False,
-                                                         default=str)[:3600]))),
+                                             "SNAPSHOT", fit_json(payload, ceiling=3600).text))),
                 temperature=0.2, max_tokens=180),
                 user_id=user_id, run_id=run_id, agent="editor", kind="editorial")
         except Exception:

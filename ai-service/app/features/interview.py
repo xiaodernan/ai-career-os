@@ -201,7 +201,7 @@ async def evaluate_answer(*, mode: str, question: str, answer: str, resume_ctx: 
     prompt = (f"Interview context (candidate's real background, untrusted):\n"
               f"{wrap_untrusted('CANDIDATE_CONTEXT', fit_input(ctx, share=0.4).text)}\n\n"
               f"QUESTION: {question}\n\nCANDIDATE ANSWER:\n"
-              f"{wrap_untrusted('ANSWER', ans[:4000])}")
+              f"{wrap_untrusted('ANSWER', fit_input(ans).text)}")
 
     # The evaluator rides the bounded spine: the model drafts, the verify node clamps
     # every number into [0, 1], whitelists the dims the prompt promised, drops junk rows

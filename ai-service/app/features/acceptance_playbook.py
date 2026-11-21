@@ -13,6 +13,7 @@ import re
 
 from app.agents.stategraph import NodeResult, StateGraph
 from app.core.ai import ask_json, stable_messages, wrap_untrusted
+from app.core.context_budget import fit_json
 from app.features.grounding import digit_runs, snapshot_digits
 from app.providers.base import LLMMessage, LLMRequest
 
@@ -87,9 +88,7 @@ async def acceptance_playbook(offer: dict, *, locale: str = "en",
             out = await ask_json(LLMRequest(
                 messages=stable_messages(SYSTEM,
                                          LLMMessage("user", wrap_untrusted(
-                                             "OFFER", json.dumps(snapshot,
-                                                         ensure_ascii=False,
-                                                         default=str)[:2400]))),
+                                             "OFFER", fit_json(snapshot, ceiling=2400).text))),
                 temperature=0.25, max_tokens=900),
                 user_id=user_id, run_id=run_id, agent="acceptance_coach",
                 kind="acceptance_playbook")
