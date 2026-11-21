@@ -136,7 +136,7 @@ export function ManualSheet() {
                   {t(group.labelKey)}
                 </p>
                 {group.descriptionKey && (
-                  <p className="mb-2 text-xs text-muted-foreground capitalize">{t(group.descriptionKey)}</p>
+                  <p className="mb-2 px-1 text-xs leading-relaxed text-muted-foreground">{t(group.descriptionKey)}</p>
                 )}
                 <ul className="space-y-1">
                   {group.routes.map((route) => {
