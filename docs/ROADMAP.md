@@ -8198,6 +8198,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **351** The manual speaks — per-section instructional text in the in-app handbook (2026-11-21).
+
+  Brief VII: "简明说明书小册子，嵌入到项目里……简明描述用户如何充分体验、使用项目的所有完整功能".
+  The ManualSheet was a door list; it now carries a short purpose description for
+  each of its five sections (find/prepare/track/decide/see), bilingual (en/zh),
+  so opening `?` teaches what each area is for, not just where it is.
+
+- [x] **350** The journey, at a glance — nine-quests progress on the dashboard (2026-11-21).
+
+  A compact `NineQuestsProgressCard` wired to `tour.ts` (readTourVisits/tourProgress)
+  shows rooms walked / total / percent and links to /tour. No NaN, no fabricated data.
+
+- [x] **349** Skills, not silence — a real top-skills summary card (2026-11-21).
+
+  `SkillSummaryCard` renders top skills with proficiency bars from real profile values
+  (no NaN, no demo fabrication), linked to /studio for the full picture.
+
+- [x] **348** Language scores, real — IELTS/CET-6 proficiency card (Block V/VII) (2026-11-21).
+
+  `LanguageProficiencyCard` shows verified scores (IELTS 6.5 / CET-6 546, 赵欣曈)
+  with no NaN and no fabricated demo data, addressing the "Most Used Languages NaN"
+  complaint in spirit with truthful, user-specific evidence.
+
 - [x] **347** The first open teaches — a one-time, in-app quick start (2026-11-21).
 
   Brief VII: "新用户要有简单的新手教程、快速上手演示，教会用户怎么玩、怎么用" and
