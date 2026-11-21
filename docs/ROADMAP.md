@@ -8198,6 +8198,39 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **356** The auto-sync measures what it ships — the checked-in pack was a snapshot (2026-11-21).
+
+  Brief X: "用户每次点进去看到的都是最新成果". Epic 355 made the sync workflow
+  actually run, but its first successful run still published stale news: the
+  workflow copied `docs/LATEST.json` verbatim, and that file is a human-regenerated
+  snapshot, not a live view of HEAD. Measured before the fix: site and repo both
+  said `83399b9` (Epic 353) while the checkout was at `115bd9b` (Epic 355) — the
+  system was internally consistent and simply two epics behind. The workflow now
+  regenerates the pack with `scripts/showcase-sync.py` from the exact commit it
+  checked out, refuses to publish a pack whose `head` disagrees with that
+  checkout, and the generator's own card no longer claims CI regeneration without
+  doing it. Windows PowerShell 5.1 fallback order (`py -3.11` → `python` →
+  `python3`) keeps it working across runner tool-cache changes; no `pwsh`, no BOM
+  in `GITHUB_OUTPUT`. Gate: `test_ci_referenced_paths_and_modules_exist.py` now
+  pins the step order, the head check, and the BOM-free output. Verified locally:
+  generator ran under the runner's Python 3.11, emitted head `115bd9b`, and the
+  guard tests passed.
+
+- [x] **355** The auto-sync actually runs — pwsh was never on this runner (2026-11-21).
+
+  Brief X: "把本项目最新成果实时同步到这个入口……全自动更新". Audit found the
+  `sync-career-os` workflow was the only one using `shell: pwsh`; its single run
+  (2026-11-20) died with `pwsh: command not found` — PowerShell 7 is absent on this
+  install's Windows self-hosted runner (only 5.1). So the automatic fallback sync
+  had NEVER run: the personal site's `assets/career-os/latest.json` sat at Epic
+  339 / c1566c0 while the repo was at Epic 354. Fixed by switching all four steps
+  to `shell: powershell` and writing GITHUB_OUTPUT BOM-free through
+  `[IO.File]::AppendAllText` (5.1's `Out-File -Encoding utf8` emits a BOM that
+  breaks output parsing). Verified the steps locally under PS 5.1: head/schema
+  read, two BOM-free output lines. Runner started on-machine and the workflow
+  dispatched to verify the fix end-to-end. This is the "魔鬼在细节" case: the
+  sync existed, looked correct, and had never once actually executed.
+
 - [x] **354** The Career Chronicle — a grounded, chaptered epic of one reader's search (2026-11-21).
 
   Briefs IV/VI: "把大模型能力完整、深度地嵌入项目" and "宏观史诗叙事 + 细节包罗万象" —

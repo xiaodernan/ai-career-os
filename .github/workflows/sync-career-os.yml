@@ -35,11 +35,36 @@ jobs:
           ref: main
           fetch-depth: 1
 
+      # The checked-in fact pack is a snapshot, not a live mirror: it is regenerated
+      # by a human after a milestone and can lag HEAD by several commits. Copying it
+      # as-is made this workflow push "latest" results that were not the latest —
+      # measured 2026-11-21: site said 83399b9 while the repo was at 115bd9b.
+      # Regenerate first, from the exact head checked out above. The generator needs
+      # only the standard library plus git; try the runner's pinned 3.11, then any
+      # Python on PATH, so this keeps working after a runner tool-cache change.
+      - name: Regenerate the fact pack from this exact head
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $ok = $false
+          foreach ($try in @(
+              { & py -3.11 scripts/showcase-sync.py },
+              { & python scripts/showcase-sync.py },
+              { & python3 scripts/showcase-sync.py }
+            )) {
+            try {
+              & $try
+              if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+            } catch { }
+          }
+          if (-not $ok) { throw 'showcase-sync.py could not run: no usable Python on this runner' }
+
       # Windows PowerShell 5.1 is present on every Windows runner; PowerShell 7
       # (`pwsh`) is not installed on this install's self-hosted runner — the first
       # run of this workflow died with `pwsh: command not found`. `-Encoding utf8`
       # in 5.1 writes a BOM that breaks GITHUB_OUTPUT parsing, so append through
-      # .NET (BOM-free) instead of Out-File.
+      # .NET (BOM-free) instead of Out-File. A pack whose head disagrees with the
+      # checkout is a stale snapshot and must never be pushed as "latest".
       - name: Read the source head and validate the fact pack
         id: facts
         shell: powershell
@@ -48,6 +73,10 @@ jobs:
           $pack = Get-Content docs/LATEST.json -Raw | ConvertFrom-Json
           if (-not $pack.head -or -not $pack.schema_version) {
             throw 'docs/LATEST.json is missing head/schema_version — refusing to sync'
+          }
+          $head = (git rev-parse --short=7 HEAD).Trim()
+          if ($pack.head -ne $head) {
+            throw "fact pack head $($pack.head) does not match checkout $head — refusing to sync"
           }
           [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "head=$($pack.head)`n")
           [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "generated=$($pack.generated_at)`n")
