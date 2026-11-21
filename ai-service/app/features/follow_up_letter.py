@@ -91,7 +91,7 @@ async def follow_up_letter(offer: dict, *, locale: str = "en",
                                              "SNAPSHOT", json.dumps(snapshot,
                                                           ensure_ascii=False,
                                                           default=str)[:2400]))),
-                temperature=0.0, max_tokens=600),
+                temperature=0.2, max_tokens=600),
                 user_id=user_id, run_id=run_id, agent="offer_negotiator",
                 kind="follow_up_letter")
         except Exception:

@@ -1138,8 +1138,12 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 243 with Epic 336's ThankYouLetterRequest/ThankYouLetterResponse and Epic 337's
     # NegotiationPrepRequest/NegotiationPrepResponse (same class, same reason).
     # Epic 339's DeclineLetterRequest/DeclineLetterResponse (same class, same reason) makes it 245.
-    assert len(declared) == 245, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 245 measured"
+    # Epic 273's milestone shelf adds four records on the growth DTO — Milestone,
+    # MilestoneCounters, MilestonesResponse (the wire the growth page binds) and the private
+    # Step triple the shelf derives its progress from — all declared through the shared opener,
+    # so the census is now 249. This pass counts the records after that merge.
+    assert len(declared) == 249, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 249 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

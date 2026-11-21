@@ -20,19 +20,16 @@ import { cn } from "@/lib/utils";
  * of only trophies tells a reader nothing about what to do this week.
  */
 
-/** key → [earned label, working label]; the keys are the backend's contract. */
-const MILESTONE_WORDS: Record<string, [string, string]> = {
-  first_step: ["First application filed", "File your first application"],
-  ten_steps: ["Ten applications filed", "File 10 applications"],
-  fifty_steps: ["Fifty applications filed", "File 50 applications"],
-  grounded: ["First match computed", "Run your first match"],
-  first_rehearsal: ["First rehearsal done", "Hold your first rehearsal"],
-  five_rehearsals: ["Five rehearsals done", "Hold 5 rehearsals"],
-  letter_wright: ["Three letters kept", "Keep 3 letters"],
-  first_offer: ["First offer received", "Receive your first offer"],
-  shelf_full: ["Three offers on the shelf", "Hold 3 offers at once"],
-  streak_week: ["A seven-day streak", "Act 7 days in a row"],
-};
+/** The words live in the locale table (`growth.milestone_<key>_earned` / `_working`)
+ *  so a Chinese reader never sees an English sentence hard-coded in this source —
+ *  see the copy-census gate. */
+function milestoneLabel(t: (key: string) => string, key: string, done: boolean): string {
+  const suffix = done ? "earned" : "working";
+  const fullKey = `growth.milestone_${key}_${suffix}`;
+  // A milestone the backend adds before the locale table knows it falls back to
+  // its own key rather than showing an empty badge.
+  return t(fullKey) === fullKey ? key : t(fullKey);
+}
 
 export function MilestoneShelf() {
   const { t, locale } = useLocale();
@@ -62,7 +59,7 @@ export function MilestoneShelf() {
         {data && (
           <ul className="grid gap-2 sm:grid-cols-2">
             {data.milestones.map((m) => {
-              const words = MILESTONE_WORDS[m.key] ?? [m.key, m.key];
+              const label = milestoneLabel(t, m.key, m.done);
               const pct = m.target ? Math.min(100, Math.round(((m.progress ?? 0) / m.target) * 100)) : 0;
               return (
                 <li
@@ -78,9 +75,7 @@ export function MilestoneShelf() {
                         aria-hidden
                         className={cn("size-4", m.done ? "text-warning" : "text-muted-foreground/40")}
                       />
-                      <span className="min-w-0 truncate">
-                        {m.done ? words[0] : words[1]}
-                      </span>
+                      <span className="min-w-0 truncate">{label}</span>
                     </p>
                     {m.done && (
                       <Badge variant="warning" className="shrink-0 font-normal">

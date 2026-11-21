@@ -65,7 +65,7 @@ async def narrate(payload: dict, *, locale: str = "en",
                                              "SNAPSHOT", json.dumps(payload,
                                                          ensure_ascii=False,
                                                          default=str)[:3600]))),
-                temperature=0.0, max_tokens=200),
+                temperature=0.2, max_tokens=200),
                 user_id=user_id, run_id=run_id, agent="offers_editor", kind="offer_narrative")
         except Exception:
             out = {}

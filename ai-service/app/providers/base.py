@@ -29,8 +29,8 @@ class ToolCall:
 class LLMRequest:
     messages: list[LLMMessage]
     model: str | None = None
-    temperature: float = 0.0  # MUST be 0.0 for deterministic engine calls & cache eligibility
-    max_tokens: int = 8192  # increased from 2048; codex handles 50k-90k, we increase our ceiling
+    temperature: float = 0.4
+    max_tokens: int = 2048
     tools: list[ToolSpec] | None = None
     json_mode: bool = False  # request a single JSON object back
     # Epic 182: the cache-routing key. A gateway that load-balances identical

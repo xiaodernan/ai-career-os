@@ -74,17 +74,23 @@ class OpenAICompatProvider:
             "max_tokens": req.max_tokens,
             "stream": stream,
         }
-        # The relay reports usage in the terminal chunk only for streamed calls, and
-        # the cache detail survives there (5 of 6 probes measured 2026-11-18, same
-        # bytes as the non-streamed twin). Non-streamed calls answer with NO
-        # `prompt_tokens_details` at all (0 of 6) — so `complete()` assembles its
-        # reply over the streaming shape too and every call carries the detail.
+        # Ask for usage on the terminal chunk in both modes. Live probe 2026-11-21
+        # (gpt-6.2-sol via api.aizzz.xyz/v1, through the 7897 mixed proxy) showed the
+        # gateway returns `prompt_tokens_details.cached_tokens` on NON-streaming calls
+        # too (4180/4391 on a warm repeat, 95%) — the older 2026-11-18 note claiming
+        # non-stream never carries the detail no longer holds. We still route
+        # `complete()` through the streaming shape below: it is byte-for-byte the same
+        # answer, the detail is guaranteed on the terminal event, and it keeps one code
+        # path for usage. `stream_options` is harmless when stream is false.
         p["stream_options"] = {"include_usage": True}
         if req.cache_key:
-            # The provider's own routing hint: identical prefixes asked with the same
-            # key land on the cache shard that already holds them, instead of
-            # whichever replica the load balancer picks (measured: a repeat answers
-            # cached=0 roughly every other call without it).
+            # Routing hint for gateways that shard by key. Live probe 2026-11-21 proved
+            # this gateway's prefix cache is NOT sharded that way: two different
+            # long sessions interleaved under ONE `careeros-engine` key each held 95.7%
+            # independently, and temperature 0/0.2/0.7 all hit 95.9% on the same prefix.
+            # So the key is kept only as a forward-compatible hint; the real cache
+            # driver is a byte-identical prefix (see app.core.preamble), not this key
+            # and not temperature. Never key per-request or per-call — that would shard.
             p["prompt_cache_key"] = req.cache_key
         tools = _tools_openai(req)
         if tools:

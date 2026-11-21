@@ -272,8 +272,11 @@ DEAD_NAME_TIERS = {
      "lib/i18n/copy-census.test.ts", "lib/i18n/copy-scan.ts"): {"versionNo"},
     ("lib/api/normalize-actions.test.ts", "lib/api/normalize.test.ts", "lib/api/normalize.ts",
      "lib/hooks/resources.ts"): {"job_id"},
-    ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at",
-                                                                                      "updated_at"},
+    ("lib/api/normalize.test.ts", "lib/api/normalize.ts", "lib/hooks/resources.ts"): {"created_at"},
+    # Epic 272's dashboard card names `updated_at` in a comment explaining the stale-row
+    # trigger — a spelling carrier, not a reader (the mapper is still the only reader).
+    ("app/(app)/dashboard/page.tsx", "lib/api/normalize.test.ts", "lib/api/normalize.ts",
+     "lib/hooks/resources.ts"): {"updated_at"},
     # `resume_versions` gained a fourth speller without a reader: the status-words module's
     # docstring names the column whose five values it turns into the resumes page's badge.
     # The mapper still folds the wire name into the versions row, which is the only reader.

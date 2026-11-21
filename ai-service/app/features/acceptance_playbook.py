@@ -90,7 +90,7 @@ async def acceptance_playbook(offer: dict, *, locale: str = "en",
                                              "OFFER", json.dumps(snapshot,
                                                          ensure_ascii=False,
                                                          default=str)[:2400]))),
-                temperature=0.0, max_tokens=900),
+                temperature=0.25, max_tokens=900),
                 user_id=user_id, run_id=run_id, agent="acceptance_coach",
                 kind="acceptance_playbook")
         except Exception:

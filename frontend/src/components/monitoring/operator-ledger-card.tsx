@@ -27,6 +27,7 @@ const FINDINGS = [
   { key: "deterministic", copyKey: "monitoring.ledgerFinding1" },
   { key: "stream", copyKey: "monitoring.ledgerFinding2" },
   { key: "prefix", copyKey: "monitoring.ledgerFinding3" },
+  { key: "prefix-2026-11-21", copyKey: "monitoring.ledgerFinding4" },
 ] as const;
 
 export function OperatorLedgerCard() {

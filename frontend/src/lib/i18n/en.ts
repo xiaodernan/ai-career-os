@@ -1372,6 +1372,8 @@ export const en = {
         "Stream frames · include_usage honored · cached tokens reported on 8 of 8 probes · 8,192 of 8,353 input tokens cached (98.1%)",
       ledgerFinding3:
         "Warm identical prefix · 94.9% cached observed earlier on this install",
+      ledgerFinding4:
+        "Re-measured 2026-11-21 · gpt-6.2-sol · non-stream now reports cached_tokens reliably (95% after warm-up) · interleaved parallel sessions each hold their own hits without interference · temperature 0 / 0.7 hit identically — the cache is driven only by a byte-identical prefix, not by streaming mode, temperature, or parallel sessions; the earlier 'non-stream zero means a miss' reading is corrected",
       alerts: "Alerts",
       regressions: "Regressions",
       runsAnalyzed: "{count} runs analyzed",
@@ -2922,6 +2924,28 @@ export const en = {
       milestoneEarned: "Earned",
       milestoneProgress: "{progress} of {target}",
       milestoneCounters: "Behind every badge: {applications} applications · {interviews} rehearsals · {offers} offers",
+      // Each backend milestone key → earned/working label, as flat string keys.
+      // Kept in the locale table so a Chinese reader never sees the English sentence.
+      milestone_first_step_earned: "First application filed",
+      milestone_first_step_working: "File your first application",
+      milestone_ten_steps_earned: "Ten applications filed",
+      milestone_ten_steps_working: "File 10 applications",
+      milestone_fifty_steps_earned: "Fifty applications filed",
+      milestone_fifty_steps_working: "File 50 applications",
+      milestone_grounded_earned: "First match computed",
+      milestone_grounded_working: "Run your first match",
+      milestone_first_rehearsal_earned: "First rehearsal done",
+      milestone_first_rehearsal_working: "Hold your first rehearsal",
+      milestone_five_rehearsals_earned: "Five rehearsals done",
+      milestone_five_rehearsals_working: "Hold 5 rehearsals",
+      milestone_letter_wright_earned: "Three letters kept",
+      milestone_letter_wright_working: "Keep 3 letters",
+      milestone_first_offer_earned: "First offer received",
+      milestone_first_offer_working: "Receive your first offer",
+      milestone_shelf_full_earned: "Three offers on the shelf",
+      milestone_shelf_full_working: "Hold 3 offers at once",
+      milestone_streak_week_earned: "A seven-day streak",
+      milestone_streak_week_working: "Act 7 days in a row",
       title: "Growth report",
       description:
         "Readiness, the gap behind it, the market's salary band, a phased learning plan, and what moved since your last run.",

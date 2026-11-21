@@ -57,10 +57,12 @@ describe("MilestoneShelf", () => {
 
     const html = renderToStaticMarkup(<MilestoneShelf />);
 
-    // Earned: full words. Working: the progress bar and its ratio.
-    expect(html).toContain("First application filed");
-    expect(html).toContain("File 50 applications");
-        expect(html).toContain('aria-valuenow="10"');
+    // Earned/working wording comes from the locale table, not a hard-coded English map,
+    // so a Chinese reader never sees an English sentence (copy-census gate). The mock's
+    // t() echoes the key, which is exactly what we assert here.
+    expect(html).toContain("[growth.milestone_first_step_earned]");
+    expect(html).toContain("[growth.milestone_fifty_steps_working]");
+    expect(html).toContain('aria-valuenow="10"');
     expect(html).toContain("width:20%");
     expect(html).toContain("[growth.milestoneProgress|10,50]");
     expect(html).toContain("[growth.milestoneEarned]");
@@ -83,7 +85,7 @@ describe("MilestoneShelf", () => {
     };
 
     const html = renderToStaticMarkup(<MilestoneShelf />);
-    expect(html).toContain("Receive your first offer");
+    expect(html).toContain("[growth.milestone_first_offer_working]");
     expect(html).not.toContain("role=\"progressbar\"");
   });
 });

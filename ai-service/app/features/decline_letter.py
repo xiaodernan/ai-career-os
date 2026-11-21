@@ -88,7 +88,7 @@ async def decline_letter(offer: dict, *, locale: str = "en",
                                              "SNAPSHOT", json.dumps(snapshot,
                                                           ensure_ascii=False,
                                                           default=str)[:2400]))),
-                temperature=0.0, max_tokens=700),
+                temperature=0.2, max_tokens=700),
                 user_id=user_id, run_id=run_id, agent="offer_negotiator",
                 kind="decline_letter")
         except Exception:

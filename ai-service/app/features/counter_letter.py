@@ -111,7 +111,7 @@ async def counter_offer_letter(offer: dict, siblings: list | None, *, locale: st
                                              "SNAPSHOT", json.dumps(snapshot,
                                                           ensure_ascii=False,
                                                           default=str)[:2400]))),
-                temperature=0.0, max_tokens=700),
+                temperature=0.2, max_tokens=700),
                 user_id=user_id, run_id=run_id, agent="offer_negotiator",
                 kind="counter_offer_letter")
         except Exception:

@@ -55,7 +55,7 @@ async def recommend(snapshot: dict, *, user_id: str | None = None,
                                              "SNAPSHOT", json.dumps(snapshot,
                                                                   ensure_ascii=False,
                                                                   default=str)[:6000]))),
-                temperature=0.0, max_tokens=700),
+                temperature=0.2, max_tokens=700),
                 user_id=user_id, run_id=run_id, agent="admin", kind="counsel")
         except Exception:
             out = {}

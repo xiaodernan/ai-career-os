@@ -170,7 +170,9 @@ describe("the browser's copy", () => {
     // 216 with Epic 332: `components/replies/inbound-decode.tsx`, the analyst's read of one letter.
     // 217 with Epic 336: `components/interviews/interview-thank-you-letter.tsx`, the letter the reader sends after the interview.
     // 218 with Epic 337: `components/offers/offer-negotiation-prep.tsx`, the twelve lines the reader carries into the negotiation call.
-    expect(browserSources().length).toBe(218);
+    // 219 with Epic 273: `components/growth/milestone-shelf.tsx`, the earned badge strip — its
+    // milestone wording now reads from the locale table instead of a hard-coded English map.
+    expect(browserSources().length).toBe(219);
   });
 
   it("finds a sentence, however long it is", () => {

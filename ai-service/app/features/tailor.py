@@ -94,7 +94,7 @@ async def tailor(resume_structured: dict, resume_text: str, jd: dict, *, user_id
                        f"everything it rejected must not reappear): {state['verifier_feedback']}")
         req = LLMRequest(
             messages=stable_messages(SYSTEM, LLMMessage("user", prompt)),
-            temperature=0.0, max_tokens=4000)
+            temperature=0.2, max_tokens=4000)
         out = await ask_json(req, user_id=user_id, run_id=run_id, agent="resume", kind="tailor")
         out = out if isinstance(out, dict) else {}
         return NodeResult(state={"out": out, "attempts": state["attempts"] + 1},

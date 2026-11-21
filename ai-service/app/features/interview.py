@@ -162,7 +162,7 @@ async def opening_question(*, mode: str, company: str, position: str, resume_ctx
             messages=stable_messages("You conduct realistic mock job interviews. "
                                      "Ask exactly ONE question. Be concise.",
                                      LLMMessage("user", prompt)),
-            temperature=0.0, max_tokens=260),
+            temperature=0.7, max_tokens=260),
             user_id=user_id, run_id=run_id, agent="interview", kind="interview_open")
         return NodeResult({"raw": resp.text, "model": resp.model}, "verify",
                           trace={"rawChars": len(resp.text or "")})
