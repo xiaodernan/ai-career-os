@@ -49,15 +49,16 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 30 | 项目体量大、细节密集 | DONE (ongoing) | 122 epics, 408 work items, 180 test files, per the regenerate-on-push showcase |
 | 31 | RSS 之类大模型缓存效率 | MEASURED | see row 18; prefix discipline already in every LLM call |
 | 32 | 个人展示页 https://xiaodernan.github.io/ 同步 | DONE | showcase.html auto-regenerates on every push; the portfolio card (project 06, Monday 13:30 UTC sync) was added after push access; `sync-career-os.yml` watches `main` and pushes `latest.json` weekly — the site load fetches it straight from raw.githubusercontent with `assets/career-os/latest.json` as the cached fallback. 433 crons run every week against the public URL and only the fallback moves; real routes are linked from the card |
-| 33 | 优化措施 / unclogging 前端 | PARTIAL | see rows 10–11; settings at 337.6 of 340 kB gzip; budget split pending |
+| 33 | 优化措施 / unclogging 前端 | DONE (2026-11-22) | Epic 358 paid the shared-table debt: every route shed ~152 kB gzip (knowledge 374.1 → 222.2) and the budget was TIGHTENED 366 → 230 rather than raised; rows 10–11 still await a browser |
 | 34 | 前端渲染验证/视觉巡检 | PARTIAL | SSR byte-audits and component tests only; in-app browser has not reached `:3000`/`:8080` from this host |
 | 35 | 每次只动手做、不问 | DONE (process) | the plan drives; blockers are noted, never waited on |
 | 36 | 外围需求全部执行 | DONE/PARTIAL as above | nothing silently dropped — this ledger is the accounting |
 
 ## Standing next (the honest queue)
 
-1. **The per-locale translations split** — the structural answer the bundle
-   budget keeps asking for; a routing-level change, not a patch.
+1. ~~**The per-locale translations split**~~ — DONE (Epic 358, 2026-11-22). It was
+   not a routing-level change after all: the table crosses into the RSC payload with the
+   HTML, and the spare language is a chunk warmed on hover. -152 kB gzip per route.
 2. **Hint coverage of every primary control** — roll `components/ui/hint.tsx`
    through dashboard/jobs/admin/kanban systematically.
 3. **Render verification on a roomier host** — the visual sweep this ledger's

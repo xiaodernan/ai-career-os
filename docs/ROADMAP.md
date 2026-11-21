@@ -8198,6 +8198,43 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **358** The reader's language ships with the HTML, not with the JavaScript (2026-11-22).
+
+  Epic 265 named this as the architecture's standing debt and the budget header was raised
+  eight times to accommodate it: both bilingual tables rode in the client bundle for every
+  route, whatever language the page painted. Measured on this host before the change, six
+  routes were over budget — knowledge 374.1 kB, jobs 372.9, applications 371.9, jobs/[id]
+  370.4, offers 370.3, replies 368.9 — against a 366 kB line that had been raised from 310
+  in nine documented steps, every one of them "the same shared table every route pays".
+
+  The split is one seam and one direction. `lib/i18n/translations.ts` keeps both tables as
+  the server's own module and exports `LocaleTable` as a *type* only; `RootDocument` (a
+  server component) picks the reader's table from the cookie and hands it to the provider,
+  so it crosses into the RSC payload with the HTML. No shipped module imports a table
+  statically any more — the other language is `import("./en")` / `import("./zh")`, a chunk
+  of its own. `locale-context.tsx` holds the served table once, renders from it, and asks
+  for the spare only when the reader moves: the switcher warms it on hover and focus, so a
+  switch that is taken is instant and a reader who never switches never sends the bytes.
+
+  Measured on this host, same tree, before → after: knowledge 374.1 → 222.2,
+  jobs 372.9 → 221.0, applications 371.9 → 220.1, jobs/[id] 370.4 → 218.5,
+  offers 370.3 → 218.5, replies 368.9 → 217.1. The budget is therefore **tightened**
+  366 → 230 with the reason written in the gate's own header, not raised again. A first-load
+  chunk audit confirms neither table is in any route's first load; the two chunks that hold
+  them belong to `/global-error`, which stands where the shell used to be and loads only
+  when the layout threw.
+
+  Verified against a real `next start` on this host, not only in tests: a `zh` cookie
+  answers 335,614 bytes of HTML carrying the Chinese table and no English one (no
+  "growth report"), and an English request the reverse — the two languages no longer
+  travel together. `translate()` outside a render still answers in the language the
+  cookie names, because the provider mirrors the rendered table for it. Tests: a new
+  `locale-table-split.test.tsx` (7) pins the seam — the handed-in table renders, a
+  provider with no table answers from the installed ones rather than printing keys, and
+  no shipped module names a table again; the vitest setup installs both tables for tests
+  that render the provider directly, which is the one place the seam has nowhere else to
+  stand. Full frontend suite 1650 passed, tsc clean, eslint clean on the touched files.
+
 - [x] **357** The Career Atlas — an open world drawn only from facts the reader made (2026-11-21).
 
   Brief VI: "无尽开放世界……辽阔的土地上要有足够多细节". The ledger already held the
