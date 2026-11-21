@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **373** The search and the reading are two questions, and the page says so (2026-11-22).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明，方便用户理解". The replies page
+  asks two separate questions — which words, and which reading — and the controls
+  give a reader no way to know that: clearing the words leaves the reading, and
+  picking "Rejections" leaves the words. A reader who assumed otherwise lost their
+  filter and never knew why.
+
+  Both controls now carry a hint saying so, on the control itself, which is where a
+  reader looks. The clear button's hint appears only while words are on screen —
+  that is the only moment a reader could wonder what clearing would take with it.
+
+  EN+ZH, two keys each. Radix mounts a tooltip's body only while it is open, so the
+  test pins the trigger (the clear button's trigger is the one that appears only
+  with words) and the copy table's own parity gate holds the sentences. Replies
+  suites 96/96, tsc clean, eslint clean.
+
 - [x] **372** A search that found nothing is a reader who could not find their way (2026-11-22).
 
   Brief IX names the behaviour directly: "不知道去哪就瞎点". A room-hop (Epic 353) says
