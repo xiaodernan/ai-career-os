@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T14:35:49.598431Z",
+  "generated_at": "2026-11-21T15:01:53.602857Z",
   "branch": "main",
-  "head": "115bd9b",
-  "total_commits": 1738,
-  "milestone": "Epic 354",
-  "milestone_full": "the ledger of done epics (through 507 items), closed at Epic 354 — The Career Chronicle",
+  "head": "2a07d59",
+  "total_commits": 1739,
+  "milestone": "Epic 356",
+  "milestone_full": "the ledger of done epics (through 509 items), closed at Epic 356 — The auto-sync measures what it ships",
   "pushed_at": "2026-11-21",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1583+",
   "test_files": 204,
-  "work_items": 507,
-  "epics": 220,
+  "work_items": 509,
+  "epics": 222,
   "feature_surface": [
+    "Epic 356 — The auto-sync measures what it ships",
+    "Epic 355 — The auto-sync actually runs",
     "Epic 354 — The Career Chronicle",
     "Epic 353 — The lost reader, made visible",
     "Epic 352 — Ask your evidence",
-    "Epic 351 — The manual speaks",
-    "Epic 350 — The journey, at a glance",
-    "Epic 349 — Skills, not silence"
+    "Epic 351 — The manual speaks"
   ]
 }

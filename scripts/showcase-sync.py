@@ -164,7 +164,7 @@ def page() -> str:
     <div class="cell"><b>{TOP_EPICS}</b><span>top-level epics shipped</span></div>
     <div class="cell"><b>{ITEM_EPICS}</b><span>work items, all verified</span></div>
     <div class="cell"><b>{NAV_ROUTES}</b><span>signed-in routes</span></div>
-    <div class="cell"><b>{TESTS}</b><span>unit tests green</span></div>
+    <div class="cell"><b>{TESTS}</b><span>unit tests in the suite</span></div>
     <div class="cell"><b>2</b><span>languages, full parity</span></div>
   </div>
 
@@ -176,7 +176,7 @@ def page() -> str:
   </div>
 
   <p><a class="cta" href="https://github.com/xiaodernan/ai-career-os">View on GitHub →</a></p>
-  <p class="muted">{VITEST_FILES} test files, {len(ROUTES)} page routes. Offline harness: mock LLM / hash embeddings. Regenerated automatically by CI whenever the measured numbers move.</p>
+  <p class="muted">{VITEST_FILES} test files, {len(ROUTES)} page routes. Offline harness: mock LLM / hash embeddings. Regenerated from the checked-out head by the portfolio sync workflow.</p>
 </main>
 </body>
 </html>"""
