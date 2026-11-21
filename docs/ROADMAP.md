@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **374** How long it has been since the reader last rehearsed (2026-11-22).
+
+  Brief VI asks for "新的后续环节" and for a world that keeps giving. The rehearsal list
+  shows what happened; this says what has NOT happened lately. A rehearsal is a
+  skill and a skill goes stale, so the reader who took four in October and none
+  since is not lazy — they are out of the habit, and nothing on the page said so.
+
+  It is a nudge, never a score: no count of days is framed as a failure, and a reader
+  who has never rehearsed gets a different sentence (they have not started) rather
+  than the same one with a bigger number. The bands are stated in days because that
+  is the unit a reader thinks in, and the sentence names the last rehearsal's own
+  date rather than a derived number.
+
+  Six pure tests on the rule — the newest row wins, the three bands at their edges,
+  the never-rehearsed case, a date the parser cannot read, and a clock ahead of the
+  row — plus three on the card. Copy census 232 → 233; interview suites 105/105,
+  tsc clean, eslint clean.
+
 - [x] **373** The search and the reading are two questions, and the page says so (2026-11-22).
 
   Brief V: "主界面给各种按键和操作加上附带的教学说明，方便用户理解". The replies page
