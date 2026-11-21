@@ -4474,6 +4474,12 @@ export const en = {
       analysisThinking: "Analyzing…",
       analysisActions: "What to do",
       analysisRisks: "What to watch",
+      measuresTitle: "Deep optimisation measures",
+      measuresLede: "Ordered by impact. Every measure cites a number from this install's own ledger; nothing here invents a figure or names a reader.",
+      measureImpact: "Expected impact",
+      effortLow: "Low effort",
+      effortMedium: "Medium effort",
+      effortHigh: "High effort",
       analysisEmpty: "The analyst returned nothing worth listing — not encouragement, the plain fact that the install is not in trouble right now.",
       optimizationsLede:
         "These aren't invented ideas — they're rules reading this page's own wires at the moment you opened it. A rule that cannot see its input stays silent; pick the top item that smells hardest and start there.",

@@ -4182,6 +4182,12 @@ export const zh = {
       analysisThinking: "分析中……",
       analysisActions: "该做的事",
       analysisRisks: "警报",
+      measuresTitle: "深度优化措施",
+      measuresLede: "按影响力排序。每条措施都引用了本系统账本里的真实数字——不编造数据，也不点名任何读者。",
+      measureImpact: "预期影响",
+      effortLow: "低成本",
+      effortMedium: "中等成本",
+      effortHigh: "高成本",
       analysisEmpty: "分析器没有返回什么值得列出来的——这不是鼓励，这就是直说：事情现在不是一片糟。",
       optimizationsLede:
         "这些不是编出来的建议——它们是这一页自己的数据线在你打开它那一刻跑出来的规则。看不到输入的规则保持沉默；从最难闻的那一条开工。",

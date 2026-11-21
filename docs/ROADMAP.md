@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **342** The second voice sees the whole install — grounded deep optimisation measures (2026-11-21).
+
+  Brief item IX: "管理员页面能监控所有用户的统计数据、做分析和趋势预测，并根据这些数据
+  给出下一步应该采取的深度优化措施". An LLM analyst already existed (Epic 320), but it was
+  handed only cache/trends/attention/funnel — blind to the 20 global counters (`stats`) and
+  the cohort retention the page actually renders — and its output was a 70-word summary plus
+  200-char strings, with no structured measures. Two honest fixes: `analystSnapshot()` now
+  includes `stats` + `cohort` (same aggregates, no PII, no new wire names), and `counsel.py`
+  emits a `measures[]` artifact — `{title, evidence, why, expected_impact, effort, sequence}`
+  — under the same digit-grounding verifier: a measure citing no snapshot number is dropped,
+  effort is clamped to low/medium/high, at most four, ordered by impact. The admin page
+  renders them as a prioritised ledger with effort badges. Live-probed on gpt-6.2-sol via
+  the 7897 proxy with an enriched snapshot: 3 grounded measures (0 dropped), each citing
+  real numbers (2,641 landings→11 acts, 27 tailor calls at 5.9%, 7,889→934→48 funnel),
+  with impact + effort + sequence. `test_counsel_analyst.py` 6/6 (new grounded-measures case),
+  frontend 1564, ai-service 2994, tsc + next build green.
+
 - [x] **341** The gate that reports — the pressure probe survives its own saturation (2026-11-21).
 
   Brief item #11 asks for a real pressure run: "模拟海量用户、高并发、瞬间大数据量冲击系统

@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -71,6 +72,16 @@ interface AdminFunnel {
 interface AdminCohort {
   cohort?: Array<{ week: string; registered: number; active: number }>;
   weeksRequested?: number;
+}
+
+/** Epic 342 — one grounded optimisation measure from the LLM analyst. */
+interface AdminMeasure {
+  title?: string;
+  evidence?: string;
+  why?: string;
+  expected_impact?: string;
+  effort?: "low" | "medium" | "high";
+  sequence?: number;
 }
 
 interface AdminAttentionItem {
@@ -178,12 +189,18 @@ export default function AdminPage() {
   const [analystState, setAnalystState] = React.useState<
     | { status: "idle" }
     | { status: "thinking" }
-    | { status: "done"; summary: string; actions: string[]; risks: string[] }
+    | { status: "done"; summary: string; actions: string[]; risks: string[]; measures: AdminMeasure[] }
     | { status: "empty" }
   >({ status: "idle" });
 
   // The snapshot the analyst sees: the same aggregates the page already draws, in one shape.
+  // Epic 342: include the 20 global counters and the cohort retention rows the page
+  // renders — previously the model was asked for a "deep read of the install" while
+  // being shown only cache/weekly/attention/funnel, so it could not reason over the
+  // user counts or retention at all. Same aggregates, no PII, no new wire names.
   const analystSnapshot = React.useCallback(() => ({
+    stats: stats ?? undefined,
+    cohort: cohort?.cohort ?? undefined,
     cache: cacheEconomy ? {
       calls: cacheEconomy.totals?.calls ?? 0,
       input_tokens: cacheEconomy.totals?.input_tokens ?? 0,
@@ -203,16 +220,17 @@ export default function AdminPage() {
       dwellPerLandingMs: attention.dwellPerLandingMs,
     } : undefined,
     funnel: funnel?.stages ?? undefined,
-  }), [cacheEconomy, trends, attention, funnel]);
+  }), [stats, cohort, cacheEconomy, trends, attention, funnel]);
 
   // Epic 320 — the overseer presses this and the ai-service reads one more pass over the aggregates.
   const runAnalyst = React.useCallback(async () => {
     setAnalystState({ status: "thinking" });
     try {
       const data = await api.create<{
-        summary?: string; actions?: string[]; risks?: string[]; empty?: boolean;
+        summary?: string; actions?: string[]; risks?: string[]; measures?: AdminMeasure[]; empty?: boolean;
       }>(endpoints.admin.counselLlm, { snapshot: analystSnapshot() });
-      const hasContent = Boolean(data.summary && data.summary.trim()) || (data.actions?.length ?? 0) > 0;
+      const hasContent = Boolean(data.summary && data.summary.trim())
+        || (data.actions?.length ?? 0) > 0 || (data.measures?.length ?? 0) > 0;
       if (!hasContent) {
         setAnalystState({ status: "empty" });
         return;
@@ -222,6 +240,7 @@ export default function AdminPage() {
         summary: data.summary ?? "",
         actions: data.actions ?? [],
         risks: data.risks ?? [],
+        measures: data.measures ?? [],
       });
     } catch {
       setAnalystState({ status: "empty" });
@@ -825,6 +844,36 @@ export default function AdminPage() {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {analystState.measures.length > 0 && (
+              <div className="border-t border-primary/15 pt-3">
+                <p className="text-2xs uppercase tracking-widest text-primary">{t("admin.measuresTitle")}</p>
+                <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">{t("admin.measuresLede")}</p>
+                <ol className="mt-3 grid gap-2">
+                  {analystState.measures.map((m, i) => (
+                    <li key={i} className="rounded-xl border border-border/60 bg-background/60 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="flex items-center gap-2 text-sm font-semibold">
+                          <span className="tabular-nums text-primary">{String(m.sequence ?? i + 1).padStart(2, "0")}</span>
+                          {m.title}
+                        </p>
+                        <Badge variant={m.effort === "high" ? "destructive" : m.effort === "medium" ? "warning" : "secondary"} className="shrink-0 font-normal">
+                          {t(m.effort === "high" ? "admin.effortHigh" : m.effort === "medium" ? "admin.effortMedium" : "admin.effortLow")}
+                        </Badge>
+                      </div>
+                      {m.evidence && (
+                        <p className="mt-1.5 text-xs leading-relaxed font-mono text-primary/80">{m.evidence}</p>
+                      )}
+                      {m.why && <p className="mt-1 text-xs leading-relaxed text-foreground/80">{m.why}</p>}
+                      {m.expected_impact && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          <span className="font-semibold">{t("admin.measureImpact")}:</span> {m.expected_impact}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
           </div>

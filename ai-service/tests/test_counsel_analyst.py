@@ -70,8 +70,8 @@ async def test_provider_failure_answers_silent(monkeypatch):
         raise RuntimeError("provider down")
     monkeypatch.setattr(counsel_mod, "ask_json", boom)
     out = await counsel_mod.recommend(_SNAPSHOT)
-    assert out == {"summary": "", "actions": [], "risks": [],
-                   "actions_dropped": 0, "risks_dropped": 0}
+    assert out == {"summary": "", "actions": [], "risks": [], "measures": [],
+                   "actions_dropped": 0, "risks_dropped": 0, "measures_dropped": 0}
 
 
 @pytest.mark.asyncio
@@ -80,8 +80,8 @@ async def test_non_dict_model_answer_answers_silent(monkeypatch):
         return ["not", "a", "dict"]
     monkeypatch.setattr(counsel_mod, "ask_json", fake)
     out = await counsel_mod.recommend(_SNAPSHOT)
-    assert out == {"summary": "", "actions": [], "risks": [],
-                   "actions_dropped": 0, "risks_dropped": 0}
+    assert out == {"summary": "", "actions": [], "risks": [], "measures": [],
+                   "actions_dropped": 0, "risks_dropped": 0, "measures_dropped": 0}
 
 
 def test_digit_run_parsing():
@@ -89,3 +89,35 @@ def test_digit_run_parsing():
     # percent signs so "84.3%" matches the snapshot's "84.3".
     assert counsel_mod._digit_runs("at 2.7% with 1,658 and 0.4") == {"2.7", "1658", "0.4"}
     assert counsel_mod._digit_runs("54.7 hit rate") == {"54.7"}
+
+
+@pytest.mark.asyncio
+async def test_measures_are_structured_and_grounded(monkeypatch):
+    """Epic 342: deep optimisation measures arrive as a grounded, clamped structure —
+    an unanchored measure is dropped, an unknown effort grade is clamped to medium.
+    """
+    async def fake_ask_json(req, **kw):
+        return {
+            "summary": "517:324 cached; 11 acts from 2641 landings.",
+            "actions": [], "risks": [],
+            "measures": [
+                {"title": "Fix attention cliff", "evidence": "only 11 acts from 2641 landings",
+                 "why": "Most visits leave without acting", "expected_impact": "raise acts",
+                 "effort": "low", "sequence": 1},
+                {"title": "Ungrounded", "evidence": "double the sky-wide metric",
+                 "why": "x", "expected_impact": "y", "effort": "high", "sequence": 2},
+                {"title": "Odd effort", "evidence": "watch 5.9% cache tailoring",
+                 "why": "cold tails cost", "expected_impact": "raise hit pct",
+                 "effort": "catastrophic", "sequence": 3},
+            ],
+        }
+
+    monkeypatch.setattr(counsel_mod, "ask_json", fake_ask_json)
+    out = await counsel_mod.recommend(_SNAPSHOT)
+    assert out["measures_dropped"] == 1  # the sky-wide one cited no snapshot digit
+    measures = out["measures"]
+    assert len(measures) == 2
+    first = next(m for m in measures if m["title"] == "Fix attention cliff")
+    assert first["effort"] == "low" and first["sequence"] == 1
+    odd = next(m for m in measures if m["title"] == "Odd effort")
+    assert odd["effort"] == "medium"  # clamped from "catastrophic"

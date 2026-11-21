@@ -3266,7 +3266,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 14),
         # 141 rather than 140 since Epic 319's cache-economy tile grew the import block above it
         # by one line; the sentence itself did not change.
-        ("frontend/src/app/admin/admin-page.tsx", 141),
+        # 152 rather than 141 since Epic 342's AdminMeasure interface + Badge import grew
+        # the block above it by eleven lines; the sentence itself did not change.
+        ("frontend/src/app/admin/admin-page.tsx", 152),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.
