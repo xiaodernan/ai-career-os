@@ -298,6 +298,19 @@ export interface Evidence {
   source?: { docTitle?: string; docId?: string; path?: string[]; kind?: string };
 }
 
+/**
+ * A grounded RAG answer over the reader's own evidence (knowledge/answer).
+ * `answer` carries inline [n] markers; `citations[i-1]` is the quote marker [n]
+ * points at. The engine's verify node strikes citations that point past the
+ * retrieved set, and nothing from a non-ready document is ever quoted.
+ */
+export interface RagAnswerResult {
+  answer?: string | null;
+  citations?: Evidence[];
+  understanding?: Record<string, unknown> | null;
+  run_id?: string;
+}
+
 /* ------------------------------------------------------------------ */
 /* Companies                                                          */
 /* ------------------------------------------------------------------ */

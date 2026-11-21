@@ -8198,6 +8198,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **352** Ask your evidence — the grounded RAG answer engine finally gets a front door (2026-11-21).
+
+  The deepest LLM-integration gap left in the product: `POST /internal/rag/answer`
+  was a fully-built bounded StateGraph (retrieve → answer(LLM) → verify → render,
+  with deterministic citation strike-through) that NO screen reached — no Java
+  bridge, no frontend caller; even the copilot's agent tools bypassed it by calling
+  `pipeline.retrieve` directly. Bridged end-to-end:
+  - backend: `AiServiceClient.ragAnswer` default + `HttpAiServiceClient` impl
+    (camelCase → snake_case translation under the caller's X-User-Id),
+    `RagAnswerRequest` record, `RagAnswerController` at `POST /api/v1/knowledge/answer`.
+  - frontend: `endpoints.knowledgeAnswer`, `RagAnswerResult` type, `useRagAnswer`
+    hook (`field()`-built body), `AskKnowledgeCard` on /knowledge. The answer's
+    inline `[n]` markers render as SourceChips with titles from the verified
+    citation list — the app invents no citation the engine did not return.
+  - gates: `test_api_doc_contract.py` unreached 8→7 + response-claims +1,
+    API.md internal row un-marked + public row added, copy census 226→227,
+    en/zh knowledge keys + `failures.ragAnswer`. Hook wire-shape test + component
+    smoke test added.
+  Verified: ai-service contracts 19 passed, backend compiles, frontend **1578 passed**,
+  tsc + next build green. 4 backend failures (HealthIT ×2, DashboardRepositoryTest
+  ×3 columns) were confirmed pre-existing on clean HEAD — unrelated to this bridge.
+
 - [x] **351** The manual speaks — per-section instructional text in the in-app handbook (2026-11-21).
 
   Brief VII: "简明说明书小册子，嵌入到项目里……简明描述用户如何充分体验、使用项目的所有完整功能".

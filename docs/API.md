@@ -653,6 +653,7 @@ catalogue, so the palette and the board rank one query the same way.
 | DELETE | `/knowledge/sources/{id}` | |
 | POST | `/knowledge/text` | ingest inline text (`{kind, title, refId?, text}`) |
 | POST | `/knowledge/documents` | ingest an uploaded document: multipart `file`, optional `kind` and `title`; the source row and its document row are filed in one transaction, so an upload that cannot store its document stores neither |
+| POST | `/knowledge/answer` | ask a grounded LLM question over the caller's own ready evidence (`{query, kinds?, documentIds?, topK?, contextSummary?}`) → `{answer, citations, understanding, run_id}`; the ai-service StateGraph retrieve → answer → verify → render strikes any `[n]` citation that points past the retrieved set, and nothing from a non-ready document is ever quoted (backend `ragAnswer`, driven by the knowledge page's "Ask your evidence" card) |
 | GET | `/knowledge/notes/tags` | the caller's own tag vocabulary with a count per tag (69.2); the labels are read from the same `text[]` column the notes list filters on, and a note with no tags is in the list's total but in no tag's count |
 | GET / POST / PATCH / DELETE | `/knowledge/notes`, `/knowledge/notes/{id}` | user notes; `GET` pages with `page`/`size` and narrows to one `tag` (64.2) — the report's keep actions tag their notes `interview`/`study`/`answer`/`gap`/`prepare`, so a tag is how the knowledge page finds the advice a rehearsal left |
 
@@ -834,7 +835,7 @@ crosses the wire now so the mapping can grow a vocabulary later.
 | POST | `/internal/ingest/text` | ingest inline text |
 | POST | `/internal/rag/embeddings` | `{text}` → `{embedding}`: one query vector for the backend's hybrid `/jobs` ranking; an empty list means no provider could answer, so the caller ranks keyword-only |
 | POST | `/internal/rag/retrieve` | hybrid retrieval + citations (no backend caller: retrieval happens in-process, agent tools -> pipeline.retrieve) |
-| POST | `/internal/rag/answer` | retrieval + grounded answer (no backend caller: same, for the grounded-answer variant) |
+| POST | `/internal/rag/answer` | retrieval + grounded answer (`{query, kinds?, document_ids?, top_k?, context_summary?}` → `{answer, citations, understanding, run_id}`); backend `ragAnswer`, driven by the knowledge page's "Ask your evidence" card |
 | POST | `/internal/rag/chunks` | chunk listing / inspection (no backend caller: kept for operators) |
 | GET | `/internal/rag/cache` | this process's cache backend and counters (hits, misses, errors, l2 hits, single-flight leaders/joined); per-process by design. (no backend caller: operator diagnostic: one process's cache counters, no screen reads them) |
 | POST | `/internal/rag/cache/invalidate` | `{}` → `{invalidated, generation}`: bump this user's RAG epoch so cached retrievals stop quoting a just-deleted note/source/resume; scoped to the caller's `X-User-Id`, fail-open (`invalidated=false` if the cache is off or the store is down). Backend `invalidateCache`, driven by `RagCacheInvalidator` after a delete transaction commits |

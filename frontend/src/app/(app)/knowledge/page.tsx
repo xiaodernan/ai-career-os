@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SourceDeleteButton, SourceUploadCard } from "@/components/knowledge/source-actions";
 import { NotesPanel } from "@/components/knowledge/notes-panel";
+import { AskKnowledgeCard } from "@/components/knowledge/ask-knowledge-card";
 import { useKnowledgeSources } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -133,6 +134,10 @@ export default function KnowledgePage() {
         </Card>
       )}
     />
+    {/* Ask your evidence — the grounded-answer engine's front door. It answers only
+      from the reader's own ready documents, with verified [n] citations; when a
+      citation focuses one source (`?src=`) the whole-board question is hidden. */}
+    {!src && <AskKnowledgeCard />}
     {/* Notes live beside the sources, not inside them: a note is its own UserNote row, not an
       ingested document, and the `?src=` citation focus narrows documents only. */}
     {!src && <NotesPanel />}

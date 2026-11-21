@@ -100,6 +100,19 @@ public interface AiServiceClient {
     }
 
     /**
+     * A grounded answer over the reader's OWN ingested evidence (RAG). The ai-service runs a
+     * bounded StateGraph retrieve → answer → verify → render: the answer carries inline [n]
+     * markers, verify deterministically strikes citations that point past the retrieved set,
+     * and everything quoted comes from the caller's ready documents only. The backend forwards
+     * the query + optional filters under the caller's user id; no user rows leave this install.
+     */
+    default Map<String, Object> ragAnswer(String query, List<String> kinds,
+                                          List<String> documentIds, Integer topK,
+                                          String contextSummary, UUID userId) {
+        return Map.of();
+    }
+
+    /**
      * Epic 344 — one grounded first-impression paragraph over the reader's parsed
      * resume. The payload is a PII-light summary the backend builds from the owned
      * row; the engine answers {impression} or null when nothing grounded survives.

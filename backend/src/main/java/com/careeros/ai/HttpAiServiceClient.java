@@ -302,6 +302,27 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> ragAnswer(String query, List<String> kinds,
+                                         List<String> documentIds, Integer topK,
+                                         String contextSummary, UUID userId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("query", query);
+        if (kinds != null && !kinds.isEmpty()) {
+            body.put("kinds", kinds);
+        }
+        if (documentIds != null && !documentIds.isEmpty()) {
+            body.put("document_ids", documentIds);
+        }
+        if (topK != null) {
+            body.put("top_k", topK);
+        }
+        if (contextSummary != null && !contextSummary.isBlank()) {
+            body.put("context_summary", contextSummary);
+        }
+        return post("/internal/rag/answer", userId, body);
+    }
+
+    @Override
     public Map<String, Object> resumeImpression(Map<String, Object> payload, UUID userId, String locale) {
         Map<String, Object> body = new HashMap<>();
         body.put("payload", payload == null ? Map.of() : payload);

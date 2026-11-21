@@ -134,6 +134,8 @@ export const endpoints = {
   knowledgeNote: (id: string) => `/knowledge/notes/${seg(id)}`,
   knowledgeText: "/knowledge/text",
   knowledgeDocuments: "/knowledge/documents",
+  /** A grounded LLM answer over the caller's own ready evidence, with verified [n] citations. */
+  knowledgeAnswer: "/knowledge/answer",
 
   /* ---------------- AI actions (thin proxies over ai-service) ------------ */
   contacts: "/contacts",
