@@ -4667,6 +4667,10 @@ export const en = {
       attentionActs: "Acts",
       attentionBounces: "Impatient bounces",
       attentionBounceRate: "Bounce rate",
+      // 372: a search that found nothing — the strongest "lost reader" signal there
+      // is, because the reader asked and the product had no answer.
+      attentionSearchMiss: "Searches with no result",
+      attentionSearchMissWords: "What they searched for and did not find",
       attentionAimless: "Aimless clicks",
       attentionAnonymousLandings: "Anonymous landings",
       attentionSignedLandings: "Signed landings",

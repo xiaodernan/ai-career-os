@@ -48,6 +48,11 @@ public class AttentionAdminService {
         out.put("bounceRatePct", landings == 0L ? 0.0
                 : Math.round((10000.0 * bounces / landings)) / 100.0);
         out.put("aimless", one("SELECT count(*) FROM attention_events WHERE event='aimless' AND created_at >= now() - interval '" + days + " days'"));
+        // 372: a search that found nothing is the strongest "lost reader" signal there
+        // is -- the reader asked and the product had no answer. Counted beside the
+        // aimless hop, because one is a reader moving and the other is a reader asking.
+        out.put("searchMiss", one("SELECT count(*) FROM attention_events WHERE event='search_miss' AND created_at >= now() - interval '" + days + " days'"));
+        out.put("searchMissWords", topWords(days));
         out.put("signedLandings",    one("SELECT count(*) FROM attention_events WHERE event='land' AND user_id IS NOT NULL AND created_at >= now() - interval '" + days + " days'"));
         out.put("anonymousLandings", one("SELECT count(*) FROM attention_events WHERE event='land' AND user_id IS NULL AND created_at >= now() - interval '" + days + " days'"));
 
@@ -71,6 +76,23 @@ public class AttentionAdminService {
                     + " GROUP BY path ORDER BY landings DESC LIMIT 12");
         out.put("topLandings", topLandings);
         return out;
+    }
+
+    /**
+     * 372: the words readers searched for and did not find, most-searched first.
+     *
+     * A count says the product failed somebody; the word says who and what for, which
+     * is the difference between a metric and a to-do. Bounded to five because an
+     * operator reads this line, not a table -- and the words are already short, since
+     * the sensor drops a paste rather than storing it.
+     */
+    private List<Map<String, Object>> topWords(int days) {
+        String sql = "SELECT value AS word, count(*) AS misses "
+                + "FROM attention_events "
+                + "WHERE event='search_miss' AND value IS NOT NULL AND value <> '' "
+                + "AND created_at >= now() - interval '" + days + " days' "
+                + "GROUP BY value ORDER BY count(*) DESC, value ASC LIMIT 5";
+        return jdbc.queryForList(sql);
     }
 
     private long one(String sql) {

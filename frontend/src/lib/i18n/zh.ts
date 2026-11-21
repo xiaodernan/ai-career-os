@@ -4369,6 +4369,10 @@ export const zh = {
       attentionActs: "动作",
       attentionBounces: "没耐心跳出",
       attentionBounceRate: "跳出率",
+      // 372: 一次没有结果的搜索——这是最强的「读者迷失」信号，因为读者问了，而产品
+      // 没有答案。
+      attentionSearchMiss: "没有结果的搜索",
+      attentionSearchMissWords: "他们搜了但没找到的词",
       attentionAimless: "瞎点次数",
       attentionAnonymousLandings: "匿名落点",
       attentionSignedLandings: "注册用户落点",

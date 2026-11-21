@@ -19,6 +19,7 @@ import { api } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { normalizeSearch, searchGroupNames } from "@/lib/api/normalize";
 import { clearRecentSearches, loadRecentSearches, rememberSearch } from "@/lib/recent-searches";
+import { SearchMiss } from "@/components/common/search-miss";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { SearchResults } from "@/lib/api/types";
 import { FileText, Briefcase, Building2, History, Mail, MessageSquare, LayoutDashboard, CornerDownLeft, Loader2, Trash2, BookOpen, type LucideIcon } from "lucide-react";
@@ -189,7 +190,17 @@ export function CommandPaletteProvider({
               </div>
             )}
             {!results.isPending && !searchFailed && (
-              <CommandEmpty>{t("chrome.noResults")}</CommandEmpty>
+              <CommandEmpty>
+                {t("chrome.noResults")}
+                {/* 372: a search that found nothing is a reader who could not find
+                    their way -- the behaviour the brief names as "不知道去哪就瞎点".
+                    The row records the word they used, because a word is what makes
+                    it actionable and "no result" alone tells an operator nothing. */}
+                <SearchMiss
+                  query={debounced}
+                  hits={(results.data?.groups ?? []).reduce((sum, group) => sum + group.items.length, 0)}
+                />
+              </CommandEmpty>
             )}
 
             {apiGroups.map((group) => (

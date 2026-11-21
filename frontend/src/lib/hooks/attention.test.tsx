@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { trackAct, leaveRoom } from "./attention";
+import { trackAct, leaveRoom, trackSearch } from "./attention";
 
 describe("trackAct", () => {
   afterEach(() => {
@@ -49,6 +49,57 @@ describe("trackAct", () => {
       throw new Error("detached realm");
     }));
     expect(() => trackAct("/", "public")).not.toThrow();
+  });
+});
+
+describe("trackSearch — a search that found nothing", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const capture = () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init: RequestInit) => {
+        calls.push({ url, init });
+        return Promise.resolve({});
+      }),
+    );
+    return calls;
+  };
+
+  it("records the word the reader used, because a word is what makes it actionable", () => {
+    const calls = capture();
+    trackSearch("/jobs", "  kubernetes  ", 0);
+
+    expect(calls).toHaveLength(1);
+    const body = JSON.parse(String(calls[0].init.body));
+    expect(body).toEqual({
+      journey: "app",
+      path: "/jobs",
+      event: "search_miss",
+      value: "kubernetes",
+    });
+  });
+
+  it("stays silent when the search found something", () => {
+    const calls = capture();
+    trackSearch("/jobs", "java", 4);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("stays silent for an empty query — a keystroke is not a search", () => {
+    const calls = capture();
+    trackSearch("/jobs", "   ", 0);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("drops a paste rather than storing it", () => {
+    // A query longer than the cap is a paste, not a search; the row is dropped.
+    const calls = capture();
+    trackSearch("/jobs", "x".repeat(200), 0);
+    expect(calls).toHaveLength(0);
   });
 });
 

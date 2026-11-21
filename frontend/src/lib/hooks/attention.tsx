@@ -60,6 +60,32 @@ export function leaveRoom(path: string, start: number, journey: "app" | "public"
   void closed;
 }
 
+/**
+ * Epic 372 — a search that found nothing is a reader who could not find their way.
+ *
+ * The brief names the behaviour directly: "不知道去哪就瞎点". A room-hop says the reader
+ * moved; a search with no result says they *asked* and the product had no answer,
+ * which is the stronger signal and the one an operator can act on — it names the
+ * word the reader used.
+ *
+ * The query travels as the value, because a word is what makes the row actionable:
+ * "no result for 'kubernetes'" tells an operator what to add, while "no result"
+ * tells them nothing. It is still anonymous and still no identity — the same
+ * posture every other row here keeps. A query longer than this is a paste, not a
+ * search, and is dropped rather than stored.
+ */
+const MAX_QUERY_CHARS = 80;
+
+export function trackSearch(path: string, query: string, hits: number, journey: "app" | "public" = "app"): void {
+  if (hits > 0) return;
+  const word = (query || "").trim();
+  if (word.length === 0) return;
+  // A paste is not a search: recording the first eighty characters of one would
+  // store a word no reader typed and no operator could act on. Dropped, whole.
+  if (word.length > MAX_QUERY_CHARS) return;
+  postTelemetry("search_miss", path, journey, word);
+}
+
 export function AttentionSensor() {
   const pathname = usePathname();
   const history = React.useRef<Array<{ path: string; at: number }>>([]);

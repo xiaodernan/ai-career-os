@@ -120,6 +120,9 @@ interface AdminAttention {
   bounces?: number;
   bounceRatePct?: number;
   aimless?: number;
+  /** 372: searches that found nothing, and the words readers used. */
+  searchMiss?: number;
+  searchMissWords?: Array<{ word?: string; misses?: number }>;
   signedLandings?: number;
   anonymousLandings?: number;
   dwellPerLandingMs?: number;
@@ -626,6 +629,7 @@ export default function AdminPage() {
             { labelKey: "admin.attentionBounces", value: attention?.bounces },
             { labelKey: "admin.attentionBounceRate", value: attention?.bounceRatePct !== undefined ? attention.bounceRatePct : undefined, suffix: "%" },
             { labelKey: "admin.attentionAimless", value: attention?.aimless },
+            { labelKey: "admin.attentionSearchMiss", value: attention?.searchMiss },
             { labelKey: "admin.attentionAvgDwell", value: attention?.dwellPerLandingMs !== undefined ? Math.round(attention.dwellPerLandingMs) : undefined },
             { labelKey: "admin.attentionSignedLandings", value: attention?.signedLandings },
             { labelKey: "admin.attentionAnonymousLandings", value: attention?.anonymousLandings },
@@ -636,6 +640,25 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
+        {/* 372: the words readers searched for and did not find. A count says the
+            product failed somebody; the word says who and what for. */}
+        {(attention?.searchMissWords ?? []).length > 0 && (
+          <div className="mt-4 rounded-2xl border border-border/60 bg-card/60 p-4">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {t("admin.attentionSearchMissWords")}
+            </p>
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {(attention?.searchMissWords ?? []).map((row, index) => (
+                <li key={index}>
+                  <Badge variant="outline" className="text-xs tabular-nums">
+                    {row.word}
+                    <span className="ml-1.5 text-muted-foreground">{row.misses ?? 0}</span>
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {(() => {
           const rows = (attention?.topLandings ?? []).filter((r) => r.landings >= 3);
           const weakest = [...rows]
