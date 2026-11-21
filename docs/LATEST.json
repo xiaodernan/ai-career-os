@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-20T07:09:40.667658Z",
+  "generated_at": "2026-11-20T07:27:48.250997Z",
   "branch": "main",
-  "head": "c1566c0",
-  "total_commits": 1697,
+  "head": "6f986fd",
+  "total_commits": 1701,
   "milestone": "Epic 339",
   "milestone_full": "the ledger of done epics (through 491 items), closed at Epic 339 — The gracious decline",
   "pushed_at": "2026-11-20",
