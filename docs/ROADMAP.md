@@ -8208,11 +8208,13 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
     real regions plus an honest "unknown" region, projects each event to a stable
     site (order, not randomness, so a reload puts it back), caps the drawing at 24
     sites per region and says how many more exist, and never invents a place. An
-    empty ledger gets an uncharted-map sentence and four working doors into the
+    empty ledger gets an uncharted-map sentence and five working doors into the
     screens that write the first facts.
+  - The doors are data-driven: a region that is already charted stops advertising
+    its frontier, and a fully charted map says so instead of nagging the reader.
   - Follows `?kind=` narrowing: the map cannot display a site the fold has hidden.
-  - EN+ZH throughout (13 new keys × 2); copy census re-pinned 228→229 sources.
-  Verified: atlas 4/4, timeline page 7/7, translation/census gates 26/26, tsc clean.
+  - EN+ZH throughout (15 new keys × 2); copy census re-pinned 228→229 sources.
+  Verified: atlas 5/5, timeline page 7/7, translation/census gates 26/26, tsc clean.
   This is a real increment toward the open world, not a claim that the world is
   finished: the map grows only when the reader acts, which is the point.
 

@@ -104,11 +104,13 @@ export function buildAtlas(events: TimelineEntry[]): AtlasRegion[] {
   });
 }
 
+/** A door is offered only while its region is still uncharted. */
 const FRONTIERS = [
-  { key: "timeline.atlasFrontierJobs", href: "/jobs" },
-  { key: "timeline.atlasFrontierApplications", href: "/applications" },
-  { key: "timeline.atlasFrontierInterviews", href: "/interviews" },
-  { key: "timeline.atlasFrontierNetworking", href: "/networking" },
+  { kind: "match", key: "timeline.atlasFrontierJobs", href: "/jobs" },
+  { kind: "application", key: "timeline.atlasFrontierApplications", href: "/applications" },
+  { kind: "interview", key: "timeline.atlasFrontierInterviews", href: "/interviews" },
+  { kind: "contact", key: "timeline.atlasFrontierNetworking", href: "/networking" },
+  { kind: "resume_version", key: "timeline.atlasFrontierResumes", href: "/resumes" },
 ] as const;
 
 export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
@@ -118,6 +120,8 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
   const [openSite, setOpenSite] = React.useState<string | null>(null);
   const active = regions.find((region) => region.kind === selected) ?? regions[0];
   const site = active?.sites.find((row) => row.id === openSite) ?? active?.sites[active.sites.length - 1];
+  const charted = React.useMemo(() => new Set(regions.map((region) => region.kind)), [regions]);
+  const openFrontiers = FRONTIERS.filter((frontier) => !charted.has(frontier.kind));
 
   return (
     <Card className="border-primary/20 shadow-card">
@@ -230,13 +234,19 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {t("timeline.atlasFrontierDescription")}
           </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {FRONTIERS.map((frontier) => (
-              <Button key={frontier.href} asChild size="sm" variant="outline">
-                <Link href={frontier.href}>{t(frontier.key)}</Link>
-              </Button>
-            ))}
-          </div>
+          {openFrontiers.length === 0 ? (
+            <p className="mt-2 text-xs text-muted-foreground">{t("timeline.atlasAllCharted")}</p>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {openFrontiers.map((frontier) => (
+                <Button key={frontier.href} asChild size="sm" variant="outline">
+                  <Link href={frontier.href} title={t(LABEL_KEYS[frontier.kind])}>
+                    {t(frontier.key)}
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

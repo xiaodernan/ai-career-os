@@ -138,6 +138,8 @@ export const en = {
       atlasFrontierApplications: "Move an application",
       atlasFrontierInterviews: "Rehearse an interview",
       atlasFrontierNetworking: "Meet a contact",
+      atlasFrontierResumes: "Shape a resume",
+      atlasAllCharted: "Every frontier the map knows is charted. New kinds of facts will open new ground.",
       kindFilter: "Narrow the timeline by kind",
       filterAll: "All kinds",
       noKindRows: "No {kind} rows yet for this account.",

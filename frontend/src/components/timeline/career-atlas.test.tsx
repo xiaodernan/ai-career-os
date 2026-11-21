@@ -50,13 +50,34 @@ describe("CareerAtlas", () => {
     expect(html).toContain("[timeline.kinds.unknown]");
     expect(html).toContain('href="/jobs"');
     expect(html).toContain("[timeline.atlasFrontierNetworking]");
+    // The application region is already charted, so its door is not advertised.
+    expect(html).not.toContain("[timeline.atlasFrontierApplications]");
     expect(html).toContain('role="img"');
+  });
+
+  it("says every known frontier is charted instead of offering doors to visited regions", () => {
+    const charted: TimelineEntry[] = ["match", "application", "interview", "contact", "resume_version"].map(
+      (kind, i) => ({
+        at: `2026-10-0${i + 1}T09:00:00Z`,
+        kind,
+        title: `Fact ${i + 1}`,
+        refId: `f-${i + 1}`,
+        summary: "",
+      })
+    );
+    const html = renderToStaticMarkup(<CareerAtlas events={charted} />);
+    expect(html).toContain("[timeline.atlasAllCharted]");
+    expect(html).not.toContain("[timeline.atlasFrontierJobs]");
   });
 
   it("shows an uncharted map instead of inventing a world on an empty ledger", () => {
     const html = renderToStaticMarkup(<CareerAtlas events={[]} />);
     expect(html).toContain("[timeline.atlasEmpty]");
-    expect(html).not.toContain("[timeline.kinds.application]");
+    // No region buttons are drawn: the region label may still appear as a
+    // frontier's tooltip, which is exactly the guidance an empty map needs.
+    expect(html).not.toContain("aria-pressed=");
     expect(html).toContain("[timeline.atlasFrontierTitle]");
+    expect(html).toContain("[timeline.atlasFrontierApplications]");
+    expect(html).toContain("[timeline.atlasFrontierResumes]");
   });
 });

@@ -120,6 +120,8 @@ export const zh = {
       atlasFrontierApplications: "推进投递",
       atlasFrontierInterviews: "模拟面试",
       atlasFrontierNetworking: "联系人脉",
+      atlasFrontierResumes: "打磨简历",
+      atlasAllCharted: "地图已知的前沿都已探索。新的事实类型会开辟新的疆域。",
       kindFilter: "按类型收窄时间线",
       filterAll: "全部类型",
       noKindRows: "这个账号下还没有「{kind}」类型的记录。",
