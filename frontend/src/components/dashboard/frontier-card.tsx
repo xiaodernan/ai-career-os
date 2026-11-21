@@ -45,8 +45,12 @@ export function FrontierCard() {
     const sessions = rehearsals.data?.items ?? [];
     // A rehearsal that started and never finished is the one thing a reader most regrets
     // leaving: the report it would have produced is the whole point of taking it.
+    // `active` and `paused` are the two states the backend spells for "still open".
+    // The first browser probe of this card measured `active`, and a rule written
+    // against a vocabulary the backend does not speak is a rule that never fires --
+    // the card would have stayed silent forever while looking correct.
     const openRehearsals = sessions.filter(
-      (session) => session.status === "started" || session.status === "in_progress"
+      (session) => session.status === "active" || session.status === "paused"
     ).length;
     const awaitingReader = rows.filter(
       (row) => STAGES_THE_READER_OWNS.has(row.status ?? "")
