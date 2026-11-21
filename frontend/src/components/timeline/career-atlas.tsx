@@ -68,6 +68,29 @@ export interface AtlasSite {
  * resume first, then a posting, then the match, then the interview -- and never an
  * invented one. A region that only ever appeared once still gets its stop.
  */
+/**
+ * 367: what else was true when this site happened.
+ *
+ * A fact on its own is a dot; a fact in its moment is a place. Opening a site now
+ * also answers "what else was going on" — the nearest neighbours in time from the
+ * SAME region, so the reader sees the run of work a single dot belongs to rather
+ * than one isolated row. The neighbours are the reader's own rows, never invented,
+ * and the selected site itself is never among them.
+ *
+ * Bounded to two on each side on purpose: a reader opening one dot wants the
+ * shape of its moment, not the whole region again.
+ */
+export function neighboursOf(site: AtlasSite, region: AtlasRegion | undefined, limit = 2): AtlasSite[] {
+  if (!region) return [];
+  const at = region.sites.find((row) => row.id === site.id);
+  if (!at) return [];
+  const index = region.sites.indexOf(at);
+  const before = region.sites.slice(Math.max(0, index - limit), index);
+  const after = region.sites.slice(index + 1, index + 1 + limit);
+  // Older first, then newer: the moment reads outward from the site the reader opened.
+  return [...before, ...after];
+}
+
 export interface AtlasLeg {
   from: string;
   to: string;
@@ -179,6 +202,11 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
   // Each region's centre is the mean of the sites drawn for it, so a leg joins
   // where the reader's facts actually sit rather than a point invented for the
   // region. A region with no drawn sites contributes no leg.
+  // 367: the same region's own rows nearest in time to the open site.
+  const neighbours = React.useMemo(
+    () => neighboursOf(site ?? active?.sites[active.sites.length - 1] ?? null, active),
+    [site, active]
+  );
   const legs = React.useMemo(() => {
     const centre = new Map(regions.map((region) => {
       const rows = region.sites;
@@ -368,6 +396,32 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
                       <time dateTime={site.at} className="mt-2 block text-2xs tabular-nums text-muted-foreground">
                         {formatDate(site.at, locale)}
                       </time>
+                      {/* 367: what else was going on. The neighbours are the same
+                          region's own rows nearest in time, so the dot reads as a
+                          place in a run of work rather than one isolated fact. */}
+                      {neighbours.length > 0 ? (
+                        <div className="mt-3 border-t border-border/50 pt-2">
+                          <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {t("timeline.atlasNeighbours", { region: t(active.labelKey) })}
+                          </p>
+                          <ul className="mt-1 space-y-0.5">
+                            {neighbours.map((row) => (
+                              <li key={row.id}>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left text-xs text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+                                  onClick={() => setOpenSite(row.id)}
+                                >
+                                  <span className="min-w-0 flex-1 truncate">{row.title}</span>
+                                  <time dateTime={row.at} className="shrink-0 text-2xs tabular-nums">
+                                    {formatDate(row.at, locale)}
+                                  </time>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>

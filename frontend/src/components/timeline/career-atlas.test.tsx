@@ -6,7 +6,7 @@ vi.mock("@/lib/i18n/locale-context", () => ({
   useLocale: () => ({ locale: "en", t: (key: string) => `[${key}]`, setLocale: () => undefined }),
 }));
 
-import { buildAtlas, buildRoute, CareerAtlas } from "./career-atlas";
+import { buildAtlas, buildRoute, CareerAtlas, neighboursOf } from "./career-atlas";
 
 const EVENTS: TimelineEntry[] = [
   { at: "2026-09-01T09:00:00Z", kind: "application", title: "Backend Engineer · Acme", refId: "a-1", summary: "applied" },
@@ -100,6 +100,44 @@ describe("CareerAtlas", () => {
       { at: "2026-09-01T09:00:00Z", kind: "interview", title: "interview", refId: "i", summary: "" },
     ];
     expect(buildRoute(shuffled)).toEqual(["resume_version", "match", "interview"]);
+  });
+
+  it("367: a site opens onto what else was going on around it", () => {
+    // A fact on its own is a dot; a fact in its moment is a place. The neighbours
+    // are the same region's own rows nearest in time, and the open site is never
+    // among them.
+    const many: TimelineEntry[] = Array.from({ length: 7 }, (_, i) => ({
+      at: `2026-09-${String(i + 1).padStart(2, "0")}T09:00:00Z`,
+      kind: "note",
+      title: `Note ${i + 1}`,
+      refId: `n-${i + 1}`,
+      summary: "",
+    }));
+    const region = buildAtlas(many)[0];
+    const middle = region.sites[3];
+    const around = neighboursOf(middle, region);
+    expect(around).toHaveLength(4); // two either side, bounded on purpose
+    expect(around.map((row) => row.title)).toEqual(["Note 2", "Note 3", "Note 5", "Note 6"]);
+    expect(around.some((row) => row.id === middle.id)).toBe(false);
+  });
+
+  it("367: the ends of a region have only the neighbours they have", () => {
+    const three: TimelineEntry[] = [1, 2, 3].map((i) => ({
+      at: `2026-09-0${i}T09:00:00Z`,
+      kind: "note",
+      title: `Note ${i}`,
+      refId: `n-${i}`,
+      summary: "",
+    }));
+    const region = buildAtlas(three)[0];
+    expect(neighboursOf(region.sites[0], region).map((r) => r.title)).toEqual(["Note 2", "Note 3"]);
+    expect(neighboursOf(region.sites[2], region).map((r) => r.title)).toEqual(["Note 1", "Note 2"]);
+  });
+
+  it("367: a lone fact has no neighbours, and no region has none invented", () => {
+    const one = buildAtlas([{ at: "2026-09-01T09:00:00Z", kind: "note", title: "only", refId: "n-1", summary: "" }])[0];
+    expect(neighboursOf(one.sites[0], one)).toEqual([]);
+    expect(neighboursOf(one.sites[0], undefined)).toEqual([]);
   });
 
   it("365: the drawn legs join region centres, so the line follows the facts", () => {

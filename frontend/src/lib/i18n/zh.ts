@@ -137,6 +137,8 @@ export const zh = {
       // 365: 那条虚线是读者自己走过的路，顺序按台账记录的来——走过的路径，不是
       // 存在那里的道路。
       atlasRouteLength: "你走过的路上有 {count} 段",
+      // 367: 这个地点发生的时候，同一个区域里还发生了什么。
+      atlasNeighbours: "那时{region}里还有",
       atlasAllCharted: "地图已知的前沿都已探索。新的事实类型会开辟新的疆域。",
       kindFilter: "按类型收窄时间线",
       filterAll: "全部类型",
