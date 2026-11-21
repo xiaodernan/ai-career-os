@@ -8198,6 +8198,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **368** The author card — a portfolio artifact with the facts as given (2026-11-22).
+
+  Brief X: "把所有项目都列入我的 github io 页面" and "极致装修和宣传我的 io 页面和 GitHub
+  个人主页等个人资料". The io page is a separate repository, so what this repo can
+  deliver is the artifact that page embeds. `frontend/public/author.html` is a second
+  self-contained card beside the showcase one: one file, no script, no fetch, an iframe
+  that renders on any origin — the author's name, the two schools with the major they
+  share, the internship, the two language scores, the two physics-competition results,
+  and one door to the project and one to the GitHub profile.
+
+  **Every personal fact is a constant, not typed prose.** The same brief says an earlier
+  pass hallucinated these ("之前出现过严重幻觉，务必以下面为准，不许搞错"), so the card
+  derives nothing: where a fact has a number it is the number given. The project name is
+  one constant spelled the one way it is spelled, and the gate refuses the wrong spelling
+  anywhere in the generator — comment included, because a comment that names the mistake
+  is one edit away from repeating it. The project figures come from the same tree walk the
+  showcase card uses, so the two cannot disagree.
+
+  It rides the automation rather than a new one: the `showcase` job regenerates both cards,
+  commits back only when the numbers moved, and mirrors both to `gh-pages`. Verified: the
+  card carries every stated fact and carries none of the wrong spellings, its gate is 4/4,
+  the workflow YAML still parses, and `docs/SYNC_TO_PORTFOLIO.md` documents the embed.
+
 - [x] **367** A site opens onto what else was going on around it (2026-11-22).
 
   Brief VI: "不要'看着很大、里面很空'". A fact on its own is a dot; a fact in its

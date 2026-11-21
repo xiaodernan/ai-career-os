@@ -98,3 +98,43 @@ any origin with zero CORS concerns.
 - The card is **dark-mode-only** by design (the editor's own theme);
   if your portfolio is light-mode, wrap the iframe in `color-scheme: dark` scope,
   or fork the file and change the four `:root` variables.
+
+## The author card (Epic 368, 2026-11-22)
+
+Brief X asks for two things: "把所有项目都列入我的 github io 页面" and "极致装修和宣传我的
+io 页面和 GitHub 个人主页等个人资料，极其漂亮、尽善尽美". The io page is a separate
+repository, so what this repo provides is the artifact that page embeds — a second card,
+generated beside the showcase one:
+
+> **`frontend/public/author.html`**
+
+One file, zero dependencies, no script, no fetch — an iframe that renders on any origin. It
+carries the author's name, the two schools with their shared major, the internship, the two
+language scores and the two physics-competition results, and one door to the project
+repository and one to the GitHub profile.
+
+**Every personal fact is a constant in `scripts/author-card-sync.py`, not typed prose.** Brief
+X is explicit that an earlier pass hallucinated these ("之前出现过严重幻觉，务必以下面为准，
+不许搞错"), so the card derives nothing: where a fact has a number it is the number given. The
+project name is one constant spelled the one way it is spelled, and a gate
+(`tests/test_the_author_card_names_the_project_correctly.py`) refuses the wrong spelling
+anywhere in the generator — comment included, because a comment that names the mistake is one
+edit away from repeating it. The project figures are measured off the tree by the same walk
+the showcase card uses, so the two cannot disagree.
+
+Refresh it by hand:
+
+```bash
+python scripts/author-card-sync.py
+```
+
+You never have to since Epic 216: the `showcase` CI job regenerates both cards on every push
+to `main`, commits back only when the measured numbers moved, and mirrors both to the
+`gh-pages` branch. The author card is therefore live at
+`https://xiaodernan.github.io/ai-career-os/author.html`, and embeddable anywhere with:
+
+```html
+<iframe src="https://xiaodernan.github.io/ai-career-os/author.html"
+        width="100%" height="520" frameborder="0"
+        title="赵欣曈 — 隐盾"></iframe>
+```
