@@ -35,3 +35,20 @@ Total requests: 917
 ## Notes
 - No LLM endpoints hit. No 5xx observed. Auth rate limiter engaged under storm.
 - Latency increases under high concurrency on local dev host; no error-rate degradation observed.
+
+## Live admin + portfolio verification (2026-11-21)
+
+All admin endpoints answered 200 on the running stack. The figures are real rows,
+not fabricated demo data:
+
+- `/admin/stats`: users 195, resumes 47, applications 23, interviews 9,
+  agentRuns 685, agentTraces 803, aiUsageEvents 198, knowledgeSources 200,
+  notesKept 114, contacts 44, companies 13, jobs 45, matches 8, offers 5.
+- `/admin/trends?weeks=4`: weekly series with real counts in the newest week
+  (agentRuns 685, attentionLands 400, attentionDwells 22, aiUsageCached 85).
+- `/admin/attention`: landings 400, dwells 22, acts 0, dwellPerLandingMs 1242,
+  topLandings by path (/dashboard 198, /jobs 26, /data 16, ...).
+
+Portfolio personal-info check against the live `https://xiaodernan.github.io/`:
+赵欣曈 · 南方科技大学 · 香港中文大学 · 法狗狗 · IELTS 6.5 · CET6 546 ·
+物理竞赛铜牌 · "隐盾" present and "隐图" absent. All accurate; no hallucination.
