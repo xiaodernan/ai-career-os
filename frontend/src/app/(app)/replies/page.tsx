@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Hint } from "@/components/ui/hint";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -233,23 +234,31 @@ export default function RepliesPage() {
             className="pl-9"
           />
         </div>
-        <Button type="submit" size="sm" variant="outline">
-          {t("replies.search")}
-        </Button>
-        {state.q ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            // Clearing the words says nothing about the reading: a reader who picked
-            // "Rejections" and typed "acme" still wants the rejections once the word is gone.
-            onClick={() => {
-              setDraft("");
-              search("");
-            }}
-          >
-            {t("replies.clearSearch")}
+        {/* 373: the two questions this page asks are separate, and the reader has no
+            way to know that from the controls -- clearing the words says nothing
+            about the reading, and picking "Rejections" says nothing about the words.
+            The hint says so on the control itself, which is where a reader looks. */}
+        <Hint label={t("replies.searchHint")}>
+          <Button type="submit" size="sm" variant="outline">
+            {t("replies.search")}
           </Button>
+        </Hint>
+        {state.q ? (
+          <Hint label={t("replies.clearSearchHint")}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              // Clearing the words says nothing about the reading: a reader who picked
+              // "Rejections" and typed "acme" still wants the rejections once the word is gone.
+              onClick={() => {
+                setDraft("");
+                search("");
+              }}
+            >
+              {t("replies.clearSearch")}
+            </Button>
+          </Hint>
         ) : null}
       </form>
 

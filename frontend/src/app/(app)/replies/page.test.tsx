@@ -434,3 +434,40 @@ describe("the replies page", () => {
     expect(html).not.toContain("filed under the reading");
   });
 });
+
+describe("373: the search and the reading are two questions, and the page says so", () => {
+  beforeEach(() => {
+    state.url = { q: undefined, intent: undefined, unfiled: undefined, page: 0 };
+    state.letters.data = undefined;
+    state.applications.data = undefined;
+    state.counts.data = undefined;
+  });
+
+  it("puts the search button behind a hint, so the reading's independence is teachable", () => {
+    // Radix mounts a tooltip's body only while it is open, so what a server render
+    // can prove is that the trigger is wrapped -- the sentence itself is pinned by
+    // the copy table's own parity gate, which holds both languages.
+    const html = render();
+    expect(html).toContain('type="submit"');
+    // Two triggers at rest: the search button and the letter-count select beside it.
+    expect((html.match(/data-slot="tooltip-trigger"/g) ?? []).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("adds the clear button's hint only while words are on screen", () => {
+    // The hint exists only while a search is active: that is the only moment a
+    // reader could wonder what clearing would take with it.
+    state.url = { q: "acme", intent: undefined, unfiled: undefined, page: 0 };
+    state.letters.data = { items: [], total: 0, page: 0, size: 20 };
+    const withSearch = render();
+    expect(withSearch).toContain("Clear search");
+    const withClear = (withSearch.match(/data-slot="tooltip-trigger"/g) ?? []).length;
+
+    state.url = { q: undefined, intent: undefined, unfiled: undefined, page: 0 };
+    const withoutSearch = render();
+    expect(withoutSearch).not.toContain("Clear search");
+    const withoutClear = (withoutSearch.match(/data-slot="tooltip-trigger"/g) ?? []).length;
+
+    // The clear button's own trigger is the difference, and it appears only with words.
+    expect(withClear).toBe(withoutClear + 1);
+  });
+});

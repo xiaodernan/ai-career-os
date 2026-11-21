@@ -2136,6 +2136,10 @@ export const en = {
       searchPlaceholder: "Search replies",
       searchLabel: "Search replies by subject, sender, company, role or letter text",
       search: "Search",
+      // 373: the two questions this page asks are separate, and the reader has no
+      // way to know that from the controls.
+      searchHint: "Search the words. The reading below is a separate question and stays as it is.",
+      clearSearchHint: "Clear the words only — the reading you picked stays.",
       clearSearch: "Clear search",
       filterByIntent: "Filter replies by reading",
       filterAll: "All",

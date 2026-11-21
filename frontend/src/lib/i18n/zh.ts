@@ -2034,6 +2034,9 @@ export const zh = {
       searchPlaceholder: "搜索回信",
       searchLabel: "按主题、发件人、公司、职位或正文搜索回信",
       search: "搜索",
+      // 373: 这一页问的是两个分开的问题，而读者从控件上看不出来。
+      searchHint: "搜的是字。下面的读法是另一个问题，保持原样。",
+      clearSearchHint: "只清字——你选的读法不变。",
       clearSearch: "清除搜索",
       filterByIntent: "按意图筛选回信",
       filterAll: "全部",
