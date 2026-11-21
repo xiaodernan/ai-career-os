@@ -8198,6 +8198,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **346** The public door stops lying — gh-pages synced to the measured head (2026-11-21).
+
+  Brief II ("把多个工作分支、worktree 合并起来，汇到一个主分支") and X ("用户每次点进去
+  看到的都是最新成果") met at the project's own GitHub Pages. The `gh-pages` branch had
+  been left **222 commits behind main**: its landing and fact card still reported
+  162 epics / 448 work items / 1380+ tests, while main measures 211 / 498 / 1566+.
+  A reader following the project's own Pages entry saw a card that lied about how far
+  the work had come. Synced `frontend/public/showcase.html` (fresh from main) into the
+  branch, updated `index.html`'s counters to the measured values and the test-file
+  count (197), and added a DIRECT link from the landing page to `showcase.html` — the
+  "直接进入接口" that previously pointed at nothing reachable. A CI mirror workflow
+  had also been pushing stale snapshots; rebased past its head (7fd3a48) so the branch
+  now carries the current truth at 3886282. The worktree was used only as a safe
+  staging area and removed after push; main stayed clean and on origin/main throughout.
+
 - [x] **345** The ledger becomes a story — the timeline's grounded second voice (2026-11-21).
 
   The deepest reading of "把大模型能力完整深度地嵌入项目整体能力": the timeline is
