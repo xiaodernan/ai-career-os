@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { BookMarked, ChevronRight, LockKeyhole, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,7 @@ import { SectionHeading } from "@/components/common/export-buttons";
 import { useCareerChronicle } from "@/lib/hooks/timeline";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { ChronicleChapter, Milestones, TimelineEntry } from "@/lib/api/types";
+import { chapterAnchor } from "@/lib/chronicle-anchor";
 
 /**
  * Epic 354 — the Career Chronicle: a short, grounded book about THIS reader's own
@@ -20,6 +22,17 @@ import type { ChronicleChapter, Milestones, TimelineEntry } from "@/lib/api/type
  * epic. Copy is locale-keyed; the prose itself comes from the engine in the reader's
  * language.
  */
+/** The atlas's own label key for each region a chapter can name (Epic 370). */
+const REGION_LABEL: Record<string, string> = {
+  application: "timeline.kinds.application",
+  interview: "timeline.kinds.interview",
+  match: "timeline.kinds.match",
+  contact: "timeline.kinds.contact",
+  resume_version: "timeline.kinds.resume_version",
+  note: "timeline.kinds.note",
+  unknown: "timeline.kinds.unknown",
+};
+
 export function CareerChronicleCard({
   events,
   milestones,
@@ -93,7 +106,31 @@ export function CareerChronicleCard({
                         {i + 1}
                       </span>
                       <span className="truncate text-sm font-medium">{ch.title || t("timeline.chronicleUntitled")}</span>
-                      {ch.anchor && <Badge variant="secondary" className="shrink-0 text-2xs">{ch.anchor}</Badge>}
+                      {/* 370: the anchor is the join to the world. A chapter named
+                          what happened and never said where; now it names the regions
+                          its own anchor places it in, and each is a door onto the map
+                          narrowed there. An anchor the ledger cannot place stays a
+                          quiet number rather than a guessed region. */}
+                      {(() => {
+                        const placed = chapterAnchor(ch, events);
+                        if (placed.unmatched) {
+                          return ch.anchor ? (
+                            <Badge variant="secondary" className="shrink-0 text-2xs">{ch.anchor}</Badge>
+                          ) : null;
+                        }
+                        return placed.regions.map((region) => (
+                          <Link
+                            key={region}
+                            href={`/timeline?kind=${encodeURIComponent(region)}`}
+                            className="shrink-0"
+                            title={t("timeline.chronicleRegionDoor", { region: t(REGION_LABEL[region] ?? "timeline.kinds.unknown") })}
+                          >
+                            <Badge variant="secondary" className="text-2xs">
+                              {t(REGION_LABEL[region] ?? "timeline.kinds.unknown")}
+                            </Badge>
+                          </Link>
+                        ));
+                      })()}
                     </span>
                     <ChevronRight aria-hidden className={`size-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
                   </button>

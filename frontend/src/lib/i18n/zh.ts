@@ -101,6 +101,8 @@ export const zh = {
       chronicleLede: "徽章背后的意义：一部按章节展开的求职纪事。",
       chronicleAction: "写编年史",
       chronicleWorking: "正在撰写章节……",
+      // 370: 从一章通往它自己的 anchor 所指区域的那扇门。
+      chronicleRegionDoor: "在版图上显示{region}",
       chronicleEmpty: "账本还太薄，写不成编年史——继续走下去，章节自会有话可说。",
       chronicleUntitled: "未命名章节",
       chronicleEpilogue: "尾声",

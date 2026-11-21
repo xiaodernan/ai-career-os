@@ -119,6 +119,8 @@ export const en = {
       chronicleLede: "The meaning behind the badges: a chaptered record of how this search unfolded.",
       chronicleAction: "Write the chronicle",
       chronicleWorking: "Writing the chapters…",
+      // 370: the door from a chapter onto the region its own anchor places it in.
+      chronicleRegionDoor: "Show {region} on the atlas",
       chronicleEmpty: "The ledger is too thin for a chronicle yet — keep going, and the chapters will have something to say.",
       chronicleUntitled: "Untitled chapter",
       chronicleEpilogue: "The epilogue",
