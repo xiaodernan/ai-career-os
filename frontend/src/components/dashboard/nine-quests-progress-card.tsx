@@ -31,6 +31,7 @@ export function NineQuestsProgressCard() {
           <Map className="size-4 text-muted-foreground" aria-hidden />
           {t("dashboard.questsProgressTitle")}
         </CardTitle>
+        <p className="text-xs text-muted-foreground">{t("dashboard.questsProgressHint")}</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">

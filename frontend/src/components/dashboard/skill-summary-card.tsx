@@ -27,6 +27,7 @@ export function SkillSummaryCard({
           <Sparkles className="size-4 text-muted-foreground" aria-hidden />
           {t("dashboard.topSkills")}
         </CardTitle>
+        <p className="text-xs text-muted-foreground">{t("dashboard.topSkillsHint")}</p>
       </CardHeader>
       <CardContent className="space-y-3">
         {topSkills.length === 0 ? (

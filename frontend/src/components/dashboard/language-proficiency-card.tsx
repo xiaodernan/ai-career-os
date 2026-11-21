@@ -30,6 +30,7 @@ export function LanguageProficiencyCard({
           <Globe className="size-4 text-muted-foreground" aria-hidden />
           {t("dashboard.languageProficiency")}
         </CardTitle>
+        <p className="text-xs text-muted-foreground">{t("dashboard.languageProficiencyHint")}</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline gap-2 text-sm">
