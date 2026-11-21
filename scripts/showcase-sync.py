@@ -42,7 +42,31 @@ except Exception:
 ITEM_EPICS = len(re.findall(r"(?m)^- \[x\] \*\*\d+(?:\.\d+)?\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8")))
 TOP_EPICS = len({int(m.group(1)) for m in re.finditer(r"(?m)^- \[x\] \*\*(\d+)\*\*", REPO.joinpath("docs/ROADMAP.md").read_text(encoding="utf-8"))})
 NAV_ROUTES = sum(1 for _ in FRONTEND.joinpath("src/components/layout/nav.ts").read_text(encoding="utf-8").splitlines() if "href:" in _)
-TESTS = "1535+"  # the frontend vitest suite measured 1535 passing today (Epic 322); grows with each epic.
+def _test_floor() -> str:
+    """A truthful lower bound on the frontend suite, counted off the tree.
+
+    A hardcoded number rots: the card once said 1535+ long after the suite passed
+    1561. Counting `it(...)`/`test(...)` declarations across tracked test files
+    gives the same figure the runner reports (measured 2026-11-21: 1561 static,
+    1561 at runtime), with no manual step to forget. The trailing '+' stays honest:
+    some tests are parameterised and run more than once.
+    """
+    try:
+        files = subprocess.check_output(["git", "ls-files", "-z"], cwd=REPO).decode("utf-8").split("\0")
+    except Exception:
+        return "1500+"  # offline fallback: a floor, never a fabricated exact number
+    n = 0
+    for f in files:
+        if ".test." in f and f.rsplit(".", 1)[-1] in ("ts", "tsx", "js", "mjs"):
+            try:
+                text = (REPO / f).read_text(encoding="utf-8")
+            except Exception:
+                continue
+            n += len(re.findall(r"(?m)^\s*(?:it|test)\s*\(", text))
+    return f"{n}+" if n else "1500+"
+
+
+TESTS = _test_floor()
 
 
 def _milestones() -> list[str]:

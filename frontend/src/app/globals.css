@@ -587,7 +587,7 @@
 /* Latin tuning (negative tracking, 1.0-1.08 line-height) that makes    */
 /* display headings look designed in English reads as cut in half in   */
 /* Chinese -- the counters touch, the tails sheared off by the next    */
-// line. Every rule here applies only under html[lang="zh"];           */
+/* line. Every rule here applies only under html[lang="zh"];           */
 /* English keeps its own kerning.                                      */
 /* ------------------------------------------------------------------ */
 html[lang="zh"] .tracking-tight,
