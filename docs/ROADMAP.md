@@ -8198,6 +8198,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **343** The stub that lied is gone — one honest owner for the admin surface (2026-11-21).
+
+  The consolidated WIP batch had shipped `app/features/admin.py`: a router that was
+  **never mounted**, endpoints returning hardcoded `{"total_runs": 0}` and a fabricated
+  `2026-01-01T00:00:00Z` timestamp, and a docstring promising "aggregate statistics,
+  behavior trends, and optimization recommendations" it never computed. It was
+  imported as `admin_mod` and never referenced — unreachable, untrue, exactly the
+  "demo data pile" the brief refuses. The real admin feature is the Java
+  `/api/v1/admin/*` controllers (real DB rows, password "123" at the browser) plus
+  `counsel.py` (the LLM analyst). Removed the dead stub and the unused import, and
+  added `test_no_fake_data_admin_stub.py` (3 cases) so a fixed fake timestamp or a
+  re-imported stub reddens a gate. `@main.app` still imports (15 routes); ai-service
+  **2997 passed**, 8 skipped.
+
 - [x] **342** The second voice sees the whole install — grounded deep optimisation measures (2026-11-21).
 
   Brief item IX: "管理员页面能监控所有用户的统计数据、做分析和趋势预测，并根据这些数据

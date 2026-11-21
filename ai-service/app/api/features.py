@@ -49,7 +49,6 @@ from app.features import analytics as analytics_mod
 from app.features import career_timeline as career_timeline_mod
 from app.features import ingestion as ingestion_mod
 from app.features import monitoring as monitoring_mod
-from app.features import admin as admin_mod
 from app.features import import_plan as import_plan_mod
 from app.features import export_redact as export_redact_mod
 from app.features.cover_letter import generate as cover_generate

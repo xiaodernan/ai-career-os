@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T08:08:37.179619Z",
+  "generated_at": "2026-11-21T08:19:24.444638Z",
   "branch": "main",
-  "head": "7ae0de9",
-  "total_commits": 1715,
-  "milestone": "Epic 342",
-  "milestone_full": "the ledger of done epics (through 495 items), closed at Epic 342 — The second voice sees the whole install",
+  "head": "9ab9bce",
+  "total_commits": 1716,
+  "milestone": "Epic 343",
+  "milestone_full": "the ledger of done epics (through 496 items), closed at Epic 343 — The stub that lied is gone",
   "pushed_at": "2026-11-21",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
   "tests": "1564+",
   "test_files": 196,
-  "work_items": 495,
-  "epics": 208,
+  "work_items": 496,
+  "epics": 209,
   "feature_surface": [
+    "Epic 343 — The stub that lied is gone",
     "Epic 342 — The second voice sees the whole install",
     "Epic 341 — The gate that reports",
     "Epic 340 — The whole context",
     "Epic 339 — The gracious decline",
-    "Epic 338 — The warm lane",
-    "Epic 337 — The negotiation prep one-pager"
+    "Epic 338 — The warm lane"
   ]
 }
