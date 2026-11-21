@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Compass, MapPin, Sparkles } from "lucide-react";
+import { ArrowUpRight, Compass, MapPin, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Hint } from "@/components/ui/hint";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDate } from "@/lib/format";
@@ -111,6 +112,22 @@ export function buildAtlas(events: TimelineEntry[]): AtlasRegion[] {
   });
 }
 
+/**
+ * 364: where each region's facts are written.
+ *
+ * The map names every room the reader has been; these are the rooms themselves. A
+ * region with no screen of its own (the engine's own `unknown` bucket) carries no
+ * door rather than a link that would answer 404 -- an honest gap beats a dead one.
+ */
+const REGION_DOORS: Record<string, { href: string; key: string } | undefined> = {
+  application: { href: "/applications", key: "timeline.atlasDoorApplications" },
+  interview: { href: "/interviews", key: "timeline.atlasDoorInterviews" },
+  match: { href: "/jobs", key: "timeline.atlasDoorJobs" },
+  contact: { href: "/networking", key: "timeline.atlasDoorNetworking" },
+  resume_version: { href: "/resumes", key: "timeline.atlasDoorResumes" },
+  note: { href: "/knowledge", key: "timeline.atlasDoorNotes" },
+};
+
 /** A door is offered only while its region is still uncharted. */
 const FRONTIERS = [
   { kind: "match", key: "timeline.atlasFrontierJobs", href: "/jobs" },
@@ -151,25 +168,43 @@ export function CareerAtlas({ events }: { events: TimelineEntry[] }) {
           <>
             <div className="grid gap-4 md:grid-cols-[minmax(10rem,14rem)_1fr]">
               <div className="space-y-1.5" role="group" aria-label={t("timeline.atlasRegionsLabel")}>
-                {regions.map((region) => (
-                  <Button
-                    key={region.kind}
-                    type="button"
-                    variant={region.kind === active?.kind ? "secondary" : "ghost"}
-                    size="sm"
-                    className="w-full justify-between"
-                    aria-pressed={region.kind === active?.kind}
-                    onClick={() => {
-                      setSelected(region.kind);
-                      setOpenSite(null);
-                    }}
-                  >
-                    <span className="truncate">{t(region.labelKey)}</span>
-                    <Badge variant="outline" className="shrink-0 text-2xs tabular-nums">
-                      {region.count}
-                    </Badge>
-                  </Button>
-                ))}
+                {regions.map((region) => {
+                  // 364: a region is a door, not just a lens. The reader who sees
+                  // "Interview · 12" wants to stand in that room, and the map is the
+                  // one surface that can name every room at once -- so each region
+                  // carries the link to the screen that writes its facts, beside the
+                  // count of what is already there.
+                  const door = REGION_DOORS[region.kind];
+                  return (
+                    <div key={region.kind} className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant={region.kind === active?.kind ? "secondary" : "ghost"}
+                        size="sm"
+                        className="min-w-0 flex-1 justify-between"
+                        aria-pressed={region.kind === active?.kind}
+                        onClick={() => {
+                          setSelected(region.kind);
+                          setOpenSite(null);
+                        }}
+                      >
+                        <span className="truncate">{t(region.labelKey)}</span>
+                        <Badge variant="outline" className="shrink-0 text-2xs tabular-nums">
+                          {region.count}
+                        </Badge>
+                      </Button>
+                      {door ? (
+                        <Hint label={t("timeline.atlasRegionDoor", { region: t(region.labelKey) })}>
+                          <Button asChild size="sm" variant="ghost" className="shrink-0 px-2">
+                            <Link href={door.href} aria-label={t(door.key)}>
+                              <ArrowUpRight aria-hidden className="size-3.5" />
+                            </Link>
+                          </Button>
+                        </Hint>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
 
               {active && (

@@ -124,6 +124,16 @@ export const zh = {
       atlasFrontierInterviews: "模拟面试",
       atlasFrontierNetworking: "联系人脉",
       atlasFrontierResumes: "打磨简历",
+      // 364: 从一个已经探索过的区域走出去的那扇门——地图点出每一个房间，而这些门通向
+      // 房间本身。用自己的键而不是前沿的：前沿是没人去过的房间，门是回到去过的房间的
+      // 路，两者混为一谈会让「全部已探索」说成「无处可去」。
+      atlasDoorApplications: "打开申请看板",
+      atlasDoorInterviews: "打开演练列表",
+      atlasDoorJobs: "打开职位板",
+      atlasDoorNetworking: "打开你认识的人",
+      atlasDoorResumes: "打开你的简历",
+      atlasDoorNotes: "打开知识库",
+      atlasRegionDoor: "去{region}",
       atlasAllCharted: "地图已知的前沿都已探索。新的事实类型会开辟新的疆域。",
       kindFilter: "按类型收窄时间线",
       filterAll: "全部类型",

@@ -71,6 +71,26 @@ describe("CareerAtlas", () => {
     expect(html).toContain("aria-pressed=");
   });
 
+  it("364: every charted region carries a door to the room that writes it", () => {
+    // The map names every room the reader has been; these are the rooms. A region
+    // with no screen of its own carries no door rather than a link that 404s.
+    const html = renderToStaticMarkup(<CareerAtlas events={EVENTS} />);
+    expect(html).toContain('href="/applications"');
+    expect(html).toContain("[timeline.atlasDoorApplications]");
+    // The frontier's own key is a different claim -- a room nobody has been to --
+    // and must not be what a charted region's door answers with.
+    expect(html).not.toContain("[timeline.atlasFrontierApplications]");
+  });
+
+  it("364: the unknown region is offered no door, because it has no room", () => {
+    const only = [{ at: "2026-09-03T09:00:00Z", kind: "no-such-kind", title: "A fact without a name", refId: "x-1", summary: "still a fact" }];
+    const html = renderToStaticMarkup(<CareerAtlas events={only} />);
+    expect(html).toContain("[timeline.kinds.unknown]");
+    expect(html).not.toContain("[timeline.atlasDoorUnknown]");
+    // No link is rendered for it at all -- an honest gap beats a dead door.
+    expect(html).not.toMatch(/aria-label="\[timeline\.atlasDoor/);
+  });
+
   it("361: reads a region's span off its own first and newest fact", () => {
     const regions = buildAtlas(EVENTS);
     const application = regions.find((r) => r.kind === "application");
