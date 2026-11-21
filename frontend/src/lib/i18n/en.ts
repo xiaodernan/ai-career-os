@@ -3716,6 +3716,18 @@ export const en = {
     // Interviews
     interviews: {
       title: "Interviews",
+// 374: how long it has been. The list shows what happened; this says what
+      // has NOT happened lately -- a nudge, never a score.
+      rhythmEyebrow: "The habit",
+      rhythmNoneTitle: "No rehearsal yet",
+      rhythmNoneBody:
+        "One is enough to start. Pick a mode below and the first question is on its way.",
+      rhythmFreshTitle: "{days} day(s) since the last one",
+      rhythmFreshBody: "The habit is warm. This is the easiest it will ever be to keep.",
+      rhythmStaleTitle: "{days} day(s) since the last one",
+      rhythmWarmBody: "Last one on {last}. Worth another before the week turns.",
+      rhythmStaleBody: "Last one on {last}. Nothing is broken -- the habit just cooled.",
+
       depthBands: {
         warmup: "Warm-up",
         standard: "Standard",

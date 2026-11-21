@@ -3441,6 +3441,17 @@ export const zh = {
     // Interviews
     interviews: {
       title: "面试",
+// 374: 距上一场多久了。列表说的是发生过什么；这里说的是最近没发生什么——
+      // 一句提醒，从来不是一个分数。
+      rhythmEyebrow: "这个习惯",
+      rhythmNoneTitle: "还没有演练过",
+      rhythmNoneBody: "一场就够开始了。在下面选个模式，第一道题随后就到。",
+      rhythmFreshTitle: "距上一场 {days} 天",
+      rhythmFreshBody: "习惯还热着。保持它是再容易不过的事。",
+      rhythmStaleTitle: "距上一场 {days} 天",
+      rhythmWarmBody: "上一场在 {last}。在这周翻过去之前，值得再来一场。",
+      rhythmStaleBody: "上一场在 {last}。什么也没坏——只是习惯凉了。",
+
       depthBands: {
         warmup: "热身",
         standard: "标准",

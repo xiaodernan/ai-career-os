@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
+import { RhythmCard } from "@/components/interviews/rhythm-card";
 import { useCreateInterviewSession, useDeleteInterviewSession } from "@/lib/hooks/actions";
 import { useInterviewSessions } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
@@ -144,7 +145,14 @@ export default function InterviewsPage() {
         {/* Shimmer hairline crowns the band -- the same premium separator the dashboard uses. */}
         <span aria-hidden className="shimmer-rule absolute inset-x-0 top-0 block h-px" />
         <div className="relative px-6 py-6">
-          <PageHeader
+          {/* 374: how long it has been. The list below shows what happened; this
+          says what has NOT happened lately -- a nudge, never a score. */}
+      <RhythmCard
+        input={{
+          sessions: (sessions.data?.items ?? []).map((session) => ({ at: session.startedAt })),
+        }}
+      />
+      <PageHeader
             title={<GradientText className="italic">{t("interviews.title")}</GradientText>}
             description={
               <span className="animate-fade-up block" style={{ animationDelay: "90ms" }}>
