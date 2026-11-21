@@ -52,3 +52,12 @@ not fabricated demo data:
 Portfolio personal-info check against the live `https://xiaodernan.github.io/`:
 赵欣曈 · 南方科技大学 · 香港中文大学 · 法狗狗 · IELTS 6.5 · CET6 546 ·
 物理竞赛铜牌 · "隐盾" present and "隐图" absent. All accurate; no hallucination.
+
+### Counsel-LLM investigation (2026-11-21)
+`POST /admin/counsel-llm` first answered MALFORMED_REQUEST when probed with a flat
+snapshot — the wrong shape. With the real shape the frontend sends (`stats`, `cohort`,
+`cache`, `weekly`, `attention`, `funnel`) it returns 200 with `empty:false` but a blank
+summary: the running stack is `llm_provider=mock`, so the counsel engine's extract
+node catches the LLM failure and renders honest silence rather than an invented
+analyst voice. Confirmed correct behaviour, not a defect. The engine's grounded-measure
+discipline is covered by its own tests; a real-key deployment yields the counsel.

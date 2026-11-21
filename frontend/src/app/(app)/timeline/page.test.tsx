@@ -26,6 +26,21 @@ vi.mock("@/lib/hooks/timeline", () => ({
     isError: false,
     data: undefined,
   }),
+  // Epic 354: the chronicle card's mutation must be stubbed too — this page test
+  // grades the ledger, never the chronicle call.
+  useCareerChronicle: () => ({
+    mutate: () => undefined,
+    isPending: false,
+    isSuccess: false,
+    isError: false,
+    data: undefined,
+  }),
+}));
+
+// Epic 354: the page reads milestone counters to feed the chronicle. The page test
+// only grades the ledger, so a quiet milestone snapshot is enough.
+vi.mock("@/lib/hooks/monitoring", () => ({
+  useMilestones: () => ({ data: undefined, isPending: false, isError: false }),
 }));
 
 vi.mock("@/lib/hooks/use-url-state", () => ({

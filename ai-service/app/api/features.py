@@ -49,6 +49,7 @@ from app.features import interview_prep as interview_prep_mod
 from app.features import analytics as analytics_mod
 from app.features import career_timeline as career_timeline_mod
 from app.features import career_narrative as career_narrative_mod
+from app.features import career_chronicle as career_chronicle_mod
 from app.features import ingestion as ingestion_mod
 from app.features import monitoring as monitoring_mod
 from app.features import import_plan as import_plan_mod
@@ -1310,6 +1311,27 @@ async def career_narrative_ep(req: CareerNarrativeReq, ctx: Ctx = Depends(requir
     """
     payload = {"events": [e for e in (req.events or []) if isinstance(e, dict)]}
     return await career_narrative_mod.career_narrative(
+        payload, locale=req.locale or "en",
+        user_id=str(ctx.user_id) if ctx.user_id else None)
+
+
+class CareerChronicleReq(BaseModel):
+    """Epic 354 — the chaptered chronicle: the events and milestone counters the page already shows."""
+    events: list[dict] = Field(default_factory=list)
+    milestones: dict = Field(default_factory=dict)
+    locale: str | None = None
+
+
+@router.post("/career-chronicle")
+async def career_chronicle_ep(req: CareerChronicleReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 354 — a grounded, chaptered epic over the reader's own search. No run/usage
+    row: an install chronicling its own ledger. Silence on failure, never a guess.
+    """
+    payload = {
+        "events": [e for e in (req.events or []) if isinstance(e, dict)],
+        "milestones": req.milestones if isinstance(req.milestones, dict) else {},
+    }
+    return await career_chronicle_mod.career_chronicle(
         payload, locale=req.locale or "en",
         user_id=str(ctx.user_id) if ctx.user_id else None)
 

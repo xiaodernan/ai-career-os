@@ -1148,9 +1148,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # body the resume controller binds) makes it 251. Epic 345's NarrativeRequest (the
     # `{events, locale}` body the timeline controller binds) makes it 252. Epic 352's
     # RagAnswerRequest (the `{query, kinds?, documentIds?, topK?, contextSummary?}` body the
-    # knowledge controller binds) makes it 253.
-    assert len(declared) == 253, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 253 measured"
+    # knowledge controller binds) makes it 253. Epic 354's ChronicleRequest (the
+    # `{events, milestones, locale}` body the timeline controller binds) makes it 254.
+    assert len(declared) == 254, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 254 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3274,7 +3275,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # by one line; the sentence itself did not change.
         # 152 rather than 141 since Epic 342's AdminMeasure interface + Badge import grew
         # the block above it by eleven lines; the sentence itself did not change.
-        ("frontend/src/app/admin/admin-page.tsx", 152),
+        # 157 rather than 152 since Epic 353's bounce tiles + Epic 354's chronicle trend
+        # grew the blocks above it by five lines; the sentence itself did not change.
+        ("frontend/src/app/admin/admin-page.tsx", 157),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.

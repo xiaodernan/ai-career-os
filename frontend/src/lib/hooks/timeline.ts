@@ -4,7 +4,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { list, str } from "@/lib/api/normalize";
-import type { TimelineEntry } from "@/lib/api/types";
+import type { CareerChronicle, TimelineEntry } from "@/lib/api/types";
 
 /**
  * The timeline the loop already wrote (Epic 81): one ordered list of the dated
@@ -38,6 +38,28 @@ export function useCareerNarrative() {
         locale,
       })) ?? {},
     onError: fail("failures.careerNarrative"),
+  });
+}
+
+/**
+ * Epic 354 — a grounded, chaptered chronicle of the reader's own search. The
+ * events and milestone counters are sent by the page (no new DB read); a silent
+ * relay answers an empty book, which the card renders as honest quiet rather than
+ * an invented epic.
+ */
+export function useCareerChronicle() {
+  const { locale } = useLocale();
+  return useMutation({
+    mutationFn: async (input: {
+      events: TimelineEntry[];
+      milestones: Record<string, unknown>;
+    }): Promise<CareerChronicle> =>
+      (await api.create<CareerChronicle>(endpoints.timelineChronicle, {
+        events: input.events,
+        milestones: input.milestones,
+        locale,
+      })) ?? {},
+    onError: fail("failures.careerChronicle"),
   });
 }
 

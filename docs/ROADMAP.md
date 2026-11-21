@@ -8198,6 +8198,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **354** The Career Chronicle — a grounded, chaptered epic of one reader's search (2026-11-21).
+
+  Briefs IV/VI: "把大模型能力完整、深度地嵌入项目" and "宏观史诗叙事 + 细节包罗万象" —
+  "看着很大、里面很空" was true of the milestone shelf (badges with no meaning) and the
+  static playbook. Audit found every LLM narrative feature wrote ONE artifact; none wrote
+  a progressing book. Added a genuine multi-node StateGraph (draft → challenge → verify →
+  render), the deepest graph in the product after story-forge:
+  - `ai-service/app/features/career_chronicle.py` writes a chaptered book over the reader's
+    OWN timeline events + milestone counters (no new DB read), every chapter's prose and
+    lore verified against digit-runs the payload carries (silence on failure, never invented).
+    Route `POST /internal/features/career-chronicle`; mock cue added for offline verification.
+  - Java bridge `careerChronicle` (AiServiceClient/HttpAiServiceClient) + `POST /api/v1/timeline/chronicle`.
+  - Frontend `CareerChronicleCard` on /timeline: chapter list with unlock/expand state,
+    lore entries, epilogue, bilingual (en/zh); `useCareerChronicle` + types + endpoints.
+  - Gates: engine 3 tests, hook wire-shape + card smoke tests, copy census 227→228,
+    api_doc_contract (internal + public rows), failed-mutation census, response-shape pins,
+    endpoint parity, i18n used-keys.
+  Verified: ai-service **3016 passed**, frontend **1583 passed**, tsc + next build green.
+  Real-key live probe (gpt-6.2-sol via Clash 7897): a 3-chapter Chinese chronicle, 0 struck,
+  grounded lore + epilogue — deep LLM capability exercised for real, not mocked.
+
 - [x] **353** The lost reader, made visible — bounce and aimless clicks become real events (2026-11-21).
 
   Brief IX: "模拟真实用户行为：打开页面没耐心就关掉、不知道去哪就瞎点等，把这些真实行为模拟出来".

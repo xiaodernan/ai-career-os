@@ -506,6 +506,17 @@ public interface AiServiceClient {
     }
 
     /**
+     * Epic 354 — a grounded, chaptered chronicle of the reader's own search. The
+     * browser sends the timeline events and milestone counters it already renders;
+     * the engine writes a short book whose every claim cites a number in that payload.
+     * Silence (empty book) is the failure mode, never invented prose. No run/usage row.
+     */
+    default Map<String, Object> careerChronicle(UUID userId, List<Map<String, Object>> events,
+                                                 Map<String, Object> milestones, String locale) {
+        return Map.of();
+    }
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is.
      */

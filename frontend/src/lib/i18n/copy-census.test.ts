@@ -178,7 +178,8 @@ describe("the browser's copy", () => {
     // 223 with Epic 347: `components/layout/quick-start.tsx`, the first-run guided hello.
     // 226 with Epic 348-350: language-proficiency-card, skill-summary-card, nine-quests-progress-card.
     // 227 with the grounded RAG answer bridge: components/knowledge/ask-knowledge-card.tsx.
-    expect(browserSources().length).toBe(227);
+    // 228 with Epic 354: components/timeline/career-chronicle-card.tsx.
+    expect(browserSources().length).toBe(228);
   });
 
   it("finds a sentence, however long it is", () => {

@@ -57,4 +57,26 @@ public class TimelineController {
     /** Epic 345 — body of the timeline narrative: the events the page already drew + locale. */
     public record NarrativeRequest(List<Map<String, Object>> events, String locale) {
     }
+
+    /**
+     * Epic 354 — a grounded, chaptered chronicle of the reader's own search. The browser
+     * sends the timeline events and milestone counters already on screen; the engine writes
+     * a short book whose claims must cite numbers from that payload, or stay silent.
+     */
+    @PostMapping("/api/v1/timeline/chronicle")
+    public Map<String, Object> chronicle(@CurrentUser AuthUser user,
+                                          @RequestBody(required = false) ChronicleRequest request) {
+        if (request == null) {
+            return Map.of();
+        }
+        List<Map<String, Object>> events = request.events() == null ? List.of() : request.events();
+        Map<String, Object> milestones = request.milestones() == null ? Map.of() : request.milestones();
+        Map<String, Object> out = ai.careerChronicle(user.id(), events, milestones, request.locale());
+        return out == null ? Map.of() : out;
+    }
+
+    /** Epic 354 — body of the chronicle: the events and milestone counters the page already drew. */
+    public record ChronicleRequest(List<Map<String, Object>> events,
+                                   Map<String, Object> milestones, String locale) {
+    }
 }

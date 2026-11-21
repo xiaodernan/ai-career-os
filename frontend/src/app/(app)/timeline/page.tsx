@@ -18,7 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VirtualList } from "@/components/common/virtual-list";
 import { useTimeline } from "@/lib/hooks/timeline";
+import { useMilestones } from "@/lib/hooks/monitoring";
 import { CareerNarrativeCard } from "@/components/timeline/career-narrative-card";
+import { CareerChronicleCard } from "@/components/timeline/career-chronicle-card";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateTime, formatTime } from "@/lib/format";
@@ -158,6 +160,7 @@ function DayGroup({ dayKey, at, count, children }: {
 export default function TimelinePage() {
   const { t, locale } = useLocale();
   const query = useTimeline();
+  const milestones = useMilestones();
   const [state, setUrl] = useUrlState<{ kind?: string }>(PAGE_DEFAULTS);
   const narrowed = (state.kind ?? "").trim();
   const narrowedKind = narrowed.length > 0 ? narrowed : undefined;
@@ -230,6 +233,10 @@ export default function TimelinePage() {
       {/* Epic 345 — one grounded story over the whole ledger, in the reader's language. */}
       {query.data && query.data.length > 0 && (
         <CareerNarrativeCard events={query.data} />
+      )}
+      {/* Epic 354 — the chaptered chronicle: the meaning behind the milestone shelf. */}
+      {query.data && query.data.length > 0 && (
+        <CareerChronicleCard events={query.data} milestones={milestones.data} />
       )}
       <QueryBoundary
         query={query}

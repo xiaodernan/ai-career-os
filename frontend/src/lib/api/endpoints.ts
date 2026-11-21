@@ -152,6 +152,8 @@ export const endpoints = {
   /** The reader's whole search as one ordered list of what already happened — groups, not screens. */
   timeline: "/timeline",
   timelineNarrative: "/timeline/narrative",
+  /** A grounded, chaptered epic over the reader's own search, unlocked by milestones. */
+  timelineChronicle: "/timeline/chronicle",
 
   /* ---------------- Activity / reports / search / chat history ----------- */
   activityRuns: "/activity/runs",

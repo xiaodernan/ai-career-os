@@ -1927,6 +1927,25 @@ export interface TimelineEntry {
   summary: string;
 }
 
+/** One chapter of the Career Chronicle (Epic 354) — a grounded act of the reader's own search. */
+export interface ChronicleChapter {
+  key: string;
+  title: string;
+  prose: string;
+  loreEntries?: string[];
+  anchor?: string;
+}
+
+/** The chaptered chronicle over the reader's own search; empty means a silent book. */
+export interface CareerChronicle {
+  chapters?: ChronicleChapter[];
+  epilogue?: string;
+  locale?: string;
+  issues?: string[];
+  struck?: number;
+  empty?: boolean;
+}
+
 /* ------------------------------------------------------------------ */
 /* Growth report                                                       */
 /* ------------------------------------------------------------------ */

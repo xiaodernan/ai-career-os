@@ -948,6 +948,18 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> careerChronicle(UUID userId, List<Map<String, Object>> events,
+                                               Map<String, Object> milestones, String locale) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("events", events == null ? List.of() : events);
+        body.put("milestones", milestones == null ? Map.of() : milestones);
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/career-chronicle", userId, body);
+    }
+
+    @Override
     public Map<String, Object> pipelineFunnel(UUID userId, List<Map<String, Object>> applications) {
         return post("/internal/features/pipeline-funnel", userId, Map.of("applications", applications));
     }

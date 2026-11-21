@@ -236,6 +236,19 @@ class MockProvider:
                                "closed": [],
                                "open": [{"question": "What exactly did you do yourself?",
                                          "reason": "the note does not isolate individual contribution"}]})
+        # Epic 354 -- the Career Chronicle. The mock echoes a figure it actually saw
+        # in the fenced payload so the chapter verifier can be exercised offline: a
+        # chapter citing a source number passes, one citing an invented number is struck.
+        if "chronicler of one person" in low:
+            digits = re.findall(r"\d+(?:\.\d+)?%?", prompt)
+            figure = digits[0] if digits else "1"
+            return json.dumps({"chapters": [
+                {"key": "opening", "title": "The Opening Move",
+                 "prose": f"The record shows {figure} dated entries marking the start of the search.",
+                 "loreEntries": [f"Anchored to {figure} in the ledger."], "anchor": figure}],
+                "epilogue": f"The ledger closes with {figure} entries still on record."})
+        if "skeptical reader of a job-search chronicle" in low:
+            return json.dumps({"issues": []})
         return json.dumps({"answer": "mock structured answer", "confidence": 0.8})
 
     async def stream(self, req: LLMRequest) -> AsyncIterator[StreamDelta]:
