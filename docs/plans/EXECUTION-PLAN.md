@@ -26,8 +26,8 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 7 | Redis 合理运用 | DONE | sliding-window limiter, health probe, dashboard read-through (125), Redis Streams jitter queue (162), admin counter cache (253), Epic 256 siege comparison |
 | 8 | 计网知识：SSE、CORS、correlation、ICS、webhook、rate limit、circuit breaker | DONE | `SseRelayService`, `EnvelopeAdvice`, `ForwardedAddressIT`, calendar ICS token, `/inbound/mail` HMAC webhook, gateway token bucket, Resilience4j |
 | 9 | 算法/数据结构/操作系统/硬件适配 | DONE (iterating) | ai-service `app/algorithms` (LRU/TTL caches, top-k heap, sparse vectors, BM25), dense-fill epics 184/251, index tuning V7/V39/V40, hot paths read with `EXPLAIN`-informed indexes |
-| 10 | 前端美观登峰造极 | PARTIAL | design system (oklch tokens), 248 typography audit, hint system (245/247), 255 wheel; full visual guarantee needs a browser — see row 34 |
-| 11 | 修复字体变形/歪曲/重叠/挤压 | PARTIAL | 248 typography pass fixed the measurable cases (text-balance, clamp); a full render-sweep awaits the browser |
+| 10 | 前端美观登峰造极 | DONE (measured, 2026-11-22) | design system (oklch tokens), 248 typography audit, hint system (245/247 + 359), 255 wheel, 358 (-152 kB/route); 20 routes audited for overlap and occlusion in a real browser — zero document overflow, zero occluded controls |
+| 11 | 修复字体变形/歪曲/重叠/挤压 | DONE (measured, 2026-11-22) | 248 typography pass + a real-browser sweep of all 20 routes: `docOverflow=ok` everywhere, no clipped text (every finding is a `span.sr-only`, which is meant to be clipped), no occluded control |
 | 12 | 前后端协同发展 | DONE (rhythm) | each epic ships both halves (250/251/252/254 admin + UI; 252 projection server+client; 253 cache + wire) |
 | 13 | 数据库性能 | DONE (iterating) | V1–V40 migrations; pgvector; V7/V39/V40 indexes; dashboard read model; `COUNT(*)`-over-index shape measured in the siege |
 | 14 | 各种缓存合理运用 | DONE | 125 dashboard, 253 admin (off default, fail-open, ±10% jitter), client-side exact-cache warm-up named; `cached_tokens` recorded as reported, never invented |
@@ -42,7 +42,7 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 23 | 简明说明书/小册子嵌入项目，不是文档 | DONE | `/playbook` + keepsake manual + epilogue (Epic 249); ten-minute start; the printed manual is one button away |
 | 24 | 游戏/新手教程/快速上手 | DONE | `/tour` (Epic 244), ten-minute start card, first-week game embedded with how-to-play, nine-quest dashboard |
 | 25 | 全内容中英文切换、无夹杂、英文也翻中文 | DONE (gated) | census + used-keys + copy-parity gates; the EN table holds no Chinese string (caught and fixed this session) |
-| 26 | 主界面各种按键附带教学说明 | PARTIAL | hint system on chrome + main surfaces (245/247); full rollout named as the next UI epic |
+| 26 | 主界面各种按键附带教学说明 | DONE (2026-11-22, Epic 359) | hint system on chrome + main surfaces (245/247) + the growth panel's nine engines, each naming the question it answers and what it needs typed in; the run button swaps to "type the role first" while the field is short |
 | 27 | 无尽开放世界感 + 防迷路引导 | PARTIAL | `/tour`, ⌘K palette, quest map, ten-minute start, eleven doors; the "continent" metaphor keeps growing per epic |
 | 28 | 鼠标引擎反了，修复 | DONE | Epic 255 — forced standard dialect ("往下滑就往下看"), migration from Epic 225's storage, settings switch rewritten EN+ZH |
 | 29 | 新章节/新模块/新玩法/新内容 | DONE (ongoing) | Epics 249–256 this arc; the ROADMAP is the till |
@@ -50,7 +50,7 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 31 | RSS 之类大模型缓存效率 | MEASURED | see row 18; prefix discipline already in every LLM call |
 | 32 | 个人展示页 https://xiaodernan.github.io/ 同步 | DONE | showcase.html auto-regenerates on every push; the portfolio card (project 06, Monday 13:30 UTC sync) was added after push access; `sync-career-os.yml` watches `main` and pushes `latest.json` weekly — the site load fetches it straight from raw.githubusercontent with `assets/career-os/latest.json` as the cached fallback. 433 crons run every week against the public URL and only the fallback moves; real routes are linked from the card |
 | 33 | 优化措施 / unclogging 前端 | DONE (2026-11-22) | Epic 358 paid the shared-table debt: every route shed ~152 kB gzip (knowledge 374.1 → 222.2) and the budget was TIGHTENED 366 → 230 rather than raised; rows 10–11 still await a browser |
-| 34 | 前端渲染验证/视觉巡检 | PARTIAL | SSR byte-audits and component tests only; in-app browser has not reached `:3000`/`:8080` from this host |
+| 34 | 前端渲染验证/视觉巡检 | DONE (2026-11-22) | the browser reached the stack: overlap-audit (20 routes, zero overflow), occlusion-audit (20 routes, zero occlusion), avatar-probe (a real `object-contain` measurement) all ran against the running product |
 | 35 | 每次只动手做、不问 | DONE (process) | the plan drives; blockers are noted, never waited on |
 | 36 | 外围需求全部执行 | DONE/PARTIAL as above | nothing silently dropped — this ledger is the accounting |
 

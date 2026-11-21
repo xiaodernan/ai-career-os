@@ -8198,6 +8198,48 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **360** The reader's avatar fits instead of being cropped (2026-11-22).
+
+  Brief V names it word for word: "我的头像被压缩变小、边缘被裁掉，修复". The cause was
+  one Tailwind class. `AvatarImage` rendered with `object-cover`, which fills the
+  circle by cropping whatever does not fit — a wide picture lost its top and bottom
+  and the reader saw a slice of their own face, and the frame was `size-8` (32 px),
+  small enough to read as "compressed". The image now fits *inside* the frame
+  (`object-contain`, `object-center`) over a `bg-muted` background that fills the
+  letterbox, so a transparent PNG does not show the fallback's initials through
+  the gap. The topbar's avatar is `size-9` and its alt names whose picture it is
+  (`chrome.yourAvatar`) — it is identity, not decoration, and a screen reader
+  should say so. The trade is written into the component: a non-square picture no
+  longer fills the circle edge to edge. A crop is a picture the reader did not
+  choose.
+
+  Verified in a real browser, not only in tests: `e2e/avatar-probe.mjs` (kept
+  beside the overlap and occlusion audits) renders the shipped component with a
+  3:1 picture and reads its computed style — `object-fit: contain` at
+  `50% 50%`, which is the numerical shape of "nothing was cropped". Radix mounts
+  `Avatar.Image` only once the picture has loaded, so a server render draws the
+  fallback; the unit test therefore pins the image's classes from the source and
+  the frame's circle and clip from a render. Frontend suite 209 files / 1608
+  tests green, tsc clean, budget still 222.2 of 230 kB.
+
+- [x] **359** Every engine button says what it is for (2026-11-22).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明，方便用户理解". The `/growth`
+  panel holds nine engines whose labels are one word each — "gap" and "progress"
+  are one word each and one is a snapshot while the other is a trend, so a click
+  was a guess. Each engine button now carries a hint naming the question it
+  answers and what it needs typed in; the run button's own hint swaps to "type
+  the role first" while the field is too short, which is exactly when the reader
+  is wondering why the button will not answer. Two engines (stories, roles) say
+  outright that they need no role, so the reader is not sent to type one.
+
+  EN+ZH, ten keys each, resolved through `t()` so the census owns the words.
+  Radix mounts a tooltip's content only while it is open, so the test pins the
+  two halves separately: the rendered markup proves all ten controls are tooltip
+  triggers (nothing left bare), and the source walk proves every engine has a
+  sentence and that no sentence is prose in a component. The two eslint warnings
+  this file neighbours were confirmed pre-existing on clean HEAD.
+
 - [x] **358** The reader's language ships with the HTML, not with the JavaScript (2026-11-22).
 
   Epic 265 named this as the architecture's standing debt and the budget header was raised
