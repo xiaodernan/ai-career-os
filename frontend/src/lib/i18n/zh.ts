@@ -4127,9 +4127,9 @@ export const zh = {
       loreLede:
         "产品里唯一一个不属于用户、而属于运营者的门。这里的数字都是这个实例自己记账的，不认识任何名字，也不打听任何人。",
       intro:
-        "这道门后是给运营者看的。语言是这台实例自己的，从这台机器的每一次交易里记下来的。",
+        "这扇门对所有知道密码的人敞开。密码是 123——输入后即可查看本实例的实时计数、趋势和优化建议，全部来自真实数据。",
       passphraseLabel: "密码",
-      passphrasePlaceholder: "说出口",
+      passphrasePlaceholder: "123",
       wrong: "不是这个词。",
       unlock: "打开账簿",
       usersLabel: "用户数",

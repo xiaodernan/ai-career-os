@@ -4421,9 +4421,9 @@ export const en = {
       loreLede:
         "One door in this product doesn't have a user on the other side; it has the operator, looking back at the whole thing. Counts, latencies and the next hand-wave you should do — pinned to this install, not to anyone's résumé.",
       intro:
-        "The word this door opens on is the one the operator chose. No account is required; a passphrase is. What's behind it is the install's own counter, straight off the tables.",
+        "This door opens for everyone who knows the passphrase. The password is 123 — enter it to see the install's live counters, trends, and optimization recommendations, all drawn from real data.",
       passphraseLabel: "The passphrase",
-      passphrasePlaceholder: "speak",
+      passphrasePlaceholder: "123",
       wrong: "That isn't the word.",
       unlock: "Open the ledger",
       usersLabel: "Users",
