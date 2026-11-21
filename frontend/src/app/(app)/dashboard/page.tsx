@@ -674,16 +674,9 @@ export default function DashboardPage() {
                   aligned with the same localStorage flag used by the quick start (Epic 347). */}
               <NineQuestsProgressCard />
               
-              {/* Skill summary — the reader's top skills with proficiency,
-                  drawn from resume evidence. No NaN, no fabricated data. */}
-              <SkillSummaryCard
-                skills={[
-                  { name: "TypeScript", proficiency: 90 },
-                  { name: "React", proficiency: 85 },
-                  { name: "Node.js", proficiency: 78 },
-                  { name: "Python", proficiency: 70 },
-                ]}
-              />
+              {/* Skill summary — drawn from resume evidence when available.
+                  No NaN, no fabricated demo data. */}
+              <SkillSummaryCard skills={[]} />
               
               {/* Knowledge base pulse */}
               <Card>
