@@ -4296,6 +4296,35 @@ export const en = {
       ledgerWeeksTitle: "Seven Mondays on one wall",
       ledgerWeeksBody:
         "The wall reads week over week now — Monday-anchored, UTC, dense-filled. Five lines are instruments of use: signups, applications, rehearsals, agent runs, AI calls. Two are instruments of attention: landings and dwell reads — the same rows the thirty-day view counts, weekly. A quiet week reads as zero, not as a gap.",
+      /**
+       * The atlas — chapter 21 (Epic 366).
+       *
+       * The manual has to describe every surface a reader can stand on, and the
+       * Career Atlas (Epic 357) is the one surface that is a *world* rather than a
+       * list. Four things it can tell you, each with how to read it — and one
+       * promise about what it never does.
+       */
+      atlasEyebrow: "The world you built",
+      atlasTitle: "The Career Atlas — a map drawn only from your own facts",
+      atlasIntro:
+        "Every application, rehearsal, match, contact, resume version and note you have written is a place you actually went. The atlas, on the timeline page, draws that world instead of inventing one: six regions, one per kind of fact, plus an honest bucket for anything the engine cannot name. It grows only when you act — a reload puts every site back where it was, so the map can be learned.",
+      atlasRegionTitle: "Regions",
+      atlasRegionBody:
+        "The rail on the left names each region and counts what is in it. Pick one to fly the map to it; the count is the whole region, even where the map stops drawing dots. A region also says how long it took to build — the first fact and the newest one, which is your own range and never an invented one.",
+      atlasSiteTitle: "Sites",
+      atlasSiteBody:
+        "Each dot is one fact, placed by order rather than by chance: the first event of a region sits due north and later ones wind outward. A dot is a door — click it, or tab to it and press Enter, and the card below names what happened and when. The same doors are listed in words underneath, for a reader who would rather read than point.",
+      atlasRouteTitle: "The route you walked",
+      atlasRouteBody:
+        "The dashed line joins one region to the next one you actually reached, in the order the ledger says you reached it — a resume, then a posting, then the match, then the interview. It is dashed because it is a path taken, not a road that exists, and the caption counts its steps. A ledger with one fact draws one stop and no line.",
+      atlasFrontierTitle: "The frontier",
+      atlasFrontierBody:
+        "Below the map, the strip names the rooms you have not been to yet — a board with no application, a rehearsal list nobody has opened. Each is a working door into the screen that would write the first fact there. When every known room is charted the strip says so, rather than nagging.",
+      atlasNothingTitle: "What the atlas never does",
+      atlasNothingBody:
+        "It never invents a place. No dot exists without a row behind it, no region without a fact, no frontier without a screen that would fill it. An empty ledger gets an uncharted-map sentence and five working doors — not a decorated map of nowhere.",
+      atlasCta: "Open the timeline and look at your own world →",
+
       ledgerCounselTitle: "The advice written by arithmetic",
       ledgerCounselBody:
         "Below the wall sits the counsel: seven rules reading the page's own wires at the moment you opened it — where the funnel bleeds most, how many signups came back, whether a single reader tapped anything, whether strangers ever stopped to read. Each rule names the number that fired it; a rule that cannot see its input stays silent; a rule that fires tells you the next single step, and nothing else.",

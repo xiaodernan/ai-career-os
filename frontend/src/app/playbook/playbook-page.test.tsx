@@ -45,6 +45,24 @@ describe("/playbook — the manual", () => {
     }
   });
 
+  it("366: teaches the atlas — the manual must cover every surface a reader can stand on", () => {
+    const html = renderToStaticMarkup(<PlaybookPage />);
+    expect(html).toContain('id="atlas"');
+    for (const key of [
+      "playbook.atlasEyebrow",
+      "playbook.atlasTitle",
+      "playbook.atlasIntro",
+      "playbook.atlasRegionTitle",
+      "playbook.atlasSiteTitle",
+      "playbook.atlasRouteTitle",
+      "playbook.atlasFrontierTitle",
+      "playbook.atlasNothingTitle",
+      "playbook.atlasCta",
+    ]) {
+      expect(html, key).toContain(key);
+    }
+  });
+
   it("honors the same anchor shape the route prints", () => {
     const html = renderToStaticMarkup(<PlaybookPage />);
 

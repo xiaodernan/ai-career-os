@@ -529,6 +529,43 @@ export default function PlaybookPage() {
           </p>
         </section>
 
+        {/* The atlas — how to read the world your own ledger drew (Epic 366) */}
+        <section id="atlas" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.atlasEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">21</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.atlasTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.atlasIntro")}</p>
+
+          {/* The four things the map can tell you, each with how to read it. */}
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {[
+              { titleKey: "playbook.atlasRegionTitle", bodyKey: "playbook.atlasRegionBody" },
+              { titleKey: "playbook.atlasSiteTitle", bodyKey: "playbook.atlasSiteBody" },
+              { titleKey: "playbook.atlasRouteTitle", bodyKey: "playbook.atlasRouteBody" },
+              { titleKey: "playbook.atlasFrontierTitle", bodyKey: "playbook.atlasFrontierBody" },
+            ].map((node, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {t(node.titleKey)}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t(node.bodyKey)}</p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] p-5">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("playbook.atlasNothingTitle")}</p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.atlasNothingBody")}</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            <Link href="/timeline" className="font-medium text-primary underline-offset-4 hover:underline">
+              {t("playbook.atlasCta")}
+            </Link>
+          </p>
+        </section>
+
         {/* Colophon */}
 
         {/* The ledger watches back — the one chapter about the install itself (Epic 281) */}

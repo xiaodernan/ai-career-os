@@ -23,6 +23,7 @@ const CHAPTERS = [
   { href: "#inink", titleKey: "playbook.inInkTitle" },
   { href: "#edge", titleKey: "playbook.edgeTitle" },
   { href: "#afterward", titleKey: "playbook.afterwardTitle" },
+  { href: "#atlas", titleKey: "playbook.atlasTitle" },
   { href: "#ledger", titleKey: "playbook.ledgerTitle" },
   { href: "#assistant", titleKey: "playbook.assistantTitle" },
   { href: "#decode", titleKey: "playbook.decodeTitle" },
