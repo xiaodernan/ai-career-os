@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-21T15:33:52.103873Z",
+  "generated_at": "2026-11-21T15:36:24.964698Z",
   "branch": "main",
-  "head": "5596d73",
-  "total_commits": 1742,
+  "head": "8a8770c",
+  "total_commits": 1744,
   "milestone": "Epic 357",
   "milestone_full": "the ledger of done epics (through 510 items), closed at Epic 357 — The Career Atlas",
   "pushed_at": "2026-11-21",
