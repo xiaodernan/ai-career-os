@@ -123,6 +123,10 @@ PASTED_TEXT_FIELDS: dict[tuple[str, str, str], str] = {
 # role or company name in one box (min_length 2 or 10), and the interview-prep wave's prep endpoint
 # takes the target role the session drills toward.
 BOUNDED_NOT_PASTED: dict[tuple[str, str, str], str] = {
+    # Epic 274: a raw career note the reader pastes for the STAR forge. It is a paste,
+    # but of the reader's own experience, not a job posting — the floor above compares
+    # posting length, so this note must sit in the other ledger with its reason.
+    ("StoryForgeReq", "raw_note", "/story-forge"): "a career note for the STAR forge, not a job posting",
     ("GapReq", "target_role", "/gap-analysis"): "one role name typed into one box, never a paste",
     ("SalaryReq", "role", "/salary-benchmark"): "one role name, the salary question's subject",
     ("NegotiateReq", "role", "/negotiate"): "one role name, the negotiation's subject",

@@ -38,6 +38,7 @@ from app.features import resume_parse as rp
 from app.features import roles as roles_mod
 from app.features import salary as salary_mod
 from app.features import stories as stories_mod
+from app.features import story_forge as story_forge_mod
 from app.features import tailor as tailor_mod
 from app.features import counter_offer as counter_offer_mod
 from app.features import demand as demand_mod
@@ -1299,6 +1300,34 @@ async def classify_reply_ep(req: ClassifyReplyReq, ctx: Ctx = Depends(require_in
         # The run is closed as failed and the refusal travels: the backend's
         # bridge keeps the letter and stores no intent, which is the honest
         # answer when neither the words nor the model read it.
+        await observability.finish_run(run_id, "failed")
+        raise
+    await observability.finish_run(run_id, "completed")
+    return result
+
+
+class StoryForgeReq(BaseModel):
+    """Epic 274 -- forge one interview STAR story from a raw career note.
+
+    `raw_note` is required: it is the reader's own material and the only source
+    the verifier trusts. `locale` picks the language of the honest follow-ups."""
+    raw_note: str = Field(min_length=1)
+    locale: str | None = None
+
+
+@router.post("/story-forge")
+async def story_forge_ep(req: StoryForgeReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 274 -- the LLM acts as writer, then skeptical interviewer, then writer
+    again; a deterministic verifier strikes any figure the note did not carry.
+
+    The graph's open challenges survive into the result as `followups`, so a story
+    the reader cannot yet defend says what they still need to supply."""
+    run_id = await _run(ctx, "interview", "story_forge")
+    try:
+        result = await story_forge_mod.forge_story(
+            req.raw_note, locale=req.locale,
+            user_id=str(ctx.user_id) if ctx.user_id else None, run_id=run_id)
+    except Exception:
         await observability.finish_run(run_id, "failed")
         raise
     await observability.finish_run(run_id, "completed")

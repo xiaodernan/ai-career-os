@@ -210,6 +210,32 @@ class MockProvider:
             nums = re.findall(r"\[(\d+)\]", prompt)
             scores = {n: max(0.1, 1.0 - i * 0.1) for i, n in enumerate(nums)}
             return json.dumps({"scores": scores})
+        # Epic 274 -- the STAR story forge. The mock echoes a figure it actually
+        # saw in the fenced note so the deterministic verifier can be exercised
+        # offline: a story carrying only source numbers passes, one carrying an
+        # invented number gets struck. Three cues, one per LLM node of the graph.
+        if "raw career note into an interview star" in low:
+            digits = re.findall(r"\d+(?:\.\d+)?%?", prompt)
+            figure = digits[0] if digits else " several"
+            return json.dumps({"situation": "A project needed attention",
+                               "task": "I owned the delivery",
+                               "action": "I designed and built the solution",
+                               "result": f"Improved the outcome by {figure}"})
+        if "skeptical interview panel" in low:
+            return json.dumps({"challenges": [
+                {"target": "action", "question": "What exactly did you do yourself?",
+                 "closable": "no", "hint": ""},
+            ]})
+        if "improve one star story" in low:
+            digits = re.findall(r"\d+(?:\.\d+)?%?", prompt)
+            figure = digits[0] if digits else " several"
+            return json.dumps({"situation": "A project needed attention",
+                               "task": "I owned the delivery",
+                               "action": "I designed and built the solution",
+                               "result": f"Improved the outcome by {figure}",
+                               "closed": [],
+                               "open": [{"question": "What exactly did you do yourself?",
+                                         "reason": "the note does not isolate individual contribution"}]})
         return json.dumps({"answer": "mock structured answer", "confidence": 0.8})
 
     async def stream(self, req: LLMRequest) -> AsyncIterator[StreamDelta]:

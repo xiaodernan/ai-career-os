@@ -98,6 +98,9 @@ FORWARD = {
     "/internal/features/negotiation-prep": ("NegotiationPrepReq", {"offer"}),
     # Epic 339 -- the gracious decline. `offer` required.
     "/internal/features/decline-letter": ("DeclineLetterReq", {"offer"}),
+    # Epic 274 -- the LLM story forge. `raw_note` is the reader's own material and
+    # the only source the verifier trusts; `locale` optional.
+    "/internal/features/story-forge": ("StoryForgeReq", {"raw_note"}),
 }
 
 

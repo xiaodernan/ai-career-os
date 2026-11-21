@@ -872,11 +872,14 @@ Eight routes that no backend caller builds do sit in section 3, and each says so
 Purpose cell; the gate that partitions the unreached surface charges those seven with
 carrying the marker and every other row with not carrying it.
 
-Every engine now has a backend caller, so this table is empty — a new engine that ships
-ahead of its bridge joins it again, and the split is re-measured.
+The split is re-measured on every run. Epic 274 ships ahead of its bridge, so the
+story forge — a traced LLM StateGraph (write → challenge → revise → verify) that turns
+one career note into a grounded STAR story with honest follow-ups — is the one row here
+until a screen calls it.
 
 | Method | Path | Purpose |
 |---|---|---|
+| POST | `/internal/features/story-forge` | Epic 274 -- the LLM story forge: a career note in, a grounded STAR story out, with unverifiable figures struck and the panel's unanswered challenges kept as honest follow-ups |
 
 ## 4. Worked examples
 
