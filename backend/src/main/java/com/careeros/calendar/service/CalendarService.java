@@ -2,11 +2,18 @@ package com.careeros.calendar.service;
 
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationRepository;
+import com.careeros.common.Paging;
+import com.careeros.knowledge.entity.UserNote;
+import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.offer.entity.OfferRow;
 import com.careeros.offer.repository.OfferShelfRepository;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,12 +32,14 @@ public class CalendarService {
 
     private final ApplicationRepository applications;
     private final OfferShelfRepository offers;
+    private final UserNoteRepository notes;
     private final CalendarLinks links;
 
     public CalendarService(ApplicationRepository applications, OfferShelfRepository offers,
-                           CalendarLinks links) {
+                           UserNoteRepository notes, CalendarLinks links) {
         this.applications = applications;
         this.offers = offers;
+        this.notes = notes;
         this.links = links;
     }
 
@@ -47,15 +56,27 @@ public class CalendarService {
                 .stream()
                 .map(CalendarService::deadline)
                 .toList();
+        // Epic 387: a sealed letter is a dated fact too. The note's body never reaches
+        // the feed — only its opening day and the way back to the timeline.
+        List<CalendarFeed.Capsule> capsules = notes
+                .findByTag(userId, "capsule", Paging.first(200))
+                .getContent()
+                .stream()
+                .map(CalendarService::capsule)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(CalendarFeed.Capsule::date))
+                .toList();
         boolean chinese = locale != null && locale.toLowerCase(Locale.ROOT).startsWith("zh");
         return CalendarFeed.render(
                 reminders,
                 deadlines,
-                chinese ? "职业提醒" : "Career OS reminders",
-                chinese ? "来自 Career OS 的申请提醒与录用决定截止日期。"
-                        : "Your application follow-ups and offer decision deadlines from Career OS.",
+                capsules,
+                chinese ? "职业日历" : "Career OS calendar",
+                chinese ? "来自 Career OS 的申请提醒、录用决定截止日期与封存的信。"
+                        : "Your application follow-ups, offer decision deadlines and sealed letters from Career OS.",
                 links.webRoot() + "/applications",
                 links.webRoot() + "/offers",
+                links.webRoot() + "/timeline",
                 chinese);
     }
 
@@ -74,6 +95,22 @@ public class CalendarService {
                 offer.getLabel(),
                 offer.getDeadline(),
                 stamp(offer));
+    }
+
+    /**
+     * A capsule note becomes its opening day, or null when the tag is not a real
+     * date. The stamp is the note's last change, so an edited letter does not
+     * rewrite the event; a row the database has not stamped falls back to the day.
+     */
+    private static CalendarFeed.Capsule capsule(UserNote note) {
+        LocalDate date = CalendarFeed.capsuleDate(note.getTags());
+        if (date == null) {
+            return null;
+        }
+        OffsetDateTime stamp = note.getUpdatedAt() != null ? note.getUpdatedAt()
+                : note.getCreatedAt() != null ? note.getCreatedAt()
+                : date.atStartOfDay().atOffset(ZoneOffset.UTC);
+        return new CalendarFeed.Capsule(note.getId(), date, stamp);
     }
 
     private static OffsetDateTime stamp(OfferRow offer) {

@@ -8198,6 +8198,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **387** A sealed letter reaches the calendar you already own (2026-11-22).
+
+  The subscription feed (Epic 34.1) carried application reminders and pending
+  offer deadlines; a letter sealed in Epic 384 had no way into the calendar
+  app the reader already opens. The feed now reads the account's
+  `capsule`-tagged notes (up to 200), parses only a real
+  `capsule-YYYY-MM-DD` tag, and writes each as an **all-day event on its
+  opening date**: no hour is invented for a ritual, no alarm rings for a
+  letter, and the note's body never travels — only the day, the account's
+  language for the summary, and the door back to `/timeline`. A malformed date
+  is dropped rather than shifted (2026-02-30 is not a Thursday); events are
+  written in opening order; the feed's own name and description now say
+  letters are included, and the settings card in both languages names the
+  opening day. 5 new backend tests (event shape, language, ordering, tag
+  parsing) bring `CalendarFeedTest` to **19/19**, and the full backend unit
+  suite is **1,433 green**. Also removed the second, duplicate
+  `spring-boot-starter-data-redis` declaration Maven had been warning about
+  since Epic 85.4 — the cache was never missing, only declared twice.
+
 - [x] **386** The search gets a month (2026-11-22).
 
   The product writes dated rows in seven places, and the reader plans in days,

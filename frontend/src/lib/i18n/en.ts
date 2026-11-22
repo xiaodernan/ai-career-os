@@ -2170,12 +2170,12 @@ export const en = {
     calendar: {
       title: "Calendar subscription",
       description:
-        "Read your reminders and pending offer decision days in the calendar app you already open. The address below is the whole credential — anyone holding it can read these, and a new secret retires every address at once.",
+        "Read your reminders, pending offer decision days and the day a sealed letter opens in the calendar app you already open. The address below is the whole credential — anyone holding it can read these, and a new secret retires every address at once.",
       linkLabel: "Your calendar address",
       copy: "Copy address",
       loading: "Preparing your address…",
       loadFailed: "The address could not be prepared. Reload the page and try again.",
-      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder — and an undecided offer’s deadline — appears on the calendar’s next poll, and stays until you clear it here.",
+      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder, an undecided offer’s deadline and the day a sealed letter opens appear on the calendar’s next poll; a letter’s event leaves when its note does.",
     },
     /**
      * The mail-letters card (42.1, 42.2). The three dials used to be reachable only from the

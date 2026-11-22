@@ -1,21 +1,28 @@
 package com.careeros.calendar.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.careeros.application.entity.Application;
 import com.careeros.application.repository.ApplicationRepository;
+import com.careeros.knowledge.entity.UserNote;
+import com.careeros.knowledge.repository.UserNoteRepository;
 import com.careeros.offer.entity.OfferRow;
 import com.careeros.offer.repository.OfferShelfRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 /**
  * What the calendar feed says (roadmap 34.1, offer deadlines in Epic 196).
@@ -41,6 +48,7 @@ class CalendarFeedTest {
     private static final UUID ALICE = UUID.fromString("11111111-1111-4111-8111-111111111111");
     private static final UUID APPLICATION = UUID.fromString("55555555-5555-4555-8555-555555555555");
     private static final UUID OFFER = UUID.fromString("77777777-7777-4777-8777-777777777777");
+    private static final UUID CAPSULE = UUID.fromString("99999999-9999-4999-8999-999999999999");
 
     private static final OffsetDateTime UPDATED = OffsetDateTime.parse("2026-10-01T08:00:00Z");
     private static final OffsetDateTime CREATED = OffsetDateTime.parse("2026-09-30T07:00:00Z");
@@ -48,13 +56,15 @@ class CalendarFeedTest {
 
     private final ApplicationRepository applications = mock(ApplicationRepository.class);
     private final OfferShelfRepository offers = mock(OfferShelfRepository.class);
+    private final UserNoteRepository notes = mock(UserNoteRepository.class);
     private final CalendarLinks links = new CalendarLinks("test-secret", "https://careeros.example");
-    private final CalendarService service = new CalendarService(applications, offers, links);
+    private final CalendarService service = new CalendarService(applications, offers, notes, links);
 
     @BeforeEach
     void theOffersLaneIsEmptyUnlessATestFillsIt() {
         when(offers.findByUserIdAndDecisionAndDeadlineIsNotNullOrderByDeadlineAsc(ALICE, "pending"))
                 .thenReturn(List.of());
+        when(notes.findByTag(eq(ALICE), eq("capsule"), any())).thenReturn(Page.empty());
     }
 
     private static Application row(OffsetDateTime reminder, String company, String title) {
@@ -155,11 +165,11 @@ class CalendarFeedTest {
         String english = unfold(render(List.of(), "en"));
         String chinese = unfold(render(List.of(), "zh"));
 
-        assertThat(english).contains("X-WR-CALNAME:Career OS reminders\r\n");
+        assertThat(english).contains("X-WR-CALNAME:Career OS calendar\r\n");
         assertThat(english).contains(
-                "X-WR-CALDESC:Your application follow-ups and offer decision deadlines from Career OS.\r\n");
-        assertThat(chinese).contains("X-WR-CALNAME:职业提醒\r\n");
-        assertThat(chinese).contains("X-WR-CALDESC:来自 Career OS 的申请提醒与录用决定截止日期。\r\n");
+                "X-WR-CALDESC:Your application follow-ups\\, offer decision deadlines and sealed letters from Career OS.\r\n");
+        assertThat(chinese).contains("X-WR-CALNAME:职业日历\r\n");
+        assertThat(chinese).contains("X-WR-CALDESC:来自 Career OS 的申请提醒、录用决定截止日期与封存的信。\r\n");
     }
 
     @Test
@@ -258,5 +268,61 @@ class CalendarFeedTest {
 
         assertThat(ics).contains("UID:" + APPLICATION + "@careeros\r\n");
         assertThat(ics).contains("UID:" + OFFER + "@careeros-offer-deadline\r\n");
+    }
+
+    @Test
+    void aSealedLetterReachesTheFeedAsItsOpeningDayAndNothingElse() {
+        UserNote note = capsuleNote(CAPSULE, "2026-12-24", UPDATED);
+        when(notes.findByTag(eq(ALICE), eq("capsule"), any())).thenReturn(new PageImpl<>(List.of(note)));
+
+        String ics = service.feed(ALICE, "en");
+
+        assertThat(ics).contains("UID:" + CAPSULE + "@careeros-capsule\r\n");
+        assertThat(ics).contains("DTSTAMP:20261001T080000Z\r\n");
+        assertThat(ics).contains("DTSTART;VALUE=DATE:20261224\r\n");
+        assertThat(ics).contains("DTEND;VALUE=DATE:20261225\r\n");
+        assertThat(ics).contains("SUMMARY:Sealed letter opens\r\n");
+        assertThat(ics).contains("DESCRIPTION:https://careeros.example/timeline\r\n");
+        // A letter is a ritual, not a deadline: no alarm, and never the body.
+        assertThat(ics).doesNotContain("BEGIN:VALARM");
+    }
+
+    @Test
+    void theCapsuleEventIsNamedInTheAccountsLanguage() {
+        UserNote note = capsuleNote(CAPSULE, "2026-12-24", UPDATED);
+        when(notes.findByTag(eq(ALICE), eq("capsule"), any())).thenReturn(new PageImpl<>(List.of(note)));
+
+        assertThat(service.feed(ALICE, "zh")).contains("SUMMARY:封存的信开启\r\n");
+    }
+
+    @Test
+    void capsuleEventsAreWrittenInOpeningOrder() {
+        UUID later = UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+        UserNote first = capsuleNote(CAPSULE, "2026-12-24", UPDATED);
+        UserNote second = capsuleNote(later, "2026-12-26", UPDATED);
+        when(notes.findByTag(eq(ALICE), eq("capsule"), any()))
+                .thenReturn(new PageImpl<>(List.of(second, first)));
+
+        String ics = service.feed(ALICE, "en");
+
+        assertThat(ics.indexOf("UID:" + CAPSULE)).isLessThan(ics.indexOf("UID:" + later));
+    }
+
+    @Test
+    void capsuleDateReadsOnlyARealDatedTag() {
+        assertThat(CalendarFeed.capsuleDate(List.of("capsule", "capsule-2026-12-24")))
+                .isEqualTo(LocalDate.of(2026, 12, 24));
+        assertThat(CalendarFeed.capsuleDate(List.of("capsule", "capsule-2026-02-30"))).isNull();
+        assertThat(CalendarFeed.capsuleDate(List.of("capsule", "interview"))).isNull();
+        assertThat(CalendarFeed.capsuleDate(null)).isNull();
+    }
+
+    private static UserNote capsuleNote(UUID id, String date, OffsetDateTime updated) {
+        UserNote note = mock(UserNote.class);
+        when(note.getId()).thenReturn(id);
+        when(note.getTags()).thenReturn(List.of("capsule", "capsule-" + date));
+        when(note.getUpdatedAt()).thenReturn(updated);
+        when(note.getCreatedAt()).thenReturn(CREATED);
+        return note;
     }
 }

@@ -1,9 +1,11 @@
 package com.careeros.calendar.service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +36,9 @@ public final class CalendarFeed {
             .ofPattern("yyyyMMdd'T'HHmmss'Z'")
             .withZone(ZoneOffset.UTC);
 
+    /** An all-day event carries a date, not a moment; RFC 5545 spells it `yyyyMMdd`. */
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+
     /** The longest physical line RFC 5545 allows, counting the continuation's leading space. */
     private static final int FOLD_AT = 75;
 
@@ -58,13 +63,45 @@ public final class CalendarFeed {
     }
 
     /**
+     * One sealed letter's opening day (Epic 387). A letter opens on a date, so the
+     * event is all-day: no hour is invented for a ritual. Only the envelope reaches
+     * the feed — the note's body never travels here.
+     */
+    public record Capsule(UUID id, LocalDate date, OffsetDateTime stamp) {
+    }
+
+    /**
+     * The opening date inside a capsule's tags (`capsule-YYYY-MM-DD`), or null when
+     * the note is not a capsule. A tag that looks dated but is not (2026-02-30) is
+     * dropped rather than shifted to another day.
+     */
+    public static LocalDate capsuleDate(List<String> tags) {
+        if (tags == null) {
+            return null;
+        }
+        for (String tag : tags) {
+            if (tag == null || !tag.startsWith("capsule-")) {
+                continue;
+            }
+            try {
+                return LocalDate.parse(tag.substring("capsule-".length()));
+            } catch (DateTimeParseException ignored) {
+                // A malformed date is not a capsule; the next dated tag may be one.
+            }
+        }
+        return null;
+    }
+
+    /**
      * The whole document. An account with no reminders and no deadlines gets a valid empty
      * calendar rather than an error: "nothing on the board has a time" is a normal answer a
      * subscriber can hold.
      */
     public static String render(List<Reminder> reminders, List<Deadline> deadlines,
+                                List<Capsule> capsules,
                                 String calendarName, String calendarNote,
-                                String appUrl, String offersUrl, boolean chinese) {
+                                String appUrl, String offersUrl, String timelineUrl,
+                                boolean chinese) {
         StringBuilder out = new StringBuilder();
         out.append("BEGIN:VCALENDAR\r\n");
         out.append("VERSION:2.0\r\n");
@@ -76,11 +113,17 @@ public final class CalendarFeed {
         if (deadlines == null) {
             deadlines = List.of();
         }
+        if (capsules == null) {
+            capsules = List.of();
+        }
         for (Reminder reminder : reminders) {
             event(out, reminder, appUrl);
         }
         for (Deadline deadline : deadlines) {
             deadlineEvent(out, deadline, offersUrl, chinese);
+        }
+        for (Capsule capsule : capsules) {
+            capsuleEvent(out, capsule, timelineUrl, chinese);
         }
         out.append("END:VCALENDAR\r\n");
         return out.toString();
@@ -127,6 +170,27 @@ public final class CalendarFeed {
         text(out, "DESCRIPTION", summary);
         out.append("TRIGGER:-P1D\r\n");
         out.append("END:VALARM\r\n");
+        out.append("END:VEVENT\r\n");
+    }
+
+    /**
+     * A letter's opening day, as an all-day event. No alarm: a letter is a ritual,
+     * not a deadline, and an all-day event's alarm would ring at a time the feed
+     * never chose. The body never appears here — only the day and the way back.
+     */
+    private static void capsuleEvent(StringBuilder out, Capsule capsule, String timelineUrl,
+                                     boolean chinese) {
+        String summary = chinese ? "封存的信开启" : "Sealed letter opens";
+        out.append("BEGIN:VEVENT\r\n");
+        raw(out, "UID", capsule.id() + "@careeros-capsule");
+        raw(out, "DTSTAMP", UTC.format(capsule.stamp()));
+        raw(out, "DTSTART;VALUE=DATE", DATE.format(capsule.date()));
+        raw(out, "DTEND;VALUE=DATE", DATE.format(capsule.date().plusDays(1)));
+        text(out, "SUMMARY", summary);
+        text(out, "DESCRIPTION", timelineUrl);
+        raw(out, "URL", timelineUrl);
+        out.append("STATUS:CONFIRMED\r\n");
+        out.append("TRANSP:TRANSPARENT\r\n");
         out.append("END:VEVENT\r\n");
     }
 
