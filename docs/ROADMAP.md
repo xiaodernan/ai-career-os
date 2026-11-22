@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **379** The ledger still counsels when the model is dark (2026-11-22).
+
+  The operator's account was closed on 2026-11-22 ("后续开发可能无法调用这个大模型api了"),
+  and the page's only *named* analyst is an LLM call. A failed call used to land on
+  "the analyst returned nothing worth listing" — the one sentence that reads as "all
+  is well" when the truth is "nothing was asked". The admin page now distinguishes
+  **offline** from **empty**, and under either state it renders arithmetic the page
+  can defend on its own: a least-squares projection of the next four weeks for
+  applications, rehearsals and arrivals (with R² printed beside every line so a noisy
+  window cannot masquerade as a forecast), and up to four local measures derived from
+  the same trends and cache totals the page already fetched. A rule that cannot see
+  its series stays silent; a flat-zero window is not a falling tide. `flat` is a
+  result, not a failure. EN+ZH keys added in both tables. Verified: 10 new
+  `admin-forecast` tests + admin page contract, full frontend suite **220 files /
+  1,694 tests green**, `tsc --noEmit` clean. No provider call is made by any of it.
+
 - [x] **378** The pressure verdict has a home in CI (2026-11-22).
 
   Brief XI: "长久持续开发的同时做压力测试". `scripts/load_probe.py --strict` already

@@ -4416,9 +4416,9 @@ export const zh = {
         "浏览器的钟，最近三十天；已写入的行就存在。数字是测出来的，不是猜出来的——这台机器能看到的，它就说出来；看不到的，它就不说。",
       attentionWeakest: "信号最弱的三个",
       attentionWeakestLede:
-        "陆点数最多的这十二条路径里，这三条的读者把手最不肯伸出去——这是下一步重做最该动的地方。",
+        "落点数最多的这十二条路径里，这三条的读者把手最不肯伸出去——这是下一步重做最该动的地方。",
       attentionWeakestNoneLede:
-        "还没有路径有三次陆点——等读者够了，再下结论。",
+        "还没有路径有三次落点——等读者够了，再下结论。",
       attentionLostTitle: "读者在哪迷了路",
       attentionLostLede:
         "跳出和瞎点最多的房间。这里数字高，就是下一步该动的地方：门开了，可读者没找到路。",
@@ -4444,6 +4444,32 @@ export const zh = {
       effortMedium: "中等成本",
       effortHigh: "高成本",
       analysisEmpty: "分析器没有返回什么值得列出来的——这不是鼓励，这就是直说：事情现在不是一片糟。",
+      analysisOffline:
+        "模型这次没有出声——账号额度、网关或网络把它挡在了门外。下面的预测与措施由本机算术直接从同一份账本算出，不需要任何外部服务。",
+      localForecastTitle: "本机算术预测：未来四周",
+      localForecastLede:
+        "对最近窗口做最小二乘直线外推，并标出拟合度。它是算术，不是承诺；窗口越抖，R² 越低，越不该拿它当预言。",
+      localForecastNext: "未来 4 周 {next}（窗口内 {current}）",
+      localForecastFit: "拟合 R² {r2}",
+      localDirectionUp: "上行",
+      localDirectionDown: "下行",
+      localDirectionFlat: "走平",
+      localForecastEmpty: "还没有足够长的窗口可以做外推——至少需要三周的真实计数。",
+      localMeasuresTitle: "本机优化措施",
+      localMeasuresLede:
+        "当模型不可用时，这些规则仍然从同一份账本给出下一步；模型回来时，它们也照常成立。",
+      localApplicationsFallingTitle: "投递的潮水在退",
+      localApplicationsFallingBody:
+        "最近 {weeks} 周投递从 {first} 降到 {last}；按同一条直线外推，未来四周大约只有 {next} 份。先检查职位源与保存搜索是否还在供货，再看提醒有没有按时发出。",
+      localAttentionFallingTitle: "入口的人流在变薄",
+      localAttentionFallingBody:
+        "最近 {weeks} 周落地从 {first} 降到 {last}，直线外推未来四周约 {next}。先看最新一次部署的首屏与首步，再看外部入口是否失效。",
+      localInterviewFallingTitle: "模拟面试在减少",
+      localInterviewFallingBody:
+        "最近 {weeks} 周模拟面试从 {first} 降到 {last}，外推未来四周约 {next}。检查面试入口是否被埋、题库是否耗尽，以及结束后的复盘是否给出了下一步。",
+      localCacheColdTitle: "缓存变冷了",
+      localCacheColdBody:
+        "最近 {calls} 次模型调用里只有 {hit}% 的输入来自缓存。先确认每次调用都以同一段前缀开头，再检查并行会话是否把前缀切碎。",
       optimizationsLede:
         "这些不是编出来的建议——它们是这一页自己的数据线在你打开它那一刻跑出来的规则。看不到输入的规则保持沉默；从最难闻的那一条开工。",
       counselFunnelTitle: "交接处正在出血",
@@ -4451,10 +4477,10 @@ export const zh = {
         "{from} → {to} 是这台实例自己漏斗里最陡的一段——{fromCount} 人到 {toCount} 人（单一步流失 {dropPct}%）。先修这一步，再动它上游的任何东西。",
       counselAttentionSoftenTitle: "门越开越空了",
       counselAttentionSoftenBody:
-        "后四周平均每周 {recent} 位落地，之前那个窗口还有 {base}。实例悄无声息地仄下去了——没有警报，没有指示灯，只是来的人越来越少。检查的是第一个询问：是某条路径上的第一步，不再值得停一次了。",
+        "后四周平均每周 {recent} 位落地，之前那个窗口还有 {base}。实例悄无声息地冷下去了——没有警报，没有指示灯，只是来的人越来越少。检查的是第一个询问：是某条路径上的第一步，不再值得停一次了。",
       counselAttentionCollapseTitle: "门不敲了",
       counselAttentionCollapseBody:
-        "最近一周只有 {last} 次落地——不足之前均值 {base} 的三分之一。目光并不守恒：当最新一周停了拉力，入口第一步的地方就等于不存在。随便调一次最新的部署、最新的那次改动——这个章节里第一个询问的地方，可能有一扇你关不见了的门。",
+        "最近一周只有 {last} 次落地——不足之前均值 {base} 的三分之一。目光并不守恒：当最新一周停了拉力，入口第一步的地方就等于不存在。随便调一次最新的部署、最新的那次改动——这个章节里第一个询问的地方，可能有一扇你看不见的门。",
       counselCohortTitle: "首次会话的悬崖",
       counselCohortBody:
         "最近 {weeks} 周注册的读者，只有 {retentionPct}% 回来过（{registered} 人里 {active} 人）。悬崖在哪里开始，就在哪里最便宜——盯住注册之后前十分钟里发生的一切。",

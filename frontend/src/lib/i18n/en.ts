@@ -4747,6 +4747,32 @@ export const en = {
       effortMedium: "Medium effort",
       effortHigh: "High effort",
       analysisEmpty: "The analyst returned nothing worth listing — not encouragement, the plain fact that the install is not in trouble right now.",
+      analysisOffline:
+        "The model did not answer — an exhausted quota, the gateway, or the network kept it out. The forecast and measures below are computed on this machine from the same ledger; they need no external service.",
+      localForecastTitle: "Local arithmetic: the next four weeks",
+      localForecastLede:
+        "A least-squares line through the last window, with its fit printed beside it. It is arithmetic, not a promise: the noisier the window, the lower the R², and the less it should be treated as prophecy.",
+      localForecastNext: "next 4 weeks {next} (window {current})",
+      localForecastFit: "fit R² {r2}",
+      localDirectionUp: "rising",
+      localDirectionDown: "falling",
+      localDirectionFlat: "flat",
+      localForecastEmpty: "Not enough weeks to project yet — at least three real buckets are required.",
+      localMeasuresTitle: "Local optimisation measures",
+      localMeasuresLede:
+        "When the model is unavailable these rules still name the next step from the same ledger; when it returns, they remain true.",
+      localApplicationsFallingTitle: "The application tide is going out",
+      localApplicationsFallingBody:
+        "Applications fell from {first} to {last} over {weeks} weeks; the same line projects about {next} across the next four. Check whether the job feeds and saved searches still supply roles, then whether reminders leave on time.",
+      localAttentionFallingTitle: "The front door is thinning",
+      localAttentionFallingBody:
+        "Landings fell from {first} to {last} over {weeks} weeks; the line projects about {next} across the next four. Inspect the latest deployment's first screen and first step, then whether an external entrance has gone dark.",
+      localInterviewFallingTitle: "Rehearsals are falling away",
+      localInterviewFallingBody:
+        "Mock interviews fell from {first} to {last} over {weeks} weeks, projecting about {next} across the next four. Check whether the rehearsal door is buried, the question bank exhausted, and the debrief still names a next step.",
+      localCacheColdTitle: "The cache has gone cold",
+      localCacheColdBody:
+        "Only {hit}% of the input across the last {calls} model calls came from cache. Confirm every call opens with the same prefix, then check whether parallel sessions are splitting that prefix.",
       optimizationsLede:
         "These aren't invented ideas — they're rules reading this page's own wires at the moment you opened it. A rule that cannot see its input stays silent; pick the top item that smells hardest and start there.",
       counselFunnelTitle: "The hand-off is bleeding",

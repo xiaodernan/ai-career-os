@@ -11,8 +11,11 @@ import {
   Flame,
   Lock,
   Mail,
+  Minus,
   Send,
   Timer,
+  TrendingDown,
+  TrendingUp,
   Sparkles,
   Users,
   Waves,
@@ -27,6 +30,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatNumber, relativeTime } from "@/lib/format";
 import { seriesTotal, projectedSparkline } from "@/lib/admin-trend";
+import { deriveLocalMeasures, forecast } from "@/lib/admin-forecast";
 import { funnelReading } from "@/lib/admin-funnel";
 import { deriveCounsel } from "@/lib/admin-counsel";
 import { traceKindWord } from "@/lib/status-words";
@@ -174,6 +178,15 @@ const TREND_SERIES = [
   { key: "aiUsageCached", labelKey: "admin.aiUsageCachedLabel", icon: Flame },
 ] as const;
 
+// Epic 379: the three lines the local arithmetic projects. They are the ones the
+// brief names first — applications, rehearsals, arrivals — and the ones whose
+// direction changes what an operator would do next.
+const LOCAL_FORECAST_SERIES = [
+  { key: "applications", labelKey: "admin.applicationsLabel", icon: BarChart3 },
+  { key: "interviewsPracticed", labelKey: "admin.interviewLabel", icon: Activity },
+  { key: "attentionLands", labelKey: "admin.attentionLandsLabel", icon: Eye },
+] as const;
+
 /**
  * /admin — the overseer's ledger (Epics 250, 251).
  *
@@ -201,6 +214,7 @@ export default function AdminPage() {
     | { status: "thinking" }
     | { status: "done"; summary: string; actions: string[]; risks: string[]; measures: AdminMeasure[] }
     | { status: "empty" }
+    | { status: "offline" }
   >({ status: "idle" });
 
   // The snapshot the analyst sees: the same aggregates the page already draws, in one shape.
@@ -253,7 +267,10 @@ export default function AdminPage() {
         measures: data.measures ?? [],
       });
     } catch {
-      setAnalystState({ status: "empty" });
+      // The model is an optional voice (Epic 379): a closed quota or a dark
+      // gateway must not read as "nothing to report". The local section below
+      // is the analyst of record when this branch runs.
+      setAnalystState({ status: "offline" });
     }
   }, [analystSnapshot]);
 
@@ -417,6 +434,15 @@ export default function AdminPage() {
     { stats, trends, funnel, cohort, attention },
     { labelForStage: (id) => (FUNNEL_STAGE_KEYS[id] ? t(FUNNEL_STAGE_KEYS[id]) : id) }
   );
+
+  // Epic 379: the same ledger, read without a model. `forecast` needs three real
+  // buckets; a short window says so instead of drawing a line through noise.
+  const localForecasts = LOCAL_FORECAST_SERIES.map((series) => {
+    const values = trends?.series?.[series.key] ?? [];
+    return { ...series, values, read: forecast(values, 4) };
+  });
+  const localMeasures = deriveLocalMeasures({ trends, cache: cacheEconomy });
+  const hasLocalForecast = localForecasts.some((item) => item.read !== null);
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10">
@@ -935,6 +961,107 @@ export default function AdminPage() {
         )}
         {analystState.status === "empty" && (
           <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("admin.analysisEmpty")}</p>
+        )}
+        {analystState.status === "offline" && (
+          <p className="mt-4 max-w-3xl rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm leading-relaxed text-warning">
+            {t("admin.analysisOffline")}
+          </p>
+        )}
+        {(hasLocalForecast || localMeasures.length > 0) && (
+          <div className="mt-4 rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <p className="text-2xs uppercase tracking-widest text-primary">{t("admin.localForecastTitle")}</p>
+            <p className="mt-1 max-w-3xl text-2xs leading-relaxed text-muted-foreground">
+              {t("admin.localForecastLede")}
+            </p>
+            {hasLocalForecast ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {localForecasts.map(({ key, labelKey, icon: Icon, values, read }) => (
+                  <div key={key} className="min-w-0 rounded-xl border border-border/60 bg-background/60 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-1.5 text-2xs uppercase tracking-widest text-muted-foreground">
+                        <Icon aria-hidden className="size-3.5 shrink-0" />
+                        <span className="truncate">{t(labelKey)}</span>
+                      </span>
+                      {read && (
+                        <span
+                          className={
+                            read.direction === "up"
+                              ? "flex shrink-0 items-center gap-1 text-2xs text-primary"
+                              : read.direction === "down"
+                                ? "flex shrink-0 items-center gap-1 text-2xs text-warning"
+                                : "flex shrink-0 items-center gap-1 text-2xs text-muted-foreground"
+                          }
+                        >
+                          {read.direction === "up" ? (
+                            <TrendingUp aria-hidden className="size-3.5" />
+                          ) : read.direction === "down" ? (
+                            <TrendingDown aria-hidden className="size-3.5" />
+                          ) : (
+                            <Minus aria-hidden className="size-3.5" />
+                          )}
+                          {t(
+                            read.direction === "up"
+                              ? "admin.localDirectionUp"
+                              : read.direction === "down"
+                                ? "admin.localDirectionDown"
+                                : "admin.localDirectionFlat"
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {read ? (
+                      <>
+                        <p className="mt-2 font-mono text-lg tabular-nums text-foreground">
+                          {formatNumber(Math.round(read.nextTotal))}
+                        </p>
+                        <p className="mt-0.5 text-2xs leading-relaxed text-muted-foreground">
+                          {t("admin.localForecastNext", {
+                            next: formatNumber(Math.round(read.nextTotal)),
+                            current: formatNumber(seriesTotal(values)),
+                          })}
+                        </p>
+                        <p className="mt-0.5 text-2xs text-muted-foreground/80">
+                          {t("admin.localForecastFit", { r2: read.r2.toFixed(2) })}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">
+                        {t("admin.localForecastEmpty")}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t("admin.localForecastEmpty")}</p>
+            )}
+            {localMeasures.length > 0 && (
+              <div className="mt-4 border-t border-border/60 pt-3">
+                <p className="text-2xs uppercase tracking-widest text-primary">{t("admin.localMeasuresTitle")}</p>
+                <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">{t("admin.localMeasuresLede")}</p>
+                <ol className="mt-2 grid gap-2">
+                  {localMeasures.map((measure) => (
+                    <li key={measure.id} className="rounded-xl border border-border/60 bg-background/60 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="min-w-0 text-sm font-semibold leading-snug">{t(measure.titleKey)}</p>
+                        {measure.href && (
+                          <Button variant="ghost" size="xs" asChild className="shrink-0 gap-1.5">
+                            <Link href={measure.href}>
+                              {t("admin.counselOpen")}
+                              <ArrowRight aria-hidden className="size-3.5" />
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {t(measure.bodyKey, measure.vars)}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
         )}
         {counsel.length > 0 ? (
           <ol className="mt-4 grid gap-2">
