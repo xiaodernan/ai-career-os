@@ -571,6 +571,8 @@ export const zh = {
         running: "进行中",
         completed: "已完成",
         failed: "失败",
+        transportStream: "流式",
+        transportComplete: "完整 · SSE",
         resultOf: "{tool} 的结果",
         kinds: {
           step_start: "步骤开始",

@@ -628,6 +628,8 @@ export const en = {
         running: "Running",
         completed: "Completed",
         failed: "Failed",
+        transportStream: "stream",
+        transportComplete: "complete · SSE",
         /** The line a tool_result step shows: the reader's sentence around
          * the tool's own name, which the payload carries. */
         resultOf: "{tool} result",

@@ -45,8 +45,8 @@ describe("AgentTimeline — the llm_call row says its transport", () => {
       />
     );
 
-    expect((markup.match(/>stream</g) ?? []).length).toBe(2);
-    expect((markup.match(/>complete</g) ?? []).length).toBe(1);
+    expect((markup.match(/\[ai\.agentTimeline\.transportStream\]/g) ?? []).length).toBe(2);
+    expect((markup.match(/\[ai\.agentTimeline\.transportComplete\]/g) ?? []).length).toBe(1);
   });
 
   it("staggers the rows' entrance in mount order, never from a timer", () => {

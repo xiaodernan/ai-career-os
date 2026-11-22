@@ -8198,6 +8198,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **382** The transport chip stops reading as "non-stream" (2026-11-22).
+
+  The operator's complaint was precise: every engine call's trace row said
+  `complete`, which reads as "this call skipped streaming". But `complete` names
+  the caller-facing shape, not the wire: the OpenAI-compatible provider drives
+  every completion through SSE precisely so the terminal chunk carries
+  `prompt_tokens_details`. The chip now says "完整 · SSE" / "complete · SSE" for
+  blocking calls and "流式"/"stream" for streamed ones, so the label can no
+  longer be mistaken for a transport that skipped the cache-friendly path. The
+  provider docstring that still claimed non-stream calls never report
+  `cached_tokens` was corrected to the measured 2026-11-21 behaviour. Agent
+  timeline test updated to pin the keyed labels; i18n keys added in both tables.
+
 - [x] **381** The front door fits a phone (2026-11-22).
 
   The landing header put four controls in one unwrapped row: brand, language,

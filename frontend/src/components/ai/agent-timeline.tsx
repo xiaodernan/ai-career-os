@@ -101,6 +101,15 @@ function TimelineRow({
   const transport = event.kind === "llm_call" && event.payload && typeof event.payload["mode"] === "string"
     ? String(event.payload["mode"])
     : null;
+  // "complete" is the caller-facing shape, not a non-streaming wire: every
+  // OpenAI-compatible completion rides SSE. Name both, so the chip cannot be
+  // read as "this call skipped the cache-friendly stream path".
+  const transportLabel =
+    transport === "stream"
+      ? t("ai.agentTimeline.transportStream")
+      : transport === "complete"
+        ? t("ai.agentTimeline.transportComplete")
+        : transport;
 
   return (
     // Rows arrive in mount order with a 45ms stagger, capped at 8 rows worth of delay
@@ -135,7 +144,7 @@ function TimelineRow({
           <span className="truncate font-medium">{event.label}</span>
           {transport ? (
             <span className="shrink-0 rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
-              {transport}
+              {transportLabel}
             </span>
           ) : null}
           <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">

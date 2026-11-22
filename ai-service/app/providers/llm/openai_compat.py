@@ -102,12 +102,11 @@ class OpenAICompatProvider:
     async def _consume_stream(self, req: LLMRequest) -> tuple[str, list[ToolCall], Usage]:
         """Drive one streaming exchange and return what the model answered.
 
-        Non-stream calls on this relay answer without `prompt_tokens_details`:
-        the token block is absent, so the reported cache figure reads as 0
-        for every un-streamed call and one-shot engines under-report forever.
-        The wire shape is identical — the same deltas, assembled here — so the
-        reply is byte-for-byte what a non-stream call returns, only with the
-        detail the reader is owed.
+        `complete()` rides this shape even though the caller waits for the whole
+        answer: the wire body and reply are identical, the terminal chunk carries
+        `prompt_tokens_details` deterministically, and one code path owns usage.
+        A blocking non-stream call can still carry the detail on this relay
+        (measured 2026-11-21), but it is not guaranteed; the stream is.
         """
         payload = self._payload(req, stream=True)
 
