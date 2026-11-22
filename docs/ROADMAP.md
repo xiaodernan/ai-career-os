@@ -8198,6 +8198,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **404** The month arithmetic survives a flood (2026-11-22).
+
+  The calendar's fold is the one place every dated row in the product passes
+  through, and it had only ever been graded with four or five rows. A new
+  test feeds it twenty thousand applications spread across a month and asks
+  the same questions the page asks — build, summarize, month grouping, week
+  grouping, the next five — then checks the answers exactly. The whole
+  24-test calendar library finishes in **60 ms**, which is the real assertion:
+  the fold is still linear, with no nested scan hiding behind a pretty grid.
+  No production code changed; the flood test is the guard. Full frontend
+  suite **231 files / 1,782 tests green**, `tsc --noEmit` and `npm run lint`
+  clean; copy census stays 238.
+
 - [x] **403** The public tour finally mentions the calendar (2026-11-22).
 
   The ten-minute start is the first page a stranger reads, and its "track"

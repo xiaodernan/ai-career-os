@@ -317,6 +317,28 @@ describe("the runway ahead", () => {
   });
 });
 
+describe("the month under load", () => {
+  it("holds twenty thousand dated rows and still answers a month and a week", () => {
+    // A flood of rows is what a long search looks like. Nothing here should
+    // degrade to a nested scan: the same pure fold that serves four rows serves
+    // twenty thousand, and the counts stay honest.
+    const applications = Array.from({ length: 20_000 }, (_, index) =>
+      application({
+        id: `flood-${index}`,
+        reminderAt: `2026-09-${String((index % 28) + 1).padStart(2, "0")}T12:00:00Z`,
+      })
+    );
+    const events = buildEvents({ applications, today: TODAY });
+    expect(events).toHaveLength(20_000);
+    expect(summarize(events).reminder).toBe(20_000);
+    expect([...eventsInMonth(events, "2026-09").values()].flat()).toHaveLength(20_000);
+    const week = [...eventsInWeek(events, "2026-09-16").values()].flat();
+    expect(week.length).toBeGreaterThan(0);
+    expect(week.every((event) => event.date >= "2026-09-14" && event.date <= "2026-09-20")).toBe(true);
+    expect(upcomingEvents(events, TODAY, 5)).toHaveLength(5);
+  });
+});
+
 describe("the week's rhythm", () => {
   const cells = weekCells("2026-09-16");
   const row = (date: string, id: string): CalendarEvent => ({
