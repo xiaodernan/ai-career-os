@@ -53,12 +53,12 @@ function dialLabel(value: string | undefined, labels: Record<string, string>,
 }
 
 export default function LettersPage() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [state, setUrl] = useUrlState<{ q?: string }>(PAGE_DEFAULTS);
   const [draft, setDraft] = React.useState(state.q ?? "");
   React.useEffect(() => setDraft(state.q ?? ""), [state.q]);
   const shelf = useLetters();
-  const letters = shelf.data?.items ?? [];
+  const letters = React.useMemo(() => shelf.data?.items ?? [], [shelf.data?.items]);
   const q = (state.q ?? "").trim().toLowerCase();
 
   const visible = React.useMemo(() => {

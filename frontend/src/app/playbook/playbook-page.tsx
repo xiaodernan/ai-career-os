@@ -35,8 +35,6 @@ import { useLocale } from "@/lib/i18n/locale-context";
  * Print rules collapse the chrome and go straight to the body.
  */
 
-const SECTION_ICON_CLASS = "flex size-10 shrink-0 items-center justify-center rounded-xl border";
-
 export default function PlaybookPage() {
   const { t, locale, setLocale } = useLocale();
   const print = () => window.print();

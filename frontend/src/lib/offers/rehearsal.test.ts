@@ -6,7 +6,6 @@ import {
   clearRehearsal,
   loadRehearsal,
   saveRehearsal,
-  scoreOf,
   totalScore,
   verdictBand,
   type RehearsalState,

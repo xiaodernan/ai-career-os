@@ -8,8 +8,6 @@ export function mapLetterCatalogItem(raw: unknown): LetterCatalogItem {
   const r = (raw ?? {}) as Record<string, unknown>;
   const str = (v: unknown): string | undefined =>
     typeof v === "string" ? v : undefined;
-  const num = (v: unknown): number | undefined =>
-    typeof v === "number" && Number.isFinite(v) ? v : undefined;
   return {
     id: str(r.id) ?? "",
     applicationId: str(r.applicationId) ?? "",

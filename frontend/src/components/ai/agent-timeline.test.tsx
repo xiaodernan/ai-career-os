@@ -16,7 +16,7 @@ vi.mock("@/lib/trace-kinds", () => ({
   TRACE_KINDS: [],
 }));
 
-import { AgentTraceEvent, AgentTimeline } from "./agent-timeline";
+import { AgentTimeline } from "./agent-timeline";
 
 describe("AgentTimeline — the llm_call row says its transport", () => {
   it("renders a stream chip on streamed model calls and a complete chip on blocking ones", () => {

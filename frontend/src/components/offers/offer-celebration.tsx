@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**

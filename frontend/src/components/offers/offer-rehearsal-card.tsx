@@ -47,7 +47,7 @@ export function OfferRehearsalCard() {
   const [state, setState] = React.useState<RehearsalState>(() => loadRehearsal(
     typeof window === "undefined" ? null : window.localStorage
   ));
-  const [revealed, setRevealed] = React.useState<Record<string, boolean>>({});
+  const [, setRevealed] = React.useState<Record<string, boolean>>({});
   const [step, setStep] = React.useState(0);
 
   const done = answered(state);

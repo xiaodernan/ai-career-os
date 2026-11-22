@@ -49,7 +49,7 @@ export function CoffeeChatCard() {
   const [state, setState] = React.useState<CoffeeChatState>(() =>
     loadCoffeeChat(typeof window === "undefined" ? null : window.localStorage)
   );
-  const [revealed, setRevealed] = React.useState<Record<string, boolean>>({});
+  const [, setRevealed] = React.useState<Record<string, boolean>>({});
   const [step, setStep] = React.useState(0);
 
   const done = coffeeAnswered(state);

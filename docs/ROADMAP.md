@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **400** The lint board goes quiet (2026-11-22).
+
+  Twenty-one warnings had accumulated across the frontend, and three of them
+  were not cosmetics. The letters shelf built `letters` as `items ?? []` inside
+  render, so the `useMemo` that filters it re-ran on every render — the memo
+  was decoration; it is now memoised at the source. The growth engines'
+  `useCallback` used `locale` without listing it, so a reader who switched
+  language could get a note written in the old one; `locale` is now a
+  dependency. The offer commitment draft effect read `state.text` without
+  depending on it; a text replaced from outside could leave the draft stale;
+  it now depends on both. The rest was dead weight: two unused `cn` imports,
+  an unused label import, an unused constant, unused destructured `locale`s,
+  an unused test type and helper. `npm run lint` now reports zero warnings
+  with `tsc --noEmit` clean and the full suite at **231 files / 1,779 tests
+  green**; no behaviour changed beyond the three correctness fixes, and no
+  source file was added (copy census stays 238).
+
 - [x] **399** An exported event keeps a door back to its row (2026-11-22).
 
   The `.ics` export was faithful but blind: a row opened in another calendar

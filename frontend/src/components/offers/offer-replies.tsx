@@ -5,7 +5,6 @@ import { Check, Copy, Download, Feather, Send, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { copyText } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useOfferShelf } from "@/lib/hooks/resources";
@@ -111,7 +110,6 @@ function ReplyRow({
   line,
   caption,
   letter,
-  id,
   testId,
 }: {
   kind: string;

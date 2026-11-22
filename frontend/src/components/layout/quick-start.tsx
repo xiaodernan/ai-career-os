@@ -36,7 +36,7 @@ const STEPS = [
 export const QUICK_START_EVENT = "careeros:open-quick-start";
 
 export function QuickStart() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(0);
 

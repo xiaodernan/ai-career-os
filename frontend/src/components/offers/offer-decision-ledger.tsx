@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Plus, RotateCcw, Scale, Trash2, Trophy } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";

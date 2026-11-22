@@ -91,7 +91,6 @@ describe("the calendar file", () => {
     for (const line of summaryLines) {
       expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);
     }
-    const unfolded = summaryLines.join("").replace(/^ /, "");
     // A continuation line begins with one space; unfold and the sentence is whole.
     const joined = ics
       .replace(/\r\n /g, "")

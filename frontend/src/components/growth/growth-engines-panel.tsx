@@ -180,7 +180,7 @@ export function GrowthEnginesPanel() {
         progress.mutate({ targetRole: role.trim() });
         break;
     }
-  }, [engine, role, location, gap, demand, priority, plan, prep, progression, stories, roles, progress]);
+  }, [engine, role, location, gap, demand, priority, plan, prep, progression, stories, roles, progress, locale]);
 
   return (
     <Card>

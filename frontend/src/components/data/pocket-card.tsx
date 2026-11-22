@@ -5,7 +5,6 @@ import { Backpack, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { downloadText } from "@/lib/format";
 import {
@@ -14,7 +13,6 @@ import {
   pocketSummary,
   restorePocket,
   serializePocket,
-  POCKET_PREFIXES,
   familyLabelKey,
 } from "@/lib/pocket";
 

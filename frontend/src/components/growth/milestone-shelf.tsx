@@ -32,7 +32,7 @@ function milestoneLabel(t: (key: string) => string, key: string, done: boolean):
 }
 
 export function MilestoneShelf() {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const shelf = useMilestones();
   const data = shelf.data;
   const earnedCount = data?.milestones.filter((m) => m.done).length ?? 0;

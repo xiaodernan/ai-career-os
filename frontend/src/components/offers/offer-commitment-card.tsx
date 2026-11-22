@@ -33,7 +33,7 @@ export function OfferCommitmentCard() {
 
   React.useEffect(() => {
     setDraft(state.text);
-  }, [state.week]);
+  }, [state.week, state.text]);
 
   const dirty = draft.trim() !== state.text;
   const filled = state.text.trim().length > 0;

@@ -24,7 +24,6 @@
 
 export type WheelDirection = "standard" | "natural";
 
-const STORAGE_KEY = "careeros.wheelDirection";
 const STORAGE_KEY_V2 = "careeros.wheelDirection.v2";
 const EVENT = "careeros:wheelDirection";
 
