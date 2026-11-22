@@ -3935,6 +3935,31 @@ export const en = {
         lastTimeScore: "Last attempt {score}/100",
         lastTimeLabel: "Last attempt",
         lastTimePrepare: "Last time suggested preparing:",
+        echoEyebrow: "The echo",
+        echoTitle: "What these answers sound like",
+        echoDescription:
+          "Arithmetic over the answers on this page — length, sentence size, fillers, figures, and who is speaking. Nothing is sent to a model.",
+        echoAnswers: "Answers",
+        echoAvgSize: "Avg. size",
+        echoAvgSentence: "Avg. sentence",
+        echoFillers: "Fillers",
+        echoNumbers: "Numbers",
+        echoOwnership: "\u201cI\u201d share",
+        echoOwnershipTitle:
+          "Share of first-person pronouns that are singular (I / me / my) rather than plural (we / us / our).",
+        echoRepeated: "Repeated terms",
+        echoClear:
+          "No obvious arithmetic problem: the answers carry length, specifics and a singular voice.",
+        echoFootnote:
+          "Measured in your browser from this session's answers only. No model call.",
+        echoNudgeShort: "Answers average {avg} words; add the action and the result.",
+        echoNudgeFiller: "\u201c{term}\u201d appears {count} times; a breath does the same job.",
+        echoNudgeNoNumbers:
+          "No figures in any answer yet; one concrete number per story is what makes it land.",
+        echoNudgeWe:
+          "\u201cWe\u201d outnumbers \u201cI\u201d; say what you did, not only what the team did.",
+        echoNudgeLong: "The longest answer runs {longest} words; the middle is where attention leaks.",
+        echoNudgeRambling: "Sentences average {avg} words; split the long ones and land each point.",
       },
       report: {
         solidPractice: "Solid practice — the weak dimensions below are the fastest wins.",

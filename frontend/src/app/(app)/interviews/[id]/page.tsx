@@ -37,6 +37,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { PracticeLine } from "@/components/interviews/practice-line";
+import { AnswerEchoCard } from "@/components/interviews/answer-echo-card";
 import dynamic from "next/dynamic";
 import { AIBadge } from "@/components/ai/ai-badge";
 import { ProcessingSteps } from "@/components/ai/processing-steps";
@@ -557,6 +558,9 @@ export default function InterviewRunnerPage() {
           </div>
         </details>
       )}
+
+      {/* Epic 385: the reader's own arithmetic over the answers this session holds. */}
+      {turns.length > 0 && <AnswerEchoCard answers={turns.map((turn) => turn.answer)} />}
 
       <ConfirmDialog
         open={confirmDiscard}

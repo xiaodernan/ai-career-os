@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **385** The answers get an echo of their own (2026-11-22).
+
+  Every number on the interview runner comes from the evaluator; none of them
+  says how the answer itself was built. The runner now ends with **the echo**,
+  a card computed in the browser from the answers already on the page — no
+  endpoint, no provider, no new state. It reports the answer count, average
+  size, average sentence, filler count, figures, and the singular share of
+  first-person pronouns ("I" vs "we"), ranks the repeated filler terms
+  (English and Chinese sounds are both counted as what was typed), and turns
+  the arithmetic into at most four nudges: an answer that runs short, a filler
+  that repeats, a session with no figures, a voice hiding behind "we", a
+  220-word answer, or sentences that never come up for air. A clean session
+  says so instead of inventing a warning. Pure `lib/answer-echo.ts` — 10 unit
+  tests for units in both scripts, sentences, fillers, hedges, ownership
+  (including `我们` never being double-counted), the nudge thresholds and the
+  four-nudge ceiling — plus 4 component tests for the empty session, Chinese,
+  English, and a clean sheet. Full frontend suite **225 files / 1,727 tests
+  green**, `tsc --noEmit` clean; EN+ZH copy in both tables, copy census
+  236 → 237.
+
 - [x] **384** The shelf keeps letters to the future (2026-11-22).
 
   Every notebook eventually asks the same thing: what did I believe before
