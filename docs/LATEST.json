@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T13:28:25.601000Z",
+  "generated_at": "2026-11-22T13:50:48.615652Z",
   "branch": "main",
-  "head": "09fac0c",
-  "total_commits": 1858,
-  "milestone": "Epic 404",
-  "milestone_full": "the ledger of done epics (through 557 items), closed at Epic 404 — The month arithmetic survives a flood (2026-11-22)",
+  "head": "039c510",
+  "total_commits": 1860,
+  "milestone": "Epic 405",
+  "milestone_full": "the ledger of done epics (through 558 items), closed at Epic 405 — The calendar cannot lose a question it already asked (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1782+",
+  "tests": "1788+",
   "test_files": 231,
-  "work_items": 557,
-  "epics": 270,
+  "work_items": 558,
+  "epics": 271,
   "feature_surface": [
+    "Epic 405 — The calendar cannot lose a question it already asked (2026-11-22)",
     "Epic 404 — The month arithmetic survives a flood (2026-11-22)",
     "Epic 403 — The public tour finally mentions the calendar (2026-11-22)",
     "Epic 402 — The power moves learn the calendar, and the tour stops miscounting (2026-11-22)",
     "Epic 401 — The first walk ends at the calendar (2026-11-22)",
-    "Epic 400 — The lint board goes quiet (2026-11-22)",
-    "Epic 399 — An exported event keeps a door back to its row (2026-11-22)"
+    "Epic 400 — The lint board goes quiet (2026-11-22)"
   ]
 }
