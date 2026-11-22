@@ -19,6 +19,8 @@ export interface IcsOptions {
   /** One fixed instant keeps the file reproducible in a test. */
   now?: Date;
   uidDomain?: string;
+  /** The app's own origin; with it, each row keeps a door back to its screen. */
+  webRoot?: string;
 }
 
 const CRLF = "\r\n";
@@ -102,6 +104,11 @@ export function buildCalendarIcs(events: CalendarEvent[], options: IcsOptions): 
       `SUMMARY:${escapeIcsText(summary)}`
     );
     if (event.detail) lines.push(`DESCRIPTION:${escapeIcsText(event.detail)}`);
+    // Epic 399: a relative door is no use in another app. With the app's own
+    // origin the exported event keeps the way back to the row it came from.
+    if (options.webRoot && event.href) {
+      lines.push(`URL:${options.webRoot.replace(/\/$/, "")}${event.href}`);
+    }
     // An all-day marker, not a meeting: the reader's calendar shows it without
     // blocking the hours and without an alarm the product never promised.
     lines.push("TRANSP:TRANSPARENT", "END:VEVENT");

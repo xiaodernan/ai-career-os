@@ -254,6 +254,7 @@ export default function CalendarPage() {
     if (rows.length === 0) return;
     const ics = buildCalendarIcs(rows, {
       calendarName: `${t("monthCalendar.icsCalendarName")} · ${view === "week" ? weekLabel : monthLabel}`,
+      webRoot: window.location.origin,
       kindLabels: {
         reminder: t("monthCalendar.legendReminder"),
         followup: t("monthCalendar.legendFollowup"),

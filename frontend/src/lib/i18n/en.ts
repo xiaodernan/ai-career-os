@@ -2211,7 +2211,7 @@ export const en = {
       copy: "Copy address",
       loading: "Preparing your address…",
       loadFailed: "The address could not be prepared. Reload the page and try again.",
-      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder, an undecided offer’s deadline and the day a sealed letter opens appear on the calendar’s next poll; a letter’s event leaves when its note does.",
+      hint: "Paste it into Google Calendar, Apple Calendar or Outlook under “subscribe from a URL”. A reminder, an undecided offer’s deadline and the day a sealed letter opens appear on the calendar’s next poll; a letter’s event leaves when its note does. If you only want one month or one week, the calendar page exports just that range as a file.",
     },
     /**
      * The mail-letters card (42.1, 42.2). The three dials used to be reachable only from the
@@ -4645,7 +4645,7 @@ export const en = {
         "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal, offer deadline and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
-        "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, no feed required.",
+        "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, each keeping a link back to its row, no feed required.",
       quietlyClosing:
         "These three are the quiet half of the product: nothing is generated, nothing is guessed, and nothing leaves the account. They exist so the dates you already own are easy to keep.",
       quietlyCtaCalendar: "Open the calendar",

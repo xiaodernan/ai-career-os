@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **399** An exported event keeps a door back to its row (2026-11-22).
+
+  The `.ics` export was faithful but blind: a row opened in another calendar
+  showed its title, its detail and its all-day date, and nothing that led back
+  to the screen it came from. `buildCalendarIcs` now accepts the app's own
+  origin and writes a `URL:` line for every row that has a door — the
+  application, the offer shelf, the interview, the timeline — trimming a
+  trailing slash so the assembled link is one URI. Without an origin the file
+  stays exactly as before: self-contained rather than carrying a dead relative
+  link, and a row without `href` gets no `URL:` at all. One test covers the
+  origin-present, origin-absent and door-absent cases. The settings card's
+  subscription hint now points to the range export as the lighter alternative,
+  and the manual's feed card says each exported row keeps its link. Full
+  frontend suite **231 files / 1,779 tests green**, `tsc --noEmit` clean; no
+  new source file, copy census stays 238.
+
 - [x] **398** The offer deadline reaches the page and the file (2026-11-22).
 
   The subscription feed has carried offer deadlines since Epic 196, but the

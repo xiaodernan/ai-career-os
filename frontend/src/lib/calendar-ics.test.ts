@@ -103,6 +103,25 @@ describe("the calendar file", () => {
     expect(foldIcsLine("x".repeat(80)).split("\r\n")).toHaveLength(2);
   });
 
+  it("keeps the way back to the row when it is given an origin", () => {
+    const withRoot = buildCalendarIcs([event()], {
+      calendarName: "Career search",
+      kindLabels: LABELS,
+      now: NOW,
+      webRoot: "https://career.example/",
+    });
+    expect(withRoot).toContain("URL:https://career.example/applications?application=app-1\r\n");
+    // Without an origin the file stays self-contained rather than carrying a dead relative link.
+    expect(build([event()])).not.toContain("URL:");
+    const noDoor = buildCalendarIcs([event({ href: undefined })], {
+      calendarName: "Career search",
+      kindLabels: LABELS,
+      now: NOW,
+      webRoot: "https://career.example",
+    });
+    expect(noDoor).not.toContain("URL:");
+  });
+
   it("sorts by day then id so two downloads of the same grid are identical", () => {
     const ics = build([
       event({ id: "b", date: "2026-09-21" }),
