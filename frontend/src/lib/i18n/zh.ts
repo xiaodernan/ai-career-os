@@ -116,6 +116,8 @@ export const zh = {
       findShow: "看那一周",
       findClear: "清除",
       tempo: "本周——共 {total} 件 · 有事 {days} 天 · 最满 {weekday}（{count} 件）· 空着 {open} 天",
+      monthTempo: "本月 {total} 项安排落在 {days} 天里，最忙的 {date} 有 {count} 项",
+      monthTempoAhead: "往后还有 {count} 天完全没有安排",
       openMonth: "在月历里看这一天",
       openWeek: "在周视图里看这一天",
       loadFailed: "日历的行暂时读不到。",

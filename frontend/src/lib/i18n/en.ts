@@ -133,6 +133,8 @@ export const en = {
       findShow: "Show that week",
       findClear: "Clear",
       tempo: "This week — rows: {total} · active days: {days} · busiest: {weekday} ({count}) · open days: {open}",
+      monthTempo: "{total} rows across {days} days; {date} is the fullest with {count}",
+      monthTempoAhead: "{count} days ahead still carry nothing",
       openMonth: "See this day in the month",
       openWeek: "See this day in the week",
       loadFailed: "The calendar's rows could not be read.",

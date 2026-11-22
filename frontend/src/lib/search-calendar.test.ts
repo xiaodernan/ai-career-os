@@ -10,6 +10,7 @@ import {
   isOverdue,
   monthCells,
   monthKeyOf,
+  monthTempo,
   nextEvent,
   overdueEvents,
   readCalendarView,
@@ -378,6 +379,63 @@ describe("the week's rhythm", () => {
       openDays: 7,
       busiest: null,
     });
+  });
+});
+
+/**
+ * Epic 410 — the month's rhythm walks the month's real days, not the grid's 42
+ * cells: September 2026 has 30 days, and the spillover rows the grid draws for
+ * August and October must never count as September's.
+ */
+describe("the month's rhythm", () => {
+  const row = (date: string, id: string): CalendarEvent => ({
+    id,
+    date,
+    kind: "reminder",
+    title: id,
+  });
+
+  it("counts the month's own days only, never the grid's spillover", () => {
+    const events = new Map<string, CalendarEvent[]>([
+      ["2026-08-31", [row("2026-08-31", "before")]],
+      ["2026-09-03", [row("2026-09-03", "a")]],
+      ["2026-09-04", [row("2026-09-04", "b"), row("2026-09-04", "c")]],
+      ["2026-10-01", [row("2026-10-01", "after")]],
+    ]);
+    expect(monthTempo(events, "2026-09", TODAY)).toEqual({
+      key: "2026-09",
+      daysInMonth: 30,
+      total: 3,
+      activeDays: 2,
+      openDays: 28,
+      busiest: { date: "2026-09-04", count: 2 },
+      openAhead: 16,
+    });
+  });
+
+  it("gives a tie to the earlier day and reports no runway once the month is past", () => {
+    const events = new Map<string, CalendarEvent[]>([
+      ["2026-09-18", [row("2026-09-18", "late")]],
+      ["2026-09-08", [row("2026-09-08", "early")]],
+    ]);
+    const tempo = monthTempo(events, "2026-09", TODAY);
+    expect(tempo.busiest).toEqual({ date: "2026-09-08", count: 1 });
+    // 08 has passed, 18 has not; every other day ahead is still open.
+    expect(tempo.openAhead).toBe(15);
+    expect(monthTempo(events, "2026-09", "2026-10-01").openAhead).toBe(0);
+  });
+
+  it("knows February in a leap year and a quiet month", () => {
+    expect(monthTempo(new Map(), "2024-02", "2024-02-01")).toEqual({
+      key: "2024-02",
+      daysInMonth: 29,
+      total: 0,
+      activeDays: 0,
+      openDays: 29,
+      busiest: null,
+      openAhead: 29,
+    });
+    expect(monthTempo(new Map(), "2026-02", TODAY).daysInMonth).toBe(28);
   });
 });
 

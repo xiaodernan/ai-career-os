@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **410** The month can say its own rhythm (2026-11-22).
+
+  The month view counted its rows and drew them; it could not say how those rows
+  were spread — whether the reader's month was one crowded week or a steady
+  drumbeat. A one-line rhythm now sits above the grid: how many rows, across how
+  many of the month's own days, the fullest day and its count, and how many days
+  still ahead carry nothing. The arithmetic walks the calendar month (28–31
+  days), never the grid's 42 cells, so the neighbouring months' spillover rows
+  cannot inflate the count; a tie for fullest goes to the earlier day, and
+  `openAhead` compares against today so a past month reports no runway rather
+  than pretending it has any. The fold is pure — `monthTempo` in
+  `search-calendar.ts`, no endpoint, no model call. The week view keeps its
+  existing tempo line; the two views now describe their own spans in their own
+  words, in both languages.
+
+  Measured: full frontend suite **232 files / 1,809 tests green** (+3, all in
+  `search-calendar.test.ts` covering spillover exclusion, the tie rule, leap
+  February and a past month's empty runway), `tsc --noEmit` clean,
+  `npm run lint` clean, `npm run build` passes, copy census stays 238.
+
 - [x] **409** The find box answers to the slash (2026-11-22).
 
   The calendar's find box was a mouse-only door: a reader with both hands on the

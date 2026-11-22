@@ -269,6 +269,54 @@ export function weekTempo(
   return { total, activeDays, openDays: cells.length - activeDays, busiest };
 }
 
+export interface MonthTempo {
+  /** The month the numbers describe, `YYYY-MM`. */
+  key: string;
+  /** Days in this month — 28, 29, 30 or 31, never the grid's 42 cells. */
+  daysInMonth: number;
+  total: number;
+  activeDays: number;
+  openDays: number;
+  /** The fullest day; ties go to the earlier day of the month. */
+  busiest: { date: string; count: number } | null;
+  /** Days on or after today that carry nothing; 0 once the month is past. */
+  openAhead: number;
+}
+
+/**
+ * Epic 410 — the month's own rhythm, read off its real days. The grid always
+ * draws 42 cells so it never changes height, but a tempo counted over those
+ * cells would count the neighbouring months' days too; this fold walks the
+ * calendar month only. Pure counting: a day is open when nothing lands on it,
+ * and "ahead" means on or after today, so a past month reports no runway.
+ */
+export function monthTempo(
+  events: Map<string, CalendarEvent[]>,
+  key: string,
+  today: string = localDateKey()
+): MonthTempo {
+  const year = Number(key.slice(0, 4));
+  const month = Number(key.slice(5, 7));
+  const length = new Date(year, month, 0).getDate();
+  const daysInMonth = Number.isFinite(length) && length >= 28 ? length : 0;
+  let total = 0;
+  let activeDays = 0;
+  let openAhead = 0;
+  let busiest: { date: string; count: number } | null = null;
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = `${key}-${String(day).padStart(2, "0")}`;
+    const count = events.get(date)?.length ?? 0;
+    total += count;
+    if (count > 0) {
+      activeDays += 1;
+      if (busiest === null || count > busiest.count) busiest = { date, count };
+    } else if (date >= today) {
+      openAhead += 1;
+    }
+  }
+  return { key, daysInMonth, total, activeDays, openDays: daysInMonth - activeDays, busiest, openAhead };
+}
+
 export function summarize(events: CalendarEvent[]): Record<CalendarKind, number> {
   const counts: Record<CalendarKind, number> = {
     reminder: 0,

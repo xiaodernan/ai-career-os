@@ -35,6 +35,7 @@ import {
   eventsInWeek,
   monthCells,
   monthKeyOf,
+  monthTempo,
   overdueEvents,
   readCalendarView,
   readDayKey,
@@ -143,6 +144,9 @@ export default function CalendarPage() {
   const week = React.useMemo(() => weekCells(weekAnchor), [weekAnchor]);
   const weekEvents = React.useMemo(() => eventsInWeek(events, weekAnchor), [events, weekAnchor]);
   const tempo = React.useMemo(() => weekTempo(week, weekEvents), [week, weekEvents]);
+  // Epic 410 — the month's rhythm, counted over its own days rather than the
+  // grid's 42 cells, so the neighbouring months never inflate it.
+  const monthRhythm = React.useMemo(() => monthTempo(monthEvents, month, today), [monthEvents, month, today]);
   const busiestLabel = React.useMemo(() => {
     if (!tempo.busiest) return "";
     return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", { weekday: "long" }).format(
@@ -478,6 +482,25 @@ export default function CalendarPage() {
                 count: tempo.busiest.count,
                 open: tempo.openDays,
               })}
+            </p>
+          )}
+
+          {/* Epic 410 — the month's rhythm: its own days, the fullest of them,
+              and how much of the runway is still empty */}
+          {view === "month" && monthRhythm.total > 0 && monthRhythm.busiest && (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t("monthCalendar.monthTempo", {
+                total: monthRhythm.total,
+                days: monthRhythm.activeDays,
+                date: formatDateOnly(monthRhythm.busiest.date, locale),
+                count: monthRhythm.busiest.count,
+              })}
+              {monthRhythm.openAhead > 0 && (
+                <>
+                  {" · "}
+                  {t("monthCalendar.monthTempoAhead", { count: monthRhythm.openAhead })}
+                </>
+              )}
             </p>
           )}
 
