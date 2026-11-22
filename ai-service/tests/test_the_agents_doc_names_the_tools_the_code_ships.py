@@ -220,10 +220,20 @@ def test_the_budget_numbers_the_doc_states_are_the_ones_the_code_uses():
     assert wrong == [], f"AGENTS.md states {wrong} and the orchestrator disagrees"
     for phrase in ("MAX_STEPS = 8", "MAX_SUB_STEPS = 5", "RESULT_CHARS = 6000"):
         assert phrase in text, f"AGENTS.md no longer states {phrase}"
-    assert "last 12 turns" in text and "LLM_INPUT_CHAR_BUDGET" in text
-    assert re.search(r'fit_input\(str\(h\["content"\]\),\s*share=0\.15\)', read(ORCHESTRATOR)), (
-        "the orchestrator no longer fits each history message to a share of the input "
+    # Epic 378: the window is the budget now, and the doc says so -- the phrase this
+    # gate pins is the one a reader sizing a prompt would look for.
+    assert "budget" in text and "HISTORY_BUDGET" in text and "LLM_INPUT_CHAR_BUDGET" in text, (
+        "AGENTS.md no longer describes the conversation window as the budget, so a reader "
+        "sizing a prompt is sizing it against a turn count the code no longer uses")
+    # Epic 378 moved the window from a turn count to the budget, so the literal share is
+    # now a named constant the doc and the code agree on rather than a number typed twice.
+    assert 'fit_input(str(h["content"]), share=HISTORY_TURN_SHARE)' in read(ORCHESTRATOR), (
+        "the orchestrator no longer fits each history message to its share of the input "
         "budget, which AGENTS.md §3 states as the window's shape (Epic 340)"
+    )
+    assert 'HISTORY_BUDGET = 120_000' in read(ORCHESTRATOR), (
+        "the history window's own budget left the orchestrator, so the doc's claim about "
+        "how much conversation reaches the model is no longer measurable"
     )
     assert constant(CONVERSATION, "HISTORY_TURNS") == "12"
 

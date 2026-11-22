@@ -10,7 +10,7 @@ orchestration framework — every stage is explicit code that emits trace events
 
 ```
 system prompt (+ long-term memory + pinned context)
-  └─ conversation window (last 12 turns)
+  └─ conversation window (budget-sized, 12-turn floor)
        └─ loop, max 8 steps:
             LLM decides: answer directly │ call a tool │ transfer_to(subagent)
             tool result → appended as a `tool` message → next step
@@ -75,10 +75,13 @@ flowchart TD
 
 ## 3. Memory (PRD §17)
 
-- **Short-term** — the conversation window (last 12 turns, each turn fitted to a
-  share of the configured `LLM_INPUT_CHAR_BUDGET` via `core.context_budget`, so a
-  long message is no longer cut at a fixed 4 000 chars) passed in by the backend,
-  plus `context` pins (a specific job/resume/conversation scope).
+- **Short-term** — the conversation window, sized by the input **budget** rather
+  than a turn count (Epic 378): turns are walked newest-first and carried while
+  `HISTORY_BUDGET` holds, with `HISTORY_TURNS` as the floor rather than the ceiling,
+  and each turn fitted to `HISTORY_TURN_SHARE` of the configured
+  `LLM_INPUT_CHAR_BUDGET` via `core.context_budget` so one pasted document cannot
+  crowd out the conversation it belongs to. Passed in by the backend, plus `context`
+  pins (a specific job/resume/conversation scope).
 - **Long-term** — `user_memories` rows, grouped by kind (`profile`, `skill`,
   `preference`, `interview`, `goal`, `fact`). `memory.build_memory_context()` reads
   up to 40 and renders them as a `## Long-term memory about this user` section

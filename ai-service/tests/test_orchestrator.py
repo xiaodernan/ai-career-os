@@ -739,6 +739,105 @@ async def test_a_reissued_write_still_runs_once_after_the_cache_clears(env, monk
     assert "_note" in seen[1], "the model is told the save already happened"
 
 
+# ---------------- the history window is the budget, not a turn count ----------------
+
+
+async def test_a_short_conversation_is_carried_whole(env, monkeypatch):
+    """The floor case: a conversation that fits is unchanged by the budget."""
+    traces, _ = env
+    seen: list[list[LLMMessage]] = []
+
+    async def script(req, **kw):
+        seen.append(req.messages)
+        return _resp(text="ok")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    history = [{"role": "user", "content": "first"}, {"role": "assistant", "content": "second"}]
+    await orchestrator.career_turn(user_id="u1", message="third", history=history, run_id="r20")
+
+    contents = [m.content for m in seen[-1]]
+    assert "first" in contents and "second" in contents and "third" in contents
+
+
+async def test_a_long_conversation_runs_past_the_twelve_turn_floor(env, monkeypatch):
+    """Epic 378: the window is the budget, so a long conversation is carried further
+    than the twelve turns the count used to allow -- on a relay whose input budget is
+    measured in the tens of thousands of characters."""
+    traces, _ = env
+    seen: list[list[LLMMessage]] = []
+
+    async def script(req, **kw):
+        seen.append(req.messages)
+        return _resp(text="ok")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    # Thirty turns of a realistic length: far more than twelve, far less than the budget.
+    history = [{"role": "user" if i % 2 == 0 else "assistant", "content": f"turn {i} " + "x" * 200}
+               for i in range(30)]
+    await orchestrator.career_turn(user_id="u1", message="now", history=history, run_id="r21")
+
+    carried = [m for m in seen[-1] if m.role in ("user", "assistant")]
+    assert len(carried) > orchestrator.HISTORY_TURNS, (
+        f"only {len(carried)} turns reached the model; the budget can carry more than "
+        f"the {orchestrator.HISTORY_TURNS}-turn floor")
+    # The newest turns are the ones carried: the oldest are dropped, not the newest.
+    assert carried[-1].content == "now"
+    assert any(m.content.startswith("turn 29") for m in carried)
+    # Thirty short turns fit the budget whole, so all of them are carried -- which is
+    # the point: the count used to stop at twelve regardless of what the window could
+    # hold. (A turn count past the budget is what the next case covers.)
+    assert any(m.content.startswith("turn 0 ") for m in carried), (
+        "a conversation that fits the budget was truncated anyway")
+
+
+async def test_a_conversation_past_the_budget_drops_its_oldest_turns(env, monkeypatch):
+    """The ceiling case: past the budget the oldest turns go, and the newest stay."""
+    traces, _ = env
+    seen: list[list[LLMMessage]] = []
+
+    async def script(req, **kw):
+        seen.append(req.messages)
+        return _resp(text="ok")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    # 200 turns of 1 000 characters each: 200k, well past the window's own budget.
+    history = [{"role": "user" if i % 2 == 0 else "assistant",
+                "content": f"turn {i:04d} " + "x" * 990}
+               for i in range(200)]
+    await orchestrator.career_turn(user_id="u1", message="now", history=history, run_id="r23")
+
+    carried = [m for m in seen[-1] if m.role in ("user", "assistant")]
+    assert len(carried) < 200, "the whole conversation was carried past its budget"
+    assert carried[-1].content == "now"
+    assert any("turn 0199" in m.content for m in carried), "the newest turns must survive"
+    assert not any("turn 0000" in m.content for m in carried), "the oldest turns must go"
+    # And the floor still holds: the window never carries less than the turn count.
+    assert len(carried) >= orchestrator.HISTORY_TURNS
+
+
+async def test_one_huge_turn_cannot_crowd_out_the_conversation(env, monkeypatch):
+    """A pasted resume is one turn; it is fitted to its own share of the budget."""
+    traces, _ = env
+    seen: list[list[LLMMessage]] = []
+
+    async def script(req, **kw):
+        seen.append(req.messages)
+        return _resp(text="ok")
+
+    monkeypatch.setattr(orchestrator.ai, "ask", script)
+    huge = "z" * 100_000
+    history = [{"role": "user", "content": huge},
+               {"role": "assistant", "content": "short reply"},
+               {"role": "user", "content": "the question"}]
+    await orchestrator.career_turn(user_id="u1", message="and now?", history=history, run_id="r22")
+
+    carried = [m for m in seen[-1] if m.role in ("user", "assistant")]
+    assert all(len(m.content) < 100_000 for m in carried), (
+        "a single turn was carried whole, so it could crowd out the conversation")
+    assert "the question" in [m.content for m in carried]
+    assert "and now?" in [m.content for m in carried]
+
+
 def test_trace_args_shorten_a_long_document_but_keep_short_values():
     out = orchestrator._trace_args({"text": "r" * 5000, "job_id": "j1", "n": 3})
     assert out["job_id"] == "j1" and out["n"] == 3

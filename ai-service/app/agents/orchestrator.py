@@ -30,6 +30,12 @@ MAX_STEPS = 8
 MAX_SUB_STEPS = 5
 RESULT_CHARS = 6000
 HISTORY_TURNS = 12
+# Epic 378: one turn's share of the input budget, and the whole window's. A turn is
+# fitted to its share so one pasted document cannot crowd out the conversation it
+# belongs to; the window holds as many turns as the budget allows, which on this
+# relay is far more than the twelve the count used to allow.
+HISTORY_TURN_SHARE = 0.15
+HISTORY_BUDGET = 120_000
 
 CAREER_SYSTEM = """You are the Career Orchestrator of AI Career OS, a personal
 job-search operating system. You coordinate the user's whole search: resume
@@ -563,10 +569,40 @@ async def career_turn(*, user_id: str, message: str, history: list[dict] | None 
         system += "\n\n## Pinned conversation context\n" + fit_input(
             json.dumps(context, ensure_ascii=False, default=str), share=0.1).text
     tail: list[LLMMessage] = []
-    for h in (history or [])[-HISTORY_TURNS:]:
+    # Epic 378: the history window is the BUDGET, not a turn count.
+    #
+    # This used to read the last twelve turns, which on a Codex-class relay
+    # (200k characters of input budget) threw away most of the window the reader
+    # pays for: a long conversation was truncated at twelve exchanges whatever
+    # the budget could have carried, and the twelfth turn back was the only one
+    # the model could see. The brief names this exactly -- "我这边输入上下文总是太少,
+    # 要充分利用上下文容量".
+    #
+    # Now the turns are walked newest-first and kept while the budget holds, so a
+    # short conversation is unchanged and a long one is carried whole. The budget
+    # is the module's own ceiling, so the prefix cache still fires: everything
+    # before the newest turn is stable bytes.
+    #
+    # HISTORY_TURNS stays as the floor's friend: a turn so long it would eat the
+    # whole budget alone is still fitted down, so one pasted resume cannot crowd
+    # out the conversation it belongs to.
+    carried = 0
+    for h in reversed(history or []):
         role = h.get("role")
-        if role in ("user", "assistant") and h.get("content"):
-            tail.append(LLMMessage(role, fit_input(str(h["content"]), share=0.15).text))
+        if role not in ("user", "assistant") or not h.get("content"):
+            continue
+        body = fit_input(str(h["content"]), share=HISTORY_TURN_SHARE).text
+        if not body:
+            continue
+        tail.append(LLMMessage(role, body))
+        carried += len(body)
+        # The count is the floor, not the ceiling: the oldest HISTORY_TURNS turns are
+        # always carried even if they are long, and past that the budget decides. A
+        # conversation that fits in twelve turns is unchanged; one that does not now
+        # runs as far as the window the reader is paying for.
+        if len(tail) >= HISTORY_TURNS and carried >= HISTORY_BUDGET:
+            break
+    tail.reverse()
     tail.append(LLMMessage("user", message))
 
     # Epic 271: ground the FIRST answer. The search tool lets the model fetch evidence
