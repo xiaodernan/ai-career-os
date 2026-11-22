@@ -8307,6 +8307,77 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   the suite they belong to is unchanged at **1,820 tests in 233 files**, and `git diff`
   over `frontend/` shows no line that executes.
 
+- [x] **417** A delete hands its cache invalidation to the fleet (2026-11-23).
+
+  Epic 162 built the queue and 168–171 put four timer-driven sweeps on it, but
+  every one of those jobs began its life because a clock said so. The delete
+  path's last step was still an inline HTTP call: `RagCacheInvalidator` bumped
+  the reader's epoch on the thread that committed the transaction, so a replica
+  that died in the gap between the commit and the bump left the bump owed to no
+  one — nothing else in the fleet even knew the delete had happened. This is the
+  first job the fleet is handed by an event rather than by a schedule.
+
+  The ordering Epic 147 established is the invariant, and it survives unchanged:
+  the handover happens inside `afterCommit()`, never inside the transaction.
+  Bumping too early is the bug 147 found — before the commit, another replica
+  still reads `status='ready'` on the rows being retired, so an epoch bump only
+  makes the reader re-fetch the old, still-quotable text under a fresh
+  generation. A rollback therefore offers the fleet nothing, and a test says so
+  in the same terms (`aRollbackOffersTheJobToTheFleetEither` checks the queue
+  saw no kind at all).
+
+  The queue stays opt-in, and opt-in here means nothing is ever lost, only done
+  elsewhere: `enqueue` answers false when `careeros.queue.enabled` is off or
+  when Redis refused the write, and `dispatch` then calls the same `bump` on the
+  same thread, which is exactly the pre-queue code. So turning the switch on is
+  a durability upgrade and never a new dependency. The counter keeps its meaning
+  — bumps that reached the engine — but since 417 it is read across the fleet
+  instead of per process, and the handover itself is metered by
+  `careeros_queue_jobs_total{kind="rag.cache.invalidate"}`, `enqueued` and
+  `dropped`.
+
+  Two decisions are worth writing down because a reader will look for them. A
+  payload whose `userId` is missing or unreadable is acknowledged and logged,
+  not retried: an epoch is a counter, so a second bump costs nothing, and a
+  malformed UUID is not a fault a retry ladder can climb — every redelivery
+  lands on the same parse, and after five the entry would only reach the
+  dead-letter stream under a `max-deliveries` reason that hides the real one,
+  which is a wiring or version mismatch. And `RagCacheInvalidationJob` calls
+  `bump`, never `invalidateAfterCommit`: a worker is already outside any
+  transaction, so re-registering a synchronization would put the queue entry's
+  own bump behind a commit that does not exist.
+
+  The wiring is proven where a typo in either string is invisible to both sides'
+  unit tests: the producer would enqueue, the worker would find no handler, and
+  the entry would simply stop being anyone's job. `FleetWiringIT` now enqueues
+  the production kind through the production `JobQueue` against the IT Redis and
+  asserts `AiServiceClient.invalidateCache` is reached with the same owner UUID,
+  with two witnesses that the entry was claimed rather than discarded — no
+  dead-letter stream was created, and the pending list emptied.
+
+  Docs: the DEPLOYMENT roster row for `careeros_queue_jobs_total` no longer says
+  no producer is wired to it (it names all five kinds and points at the
+  `failed`-without-`done` pair as the reading that answers for a missing page),
+  and the RUNBOOK gains 「The fleet queue is enabled and its jobs are not
+  running」 — the five jobs, the stream/group/DLQ keys, the `XLEN → XPENDING →
+  XINFO GROUPS → XRANGE` order with the production `--env-file` and
+  `-a "$REDIS_PASSWORD"` note, the two `reason` values and what each one
+  implicates, and why a `dropped` reading is an outage noticed rather than a job
+  lost.
+
+  Measured: the handler and invalidator unit classes run together **14 passed**
+  (four cases for the queue side, ten for the class it hands over to),
+  `FleetWiringIT` is **3 of 3** in 32.9 s against the IT Redis, and `JobQueueIT`
+  is unchanged at **5 of 5**. The full backend suite is **1,587 tests, 0
+  failures, 0 errors, 0 skipped, BUILD SUCCESS** — nine above the 1,578 that
+  closed Epic 416, and those nine are exactly the cases named above; the queue's
+  own classes did not move (`JobWorkerTest` 15, `JobQueueTest` 6). The ai-service
+  side needed no re-pin: its full suite is **3,033 passed, 8 skipped**, the same
+  3,033 that Epic 416 closed with, because the census that counts readers of
+  `AiServiceClient` lists the classes that consume its answer, and the new
+  handler hands the payload to `bump` instead of reading the client itself. The
+  representative gate sweep is **602 passed**.
+
 - [x] **413** The local analyst reads the attention ledger (2026-11-22).
 
   The ledger records the exact behaviours the brief names — a reader who leaves

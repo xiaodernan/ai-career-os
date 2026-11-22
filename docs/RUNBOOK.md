@@ -804,6 +804,58 @@ would have reclaimed stay exactly where they are. The delete path's own reclaims
 object that outlives a row is a storage cost, and a counter with no baseline would page on
 a quiet week.
 
+## The fleet queue is enabled and its jobs are not running
+
+**What the alert looks like.** There is no page on this path, which is why this section starts
+from a reading rather than an alarm: `careeros_queue_jobs_total{outcome="dead"}` moving, or
+`{outcome="failed"}` climbing while `{outcome="done"}` does not, or a pending list that only
+grows. The queue is opt-in — `CAREEROS_QUEUE_ENABLED=false` is the shipped default — so in a
+default deployment every one of these series reads zero and this section is about a stack where
+someone turned the switch on.
+
+**The five jobs that ride it.** `retention.sweep` (the nightly credential and evidence bucket),
+`ingestion.sweep` (the subscribed boards), `digest.compose` and `digest.retry` (the Monday
+letter), and `rag.cache.invalidate` (the epoch bump a delete hands over after it commits).
+The stream is `careeros:v1:jobs`, the consumer group is `backend`, and a job that stopped being
+retried is in `careeros:v1:jobs:dlq`. Each replica names itself `pid@host` in the group, which
+is what makes "whose job is this" answerable after a crash.
+
+**Read it in this order.** The commands below are the development stack's shape. On
+production, every `docker compose` call also takes `-f docker-compose.yml
+-f docker-compose.prod.yml --env-file .env.prod` (DEPLOYMENT's form), and every `redis-cli`
+call also takes `-a "$REDIS_PASSWORD"`, because production Redis starts with `--requirepass`.
+
+1. `docker compose exec -T redis redis-cli XLEN careeros:v1:jobs` and
+   `docker compose exec -T redis redis-cli XPENDING careeros:v1:jobs backend`. Pending rows
+   with no idle time are a queue that is busy; pending rows idle past
+   `careeros.queue.claim-idle-ms` (30 s by default) are work a replica died holding, and a
+   sibling claims them on its next tick.
+2. `docker compose exec -T redis redis-cli XINFO GROUPS careeros:v1:jobs`. A group that is
+   missing entirely means no replica ever ran a tick: check `careeros.queue.enabled` on the app,
+   and that the app can reach Redis at all — a tick that cannot reach it logs
+   `queue tick failed` and returns, leaving the entries in place. The next tick is the retry.
+3. `docker compose exec -T redis redis-cli XRANGE careeros:v1:jobs:dlq - + COUNT 20`. Each
+   dead entry carries the original job's fields plus `from` (the stream id it came from) and
+   `reason`, which is either `no-handler` — an entry whose kind nothing in this process claims,
+   usually a rolling deploy that wrote a kind the new replicas renamed away — or
+   `max-deliveries`: a job that failed `careeros.queue.max-deliveries` times, 5 by default. The
+   second is a real defect behind the job; the first is a wiring gap.
+4. `docker compose logs --since 1h backend | grep -i queue` for the handler's own failure line.
+   A handler that throws leaves its entry pending on purpose, so the same job names itself
+   repeatedly until it succeeds or is retired.
+
+**What a `dropped` reading means, and why the platform kept working.** `enqueue` answers false
+when the queue is off or when Redis refused the write, and every producer then does the work on
+its own thread exactly as it did before the queue existed: the retention leader sweeps inline,
+and a delete bumps the cache inline. So `dropped` counts are a Redis outage seen from the one
+place that notices, not a lost job. What is genuinely lost is fleet deduplication — if every
+replica dropped, all of them ran the pass, which is the pre-queue behaviour and its cost.
+
+**What this section does not cover.** A `dead` entry is not data loss: each of these five jobs
+is idempotent by construction, so replaying it by hand is safe. To replay, copy the DLQ entry's
+fields back onto the stream with `XADD careeros:v1:jobs '*' kind <kind> ...`, or simply wait for
+the next scheduled tick, which enqueues the same work again.
+
 ## The wake a push service refused
 
 **What the alert looks like.** `CareerOSPushDeliveryFailing` fires when

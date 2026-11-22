@@ -1,8 +1,10 @@
 package com.careeros.knowledge.service;
 
 import com.careeros.ai.AiServiceClient;
+import com.careeros.queue.JobQueue;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * that refuses is counted and logged — never turned into an error about a thing the
  * reader no longer has. The stale entry, if the bump did not land, still expires on its
  * own TTL; the delete itself stands. That is the honest failure boundary.
+ *
+ * <p>Epic 417 put that last step on the job queue: the after-commit hook hands the owner to
+ * {@link JobQueue} and returns, so the bump survives the death of the replica that committed
+ * the delete - the entry stays in the group's pending list until some replica acks it, which
+ * an inline HTTP call could not. A queue that is disabled, or one whose Redis refused the
+ * write, answers {@code false}, and this class then does what it did before the queue existed:
+ * the same {@link #bump(java.util.UUID)} on the same thread. Turning the queue on is therefore
+ * a durability upgrade and never a new dependency, and the counter keeps its exact meaning -
+ * bumps that reached the engine, counted by whichever replica made them, with the enqueue
+ * itself metered by {@code careeros_queue_jobs_total}.
  */
 @Service
 public class RagCacheInvalidator {
@@ -45,11 +57,13 @@ public class RagCacheInvalidator {
 
     private final AiServiceClient ai;
     private final MeterRegistry registry;
+    private final JobQueue queue;
     private final java.util.Map<String, Counter> counters = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public RagCacheInvalidator(AiServiceClient ai, MeterRegistry registry) {
+    public RagCacheInvalidator(AiServiceClient ai, MeterRegistry registry, JobQueue queue) {
         this.ai = ai;
         this.registry = registry;
+        this.queue = queue;
     }
 
     /**
@@ -61,19 +75,32 @@ public class RagCacheInvalidator {
             return;
         }
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            bump(userId);
+            dispatch(userId);
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                bump(userId);
+                dispatch(userId);
             }
         });
     }
 
-    /** One bump, one outcome — and an ai-service that refuses cannot undo the rows. */
-    private void bump(UUID userId) {
+    /**
+     * The fleet first: an entry the stream accepted is a bump that will happen somewhere,
+     * and not necessarily here. False means the queue is off or Redis refused the write,
+     * and this replica does the work itself exactly as it did before the queue existed.
+     */
+    private void dispatch(UUID userId) {
+        if (queue.enqueue(RagCacheInvalidationJob.KIND,
+                Map.of(RagCacheInvalidationJob.USER_FIELD, userId.toString()))) {
+            return;
+        }
+        bump(userId);
+    }
+
+    /** One bump, one outcome. Called inline by {@link #dispatch} and from the stream by the job. */
+    void bump(UUID userId) {
         try {
             ai.invalidateCache(userId);
             record("requested");
