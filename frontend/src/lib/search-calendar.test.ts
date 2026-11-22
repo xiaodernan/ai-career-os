@@ -4,13 +4,18 @@ import {
   buildEvents,
   dateKeyOf,
   eventsInMonth,
+  eventsInWeek,
   followUpDue,
   monthCells,
   monthKeyOf,
   nextEvent,
+  readCalendarView,
+  readDayKey,
   readMonthKey,
+  shiftDays,
   shiftMonth,
   summarize,
+  weekCells,
 } from "@/lib/search-calendar";
 import type { Application, FollowUpItem, InterviewSession, KnowledgeNote } from "@/lib/api/types";
 
@@ -169,5 +174,73 @@ describe("buildEvents", () => {
     expect(summarize(events)).toEqual({ reminder: 1, interview: 1, followup: 1, capsule: 0 });
     expect(nextEvent(events, TODAY)?.date).toBe("2026-09-20");
     expect(nextEvent(events, "2026-10-01")).toBeNull();
+  });
+});
+
+describe("the week around a day", () => {
+  it("reads a real day and refuses an impossible one", () => {
+    expect(readDayKey("2026-09-15")).toBe("2026-09-15");
+    expect(readDayKey("2026-02-30")).toBeNull();
+    expect(readDayKey("2026-9-15")).toBeNull();
+    expect(readDayKey(undefined)).toBeNull();
+  });
+
+  it("steps seven days at a time across months, years and leap days", () => {
+    expect(shiftDays("2026-09-28", 7)).toBe("2026-10-05");
+    expect(shiftDays("2026-01-02", -7)).toBe("2025-12-26");
+    expect(shiftDays("2024-02-28", 1)).toBe("2024-02-29");
+    expect(shiftDays("2024-12-31", 1)).toBe("2025-01-01");
+  });
+
+  it("draws Monday through Sunday around any day, dimming the month's strangers", () => {
+    expect(weekCells("2026-09-16").map((cell) => cell.date)).toEqual([
+      "2026-09-14",
+      "2026-09-15",
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-19",
+      "2026-09-20",
+    ]);
+    expect(weekCells("2026-09-16").every((cell) => cell.inMonth)).toBe(true);
+
+    const straddling = weekCells("2026-10-01");
+    expect(straddling[0].date).toBe("2026-09-28");
+    expect(straddling[0].inMonth).toBe(false);
+    expect(straddling[3].date).toBe("2026-10-01");
+    expect(straddling[3].inMonth).toBe(true);
+  });
+
+  it("only switches to the week on the exact word", () => {
+    expect(readCalendarView("week")).toBe("week");
+    expect(readCalendarView("Week")).toBe("month");
+    expect(readCalendarView("month")).toBe("month");
+    expect(readCalendarView(undefined)).toBe("month");
+  });
+
+  it("groups the seven days' rows and leaves the weeks either side out", () => {
+    const events = buildEvents({
+      applications: [
+        application({ id: "a-in", reminderAt: "2026-09-16T09:00:00Z" }),
+        application({ id: "a-before", reminderAt: "2026-09-13T09:00:00Z" }),
+        application({ id: "a-after", reminderAt: "2026-09-21T09:00:00Z" }),
+      ],
+      today: TODAY,
+    });
+    const week = eventsInWeek(events, "2026-09-16");
+    expect([...week.values()].flat().map((event) => event.id)).toEqual(["reminder-a-in"]);
+    expect([...week.keys()].every((date) => date >= "2026-09-14" && date <= "2026-09-20")).toBe(true);
+  });
+
+  it("still counts and names the next row from the whole list", () => {
+    const events = buildEvents({ applications: [application()], today: TODAY });
+    const week = eventsInWeek(events, "2026-09-10");
+    expect(summarize([...week.values()].flat())).toEqual({
+      reminder: 0,
+      interview: 0,
+      followup: 0,
+      capsule: 0,
+    });
+    expect(nextEvent(events, "2026-09-10")?.id).toBe("reminder-app-1");
   });
 });

@@ -30,6 +30,45 @@ export interface MonthCell {
   inMonth: boolean;
 }
 
+export type CalendarView = "month" | "week";
+
+/** Only an exact `week` switches the grid; anything else leaves the month standing. */
+export function readCalendarView(value: string | undefined | null): CalendarView {
+  return value === "week" ? "week" : "month";
+}
+
+/** A real `YYYY-MM-DD` in the reader's clock, or null — 2026-02-30 is not a day. */
+export function readDayKey(value: string | undefined | null): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = new Date(`${value}T00:00:00`);
+  if (!Number.isFinite(parsed.getTime())) return null;
+  return localDateKey(parsed) === value ? value : null;
+}
+
+/** Walk a day forward or back across months and years without a UTC shift. */
+export function shiftDays(date: string, delta: number): string {
+  const moved = new Date(`${date}T00:00:00`);
+  moved.setDate(moved.getDate() + delta);
+  return localDateKey(moved);
+}
+
+/**
+ * The Monday-first week around a day — always seven cells, so the reader who
+ * steps a week at a time sees the same columns Monday through Sunday.
+ */
+export function weekCells(date: string): MonthCell[] {
+  const anchor = new Date(`${date}T00:00:00`);
+  const month = anchor.getMonth();
+  const offset = (anchor.getDay() + 6) % 7;
+  const start = new Date(anchor);
+  start.setDate(anchor.getDate() - offset);
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return { date: localDateKey(day), inMonth: day.getMonth() === month };
+  });
+}
+
 const KIND_ORDER: CalendarKind[] = ["reminder", "followup", "interview", "capsule"];
 
 /** A local `YYYY-MM` for a date; the calendar never shifts a row into another month by UTC. */
@@ -170,6 +209,13 @@ export function eventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent
 /** The month's own events, grouped — what the grid reads. */
 export function eventsInMonth(events: CalendarEvent[], key: string): Map<string, CalendarEvent[]> {
   return eventsByDate(events.filter((event) => event.date.startsWith(`${key}-`)));
+}
+
+/** The seven days around a date, grouped — the week grid reads this and never a month. */
+export function eventsInWeek(events: CalendarEvent[], date: string): Map<string, CalendarEvent[]> {
+  const first = weekCells(date)[0].date;
+  const last = shiftDays(first, 6);
+  return eventsByDate(events.filter((event) => event.date >= first && event.date <= last));
 }
 
 export function summarize(events: CalendarEvent[]): Record<CalendarKind, number> {

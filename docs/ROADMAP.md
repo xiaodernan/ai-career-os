@@ -8198,6 +8198,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **388** The month turns into a week without leaving the room (2026-11-22).
+
+  The month grid (Epic 386) trims a day to three chips and a "+N more" — right
+  for six weeks at a glance, wrong for the day the reader is standing in.
+  `/calendar` now carries a month/week switch, and the week is
+  `?view=week&day=YYYY-MM-DD`: seven Monday-first columns, each holding the
+  day's complete list — every row's title, its own detail (a company, a
+  relation) and its door — so nothing is folded behind a counter. The week
+  walks seven days at a time through the same prev/next controls, "Today"
+  returns to the reader's own week, and switching back to the month keeps the
+  week the reader was looking at. Dates stay local; an impossible
+  `?day=2026-02-30` is refused rather than shifted, and a week's count names
+  only its own seven days. Pure `lib/search-calendar.ts` additions — day
+  validation, day stepping across months, years and leap days, seven-cell
+  weeks, week grouping — 6 new unit tests (18/18) and 3 new page tests (8/8)
+  for the complete-day list, the mid-month week, the empty week and Chinese.
+  Full frontend suite **227 files / 1,753 tests green**, `tsc --noEmit` clean;
+  EN+ZH copy in both tables, no new source file, copy census stays 238.
+
 - [x] **387** A sealed letter reaches the calendar you already own (2026-11-22).
 
   The subscription feed (Epic 34.1) carried application reminders and pending

@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({
   interviews: [] as Record<string, unknown>[],
   followUps: [] as Record<string, unknown>[],
   notes: [] as Record<string, unknown>[],
-  url: { month: "2026-09" } as { month?: string },
+  url: { month: "2026-09" } as { month?: string; view?: string; day?: string },
   written: undefined as Record<string, unknown> | undefined,
 }));
 
@@ -132,5 +132,53 @@ describe("the calendar page", () => {
     expect(html).toContain('aria-label="Previous month"');
     expect(html).toContain('aria-label="Next month"');
     expect(html).toContain("Today");
+    // Both layouts are named up front, with the month standing.
+    expect(html).toContain('aria-label="How the calendar is laid out"');
+    expect(html).toContain(">Month<");
+    expect(html).toContain(">Week<");
+    expect(html).toContain('aria-pressed="true"');
+  });
+
+  it("opens a week with every row of each day, detail and all", () => {
+    state.url = { view: "week", day: "2026-09-16" };
+    state.applications = Array.from({ length: 5 }, (_, index) => ({
+      id: `app-${index + 1}`,
+      title: `Role ${index + 1}`,
+      companyName: "Acme Robotics",
+      status: "applied",
+      reminderAt: "2026-09-16T09:00:00Z",
+    }));
+
+    const html = render();
+
+    expect(html).toContain("Sep 14 – Sep 20, 2026");
+    expect(html).toContain("5 things this week");
+    // The week has room for the whole day: no chip is folded behind a counter.
+    for (let index = 1; index <= 5; index += 1) expect(html).toContain(`Role ${index}`);
+    expect(html).not.toContain("more");
+    expect(html).toContain("Acme Robotics");
+    expect(html).toContain('href="/applications?application=app-1"');
+    expect(html).toContain('aria-label="Previous week"');
+    expect(html).toContain('aria-label="Next week"');
+    // Days with nothing still hold their column.
+    expect(html.match(/—/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+  });
+
+  it("keeps the week honest when the seven days hold nothing", () => {
+    state.url = { view: "week", day: "2026-09-16" };
+    const html = render();
+    expect(html).toContain("Sep 14 – Sep 20, 2026");
+    expect(html).toContain("0 things this week");
+    expect(html).toContain("Nothing lands on this week yet");
+  });
+
+  it("speaks a week in Chinese, controls and all", () => {
+    state.url = { view: "week", day: "2026-09-16" };
+    const html = render("zh");
+    expect(html).toContain("2026年9月14日 – 9月20日");
+    expect(html).toContain("按周");
+    expect(html).toContain("上一周");
+    expect(html).toContain("下一周");
+    expect(html).toContain("本周有 0 件事");
   });
 });
