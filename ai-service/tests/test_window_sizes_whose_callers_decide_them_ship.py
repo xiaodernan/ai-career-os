@@ -173,10 +173,16 @@ SITES = {
                          # pager counts the matches rather than the pipeline and page two of a word
                          # is the second page of that word.
                          "{ page: state.page, size: PAGE_SIZE, q: state.q }"),
+                        # 386's calendar draws every application on one spine, so it asks the
+                        # ceiling the server will hand back and pages nothing.
+                        ("app/(app)/calendar/page.tsx", "{ size: 100 }"),
                         # Epic 212: the closing ceremony reads the applications total
                         # for its stat tiles.
                         ("app/(app)/ceremony/page.tsx",
                          "{ size: 20, page: 0 }"),
+                        # 407's company page builds its history strip from the two boards and
+                        # asks each the same way: the widest window, once, with no page.
+                        ("app/(app)/companies/[id]/page.tsx", "{ size: 100 }"),
                         # 47.3's job page asks the pipeline whether this posting is already on the
                         # board, so it names a window of one row it will never page through.
                         ("app/(app)/jobs/[id]/page.tsx",
@@ -205,17 +211,29 @@ SITES = {
                      "{ q: state.q, relation: state.relation, page: state.page, size: PAGE_SIZE, }")],
     "useKnowledgeSources": [("app/(app)/knowledge/page.tsx",
                             "true, src, { page: state.page, size: PAGE_SIZE }")],
-    "useKnowledgeNotes": [("app/(app)/ceremony/page.tsx",
+    "useKnowledgeNotes": [("app/(app)/calendar/page.tsx",
+                           # 386's capsule strip asks for the kept-under-a-tag notes by the same
+                           # ceiling 384's card uses, so the two surfaces draw one population.
+                           "{ tag: CAPSULE_TAG, size: 50 }"),
+                          ("app/(app)/ceremony/page.tsx",
                            # Epic 212: the closing ceremony reads the notes total for its stat tiles.
                            "{ size: 1, page: 0 }"),
                           ("components/knowledge/notes-panel.tsx",
                            # 64.2's tag chips narrow the same list; the filter rides beside
                            # the window and the hook spreads whatever the page passes.
-                           "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }")],
+                           "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }"),
+                          # 384's capsule card opens a year of kept notes at once and pages
+                          # nothing: the ceiling is the list it intends to show.
+                          ("components/timeline/time-capsule-card.tsx",
+                           "{ tag: CAPSULE_TAG, size: 50 }")],
     "useInterviewSessions": [
+        # 386's calendar: every rehearsal the spine can hold, asked the same way as applications.
+        ("app/(app)/calendar/page.tsx", "{ size: 100 }"),
         # Epic 212: the closing ceremony reads the interview total for its stat tiles.
         ("app/(app)/ceremony/page.tsx",
          "{ size: 1, page: 0 }"),
+        # 407's company page asks the rehearsals board the same ceiling as the pipeline one.
+        ("app/(app)/companies/[id]/page.tsx", "{ size: 100 }"),
         # 62.1's runner asks for the card's siblings so the retry can read what the last
         # completed rehearsal missed; it only asks once the detail names the card.
         ("app/(app)/interviews/[id]/page.tsx",

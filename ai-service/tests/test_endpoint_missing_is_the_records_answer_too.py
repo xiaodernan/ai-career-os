@@ -5,9 +5,9 @@ contract used by every surface". The same file decides, from one boolean, whethe
 error or a designed empty state with a sentence about version mismatch. Both halves of that promise
 are measurable, and this file pins them:
 
-* Only 6 of the 28 ``(app)`` screens route a query through the boundary. Five route the same
+* Only 6 of the 31 ``(app)`` screens route a query through the boundary. Five route the same
   pending/error/empty decision through ``components/common/module-view.tsx``, which re-implements it
-  in its own JSX, and seventeen decide it inline from their own ``isPending``/``error`` flags. Each of
+  in its own JSX, and twenty decide it inline from their own ``isPending``/``error`` flags. Each of
   the two shared shells claims universality in its own docstring -- "the single async contract used
   by every surface" and "the shared async list shell for every (app) resource page" -- and they answer
   the same status with opposite states, so this file pins which screens spend which.
@@ -71,8 +71,12 @@ MODULE_VIEW_SCREENS = [
 # on its own `isPending` rather than either shell.
 # The letters gallery (210) and the closing ceremony (212) branch on their own
 # `isPending`/`isError` arms rather than either shell.
+# The calendar board (83a49f0) joined the walk with its own page: it folds three queries
+# into one `failed` boolean and hands `ErrorState` the first error that answered, so it is
+# neither shell and it does carry the failure arm the split below demands.
 OWN_FLAG_SCREENS = [
     "frontend/src/app/(app)/analysis/page.tsx",
+    "frontend/src/app/(app)/calendar/page.tsx",
     "frontend/src/app/(app)/ceremony/page.tsx",
     "frontend/src/app/(app)/companies/[id]/page.tsx",
     "frontend/src/app/(app)/copilot/page.tsx",
@@ -136,7 +140,11 @@ def ts_files() -> list:
 @lru_cache(maxsize=None)
 def app_screens() -> list:
     out = sorted(p.relative_to(ROOT).as_posix() for p in APP.rglob("page.tsx"))
-    assert len(out) == 40, "app/%s page.tsx files, not the 40 this file walks (Epics 210/212/214/244/250 joined since this pin: letters, ceremony, playbook, tour, admin)" % len(out)
+    # 41 since the calendar board shipped (83a49f0, 2026-11-22): it renders through the
+    # same shell every other /(app)/ screen uses, so the walk grows by one and the two
+    # claims this list feeds are unchanged -- 25 of the 31 app screens still carry no
+    # boundary and the six that do are the six they have always been.
+    assert len(out) == 41, "app/%s page.tsx files, not the 41 this file walks (Epics 210/212/214/244/250 joined since the original pin: letters, ceremony, playbook, tour, admin; 416 recounts the calendar)" % len(out)
     return [rel for rel in out if "/(app)/" in rel]
 
 
@@ -189,9 +197,9 @@ def status_of(status: str) -> list:
 # ------------------------------------------------------------------ cases
 
 
-def test_the_contract_called_single_is_used_by_six_of_the_twenty_eight_app_screens():
+def test_the_contract_called_single_is_used_by_six_of_the_thirty_one_app_screens():
     screens = app_screens()
-    assert len(screens) == 30, "%d screens under app/(app), not 30" % len(screens)
+    assert len(screens) == 31, "%d screens under app/(app), not 31" % len(screens)
     users = boundary_users()
     assert users == BOUNDARY_SCREENS, "the boundary is used by %s" % [u.split("app/")[-1] for u in users]
     assert stmt(read(BOUNDARY), "single async contract used by every surface") == \
@@ -199,10 +207,10 @@ def test_the_contract_called_single_is_used_by_six_of_the_twenty_eight_app_scree
         "the file's own claim about its reach moved, so the set above needs re-measuring, not this pin"
     )
     non = [s for s in screens if s not in users]
-    assert len(non) == 24, "%d screens render without the contract this file calls single" % len(non)
+    assert len(non) == 25, "%d screens render without the contract this file calls single" % len(non)
 
 
-def test_twenty_two_of_the_twenty_eight_screens_decide_the_async_state_somewhere_else():
+def test_twenty_of_the_thirty_one_screens_decide_the_async_state_somewhere_else():
     screens = app_screens()
     b, mv = boundary_users(), module_view_users()
     assert mv == MODULE_VIEW_SCREENS, "ModuleView is spent by %s" % [u.split("app/")[-1] for u in mv]
@@ -212,7 +220,7 @@ def test_twenty_two_of_the_twenty_eight_screens_decide_the_async_state_somewhere
     flags = set(own_flag_screens())
     bare = [s for s in neither if s not in flags]
     assert bare == [], "%s render a query with no failure branch at all -- this file used to claim so" % bare
-    assert len(b) + len(mv) + len(neither) == len(screens) == 30, "the three sets stopped covering the app"
+    assert len(b) + len(mv) + len(neither) == len(screens) == 31, "the three sets stopped covering the app"
     assert stmt(read(MODULE_VIEW), "shared async list shell for every") == \
         "* ModuleView \u2014 the shared async list shell for every (app) resource page.", (
         "the second shell's own universality claim moved, so the 5/5/15 split above needs re-measuring")
@@ -402,4 +410,7 @@ def test_this_gate_reads_the_envelope_and_the_branches_it_claims():
     for rel in (BOUNDARY, MODULE_VIEW, MISSING, CLIENT, NORMALIZE, CODES, HANDLER, RUN_DETAIL):
         assert (ROOT / rel).exists(), "%s is not where this file reads it" % rel
     assert len(not_found_codes()) == 37 and len(boundary_users()) == 6
-    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 19
+    # 20 own-flag screens since the calendar board's page joined the walk (83a49f0); the
+    # split is still 6 + 5 + 20 = 31, and the counts here are the ledger's own consistency
+    # check, not a second opinion on the lists above.
+    assert len(module_view_users()) == 5 and len(OWN_FLAG_SCREENS) == 20

@@ -129,12 +129,18 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
         f"{request}")
     # #228 moved the literal to the route's own 20, so the two now agree; what this gate
     # still pins is that a caller's window overrides it rather than replaces it.
-    # Four callers now: the board (its own page), the report (59.1), the runner (62.1) —
-    # and the closing ceremony (212), which reads the interview total for its stat tiles.
-    # Epic 277's afterward card also reads the same total as the ceremony does.
+    # Four callers became six when 212's ceremony and 277's afterward card joined to read a
+    # total, and eight when 407's company page (67cd14d) and 386's month board (83a49f0) each
+    # asked for the whole ceiling -- both of them draw rehearsals beside a record rather than
+    # paging through them, so `size: 100` is their honest window and the pager stays on the
+    # board alone.
     assert hook_calls("useInterviewSessions") == [
+        ("app/(app)/calendar/page.tsx",
+         "{ size: 100 }"),
         ("app/(app)/ceremony/page.tsx",
          "{ size: 1, page: 0 }"),
+        ("app/(app)/companies/[id]/page.tsx",
+         "{ size: 100 }"),
         ("app/(app)/interviews/[id]/page.tsx",
          "{ applicationId: data?.applicationId ?? undefined, size: 20, "
          "enabled: Boolean(data?.applicationId), }"),

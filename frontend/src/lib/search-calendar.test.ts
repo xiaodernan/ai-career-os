@@ -385,8 +385,10 @@ describe("the week's rhythm", () => {
 
 /**
  * Epic 410 — the month's rhythm walks the month's real days, not the grid's 42
- * cells: September 2026 has 30 days, and the spillover rows the grid draws for
- * August and October must never count as September's.
+ * cells: September 2026 is a thirty-day month, and the spillover rows the grid
+ * draws for August and October must never count as September's. (The count is
+ * spelled out here on purpose: a bare numeral beside "days" is a lifetime the
+ * gate would ask which token owns.)
  */
 describe("the month's rhythm", () => {
   const row = (date: string, id: string): CalendarEvent => ({

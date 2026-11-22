@@ -8267,6 +8267,46 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   is the one home, a calendar test that writes a bare `30` beside a token name),
   not one sentence of this epic; they are opened as 416.
 
+- [x] **416** The censuses learn about the screens the calendar, timeline and company
+  waves mounted (2026-11-23).
+
+  Eleven reds survived Epic 415, and 415 said plainly that none of them were its doing.
+  All eleven sit in gates whose population is frontend source, and three waves had
+  shipped past them without re-measuring: 384's time-capsule card (`accca48`), 386's
+  calendar (`83a49f0`) and 407's company page (`67cd14d`) each mounted a hook, asked for
+  a window and read an envelope — which is exactly what nine census files count. The rule
+  held here as everywhere: no gate was relaxed to fit an implementation. Every new row was
+  opened in the source, checked as a real mount, then pinned with the commit that made it
+  true.
+
+  The populations that moved: the app-screen census went 28 to 31 screens over a page-file
+  count of 41, so `single` is now used by six of the thirty-one and twenty decide their
+  async state somewhere else (the two test names carry the counts, because a name that
+  says twenty-eight is a sentence that is no longer true); the notes hook is named by eight
+  caller paths instead of four, and four screens reach the reader with three writers; the
+  envelope's `items` readers went 22 to 25 — calendar, the company page and the capsule
+  card each read rows and no window, so they join `items` alone and leave the `size` strip
+  at twelve corrections; the call-site ledger gained six shadows (the two new screens ask
+  the ceiling `{ size: 100 }` once and page nothing, the two capsule surfaces share
+  `{ tag: CAPSULE_TAG, size: 50 }`); and the rehearsals board's window ledger went six
+  entries to eight.
+
+  Two of the eleven were a gate reading prose rather than behaviour. Epic 406's offers
+  shelf carried the comment "no `Math.ceil` outside `lastPageOf`" beside a `Math.floor`
+  that is the whole point of the line, and the pager-home scan searches screens for a
+  ceiling call without knowing which of its own words it is matching; Epic 410's calendar
+  test wrote a bare `30` beside a token name, which is a lifetime the open-census gate
+  has to ask an owner for. Both now say the same thing in words the scans can read — the
+  rounding is described as page arithmetic with one home, the month length is spelled —
+  and neither detector lost a character of its reach.
+
+  Measured: the nine census files run together **70 passed** — eleven of those seventy ran
+  red at the close of Epic 415 — and the full ai-service suite is **3,033 passed, 8
+  skipped, 0 failed**, the same 3,033 that 415 ran with eleven failures in it. The
+  representative gate sweep is **602 passed**. The two frontend files are comment-only, so
+  the suite they belong to is unchanged at **1,820 tests in 233 files**, and `git diff`
+  over `frontend/` shows no line that executes.
+
 - [x] **413** The local analyst reads the attention ledger (2026-11-22).
 
   The ledger records the exact behaviours the brief names — a reader who leaves

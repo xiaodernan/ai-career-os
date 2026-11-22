@@ -183,8 +183,18 @@ CALLERS = {
     # Epic 212: the closing ceremony reads the notes total through the same hook,
     # so the reach now covers the ceremony page (and its test, which names the hook)
     # alongside the notes panel.
-    "useKnowledgeNotes": ["app/(app)/ceremony/page.test.tsx", "app/(app)/ceremony/page.tsx",
-                          "components/knowledge/notes-panel.tsx"],
+    # 384 and 386 grew it again and neither pass recounted: the capsule card reads the
+    # tagged notes on the timeline (Epic 384, accca48, with its own card test and named by
+    # the timeline page's test), and the month board mounts the same `{ tag, size }` ask to
+    # draw capsules as days (Epic 386, 83a49f0, with its board test). Both are mounts, not
+    # stubs that name the hook without rendering it: calendar and the card each call the
+    # hook and read `data.items`, and the two `*.test.tsx` rows are screens' own tests.
+    "useKnowledgeNotes": ["app/(app)/calendar/page.test.tsx", "app/(app)/calendar/page.tsx",
+                          "app/(app)/ceremony/page.test.tsx", "app/(app)/ceremony/page.tsx",
+                          "app/(app)/timeline/page.test.tsx",
+                          "components/knowledge/notes-panel.tsx",
+                          "components/timeline/time-capsule-card.test.tsx",
+                          "components/timeline/time-capsule-card.tsx"],
     "useAIUsage": ["app/(app)/dashboard/page.tsx"],
 }
 COPILOT_READS = {"createdAt", "id", "lastMessagePreview", "title", "updatedAt"}

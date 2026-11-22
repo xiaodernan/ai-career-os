@@ -123,10 +123,17 @@ def test_the_notes_hook_takes_the_window_the_way_every_other_list_hook_does():
         f"the caller's window is no longer spread over the literal, so an asked-for page "
         f"would never reach the wire: {collapse(body)}")
     assert hook_calls("useKnowledgeNotes") == [
+        # The two capsule surfaces (384's card, 386's month board) ask by tag for the whole
+        # set they draw -- a capsule list is not a paged list, and neither offers a pager --
+        # so `size: 50` beside `tag` is their ceiling, the way 212's `size: 1` is a total.
+        ("app/(app)/calendar/page.tsx",
+         "{ tag: CAPSULE_TAG, size: 50 }"),
         ("app/(app)/ceremony/page.tsx",
          "{ size: 1, page: 0 }"),
         ("components/knowledge/notes-panel.tsx",
          "{ page: state.npage, size: PAGE_SIZE, tag: tag || undefined, }"),
+        ("components/timeline/time-capsule-card.tsx",
+         "{ tag: CAPSULE_TAG, size: 50 }"),
     ], f"the call sites moved: {hook_calls('useKnowledgeNotes')}"
 
 

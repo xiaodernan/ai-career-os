@@ -67,6 +67,12 @@ KEEP_AS_NOTE_BUTTON = "frontend/src/components/interviews/keep-as-note-button.ts
 # Epic 212: the closing ceremony reads the notes total for its stat tiles, so the
 # reader's reach now includes the ceremony page alongside the panel.
 CEREMONY_PAGE = "frontend/src/app/(app)/ceremony/page.tsx"
+# Epic 386's month board lists the tagged capsules it draws as days, so it mounts the
+# reader and nothing else; Epic 384's capsule card both lists and writes (it creates a
+# letter to the future and deletes one), so it joins the reader set and the writer set.
+# Neither is a stub: the calendar reads `notes.data.items`, the card reads and mutates.
+CALENDAR_PAGE = "frontend/src/app/(app)/calendar/page.tsx"
+CAPSULE_CARD = "frontend/src/components/timeline/time-capsule-card.tsx"
 
 # The route, with the character after it pinned: `/knowledge/notes` is also the first half of
 # `components/knowledge/notes-panel.tsx`, so a bare substring search reports a file naming the panel
@@ -289,12 +295,14 @@ def query_keys(rel: str) -> dict[str, list[tuple[str, str]]]:
 
 
 def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> None:
-    """`GET/POST/PATCH/DELETE /knowledge/notes` are served, and two screens reach the writer.
+    """`GET/POST/PATCH/DELETE /knowledge/notes` are served, and four screens reach the reader.
 
-    The reader still has exactly one caller -- the panel that draws the list. The
+    The reader began with exactly one caller -- the panel that draws the list. The
     writer gained a second screen in 60.1: the report's study button saves one
-    item through the same hook, so the two callers are the panel and that button,
-    and a third one is this test's cue to be re-measured.
+    item through the same hook. 212 added the ceremony's total, and 384/386 added
+    the two capsule surfaces: the month board reads the tagged notes, the card
+    reads and writes them. Four readers, three writers, each of them a mount this
+    file can point at; another one is this test's cue to be re-measured again.
     """
     routes = re.findall(r'@(Get|Post|Patch|Delete)Mapping\("(/notes[^"]*)"\)', read(CONTROLLER))
     # Five mappings over the four verbs: 69.2 added a second GET, the tag counts
@@ -312,8 +320,8 @@ def test_the_notes_route_has_two_client_hooks_and_a_screen_reaches_both() -> Non
 
     callers = {name: sorted(hook_call_sites(name)) for name in hooks}
     assert callers == {
-        "useKnowledgeNotes": sorted([NOTES_PANEL, CEREMONY_PAGE]),
-        "useNoteMutations": sorted([NOTES_PANEL, KEEP_AS_NOTE_BUTTON]),
+        "useKnowledgeNotes": sorted([CALENDAR_PAGE, CEREMONY_PAGE, NOTES_PANEL, CAPSULE_CARD]),
+        "useNoteMutations": sorted([NOTES_PANEL, KEEP_AS_NOTE_BUTTON, CAPSULE_CARD]),
     }, \
         f"the notes hooks gained or lost a caller, so this file's reach claim must be re-measured: {callers}"
     assert hooks["useKnowledgeNotes"] == RESOURCES and hooks["useNoteMutations"] == ACTIONS, \

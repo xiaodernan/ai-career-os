@@ -422,8 +422,9 @@ function daysLeft(deadline: string | null): number | null {
   // Whole days remaining, floored: 36 hours ahead is "1d left", and the final
   // day before the deadline is 0 — the badge calls that the last day. A lapsed
   // deadline is negative on purpose: the badge says so instead of printing a
-  // countdown that ran backwards. Floor is also what the pager-census gate
-  // requires (no `Math.ceil` outside `lastPageOf`).
+  // countdown that ran backwards. Rounding down is also what the pager-census
+  // gate wants: rounding this division up is page arithmetic, and page
+  // arithmetic has exactly one home (`lastPageOf`).
   return Math.floor(ms / 86_400_000);
 }
 
