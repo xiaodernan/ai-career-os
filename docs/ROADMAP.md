@@ -8198,6 +8198,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **409** The find box answers to the slash (2026-11-22).
+
+  The calendar's find box was a mouse-only door: a reader with both hands on the
+  keyboard could walk months with ← → and come home with T, but had to leave the
+  keys to search. `/` — the key the web already uses for "find on this page" —
+  now focuses the calendar's own find box, and it is announced on the input with
+  `aria-keyshortcuts` and named in the legend's keyboard line. The rule stays in
+  the same pure fold as the walks, so a slash typed inside a field is still a
+  slash and a modified slash still belongs to the browser; the manual's calendar
+  chapter names the key beside the other three.
+
+  Measured: full frontend suite **232 files / 1,806 tests green** (+3: one key
+  case, two page cases), `tsc --noEmit` clean, `npm run lint` clean,
+  `npm run build` passes, copy census stays 238.
+
 - [x] **408** A long calendar can be searched (2026-11-22).
 
   The calendar had grown into the one screen where every dated row in the

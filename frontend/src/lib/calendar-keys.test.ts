@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarNavFromKey } from "@/lib/calendar-keys";
 
 /**
- * Epic 394 — the calendar's keyboard contract. Three keys are ours; every other
+ * Epic 394 — the calendar's keyboard contract. Four keys are ours; every other
  * key, and every key pressed while typing or holding a modifier, is not.
  */
 describe("the calendar keyboard", () => {
@@ -17,14 +17,20 @@ describe("the calendar keyboard", () => {
     expect(calendarNavFromKey("T")).toBe("today");
   });
 
+  it("opens the find box on a slash (Epic 409)", () => {
+    expect(calendarNavFromKey("/")).toBe("find");
+  });
+
   it("leaves typing alone", () => {
     expect(calendarNavFromKey("ArrowLeft", { inField: true })).toBeNull();
     expect(calendarNavFromKey("t", { inField: true })).toBeNull();
+    expect(calendarNavFromKey("/", { inField: true })).toBeNull();
   });
 
   it("leaves shortcuts to the browser and the palette", () => {
     expect(calendarNavFromKey("ArrowLeft", { modifier: true })).toBeNull();
     expect(calendarNavFromKey("t", { modifier: true })).toBeNull();
+    expect(calendarNavFromKey("/", { modifier: true })).toBeNull();
   });
 
   it("declines every key it does not own", () => {

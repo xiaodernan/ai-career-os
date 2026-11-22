@@ -163,6 +163,7 @@ export default function CalendarPage() {
   // match outside the grid still gets the reader to its week.
   const [find, setFind] = React.useState("");
   const found = React.useMemo(() => searchEvents(events, find, 6), [events, find]);
+  const findRef = React.useRef<HTMLInputElement>(null);
   const cells = React.useMemo(() => monthCells(month), [month]);
 
   const monthLabel = React.useMemo(
@@ -246,6 +247,10 @@ export default function CalendarPage() {
       });
       if (!action) return;
       event.preventDefault();
+      if (action === "find") {
+        findRef.current?.focus();
+        return;
+      }
       if (action === "today") {
         if (view === "week") setUrl({ day: today, month: undefined });
         else setUrl({ month: monthKeyOf(), day: undefined });
@@ -396,10 +401,12 @@ export default function CalendarPage() {
                 className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               />
               <Input
+                ref={findRef}
                 value={find}
                 onChange={(event) => setFind(event.target.value)}
                 placeholder={t("monthCalendar.findPlaceholder")}
                 aria-label={t("monthCalendar.findPlaceholder")}
+                aria-keyshortcuts="/"
                 className="pl-8"
               />
             </div>

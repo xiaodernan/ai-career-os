@@ -8,7 +8,7 @@
  * belongs to the browser or the command palette.
  */
 
-export type CalendarNavAction = "prev" | "next" | "today";
+export type CalendarNavAction = "prev" | "next" | "today" | "find";
 
 export interface CalendarKeyContext {
   /** True while the reader is typing in an input, textarea, select or editable region. */
@@ -25,5 +25,8 @@ export function calendarNavFromKey(
   if (key === "ArrowLeft") return "prev";
   if (key === "ArrowRight") return "next";
   if (key === "t" || key === "T") return "today";
+  // Epic 409 — the same key the web uses for "find on this page" now opens the
+  // calendar's own find box, because that is the one search this page owns.
+  if (key === "/") return "find";
   return null;
 }

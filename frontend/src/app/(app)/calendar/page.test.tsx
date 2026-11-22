@@ -166,6 +166,39 @@ describe("the calendar page", () => {
     expect(html).toContain('href="/networking"');
   });
 
+  it("lifts a past reminder above the grid and counts its days late", () => {
+    state.applications = [
+      {
+        id: "app-late",
+        title: "Backend Engineer",
+        companyName: "Acme Robotics",
+        status: "applied",
+        reminderAt: "2026-09-12T09:00:00Z",
+      },
+    ];
+    const html = render();
+    expect(html).toContain("Past their date, still open");
+    expect(html).toContain("3 days late");
+    expect(html).toContain('href="/applications?application=app-late"');
+  });
+
+  it("offers a find box over every dated row and stays quiet until asked", () => {
+    state.applications = [
+      {
+        id: "app-1",
+        title: "Backend Engineer",
+        companyName: "Acme Robotics",
+        status: "applied",
+        reminderAt: "2026-09-20T09:00:00Z",
+      },
+    ];
+    const html = render();
+    expect(html).toContain('placeholder="Find a row — a role, a company, a name"');
+    expect(html).toContain('aria-keyshortcuts="/"');
+    expect(html).not.toContain("matching rows");
+    expect(html).not.toContain("No dated row matches");
+  });
+
   it("speaks Chinese to a Chinese reader, controls and all", () => {
     const html = render("zh");
     expect(html).toContain("2026年9月");
@@ -189,8 +222,11 @@ describe("the calendar page", () => {
     expect(html).toContain('title="See this day in the week"');
     // Epic 391 — the days on screen can leave as a calendar file.
     expect(html).toContain("Export calendar");
-    // Epic 394 — the keyboard is named where the legend lives.
-    expect(html).toContain("Keyboard: ← → walk one month or week, T returns to today.");
+    // Epic 394 — the keyboard is named where the legend lives; Epic 409 adds the
+    // slash that lands in the find box.
+    expect(html).toContain(
+      "Keyboard: ← → walk one month or week, T returns to today, / jumps into the find box."
+    );
   });
 
   it("opens a week with every row of each day, detail and all", () => {
