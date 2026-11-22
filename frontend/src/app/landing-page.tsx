@@ -12,6 +12,7 @@ import {
   FileText,
   Globe,
   Handshake,
+  LogIn,
   MailOpen,
   MessageSquare,
   Mic,
@@ -52,19 +53,20 @@ export function LandingPage() {
 
       {/* Header — frosted, sticky, never competes with the hero. */}
       <header className="sticky top-0 z-50 glass">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-2 px-4 sm:gap-3">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Sparkles className="size-4" aria-hidden />
             </span>
-            <span className="font-serif text-lg font-semibold tracking-tight">
+            <span className="font-serif text-base font-semibold tracking-tight sm:text-lg">
               Career<span className="text-primary">OS</span>
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <Button
               variant="ghost"
               size="sm"
+              className="px-2 sm:px-3"
               onClick={() => setLocale(locale === "en" ? "zh" : "en")}
               // The visible label and the accessible name are one thing; no aria
               // override, because the glyph alone named a control in two
@@ -75,10 +77,13 @@ export function LandingPage() {
                 {locale === "en" ? t("landing.switchToChinese") : t("landing.switchToEnglish")}
               </span>
             </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">{t("landing.signIn")}</Link>
+            <Button variant="ghost" size="sm" asChild className="px-2 sm:px-3">
+              <Link href="/login" aria-label={t("landing.signIn")} title={t("landing.signIn")}>
+                <LogIn aria-hidden className="size-4 sm:hidden" />
+                <span className="hidden sm:inline">{t("landing.signIn")}</span>
+              </Link>
             </Button>
-            <Button variant="ai" size="sm" asChild className="glow-on-hover">
+            <Button variant="ai" size="sm" asChild className="glow-on-hover shrink-0 px-3 sm:px-4">
               <Link href="/register">
                 {t("landing.getStarted")}
                 <ArrowRight className="size-3.5" aria-hidden />

@@ -8198,6 +8198,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **381** The front door fits a phone (2026-11-22).
+
+  The landing header put four controls in one unwrapped row: brand, language,
+  "Sign in" and "Get started". At 390px the row's natural width passed the
+  viewport, and the page's root `overflow-hidden` hid the spill instead of
+  wrapping it — the exact "blocks squeezed under the edge" the brief reports.
+  The header now keeps its brand at `shrink-0`, tightens the gaps below `sm`,
+  and turns the language control and "Sign in" into icon-only buttons under
+  `sm` (both keep `aria-label`/`title`, so the accessible name is unchanged and
+  only the visual width shrinks). Measured in a real Chromium at 1440×900,
+  390×844 and 360×800: `documentElement.scrollWidth` equals the viewport at all
+  three, no header item crosses an edge, zero console errors. Landing tests
+  8/8, `tsc --noEmit` clean.
+
 - [x] **380** The chronicle has a local pen (2026-11-22).
 
   The timeline's two story surfaces both needed a live provider: "tell me this
