@@ -97,3 +97,23 @@ def test_multiple_violations_are_reported_together():
     out = lp._strict_failures(_ramp({500: 5}), _authed(registered=False),
                               _gate({200: 1}, health=500))
     assert len(out) == 4
+
+
+def test_a_pressure_run_has_a_citable_ci_gate():
+    """The strict verdict must be reachable by CI, not only by reading a chat log.
+
+    The workflow must never start or stop the reader's containers (ci.yml's
+    nightly owns that lifecycle), and a stack that is down must be named SKIPPED
+    rather than quietly reported as a green pressure run.
+    """
+    workflow = (REPO / ".github" / "workflows" / "pressure-probe.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch" in workflow
+    assert "scripts/load_probe.py" in workflow
+    assert "--strict" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "shell: pwsh" not in workflow
+    assert "docker compose down" not in workflow
+    assert "docker compose up" not in workflow
+    assert "SKIPPED" in workflow
+    # The report must come from the same file the gate reads.
+    assert "pressure-probe.log" in workflow

@@ -165,9 +165,16 @@ connection, or when health does not answer 200 after the storm. The final line i
 `{"verdict":"PASS"|"FAIL","failures":[...]}`; the exit code matches. The judgement
 is the pure function `_strict_failures`, pinned offline by
 `ai-service/tests/test_load_probe_verdict.py` so the gate cannot silently go
-soft. This is what makes the pressure run safe to wire into a nightly or a
-dispatch-only workflow later — until then it is an explicit operator step, not a
-claim of a running CI gate.
+soft.
+
+Since 2026-11-22 that verdict has a citable home: `.github/workflows/pressure-probe.yml`.
+Dispatch it from GitHub Actions with the stack already running; the workflow calls
+`--strict`, attaches `pressure-probe.log`, and fails the job on any verdict failure.
+A weekly slot also fires, but when backend health is unreachable it records
+**SKIPPED** in the job summary instead of pretending a pressure run happened. The
+workflow never starts or stops containers — the nightly job owns that lifecycle —
+and an optional `coalesce` input enables the token-spending one-flight merge
+measurement only when an operator asks for it.
 
 ---
 

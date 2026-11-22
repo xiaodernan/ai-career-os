@@ -1,0 +1,106 @@
+name: pressure-probe
+
+# Epic 378 — the strict pressure gate has a home.
+#
+# `scripts/load_probe.py --strict` already turns a live measurement into a real
+# PASS/FAIL (5xx, dropped connections, a wrong-password login that succeeds, or a
+# health probe that does not recover). Until now it was an operator-only command
+# in docs/LOADTEST.md: nothing could answer "was the last pressure run actually
+# green?" without reading a chat transcript.
+#
+# This workflow is deliberately independent of ci.yml. The nightly job starts
+# Docker infra and tears it down at the end; a pressure probe runs against a
+# RUNNING stack, so it must not start or stop the reader's containers itself.
+# When the stack is absent the run is marked SKIPPED, never PASS — silence is
+# not evidence of resilience. A manual dispatch is the normal way to gate a
+# release; the weekly slot is a low-frequency tripwire, not a noisy nightly.
+
+on:
+  workflow_dispatch:
+    inputs:
+      coalesce:
+        description: "Readers for the one-flight LLM merge (0 = off, >0 spends real tokens)"
+        required: false
+        default: "0"
+  schedule:
+    # Sunday 05:23 UTC — well after the nightly teardown. Expected to SKIP on
+    # an idle machine; dispatch manually with the stack up for a real verdict.
+    - cron: "23 5 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pressure-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: strict pressure probe against the running stack
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      # The runner's Python already has httpx from the nightly job on most days;
+      # check before reaching the network. No venv is created in the reader's
+      # workspace, and no container is started or stopped by this workflow.
+      - name: Ensure the probe's only third-party dependency
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          py -3.11 -c "import httpx" 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            py -3.11 -m pip install --user --disable-pip-version-check -q httpx
+            if ($LASTEXITCODE -ne 0) { throw 'httpx could not be installed for the pressure probe' }
+          }
+
+      - name: Is the stack actually up?
+        id: stack
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $ProgressPreference = 'SilentlyContinue'
+          $up = $false
+          try {
+            $res = Invoke-WebRequest -Uri 'http://127.0.0.1:8080/api/v1/health' -TimeoutSec 5 -UseBasicParsing
+            $up = ($res.StatusCode -eq 200)
+          } catch { }
+          [IO.File]::AppendAllText($env:GITHUB_OUTPUT, "up=$($up.ToString().ToLowerInvariant())`n")
+          if ($up) { Write-Output 'backend health answered 200 — probing' }
+          else { Write-Output 'backend health unreachable — SKIPPED, not PASS' }
+
+      - name: Run the strict probe
+        id: strict
+        if: steps.stack.outputs.up == 'true'
+        shell: powershell
+        env:
+          COALESCE: ${{ github.event.inputs.coalesce || '0' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $report = 'pressure-probe.log'
+          $probeArgs = @('scripts/load_probe.py', '--base', 'http://127.0.0.1:8080', '--strict')
+          $readers = 0
+          if ($env:COALESCE -match '^\d+$') { $readers = [int]$env:COALESCE }
+          if ($readers -gt 0) { $probeArgs += @('--llm-coalesce', "$readers") }
+          py -3.11 @probeArgs 2>&1 | Tee-Object -FilePath $report
+          if ($LASTEXITCODE -ne 0) { throw "strict pressure probe reported FAIL (exit $LASTEXITCODE)" }
+          [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, "`n## pressure probe`n`nPASS — see the attached `pressure-probe.log`.`n")
+
+      - name: Say so when nothing was measured
+        if: steps.stack.outputs.up != 'true'
+        shell: powershell
+        run: |
+          [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, "`n## pressure probe`n`nSKIPPED — backend health was unreachable, so no pressure result was produced. Start the stack and dispatch this workflow for a real verdict.`n")
+
+      - name: Keep the measurement
+        if: always() && steps.stack.outputs.up == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pressure-probe
+          path: pressure-probe.log
+          if-no-files-found: warn

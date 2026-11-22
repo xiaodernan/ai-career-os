@@ -8198,6 +8198,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **378** The pressure verdict has a home in CI (2026-11-22).
+
+  Brief XI: "长久持续开发的同时做压力测试". `scripts/load_probe.py --strict` already
+  returned a real PASS/FAIL, but only to whoever happened to run the command; the
+  repo had no workflow that could answer "was the last pressure run green?" without
+  reading a chat log. Added `.github/workflows/pressure-probe.yml`: manual dispatch
+  against an already-running stack, `--strict` verdict, attached `pressure-probe.log`,
+  non-zero job on a broken invariant, and an explicit **SKIPPED** summary when backend
+  health is unreachable (silence is not a PASS). It never starts or stops the
+  reader's containers — ci.yml's nightly owns that lifecycle — and the optional
+  `coalesce` input spends LLM tokens only when an operator asks. The judgement itself
+  stays the pure `_strict_failures` function; the new gate test pins the workflow's
+  strict call, artifact, no-pwsh/no-Docker lifecycle and honest skip. Verified:
+  workflow YAML parses (6 steps), `test_load_probe_verdict.py` 12/12.
+
 - [x] **377** The knowledge base is the frontier that opens at any moment (2026-11-22).
 
   Brief VI: "无尽开放世界感". Every other frontier on the atlas strip needs another room
