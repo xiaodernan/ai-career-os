@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T03:50:02.782664Z",
+  "generated_at": "2026-11-22T04:03:58.903449Z",
   "branch": "main",
-  "head": "0029999",
-  "total_commits": 1798,
+  "head": "121119a",
+  "total_commits": 1799,
   "milestone": "Epic 377",
   "milestone_full": "the ledger of done epics (through 530 items), closed at Epic 377 — The knowledge base is the frontier that opens at any moment (2026-11-22)",
   "pushed_at": "2026-11-22",
