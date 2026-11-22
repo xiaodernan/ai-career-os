@@ -3979,6 +3979,8 @@ export const zh = {
       aiSovereignty:
         "数据不出这台机器——除非你显式同意。HOSTED_MODE 是将来的一次发布；这一份安装，默认 local-first。",
       aiTruth: "所有 AI 主张都绑证据——或者页面直说不知道。证据薄，就不冒充。",
+      aiLocal:
+        "模型不在时，账本仍然会说话——时间线写本机编年史，管理员页给出本机算术预测；不调用外部服务，也不伪造模型答案。",
       key1: "Cmd/Ctrl K —— 命令面板。任意房间直接跳过去。",
       key2: "/ —— 从任意看板直接进入搜索。",
       key3: "g d / g c / g o / g t —— 去 dashboard / copilot / offers / timeline。",

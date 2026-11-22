@@ -4278,6 +4278,8 @@ export const en = {
       aiSovereignty:
         "Your data never leaves your stack without your consent. HOSTED_MODE — the hosted variant — is a future release; this install stays local-first by construction.",
       aiTruth: "All AI claims are evidence-bound — or the page says so. If the evidence is thin, the claim says \"I don't know\" rather than fabricate.",
+      aiLocal:
+        "When the model is dark, the ledger still speaks — the timeline writes its local chronicle and the admin page prints local arithmetic; no external call, no faked model answer.",
       key1: "Cmd/Ctrl K — the command palette. Search every room, navigate instantly.",
       key2: "/ (slash) — enter search from any board.",
       key3: "g d / g c / g o / g t — go to dashboard, copilot, offers, timeline.",

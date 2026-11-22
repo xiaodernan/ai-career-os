@@ -8241,7 +8241,9 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   `lib/local-chronicle.ts`, 6 tests for
   spans, counts, lore order, frontier and unreadable timestamps; full frontend
   suite **221 files / 1,700 tests green**, `tsc --noEmit` clean. EN+ZH copy in
-  both tables; the copy census moved 234 → 235 with the new surface.
+  both tables; the copy census moved 234 → 235 with the new surface. The playbook's
+  AI rules gained the local-pen rule (and the offline FAQ names both the local
+  chronicle and the admin forecast), so the manual teaches the fallback too.
 
 - [x] **379** The ledger still counsels when the model is dark (2026-11-22).
 

@@ -192,6 +192,7 @@ export default function PlaybookPage() {
               t("playbook.aiWhiteboard"),
               t("playbook.aiSovereignty"),
               t("playbook.aiTruth"),
+              t("playbook.aiLocal"),
             ].map((line, index) => (
               <li key={index} className="flex gap-3 rounded-2xl border border-primary/15 bg-primary/[0.04] p-4 text-sm leading-relaxed text-foreground/90">
                 <CheckCircle2 aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
