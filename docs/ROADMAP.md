@@ -8198,6 +8198,27 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **412** The calendar leaves as an agenda (2026-11-22).
+
+  The grid could leave as a file and as an ICS feed, but neither is something a
+  reader can paste into a note, a message or a stand-up update. A **Copy agenda**
+  button now sits beside Export and copies the rows already on screen as plain
+  text: a heading with the range, one line per day carrying its date and short
+  weekday in the reader's language, and one bullet per row with its kind, its
+  own title and its detail. Order is the order the grid draws, so the copied
+  agenda and the screen cannot disagree. A row without a title (a sealed letter)
+  falls back to the page's own word for it rather than an invented one; a door is
+  appended as an absolute address only when the caller supplies a web root; an
+  empty range copies nothing at all, and the button is disabled for the same
+  reason Export is. The fold is pure — `lib/calendar-agenda.ts`, no endpoint, no
+  clock read, no model call. The manual's calendar chapter now names both the
+  month's rhythm line and the copied agenda.
+
+  Measured: full frontend suite **233 files / 1,816 tests green** (+5, all in
+  `calendar-agenda.test.ts`, plus page cases for the new control in both
+  languages), `tsc --noEmit` clean, `npm run lint` clean, `npm run build`
+  passes, copy census stays 238.
+
 - [x] **411** The month's rhythm counts its weekends (2026-11-22).
 
   A deadline that lands on a Saturday is a deadline a reader meets alone: the

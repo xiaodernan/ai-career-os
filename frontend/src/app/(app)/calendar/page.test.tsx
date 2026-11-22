@@ -224,6 +224,7 @@ describe("the calendar page", () => {
     expect(html).toContain("下个月");
     expect(html).toContain("回到本月");
     expect(html).toContain("该跟进了");
+    expect(html).toContain("复制议程");
   });
 
   it("offers one control per way of walking the calendar", () => {
@@ -238,8 +239,10 @@ describe("the calendar page", () => {
     expect(html).toContain('aria-pressed="true"');
     // Epic 397 — a day number is a door into that day's week.
     expect(html).toContain('title="See this day in the week"');
-    // Epic 391 — the days on screen can leave as a calendar file.
+    // Epic 391 — the days on screen can leave as a calendar file; Epic 412 adds
+    // the plain-text agenda beside it.
     expect(html).toContain("Export calendar");
+    expect(html).toContain("Copy agenda");
     // Epic 394 — the keyboard is named where the legend lives; Epic 409 adds the
     // slash that lands in the find box.
     expect(html).toContain(
@@ -286,6 +289,8 @@ describe("the calendar page", () => {
     expect(html).toContain("Nothing lands on this week yet");
     // Nothing to carry: the export stays disabled rather than writing an empty file.
     expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Export calendar<\/button>/);
+    // The agenda is the same rows, so it is disabled for the same reason.
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Copy agenda<\/button>/);
   });
 
   it("speaks a week in Chinese, controls and all", () => {

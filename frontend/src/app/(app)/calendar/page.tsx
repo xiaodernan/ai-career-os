@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Download,
   Feather,
   Handshake,
@@ -23,7 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Hint } from "@/components/ui/hint";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
-import { formatDateOnly } from "@/lib/format";
+import { copyText, formatDateOnly } from "@/lib/format";
+import { buildAgendaText } from "@/lib/calendar-agenda";
 import { useApplications, useDashboard, useInterviewSessions, useKnowledgeNotes, useOfferShelf } from "@/lib/hooks/resources";
 import { CAPSULE_TAG, daysUntil, localDateKey } from "@/lib/time-capsule";
 import { buildCalendarIcs } from "@/lib/calendar-ics";
@@ -271,19 +273,24 @@ export default function CalendarPage() {
   // Epic 391 — the grid the reader is looking at, as a file any calendar reads.
   // It is the same arithmetic the page already did; nothing is re-read, invented
   // or sent anywhere.
+  const kindLabels = React.useMemo<Record<CalendarKind, string>>(
+    () => ({
+      reminder: t("monthCalendar.legendReminder"),
+      followup: t("monthCalendar.legendFollowup"),
+      interview: t("monthCalendar.legendInterview"),
+      offer: t("monthCalendar.legendOffer"),
+      capsule: t("monthCalendar.legendCapsule"),
+    }),
+    [t]
+  );
+
   const exportCalendar = () => {
     const rows = [...shownEvents.values()].flat();
     if (rows.length === 0) return;
     const ics = buildCalendarIcs(rows, {
       calendarName: `${t("monthCalendar.icsCalendarName")} · ${view === "week" ? weekLabel : monthLabel}`,
       webRoot: window.location.origin,
-      kindLabels: {
-        reminder: t("monthCalendar.legendReminder"),
-        followup: t("monthCalendar.legendFollowup"),
-        interview: t("monthCalendar.legendInterview"),
-        offer: t("monthCalendar.legendOffer"),
-        capsule: t("monthCalendar.legendCapsule"),
-      },
+      kindLabels,
     });
     const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -294,6 +301,24 @@ export default function CalendarPage() {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  // Epic 412 — the same rows as plain text, for a note, a message or a stand-up.
+  const [agendaCopied, setAgendaCopied] = React.useState(false);
+  const copyAgenda = async () => {
+    const rows = [...shownEvents.values()].flat();
+    if (rows.length === 0) return;
+    const text = buildAgendaText(rows, {
+      title: `${t("monthCalendar.icsCalendarName")} · ${view === "week" ? weekLabel : monthLabel}`,
+      locale,
+      kindLabels,
+      emptyTitle: t("monthCalendar.capsuleEvent"),
+      webRoot: window.location.origin,
+    });
+    const ok = await copyText(text);
+    if (!ok) return;
+    setAgendaCopied(true);
+    window.setTimeout(() => setAgendaCopied(false), 2000);
   };
 
   return (
@@ -364,6 +389,17 @@ export default function CalendarPage() {
               >
                 <Download aria-hidden className="size-4" />
                 {t("monthCalendar.export")}
+              </Button>
+            </Hint>
+            <Hint side="bottom" label={t("monthCalendar.copyAgendaHint")}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={[...shownEvents.values()].flat().length === 0}
+                onClick={() => void copyAgenda()}
+              >
+                <Copy aria-hidden className="size-4" />
+                {agendaCopied ? t("monthCalendar.copyAgendaDone") : t("monthCalendar.copyAgenda")}
               </Button>
             </Hint>
           </div>
