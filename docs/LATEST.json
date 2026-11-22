@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T13:11:26.895549Z",
+  "generated_at": "2026-11-22T13:18:10.726865Z",
   "branch": "main",
-  "head": "f39bba8",
-  "total_commits": 1851,
-  "milestone": "Epic 400",
-  "milestone_full": "the ledger of done epics (through 553 items), closed at Epic 400 — The lint board goes quiet (2026-11-22)",
+  "head": "ab332df",
+  "total_commits": 1853,
+  "milestone": "Epic 401",
+  "milestone_full": "the ledger of done epics (through 554 items), closed at Epic 401 — The first walk ends at the calendar (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1779+",
+  "tests": "1780+",
   "test_files": 231,
-  "work_items": 553,
-  "epics": 266,
+  "work_items": 554,
+  "epics": 267,
   "feature_surface": [
+    "Epic 401 — The first walk ends at the calendar (2026-11-22)",
     "Epic 400 — The lint board goes quiet (2026-11-22)",
     "Epic 399 — An exported event keeps a door back to its row (2026-11-22)",
     "Epic 398 — The offer deadline reaches the page and the file (2026-11-22)",
     "Epic 397 — The two grids are doors to each other (2026-11-22)",
-    "Epic 396 — The sealed letter offers a first sentence (2026-11-22)",
-    "Epic 395 — The week reads its own rhythm aloud (2026-11-22)"
+    "Epic 396 — The sealed letter offers a first sentence (2026-11-22)"
   ]
 }
