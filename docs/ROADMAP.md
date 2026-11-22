@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **369b** The frontier card, measured in a real browser (2026-11-22).
+
+  The verification Epic 369 was owed. A throwaway account, a rehearsal started and
+  abandoned, then the dashboard read in a real browser against the running stack: the
+  card rendered with "WHERE THE WORLD POINTS NEXT / 1 rehearsal(s) still open / A
+  rehearsal left half-done is the one thing a search regrets: the report it would have
+  written is the whole point of taking it / Open your rehearsals", linking to
+  `/interviews`. Every API call the page makes answered 200.
+
+  The run also proved the fix that the probe itself forced: the backend spells an open
+  rehearsal `active`, and the first version of the rule was written against
+  `started`/`in_progress` — names the backend does not use. The card would have stayed
+  silent forever while looking correct, which is the worst shape a bug can take: it
+  reads as "nothing is waiting". The probe is kept in `e2e/frontier-probe.mjs` beside
+  the overlap, occlusion, avatar and atlas probes.
+
 - [x] **374** How long it has been since the reader last rehearsed (2026-11-22).
 
   Brief VI asks for "新的后续环节" and for a world that keeps giving. The rehearsal list
