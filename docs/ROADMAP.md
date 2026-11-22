@@ -8198,6 +8198,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **395** The week reads its own rhythm aloud (2026-11-22).
+
+  A week can be full and still feel shapeless. Above the seven columns, one
+  line of arithmetic now says what the week is like: how many rows it holds,
+  how many of its days carry at least one, which day is fullest (ties go to
+  the earlier day, because the reader already reads left to right), and how
+  many days are still open. It is `weekTempo` over the same cells and the same
+  grouped rows the grid draws — no extra read, no weighting, no "priority"
+  the product never promised. A week with nothing renders no line at all; the
+  existing empty-week sentence stays the only voice. Two library tests cover
+  the counts and the tie/empty cases, and the page tests pin the English
+  sentence over a one-Wednesday week and the Chinese one over a single row.
+  Full frontend suite **230 files / 1,773 tests green**, `tsc --noEmit` clean;
+  EN+ZH copy in both tables, copy census stays 238.
+
 - [x] **394** The calendar answers the keyboard (2026-11-22).
 
   A reader planning in days usually has one hand on the arrows already, so the

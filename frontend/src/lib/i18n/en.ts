@@ -125,6 +125,7 @@ export const en = {
       weekEmpty: "Nothing lands on this week yet. The seven days stay open until something does.",
       weekDayEmpty: "—",
       keysHint: "Keyboard: ← → walk one month or week, T returns to today.",
+      tempo: "This week — rows: {total} · active days: {days} · busiest: {weekday} ({count}) · open days: {open}",
       loadFailed: "The calendar's rows could not be read.",
       eventCount: "{count} things on the month",
       more: "+{count} more",
@@ -4626,7 +4627,7 @@ export const en = {
         "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",
       quietlyCalendarTitle: "A month and a week",
       quietlyCalendarBody:
-        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today.",
+        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
         "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, no feed required.",

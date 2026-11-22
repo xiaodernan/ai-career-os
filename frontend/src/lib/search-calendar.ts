@@ -218,6 +218,39 @@ export function eventsInWeek(events: CalendarEvent[], date: string): Map<string,
   return eventsByDate(events.filter((event) => event.date >= first && event.date <= last));
 }
 
+export interface WeekTempo {
+  total: number;
+  /** Days in the week that carry at least one row. */
+  activeDays: number;
+  /** Days in the week that carry none. */
+  openDays: number;
+  /** The fullest day; ties go to the earlier day in the week. */
+  busiest: { date: string; count: number } | null;
+}
+
+/**
+ * Epic 395 — the week's own rhythm, read off the seven cells the grid draws.
+ * Pure counting: no row is added or weighted, and a tie is not broken by
+ * importance, only by the order the reader already sees.
+ */
+export function weekTempo(
+  cells: MonthCell[],
+  events: Map<string, CalendarEvent[]>
+): WeekTempo {
+  let total = 0;
+  let activeDays = 0;
+  let busiest: { date: string; count: number } | null = null;
+  for (const cell of cells) {
+    const count = events.get(cell.date)?.length ?? 0;
+    total += count;
+    if (count > 0) activeDays += 1;
+    if (count > 0 && (busiest === null || count > busiest.count)) {
+      busiest = { date: cell.date, count };
+    }
+  }
+  return { total, activeDays, openDays: cells.length - activeDays, busiest };
+}
+
 export function summarize(events: CalendarEvent[]): Record<CalendarKind, number> {
   const counts: Record<CalendarKind, number> = {
     reminder: 0,

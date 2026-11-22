@@ -39,6 +39,7 @@ import {
   summarize,
   upcomingEvents,
   weekCells,
+  weekTempo,
   type CalendarEvent,
   type CalendarKind,
   type CalendarView,
@@ -119,6 +120,13 @@ export default function CalendarPage() {
   const weekAnchor = readDayKey(url.day) ?? today;
   const week = React.useMemo(() => weekCells(weekAnchor), [weekAnchor]);
   const weekEvents = React.useMemo(() => eventsInWeek(events, weekAnchor), [events, weekAnchor]);
+  const tempo = React.useMemo(() => weekTempo(week, weekEvents), [week, weekEvents]);
+  const busiestLabel = React.useMemo(() => {
+    if (!tempo.busiest) return "";
+    return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", { weekday: "long" }).format(
+      new Date(`${tempo.busiest.date}T00:00:00`)
+    );
+  }, [tempo.busiest, locale]);
   const shownEvents = view === "week" ? weekEvents : monthEvents;
   const counts = React.useMemo(
     () => summarize([...shownEvents.values()].flat()),
@@ -346,6 +354,18 @@ export default function CalendarPage() {
               })}
             </p>
           </div>
+
+          {view === "week" && tempo.busiest && (
+            <p className="text-sm text-muted-foreground">
+              {t("monthCalendar.tempo", {
+                total: tempo.total,
+                days: tempo.activeDays,
+                weekday: busiestLabel,
+                count: tempo.busiest.count,
+                open: tempo.openDays,
+              })}
+            </p>
+          )}
 
           {view === "week" ? (
             <WeekGrid cells={week} events={weekEvents} weekdays={weekdays} today={today} />

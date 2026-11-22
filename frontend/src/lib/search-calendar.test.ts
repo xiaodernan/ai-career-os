@@ -17,6 +17,7 @@ import {
   summarize,
   upcomingEvents,
   weekCells,
+  weekTempo,
   type CalendarEvent,
 } from "@/lib/search-calendar";
 import type { Application, FollowUpItem, InterviewSession, KnowledgeNote } from "@/lib/api/types";
@@ -271,5 +272,43 @@ describe("the runway ahead", () => {
 
   it("keeps the first row of the runway identical to the old next-up", () => {
     expect(nextEvent(rows, "2026-09-15")?.id).toBe(upcomingEvents(rows, "2026-09-15", 5)[0].id);
+  });
+});
+
+describe("the week's rhythm", () => {
+  const cells = weekCells("2026-09-16");
+  const row = (date: string, id: string): CalendarEvent => ({
+    id,
+    date,
+    kind: "reminder",
+    title: id,
+  });
+
+  it("counts rows, days that carry one, and days that stay open", () => {
+    const events = new Map<string, CalendarEvent[]>([
+      ["2026-09-14", [row("2026-09-14", "a")]],
+      ["2026-09-15", [row("2026-09-15", "b"), row("2026-09-15", "c")]],
+      ["2026-09-16", [row("2026-09-16", "d")]],
+    ]);
+    expect(weekTempo(cells, events)).toEqual({
+      total: 4,
+      activeDays: 3,
+      openDays: 4,
+      busiest: { date: "2026-09-15", count: 2 },
+    });
+  });
+
+  it("gives a tie to the earlier day and calls a quiet week empty", () => {
+    const events = new Map<string, CalendarEvent[]>([
+      ["2026-09-18", [row("2026-09-18", "a")]],
+      ["2026-09-15", [row("2026-09-15", "b")]],
+    ]);
+    expect(weekTempo(cells, events).busiest).toEqual({ date: "2026-09-15", count: 1 });
+    expect(weekTempo(cells, new Map())).toEqual({
+      total: 0,
+      activeDays: 0,
+      openDays: 7,
+      busiest: null,
+    });
   });
 });

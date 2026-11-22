@@ -179,6 +179,10 @@ describe("the calendar page", () => {
 
     expect(html).toContain("Sep 14 – Sep 20, 2026");
     expect(html).toContain("5 things this week");
+    // Epic 395 — the week reads its own rhythm: five rows on one Wednesday.
+    expect(html).toContain(
+      "This week — rows: 5 · active days: 1 · busiest: Wednesday (5) · open days: 6"
+    );
     // The week has room for the whole day: no chip is folded behind a counter.
     for (let index = 1; index <= 5; index += 1) expect(html).toContain(`Role ${index}`);
     expect(html).not.toContain("more</button>");
@@ -208,5 +212,20 @@ describe("the calendar page", () => {
     expect(html).toContain("上一周");
     expect(html).toContain("下一周");
     expect(html).toContain("本周有 0 件事");
+  });
+
+  it("names the busiest day in Chinese", () => {
+    state.url = { view: "week", day: "2026-09-16" };
+    state.applications = [
+      {
+        id: "app-1",
+        title: "后端工程师",
+        companyName: "Acme",
+        status: "applied",
+        reminderAt: "2026-09-16T09:00:00Z",
+      },
+    ];
+    const html = render("zh");
+    expect(html).toContain("本周——共 1 件 · 有事 1 天 · 最满 星期三（1 件）· 空着 6 天");
   });
 });
