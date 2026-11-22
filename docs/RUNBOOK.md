@@ -323,10 +323,26 @@ machine routing through a local proxy (Clash Verge and friends) that value ends 
 `[::1],::1`, and `httpx` parses every entry as a URL: the bracketed form leaves `:1]`
 where a port belongs, so constructing any client raises before a request is made. The
 fleet's own bypass is a separate problem, documented above; this one is only about the
-shell a developer runs gates from. Run the sweep with the variable cleared --
-`env -u NO_PROXY -u no_proxy bash scripts/verify_gates.sh` -- the same way the
-ai-service suites are run. Nothing in the repo works around it, because a proxy
-variable that breaks the client is worth seeing rather than hiding.
+shell a developer runs gates from.
+
+**What the repo does about it since Epic 419.** Two doors, and both are shut.
+`scripts/verify_gates.sh` clears `NO_PROXY`/`no_proxy` for its own run, because a gate about
+connection-pool bounds has no business reading a proxy variable. Inside the service,
+`app/core/envnet.py` builds every outbound client -- the shared provider pool and the
+ingestion fetch alike -- and strips the brackets first, which changes only the spelling:
+`[::1]` and `::1` name one host and httpx parses only the second. So the sweep and a
+container started with a Windows-shaped bypass list both work without the operator editing
+anything.
+
+**If the sentence still appears.** Two readings, and the difference is the action. From a
+gate or a script, it means something constructs a client outside `envnet` -- that is the
+shape `test_the_door_is_the_only_place_the_service_builds_a_client` exists to refuse, so the
+offending line is a bug rather than a workaround to add. From the running service, only a
+list this cannot translate without guessing reaches it (`[::1]:8080`, say): the AI routes
+answer `503 AI_EGRESS_ENV_UNREADABLE` with the variable and its value in the refusal's own
+detail, `/health` answers `llm_ready: false`, and the log carries the same sentence, so the
+fix is the operator's own -- spell the entry bare. Nothing here pretends the environment is
+readable when it is not, and nothing lets it take the readiness probe down with the calls.
 
 ## The nightly dies with 'too many clients already'
 

@@ -8500,6 +8500,104 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **419** The engine's outbound door reads the bypass list its operators
+  write (2026-11-23).
+
+  An environment variable written for another program was closing the AI
+  surface, and the message it produced named neither the variable nor the fix.
+  Measured on this repository's own venv: with httpx 0.28.1, constructing an
+  `AsyncClient` while `NO_PROXY` holds a bracketed IPv6 literal — `[::1]`, the
+  shape Windows' system-proxy bypass list emits and curl's documentation
+  teaches — raises `InvalidURL: Invalid port: ':1]'`. httpx parses every entry
+  as a URL, splits on `:`, and reads what follows as a port, so the literal's
+  last colon leaves `:1]` where a number belongs. The raise happens at
+  construction, before a socket exists, which is what makes it total:
+  `providers/registry`'s shared pool answers every LLM, embedding and voice
+  call, so all of them began to fail; `ingestion/pipeline`'s fetch — the call
+  that asks the *internal* backend for stored bytes, precisely the host class a
+  bypass list exists to exempt — failed the ingestion of every document; and
+  because `/health` asks those same factories whether they can build what the
+  deployment named (Epic 415's contract), the readiness probe died with them. A
+  reader-facing stack answering 500 "Internal server error" because of a
+  spelling in a shell it never reads is the read-failure campaign's shape one
+  level down: the dependency was not unreachable, the sentence about it was
+  just a lie.
+
+  The RUNBOOK already carried this symptom — for the gate sweep, where a bounds
+  test red on the machine that runs it — and closed with "nothing in the repo
+  works around it, because a proxy variable that breaks the client is worth
+  seeing rather than hiding." That posture was right for a developer's shell
+  and wrong for a service: the sweep can be re-run, a reader's copilot cannot.
+  So there is now one door, `app/core/envnet.py`, and both callers stand in it.
+  It rewrites the bracket form before handing the environment to httpx, which
+  is a spelling change and not a semantic one: `[::1]` and `::1` name one host
+  and only the second parses. What it cannot translate without guessing — a
+  bracket carrying its own port, where removing the brackets would decide where
+  the address ends — is refused with a sentence that names the variable, quotes
+  what it holds and states the shape that works. That refusal travels two ways,
+  and both halves had to be built. `_buildable` reads it beside the
+  `ConfigError` it already used for a key-less provider, so `/health` keeps
+  answering `llm_ready: false` instead of raising through the probe, and the
+  edge maps the same refusal to `503 AI_EGRESS_ENV_UNREADABLE`: the raise
+  happens inside the factory, below every route's own `try`, so without a
+  registered handler a caller gets FastAPI's bare 500 quoting httpx's parser —
+  a server error blaming the server for the operator's shell. The refusal's
+  detail carries the sentence the log carries, which is the difference between
+  an outage and an instruction. The backend's reader still answers a failed
+  engine call as `AI_SERVICE_UNAVAILABLE`, and that mapping is deliberately
+  unchanged: this is not the reader's mistake to act on, so the instruction
+  goes to the log and to the engine's own answer, where whoever starts the
+  process reads it.
+
+  The instrument got the other half. Both `scripts/verify_gates.sh` and its
+  PowerShell twin now clear `NO_PROXY` for their own run, because a gate about
+  connection-pool bounds has no business reading a proxy configuration, and the
+  runners are supposed to answer the same question in every shell. The bounds
+  gate's own fresh client is built through the door, which is where the
+  repository first noticed the fault, and its source contract moved with the
+  shape it guards: `_http_client` must reach httpx through `envnet.client`
+  *and* name `_SHARED_LIMITS` on the same call, because a construction that
+  reads the ambient environment unread is as unbounded as one that forgets the
+  limits — the first bracketed entry closes the door at build time. A new walk
+  refuses the drift back: every `httpx.AsyncClient(` under `app/` must sit in
+  `envnet.py`, so the next outbound need cannot reopen this by forgetting this
+  file exists.
+
+  Docs: `.env.example` spells the IPv6 entry bare and says what a list that
+  still cannot be parsed costs; `docker-compose.yml` records that the fleet
+  bypass it pins is deliberately inside the spelling that needs no translation,
+  so a container never depends on the repair; `docs/API.md` adds the one
+  refusal that is the engine's own rather than the caller's to its internal-API
+  vocabulary, next to the sentence a backend reader receives; the DEPLOYMENT
+  readiness row names the second thing that makes `llm_ready` false; and the
+  RUNBOOK section is rewritten to describe both doors — with the two readings
+  an operator has to tell apart, a gate red on the variable meaning a client
+  was built outside `envnet`, and a service refusal naming a value meaning the
+  fix is theirs.
+
+  Measured: the lane ships **9 new tests** in
+  `test_the_engine_door_reads_the_bypass_list_its_operators_write.py` — the
+  rewrite and the two values it must not touch, both spellings of the variable,
+  the Windows-shaped bypass list and the value `.env.example` actually ships
+  both building a client, the untranslatable list refused with its own name in
+  the sentence, `/health` answering `llm_ready: false` instead of raising, a
+  route behind the closed door answering `503 AI_EGRESS_ENV_UNREADABLE` with
+  that sentence in its detail, the walk that refuses a second
+  `httpx.AsyncClient` outside the door, and the ingestion fetch standing in the
+  same one. The bounds gate's factory contract moved with the shape it guards
+  rather than being relaxed: `envnet.client(` and `_SHARED_LIMITS` on one call,
+  and no direct construction inside `_http_client`. Those five files answer
+  **37 passed**. The full ai-service suite is **3,042 passed, 8 skipped** —
+  nine above the 3,033 that closed Epic 418, exactly the new gate. The
+  representative sweep answers **611 passed** on both runners, the same
+  roster that went red on this machine at Epic 418's close and is now
+  self-hermetic. No `.java` changed at this ref, so the backend suite was not
+  re-run; its last full measurement, 1,607 tests, closed Epic 418 and nothing
+  in this lane can move it. The seven documents this lane edited are read back,
+  spliced rather than drafted, by the censuses that walk them — ROADMAP's epic
+  ledger, the rate-limit and lifetime number owners, the response-shape
+  contract — and answer **71 passed**.
+
 - [x] **413** The local analyst reads the attention ledger (2026-11-22).
 
   The ledger records the exact behaviours the brief names — a reader who leaves

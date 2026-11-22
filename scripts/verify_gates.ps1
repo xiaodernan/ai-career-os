@@ -15,6 +15,15 @@ Set-Location $root
 $py = Join-Path $root "ai-service\.venv\Scripts\python.exe"
 if (-not (Test-Path $py)) { $py = "python" }
 
+# An offline gate set must not read the operator's proxy configuration. httpx 0.28.1 raises
+# InvalidURL while *constructing* a client when NO_PROXY holds a bracketed IPv6 literal --
+# the form Windows' system-proxy bypass list writes -- so a gate about connection-pool
+# bounds was red on a variable it does not measure. app/core/envnet.py is the app-side fix
+# (Epic 419); this is the instrument-side half, and the twin of the same line in
+# verify_gates.sh, so both runners read the same in every shell.
+Remove-Item Env:NO_PROXY -ErrorAction SilentlyContinue
+Remove-Item Env:no_proxy -ErrorAction SilentlyContinue
+
 $tests = @(
   "ai-service/tests/test_every_internal_route_requires_internal_auth.py",
   "ai-service/tests/test_every_internal_route_refuses_unauthenticated.py",
@@ -76,6 +85,7 @@ $tests = @(
   "ai-service/tests/test_the_ops_endpoint_reports_without_exposing.py",
   "ai-service/tests/test_the_rerank_that_costs_no_model_call.py",
   "ai-service/tests/test_the_algorithms_module.py",
+  "ai-service/tests/test_the_engine_door_reads_the_bypass_list_its_operators_write.py",
   "ai-service/tests/test_the_shared_provider_client_is_bounded.py"
 )
 

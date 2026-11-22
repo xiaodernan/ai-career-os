@@ -9,6 +9,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# An offline gate set must not read the operator's proxy configuration. httpx 0.28.1 raises
+# InvalidURL while *constructing* a client when NO_PROXY holds a bracketed IPv6 literal --
+# the form Windows' system-proxy bypass list writes, and the default on this dev box -- so a
+# gate about connection-pool bounds was red on a variable it does not measure. The app-side
+# fix is app/core/envnet.py (Epic 419); this line is the instrument-side half, so the sweep
+# reads the same in every shell.
+unset NO_PROXY no_proxy
+
 PY="python3"
 if [[ -x "$ROOT/ai-service/.venv/bin/python" ]]; then
   PY="$ROOT/ai-service/.venv/bin/python"
@@ -77,6 +85,7 @@ TESTS=(
   ai-service/tests/test_the_ops_endpoint_reports_without_exposing.py
   ai-service/tests/test_the_rerank_that_costs_no_model_call.py
   ai-service/tests/test_the_algorithms_module.py
+  ai-service/tests/test_the_engine_door_reads_the_bypass_list_its_operators_write.py
   ai-service/tests/test_the_shared_provider_client_is_bounded.py
 )
 

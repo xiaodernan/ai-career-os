@@ -2,6 +2,7 @@ from functools import lru_cache
 
 import httpx
 
+from app.core import envnet
 from app.core.config import Settings, get_settings
 from app.providers.base import EmbeddingProvider, LLMProvider
 from app.providers.embeddings.hash_embed import HashEmbeddingProvider
@@ -35,7 +36,13 @@ _SHARED_LIMITS = httpx.Limits(max_connections=100, max_keepalive_connections=20)
 
 @lru_cache
 def _http_client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(limits=_SHARED_LIMITS)
+    """The pooled client every provider shares, built through the one door that reads env.
+
+    Nothing else to do here: a bypass list httpx cannot parse raises from ``envnet.client``,
+    which ``_buildable`` reads as not-ready and the edge answers with
+    ``AI_EGRESS_ENV_UNREADABLE`` (Epic 419).
+    """
+    return envnet.client(limits=_SHARED_LIMITS)
 
 
 def get_llm(settings: Settings | None = None) -> LLMProvider:
@@ -127,10 +134,14 @@ def _buildable(build) -> bool:
     readiness is measured by calling it rather than by restating the rules a
     second time: a key-less openai_compat is not ready here for the same reason
     it raises ConfigError on the first AI call, and the two can never drift.
+
+    An unreadable bypass list joins it (Epic 419) because it fails for the same
+    reason one step earlier: the shared client cannot be built, so no named
+    provider can be handed out. The fleet is not ready and says so.
     """
     try:
         build()
-    except ConfigError:
+    except (ConfigError, envnet.ProxyEnvError):
         return False
     return True
 

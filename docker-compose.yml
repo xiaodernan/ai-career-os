@@ -155,6 +155,10 @@ services:
       # would silently drop the fleet hosts from the bypass, sending ai→backend/minio/
       # redis over Clash Verge and failing every internal call with 502. Pin the fleet
       # bypass; a deployment that needs a different door overrides both proxy knobs.
+      # The pinned value spells IPv6 bare (`::1`, not `[::1]`) on purpose: httpx reads the
+      # list at client construction, and app/core/envnet.py (Epic 419) now strips the
+      # bracketed form an operator's shell writes -- the compose file stays inside the
+      # spelling that needs no translation, so the container never depends on that repair.
       NO_PROXY: "localhost,127.0.0.1,::1,redis,postgres,minio,backend,gateway,discovery,config-server"
       # Cache (Epic 118). The service name, not the host's 16380: inside the compose
       # network Redis answers in microseconds, while the published port goes through

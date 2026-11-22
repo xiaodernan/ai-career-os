@@ -6,7 +6,7 @@ ProcessingSteps UI: extracting → cleaning → chunking → embedding → index
 
 import json
 
-from app.core import taskbus
+from app.core import envnet, taskbus
 from app.core.config import get_settings
 from app.core.skills import extract_skills
 from app.db import documents as docs_repo
@@ -16,13 +16,14 @@ from app.ingestion.parsers import ParseError, extract_text
 
 
 async def _fetch_bytes(file_key: str) -> bytes:
-    import httpx
-
     from app.core.config import get_settings as gs
 
     s = gs()
     url = f"{s.backend_base_url}/api/internal/files/{file_key}"
-    async with httpx.AsyncClient(timeout=60) as client:
+    # Through the same door the providers use: this fetch names the internal hosts a
+    # `NO_PROXY` exists to exempt, so a bypass list httpx cannot parse would fail the
+    # ingestion of every document in the fleet (Epic 419).
+    async with envnet.client(timeout=60) as client:
         r = await client.get(url, headers={"X-Internal-Token": s.internal_api_token})
         r.raise_for_status()
         return r.content

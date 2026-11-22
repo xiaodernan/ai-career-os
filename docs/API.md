@@ -762,7 +762,11 @@ vocabulary: a stable code plus the one sentence that code means --
 `{"detail": {"code": "INGEST_FEED_INVALID", "message": "invalid feed xml"}}`.
 The status is the one the route always answered with (400, except
 `TEXT_REQUIRED`, still the 422 it was); a refusal that names the offender
-carries it alongside (`"invalid": [...]`, `"errors": [...]`). The codes are
+carries it alongside (`"invalid": [...]`, `"errors": [...]`). One refusal is
+the engine's own rather than the caller's: `503 AI_EGRESS_ENV_UNREADABLE`
+means the process was started with an outbound proxy environment httpx cannot
+parse, so no provider client exists to ask — its detail carries `reason`, the
+variable and its value, which is the whole instruction (Epic 419). The codes are
 defined in `ai-service/app/core/errors.py` and pinned end to end by
 `ai-service/tests/test_refusals.py`. The backend reads the sentence out of
 that object and still maps every 400 to `AI_SERVICE_BAD_REQUEST` -- the code

@@ -18,9 +18,19 @@ half of the contract pins that every outbound call still carries its own timeout
 fragile premise that makes "leave the client default alone" correct.
 
 Offline and source-only: it builds no provider, opens no socket and needs no key. The one
-client it inspects is a fresh ``AsyncClient`` with the declared limits, never the cached
+client it inspects is a fresh one with the declared limits, never the cached
 singleton, so this test cannot bind ``_http_client``'s cached connection pool to the test
 event loop (the trap Epic 155/156 record).
+
+Epic 419 moved that fresh construction behind ``app.core.envnet``, the one door that reads
+the ambient proxy environment before httpx does. The reason this file is where the move
+shows: a ``NO_PROXY`` written with a bracketed IPv6 literal -- ``[::1]``, the shape Windows'
+system-proxy bypass list and curl both emit -- makes httpx 0.28.1 raise at *construction*,
+so this bounds-of-the-pool test was the first thing in the repository to red on a variable it
+does not measure. A gate about connection limits must not be a gate about the operator's
+shell, and the door is now asserted in both directions: the factory builds through ``envnet``
+with the declared limits, and no ``httpx.AsyncClient`` is constructed anywhere else in
+``app/`` (see ``test_the_engine_door_reads_the_bypass_list_its_operators_write.py``).
 """
 
 from __future__ import annotations
@@ -30,6 +40,7 @@ from pathlib import Path
 
 import httpx
 
+from app.core import envnet
 from app.providers import registry
 
 APP_ROOT = Path(__file__).resolve().parents[1] / "app"
@@ -55,8 +66,9 @@ def test_the_client_actually_applies_them():
     here would bind its pool to this test's event loop and break the live-provider tests
     that reuse it later in the same process.
     """
-    client = httpx.AsyncClient(limits=registry._SHARED_LIMITS)
+    client = envnet.client(limits=registry._SHARED_LIMITS)
     try:
+        assert isinstance(client, httpx.AsyncClient)  # the door must not change the class
         pool = client._transport._pool  # httpx 0.28.1 keeps limits on the pool
         assert pool._max_connections == EXPECTED_MAX_CONNECTIONS
         assert pool._max_keepalive_connections == EXPECTED_MAX_KEEPALIVE
@@ -65,14 +77,43 @@ def test_the_client_actually_applies_them():
         pass
 
 
+def _function_body(source: str, name: str) -> str:
+    """The lines of ``def name(...)`` up to the next module-level statement."""
+    out: list[str] = []
+    inside = False
+    for line in source.splitlines():
+        if line.startswith(f"def {name}("):
+            inside = True
+            continue
+        if not inside:
+            continue
+        if line and not line.startswith((" ", "\t")):
+            break
+        out.append(line)
+    assert out, f"the body of `{name}` could not be read"
+    return "\n".join(out)
+
+
 def test_the_factory_builds_its_client_with_the_declared_limits():
-    """Source contract: ``_http_client`` cannot drift back to a bare ``AsyncClient()``."""
+    """Source contract: ``_http_client`` cannot drift back to a bare ``AsyncClient()``.
+
+    Epic 419 widened what "bare" means. A construction that hands httpx the ambient proxy
+    environment unread is as unbounded as one that forgets the limits: the first bracketed
+    ``NO_PROXY`` entry makes the build itself raise, so the door that normalizes it is now
+    part of the contract, and the limits still have to be named on the same call.
+    """
     source = (APP_ROOT / "providers" / "registry.py").read_text(encoding="utf-8")
-    m = re.search(r"def _http_client\([^)]*\)[^\n]*:\s*\n\s*return\s+([^\n]+)", source)
-    assert m, "the _http_client factory body could not be read"
-    assert "_SHARED_LIMITS" in m.group(1), (
-        f"_http_client builds its client without the declared limits: {m.group(1)!r}; "
+    body = _function_body(source, "_http_client")
+    assert "envnet.client(" in body, (
+        "_http_client builds its client outside the door that reads the proxy environment "
+        f"(Epic 419); the body reads: {body!r}")
+    call = re.search(r"envnet\.client\(([^\n]*?)\)\s*$", body, re.M)
+    assert call and "_SHARED_LIMITS" in call.group(1), (
+        f"_http_client builds its client without the declared limits: {body!r}; "
         "the pool contract must be applied at construction, not merely declared nearby")
+    assert "httpx.AsyncClient(" not in body, (
+        f"_http_client constructs httpx directly again: {body!r}; that is the shape that "
+        "ignores a bracketed bypass list and 500s every AI route with 'Invalid port'")
 
 
 def test_every_provider_outbound_call_still_passes_its_own_timeout():

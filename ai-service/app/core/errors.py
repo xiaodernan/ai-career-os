@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
+from app.core import envnet
 from app.core.request_id import request_id, traceparent
 
 
@@ -106,6 +107,19 @@ SERVICE_DEADLINE_EXCEEDED = Refusal(
     status=503,
 )
 
+# ---------------- the engine's own outbound door (Epic 419) ----------------
+# A proxy bypass list httpx cannot parse stops the shared client from existing, which
+# is not the caller being wrong and not the model being down: the process was started
+# with a spelling one of its own variables cannot be read. 503, because the work truly
+# cannot be done here, and the sentence names the variable so the operator has something
+# to change. `app/core/envnet.py` raises this; the handler below is what keeps it from
+# reaching a reader as a bare 500.
+AI_EGRESS_ENV_UNREADABLE = Refusal(
+    "AI_EGRESS_ENV_UNREADABLE",
+    "the engine's outbound proxy environment cannot be read, so no model call can be made",
+    status=503,
+)
+
 # Convenience: return a RefusalError to raise
 def raise_refusal(refusal: Refusal) -> RefusalError:
     """Return a RefusalError with the given refusal, ready to raise."""
@@ -134,6 +148,21 @@ async def refusal_exception_handler(request: Request, exc: RefusalError) -> JSON
     return JSONResponse(status_code=exc.refusal.status, content={"detail": detail})
 
 
+async def egress_env_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Handle the door's refusal to build a client (Epic 419).
+
+    ``ProxyEnvError`` is raised from inside the provider factory, below every route's
+    own ``try``, so without this handler the operator's spelling mistake would surface
+    as an HTTP 500 whose text is httpx's ``Invalid port: ':1]'`` -- an internal error
+    that names neither the variable nor the fix. The detail carries the whole sentence
+    the door wrote, so the answer says what to change.
+    """
+    refusal = AI_EGRESS_ENV_UNREADABLE.with_detail({"reason": str(exc)})
+    return JSONResponse(status_code=refusal.status,
+                        content={"detail": refusal.to_http_exception().detail})
+
+
 def register_refusal_handlers(app) -> None:
-    """Register the refusal handler on a FastAPI app."""
+    """Register the refusal handlers on a FastAPI app."""
     app.add_exception_handler(RefusalError, refusal_exception_handler)
+    app.add_exception_handler(envnet.ProxyEnvError, egress_env_exception_handler)
