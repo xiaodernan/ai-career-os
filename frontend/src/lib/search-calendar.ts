@@ -311,6 +311,36 @@ export function isOverdue(event: CalendarEvent, today: string = localDateKey()):
   return event.date < today && OVERDUE_KINDS.includes(event.kind);
 }
 
+export interface FindSlice {
+  /** The newest matches first, capped at the caller's limit. */
+  items: CalendarEvent[];
+  /** Every matching row, including the ones past the cap. */
+  total: number;
+}
+
+/**
+ * Epic 408 — finding one row on a calendar that has grown a thousand of them.
+ * The query is trimmed and case-folded, and it is matched against the row's own
+ * title and detail — a role, a company, a relation's name — never against prose
+ * this module invented. Results come newest first, because the row a reader is
+ * looking for is usually the one they wrote last; an empty query finds nothing
+ * rather than everything.
+ */
+export function searchEvents(
+  events: CalendarEvent[],
+  query: string,
+  limit: number = 6
+): FindSlice {
+  const needle = query.trim().toLocaleLowerCase();
+  if (!needle) return { items: [], total: 0 };
+  const matches = events.filter((event) =>
+    `${event.title} ${event.detail ?? ""}`.toLocaleLowerCase().includes(needle)
+  );
+  matches.sort((a, b) => b.date.localeCompare(a.date));
+  const take = Math.max(0, Math.floor(limit));
+  return { items: matches.slice(0, take), total: matches.length };
+}
+
 export interface OverdueSlice {
   /** The oldest rows first, capped at the caller's limit. */
   items: CalendarEvent[];

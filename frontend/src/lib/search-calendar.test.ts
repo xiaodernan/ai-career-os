@@ -15,6 +15,7 @@ import {
   readCalendarView,
   readDayKey,
   readMonthKey,
+  searchEvents,
   shiftDays,
   shiftMonth,
   summarize,
@@ -448,5 +449,52 @@ describe("the rows the runway cannot hold", () => {
     expect(daysPast("2026-09-15", TODAY)).toBe(0);
     expect(daysPast("2026-09-16", TODAY)).toBe(0);
     expect(daysPast("not a date", TODAY)).toBe(0);
+  });
+});
+
+/**
+ * Epic 408 — a long calendar needs to be searchable. The query is the reader's
+ * own words against the row's own words; these cases pin the folding, the
+ * newest-first order, and the rule that an empty box finds nothing.
+ */
+describe("finding a row on a long calendar", () => {
+  const row = (date: string, title: string, detail?: string): CalendarEvent => ({
+    id: `${title}-${date}`,
+    date,
+    kind: "reminder",
+    title,
+    detail,
+  });
+
+  it("finds a role or a company by a fragment, ignoring case and the ends", () => {
+    const events = [
+      row("2026-09-10", "Backend Engineer", "Acme Robotics"),
+      row("2026-09-11", "Designer", "Lunar Works"),
+    ];
+    expect(searchEvents(events, "  acme ").items.map((event) => event.id)).toEqual([
+      "Backend Engineer-2026-09-10",
+    ]);
+    expect(searchEvents(events, "ENGINEER").total).toBe(1);
+    expect(searchEvents(events, "works").items[0].id).toBe("Designer-2026-09-11");
+  });
+
+  it("returns the newest match first and caps the list without capping the count", () => {
+    const events = [row("2026-09-10", "Acme"), row("2026-09-20", "Acme"), row("2026-09-15", "Acme")];
+    const slice = searchEvents(events, "acme", 2);
+    expect(slice.items.map((event) => event.date)).toEqual(["2026-09-20", "2026-09-15"]);
+    expect(slice.total).toBe(3);
+    expect(searchEvents(events, "acme", 0)).toEqual({ items: [], total: 3 });
+  });
+
+  it("finds nothing for an empty or blank query", () => {
+    const events = [row("2026-09-10", "Acme")];
+    expect(searchEvents(events, "")).toEqual({ items: [], total: 0 });
+    expect(searchEvents(events, "   ")).toEqual({ items: [], total: 0 });
+  });
+
+  it("does not reorder the caller's array", () => {
+    const events = [row("2026-09-10", "Acme"), row("2026-09-20", "Acme")];
+    searchEvents(events, "acme", 5);
+    expect(events.map((event) => event.date)).toEqual(["2026-09-10", "2026-09-20"]);
   });
 });

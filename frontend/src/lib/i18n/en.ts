@@ -125,6 +125,13 @@ export const en = {
       weekEmpty: "Nothing lands on this week yet. The seven days stay open until something does.",
       weekDayEmpty: "—",
       keysHint: "Keyboard: ← → walk one month or week, T returns to today.",
+      findPlaceholder: "Find a row — a role, a company, a name",
+      findHint: "Searches every dated row, not just the month on screen. A match in another month opens its week.",
+      findCount: "{count} matching rows",
+      findNone: "No dated row matches “{query}”.",
+      findMore: "and {count} more",
+      findShow: "Show that week",
+      findClear: "Clear",
       tempo: "This week — rows: {total} · active days: {days} · busiest: {weekday} ({count}) · open days: {open}",
       openMonth: "See this day in the month",
       openWeek: "See this day in the week",
@@ -4667,7 +4674,7 @@ export const en = {
         "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",
       quietlyCalendarTitle: "A month and a week",
       quietlyCalendarBody:
-        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal, offer deadline and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month. A reminder, a follow-up or an offer deadline that passes unanswered does not vanish with the runway: it moves to the card above the grid, oldest first, with its days late counted, until you answer it.",
+        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal, offer deadline and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month. A reminder, a follow-up or an offer deadline that passes unanswered does not vanish with the runway: it moves to the card above the grid, oldest first, with its days late counted, until you answer it. The box above the grid searches every dated row, not the month on screen: when you remember the company but not the month, a match opens the week it lives in.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
         "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, each keeping a link back to its row, no feed required.",

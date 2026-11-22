@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **408** A long calendar can be searched (2026-11-22).
+
+  The calendar had grown into the one screen where every dated row in the
+  product lands, and the only way to find one was to remember its month and walk
+  there. A search box above the grid now folds the reader's query against each
+  row's own title and detail — a role, a company, a relation's name — after
+  trimming and folding case; results come newest first, because the row a
+  reader is looking for is usually the one they wrote last. A match in another
+  month does not scroll the grid to it: it opens that row's week, so the answer
+  is a place and not a tooltip. The list caps at six and the count does not; an
+  empty box finds nothing rather than everything, and an unmatched query says so
+  in the reader's own words. The manual's calendar chapter names the box, so the
+  search is taught where the rest of the calendar is.
+
+  Measured: full frontend suite **232 files / 1,803 tests green** (+4, all in
+  `search-calendar.test.ts`), `tsc --noEmit` clean, `npm run lint` clean,
+  `npm run build` passes, copy census stays 238.
+
 - [x] **407** The company page remembers what the reader did with them (2026-11-22).
 
   The company page could describe what the corpus knew about an employer and

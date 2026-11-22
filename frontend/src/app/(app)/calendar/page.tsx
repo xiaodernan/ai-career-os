@@ -9,6 +9,7 @@ import {
   Download,
   Feather,
   Handshake,
+  Search,
   Sparkles,
   Users,
   type LucideIcon,
@@ -18,6 +19,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { Hint } from "@/components/ui/hint";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -37,6 +39,7 @@ import {
   readCalendarView,
   readDayKey,
   readMonthKey,
+  searchEvents,
   shiftDays,
   shiftMonth,
   summarize,
@@ -156,6 +159,10 @@ export default function CalendarPage() {
   // offer deadline are questions; once their day passes unanswered they leave
   // `upcomingEvents` entirely. This is where they come back, oldest first.
   const overdue = React.useMemo(() => overdueEvents(events, today, 5), [events, today]);
+  // Epic 408 — the search is over every dated row, not the month on screen; a
+  // match outside the grid still gets the reader to its week.
+  const [find, setFind] = React.useState("");
+  const found = React.useMemo(() => searchEvents(events, find, 6), [events, find]);
   const cells = React.useMemo(() => monthCells(month), [month]);
 
   const monthLabel = React.useMemo(
@@ -380,6 +387,80 @@ export default function CalendarPage() {
               })}
             </p>
           </div>
+
+          {/* Epic 408 — the calendar's own search, over every dated row */}
+          <div className="space-y-1.5">
+            <div className="relative max-w-sm">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                value={find}
+                onChange={(event) => setFind(event.target.value)}
+                placeholder={t("monthCalendar.findPlaceholder")}
+                aria-label={t("monthCalendar.findPlaceholder")}
+                className="pl-8"
+              />
+            </div>
+            <p className="text-2xs text-muted-foreground">{t("monthCalendar.findHint")}</p>
+          </div>
+
+          {find.trim().length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex flex-wrap items-baseline justify-between gap-2 text-base">
+                  <span>
+                    {found.total > 0
+                      ? t("monthCalendar.findCount", { count: found.total })
+                      : t("monthCalendar.findNone", { query: find.trim() })}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setFind("")}>
+                    {t("monthCalendar.findClear")}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              {found.items.length > 0 && (
+                <CardContent className="space-y-2">
+                  <ol className="space-y-2">
+                    {found.items.map((event) => (
+                      <li
+                        key={event.id}
+                        className="flex flex-wrap items-baseline gap-x-2 gap-y-1"
+                      >
+                        <span
+                          aria-hidden
+                          className={`size-2 shrink-0 self-center rounded-full ${KIND_VISUALS[event.kind].dot}`}
+                        />
+                        <span className="min-w-0 truncate text-sm text-foreground">
+                          {event.title || t("monthCalendar.capsuleEvent")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDateOnly(event.date, locale)} · {t(KIND_VISUALS[event.kind].labelKey)}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="ml-auto"
+                          onClick={() => {
+                            setUrl({ view: "week", day: event.date, month: undefined });
+                            setFind("");
+                          }}
+                        >
+                          {t("monthCalendar.findShow")}
+                        </Button>
+                      </li>
+                    ))}
+                  </ol>
+                  {found.total > found.items.length && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("monthCalendar.findMore", { count: found.total - found.items.length })}
+                    </p>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          )}
 
           {view === "week" && tempo.busiest && (
             <p className="text-sm text-muted-foreground">
