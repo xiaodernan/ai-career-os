@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarClock, LockKeyhole, MailPlus, Trash2, Unlock } from "lucide-react";
+import { CalendarClock, LockKeyhole, MailPlus, RefreshCw, Trash2, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import {
   localDateKey,
   readCapsules,
 } from "@/lib/time-capsule";
+import { capsulePromptKey } from "@/lib/capsule-prompts";
 
 /**
  * Epic 384 — the sealed letter. A capsule is an ordinary note with a dated tag;
@@ -31,10 +32,12 @@ export function TimeCapsuleCard() {
   const [writing, setWriting] = React.useState(false);
   const [content, setContent] = React.useState("");
   const [revealDate, setRevealDate] = React.useState(() => addDays(90));
+  const [promptOffset, setPromptOffset] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
 
   const today = localDateKey();
   const capsules = readCapsules(query.data?.items, today);
+  const promptKey = capsulePromptKey(new Date(), promptOffset);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -60,6 +63,7 @@ export function TimeCapsuleCard() {
           setWriting(false);
           setContent("");
           setRevealDate(addDays(90));
+          setPromptOffset(0);
         },
       },
     );
@@ -83,6 +87,22 @@ export function TimeCapsuleCard() {
           </Button>
         ) : (
           <form onSubmit={submit} className="space-y-3 rounded-xl border border-border/60 bg-card/60 p-4">
+            <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+              <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t("timeline.capsulePromptLabel")}
+              </p>
+              <p className="mt-1 text-sm italic leading-relaxed text-foreground/80">{t(promptKey)}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                className="mt-1 gap-1 text-muted-foreground"
+                onClick={() => setPromptOffset((offset) => offset + 1)}
+              >
+                <RefreshCw aria-hidden className="size-3" />
+                {t("timeline.capsulePromptNext")}
+              </Button>
+            </div>
             <label className="block text-xs font-medium text-muted-foreground" htmlFor="capsule-body">
               {t("timeline.capsuleBodyLabel")}
             </label>

@@ -226,6 +226,18 @@ export const en = {
       capsuleBodyLabel: "The letter",
       capsulePlaceholder:
         "Write to yourself a few months from now: what worries you, what you want to remember, what you would say to the person who opens this.",
+      capsulePromptLabel: "A prompt, if you want one",
+      capsulePromptNext: "Another prompt",
+      capsulePrompt1: "What do you want to be true on the day this opens?",
+      capsulePrompt2: "Name one fear you are carrying now, and one fact that contradicts it.",
+      capsulePrompt3: "Write the sentence you hope to read after you sign.",
+      capsulePrompt4: "What did this week teach you that a month ago you did not know?",
+      capsulePrompt5: "Describe the room you want to be sitting in a year from today.",
+      capsulePrompt6: "Which person helped you recently, and what would you tell them?",
+      capsulePrompt7: "What are you pretending not to know?",
+      capsulePrompt8: "Name three things you can control this week.",
+      capsulePrompt9: "What would you do if the answer were already yes?",
+      capsulePrompt10: "Write down one small thing that went right today.",
       capsuleDateLabel: "Opening date",
       capsuleSeal: "Seal this letter",
       capsuleSealing: "Sealing…",
@@ -4621,7 +4633,7 @@ export const en = {
         "Not every useful page needs a call out. Three instruments on this install are arithmetic over rows you already wrote: a letter you seal for later, an echo of the answers you gave, and a calendar that lays your dates out in days. Each one works offline, and each one shows only what you actually wrote.",
       quietlyCapsuleTitle: "A letter to your future self",
       quietlyCapsuleBody:
-        "On the timeline, write a note and seal it with an opening date. Until that day the mailbox shows only the envelope, never the prose; on the day itself the letter opens in your own hands, and nothing about it is sent anywhere. The opening day also enters the calendar, so the letter waits where you plan your weeks.",
+        "On the timeline, write a note and seal it with an opening date. If the first sentence is the hard part, the composer offers a prompt that changes with the day and a button for another. Until the opening day the mailbox shows only the envelope, never the prose; on the day itself the letter opens in your own hands, and nothing about it is sent anywhere. The opening day also enters the calendar, so the letter waits where you plan your weeks.",
       quietlyEchoTitle: "The echo of an answer",
       quietlyEchoBody:
         "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",

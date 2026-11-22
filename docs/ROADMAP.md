@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **396** The sealed letter offers a first sentence (2026-11-22).
+
+  A capsule asks the reader to write to their future self, and the blank box is
+  the whole difficulty. The composer now opens with a prompt above the letter:
+  ten invitations that rotate by the reader's own calendar day — so two people
+  writing on the same day see the same one — plus "Another prompt" to step
+  forward without waiting. The rule is pure (`lib/capsule-prompts.ts`): a local
+  date becomes a day number, the day number indexes the list, and negative or
+  oversized offsets wrap correctly. No network, no model, no stored prompt —
+  the letter still travels with the note's own tags. Three unit tests pin
+  stability across the hours of one day, the one-day step, and both directions
+  of wrapping; EN+ZH prompts live in both tables with no borrowed prose. The
+  manual's capsule card mentions the prompt. Full frontend suite **231 files /
+  1,776 tests green**, `tsc --noEmit` clean; no new component, copy census
+  stays 238.
+
 - [x] **395** The week reads its own rhythm aloud (2026-11-22).
 
   A week can be full and still feel shapeless. Above the seven columns, one
