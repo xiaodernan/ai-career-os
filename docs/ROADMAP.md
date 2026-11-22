@@ -8198,6 +8198,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **392** The Chinese table stops borrowing English prose (2026-11-22).
+
+  Bilingual copy fails quietly: the page is "translated", yet a Chinese reader
+  meets "mock", "counsel" or "grace" mid-sentence. A sweep of the shipped
+  Chinese strings found 25 places where the prose borrowed an English word
+  that already has a plain Chinese one — the interview choice said "跳过 mock",
+  the ledger's counsel paragraph opened with "counsel 段落", the aftercare
+  card ended on "grace 从记忆里长出来", the state-graph chapter carried
+  `retrieve`/`draft`/`verify`/`render` as prose, the notification card said
+  "worker", the ingestion freshness line kept `stale`/`close`, and the
+  evidence table counted "具名 epic". Each is now Chinese (模拟、建议、从容、
+  取料、起草、校验、落地、后台工作进程、需要复查、已过期、具名篇章), with
+  technical identifiers left where they are names rather than sentences.
+  A new gate, `language-purity.test.ts`, reads the shipped values (comments
+  stripped, placeholders removed), refuses an 18-word list of borrowed prose,
+  and asserts the English table holds no Chinese at all — so the drift cannot
+  return one string at a time. Full frontend suite **229 files / 1,762 tests
+  green**, `tsc --noEmit` clean; copy census stays 238.
+
 - [x] **391** The days on screen can leave as a calendar file (2026-11-22).
 
   The subscription feed is the server's standing offer, but a reader who wants
