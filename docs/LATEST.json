@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T11:47:22.775320Z",
+  "generated_at": "2026-11-22T11:55:36.657990Z",
   "branch": "main",
-  "head": "22b5ae7",
-  "total_commits": 1825,
-  "milestone": "Epic 387",
-  "milestone_full": "the ledger of done epics (through 540 items), closed at Epic 387 — A sealed letter reaches the calendar you already own (2026-11-22)",
+  "head": "c0afb51",
+  "total_commits": 1827,
+  "milestone": "Epic 388",
+  "milestone_full": "the ledger of done epics (through 541 items), closed at Epic 388 — The month turns into a week without leaving the room (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1744+",
+  "tests": "1753+",
   "test_files": 227,
-  "work_items": 540,
-  "epics": 253,
+  "work_items": 541,
+  "epics": 254,
   "feature_surface": [
+    "Epic 388 — The month turns into a week without leaving the room (2026-11-22)",
     "Epic 387 — A sealed letter reaches the calendar you already own (2026-11-22)",
     "Epic 386 — The search gets a month (2026-11-22)",
     "Epic 385 — The answers get an echo of their own (2026-11-22)",
     "Epic 384 — The shelf keeps letters to the future (2026-11-22)",
-    "Epic 383 — The overseer can see the hour of the week (2026-11-22)",
-    "Epic 382 — The transport chip stops reading as \"non-stream\" (2026-11-22)"
+    "Epic 383 — The overseer can see the hour of the week (2026-11-22)"
   ]
 }
