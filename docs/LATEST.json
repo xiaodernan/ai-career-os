@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T02:44:24.053627Z",
+  "generated_at": "2026-11-22T03:32:56.345016Z",
   "branch": "main",
-  "head": "32fdd00",
-  "total_commits": 1791,
+  "head": "918bdbd",
+  "total_commits": 1795,
   "milestone": "Epic 376",
   "milestone_full": "the ledger of done epics (through 529 items), closed at Epic 376 — The shape of this reader's search (2026-11-22)",
   "pushed_at": "2026-11-22",
