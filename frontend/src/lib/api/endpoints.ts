@@ -57,6 +57,8 @@ export const endpoints = {
     cohort: "/admin/cohort",
     /* The eye of the install — landings, dwells, acts and top paths (Epic 267). */
     attention: "/admin/attention",
+    /* The hour of the week readers arrive — 7×24 landings, dense, UTC (Epic 383). */
+    rhythm: "/admin/rhythm",
     /* The overseer's synthetic week (Epic 289): bounded synthetic visitors. */
     simulate: "/admin/simulate",
   },

@@ -4460,6 +4460,25 @@ export const zh = {
 
       trendFootnote:
         "这就是这台实例自己行的直接读数——不是预测，也不是行情。如果 purge 或回填跑过，逐周数字可能回溯变动；合计以页面加载那一刻的表为准。",
+      rhythmTitle: "行为节律",
+      rhythmLede:
+        "最近四周，读者在星期几、几点落地——世界时（UTC），24 小时 × 7 天。空格是安静的时段，不是缺失的数据。",
+      rhythmWindow: "{days} 天窗口",
+      rhythmCell: "{day} {hour}:00 · {count} 次落地",
+      rhythmPeak: "峰值：{day} {hour}:00 · {count} 次落地",
+      rhythmNoPeak: "窗口内还没有落地。",
+      rhythmEmpty: "还没有足够的落地可以画节律。",
+      rhythmCold: "少",
+      rhythmHot: "多",
+      rhythmFootnote:
+        "只数落地事件，不含任何个人行；统一用 UTC，跨机器可比，页面不猜本地时区。",
+      rhythmSunday: "周日",
+      rhythmMonday: "周一",
+      rhythmTuesday: "周二",
+      rhythmWednesday: "周三",
+      rhythmThursday: "周四",
+      rhythmFriday: "周五",
+      rhythmSaturday: "周六",
       journeyTitle: "黄金旅程，逐站验收",
       journeyLede:
         "本实例实测值。机器空闲的时候的数。每一站都是真实调用，慢的是 AI 调用，快的因为命中缓存。",

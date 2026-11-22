@@ -4765,6 +4765,25 @@ export const en = {
 
       trendFootnote:
         "A straight read of this install's own rows — not a forecast, not a market line. Weekly figures can move retroactively if a purge or a backfill runs; totals are the tables as of the instant this page loaded.",
+      rhythmTitle: "The rhythm of the week",
+      rhythmLede:
+        "Where the last four weeks of landings fall by day and hour — UTC, 24 × 7. A quiet cell is a quiet hour, not missing data.",
+      rhythmWindow: "{days}-day window",
+      rhythmCell: "{day} {hour}:00 · {count} landings",
+      rhythmPeak: "Peak: {day} {hour}:00 · {count} landings",
+      rhythmNoPeak: "No landings in this window yet.",
+      rhythmEmpty: "Not enough landings to draw a rhythm yet.",
+      rhythmCold: "quiet",
+      rhythmHot: "busy",
+      rhythmFootnote:
+        "Landings only, never a per-reader row; UTC keeps the picture comparable across machines, and the page does not guess a local zone.",
+      rhythmSunday: "Sun",
+      rhythmMonday: "Mon",
+      rhythmTuesday: "Tue",
+      rhythmWednesday: "Wed",
+      rhythmThursday: "Thu",
+      rhythmFriday: "Fri",
+      rhythmSaturday: "Sat",
       journeyTitle: "The golden journey, station by station",
       journeyLede:
         "Measured live on this install. Best-case times — under a quiet machine. Every station hits the real stack; the slow ones are LLM-bound and the cache hit rate is why.",

@@ -20,12 +20,14 @@ public class AdminTrendsController {
     private final AdminFreshnessService freshness;
     private final AdminFunnelService funnel;
     private final AdminCohortService cohort;
+    private final AdminRhythmService rhythm;
 
-    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness, AdminFunnelService funnel, AdminCohortService cohort) {
+    public AdminTrendsController(AdminTrendsService trends, AdminFreshnessService freshness, AdminFunnelService funnel, AdminCohortService cohort, AdminRhythmService rhythm) {
         this.trends = trends;
         this.freshness = freshness;
         this.funnel = funnel;
         this.cohort = cohort;
+        this.rhythm = rhythm;
     }
 
     @GetMapping("/trends")
@@ -46,5 +48,10 @@ public class AdminTrendsController {
     @GetMapping("/funnel")
     public Map<String, Object> funnel() {
         return funnel.funnel();
+    }
+
+    @GetMapping("/rhythm")
+    public Map<String, Object> rhythm(@RequestParam(defaultValue = "28") int days) {
+        return rhythm.rhythm(days);
     }
 }

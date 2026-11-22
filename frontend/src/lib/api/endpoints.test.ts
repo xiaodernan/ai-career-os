@@ -1168,7 +1168,10 @@ describe("endpoints ↔ backend route parity", () => {
     // 289 moved /admin/trends onto this list: the overseer's unlock asks for the same trailing
     // window twice now — once when the door opens and once when the simulator pushes "Seed a quiet
     // week", and the shared ledger drawn by the two is one wire, not two.
+    // 383 adds /admin/rhythm for the same reason: the unlock and the simulator both redraw the
+    // 7×24 grid, and both ask for the same 28-day window.
     expect([...new Set(routes.filter((k, i) => routes.indexOf(k) !== i))].sort()).toEqual([
+      "GET /admin/rhythm",
       "GET /admin/trends",
       "GET /search",
     ]);
@@ -1179,7 +1182,8 @@ describe("endpoints ↔ backend route parity", () => {
     const bound = handlers.flatMap((h) => h.params);
     // 71 with Epic 251: `@RequestParam(defaultValue = "12") int weeks` on `GET /admin/trends`.
     // 72 with Epic 264: the same `weeks` on `GET /admin/cohort`.
-    expect(bound.length).toBe(72);
+    // 73 with Epic 383: the `days` default on `GET /admin/rhythm`.
+    expect(bound.length).toBe(73);
     // 70 parameters in 26 distinct names, measured: the reader's whole answer rather than a spot
     // check, so a signature shape it stops understanding shrinks this set instead of passing quiet
     // (#225 retired `limit` from `/activity/runs`, which now pages like every other list route;
@@ -1219,6 +1223,8 @@ describe("endpoints ↔ backend route parity", () => {
     // The latest names are in it now.)
     // 251's trends route binds `weeks` on `/admin/trends` — a window in weeks rather than rows or days,
     // and a name this set did not have (70 -> 71, 29 distinct names).
+    // 383's rhythm route binds `days` on `/admin/rhythm` (72 -> 73); the name is already in this
+    // set from the activity heatmap, so only the binding count moves.
     expect(new Set(bound.map((p) => p.name))).toEqual(
       new Set([
         "agent", "applicationId", "company", "documentId", "file", "intent", "jobId", "kind",

@@ -68,6 +68,17 @@ interface AdminFreshness {
   flows?: Array<{ id: string; table: string; newest: string | null }>;
 }
 
+interface AdminRhythm {
+  days?: number;
+  hours?: number;
+  windowDays?: number;
+  timezone?: string;
+  total?: number;
+  /** Seven rows (Sunday..Saturday) of twenty-four UTC hourly counts. */
+  cells?: number[][];
+  peak?: { dow: number; hour: number; n: number };
+}
+
 interface AdminFunnel {
   stages?: Array<{ id: string; readers: number }>;
   matchedReaders?: number;
@@ -178,6 +189,17 @@ const TREND_SERIES = [
   { key: "aiUsageCached", labelKey: "admin.aiUsageCachedLabel", icon: Flame },
 ] as const;
 
+// Epic 383: the seven labels of the rhythm grid, Sunday first to match Postgres DOW.
+const RHYTHM_DAYS = [
+  "admin.rhythmSunday",
+  "admin.rhythmMonday",
+  "admin.rhythmTuesday",
+  "admin.rhythmWednesday",
+  "admin.rhythmThursday",
+  "admin.rhythmFriday",
+  "admin.rhythmSaturday",
+] as const;
+
 // Epic 379: the three lines the local arithmetic projects. They are the ones the
 // brief names first — applications, rehearsals, arrivals — and the ones whose
 // direction changes what an operator would do next.
@@ -206,6 +228,7 @@ export default function AdminPage() {
   const [funnel, setFunnel] = React.useState<AdminFunnel | null>(null);
   const [cohort, setCohort] = React.useState<AdminCohort | null>(null);
   const [attention, setAttention] = React.useState<AdminAttention | null>(null);
+  const [rhythm, setRhythm] = React.useState<AdminRhythm | null>(null);
   const [simulateBusy, setSimulateBusy] = React.useState(false);
   const [simulateCount, setSimulateCount] = React.useState(25);
   const [simulateNote, setSimulateNote] = React.useState<string | null>(null);
@@ -277,12 +300,14 @@ export default function AdminPage() {
   // The ledger refresh: attention + weekly trends drawn anew — shared by the unlock path and the simulator door.
   const refreshLedger = React.useCallback(async () => {
     try {
-      const [trendsData, attentionData] = await Promise.all([
+      const [trendsData, attentionData, rhythmData] = await Promise.all([
         api.get<AdminTrends>(endpoints.admin.trends, { weeks: 12 }),
         api.get<AdminAttention>(endpoints.admin.attention),
+        api.get<AdminRhythm>(endpoints.admin.rhythm, { days: 28 }),
       ]);
       setTrends(trendsData);
       setAttention(attentionData);
+      setRhythm(rhythmData);
     } catch {
       /* a stale ledger is a quiet one; nothing to announce */
     }
@@ -344,6 +369,9 @@ export default function AdminPage() {
     api.get<AdminAttention>(endpoints.admin.attention)
       .then((data) => { if (!cancelled) setAttention(data); })
       .catch(() => { /* as above — a falling plank is a courtesy, never a blocker */ });
+    api.get<AdminRhythm>(endpoints.admin.rhythm, { days: 28 })
+      .then((data) => { if (!cancelled) setRhythm(data); })
+      .catch(() => { /* as above — the hour of the week is a courtesy, never a blocker */ });
     return () => { cancelled = true; };
   }, [unlocked]);
 
@@ -851,6 +879,79 @@ export default function AdminPage() {
         </div>
         <p className="mt-3 text-2xs leading-relaxed text-muted-foreground">{t("admin.trendProjection")}</p>
         <p className="mt-1 text-2xs leading-relaxed text-muted-foreground">{t("admin.trendFootnote")}</p>
+      </section>
+
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.rhythmTitle")}</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.rhythmLede")}</p>
+          </div>
+          {rhythm && (
+            <Badge variant="outline" className="shrink-0 text-2xs tabular-nums">
+              {t("admin.rhythmWindow", { days: rhythm.windowDays ?? 28 })}
+            </Badge>
+          )}
+        </div>
+        {rhythm?.cells && rhythm.cells.length === 7 ? (
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-border/60 bg-card/60 p-4">
+            <div className="min-w-[640px]">
+              <div className="grid grid-cols-[44px_repeat(24,minmax(0,1fr))] gap-1">
+                <span aria-hidden />
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <span key={hour} className="text-center text-2xs tabular-nums text-muted-foreground">
+                    {hour % 3 === 0 ? hour : ""}
+                  </span>
+                ))}
+                {RHYTHM_DAYS.map((dayKey, dow) => (
+                  <React.Fragment key={dayKey}>
+                    <span className="pr-2 text-right text-2xs text-muted-foreground">{t(dayKey)}</span>
+                    {Array.from({ length: 24 }, (_, hour) => {
+                      const count = rhythm.cells?.[dow]?.[hour] ?? 0;
+                      const intensity = rhythm.peak && rhythm.peak.n > 0 ? count / rhythm.peak.n : 0;
+                      return (
+                        <span
+                          key={hour}
+                          title={t("admin.rhythmCell", {
+                            day: t(dayKey),
+                            hour: String(hour).padStart(2, "0"),
+                            count: formatNumber(count),
+                          })}
+                          className="aspect-square rounded-[3px] border border-border/30"
+                          style={{
+                            backgroundColor: count > 0 ? "var(--primary)" : "var(--muted)",
+                            opacity: count > 0 ? 0.18 + intensity * 0.82 : 0.35,
+                          }}
+                        />
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-2xs leading-relaxed text-muted-foreground">
+                <span className="tabular-nums">
+                  {rhythm.peak && rhythm.peak.n > 0
+                    ? t("admin.rhythmPeak", {
+                        day: t(RHYTHM_DAYS[rhythm.peak.dow] ?? RHYTHM_DAYS[0]),
+                        hour: String(rhythm.peak.hour).padStart(2, "0"),
+                        count: formatNumber(rhythm.peak.n),
+                      })
+                    : t("admin.rhythmNoPeak")}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {t("admin.rhythmCold")}
+                  <span className="inline-block size-2.5 rounded-[2px] border border-border/30 bg-muted" />
+                  <span className="inline-block size-2.5 rounded-[2px] border border-border/30 bg-primary opacity-50" />
+                  <span className="inline-block size-2.5 rounded-[2px] border border-border/30 bg-primary" />
+                  {t("admin.rhythmHot")}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{t("admin.rhythmEmpty")}</p>
+        )}
+        <p className="mt-2 text-2xs italic leading-relaxed text-muted-foreground">{t("admin.rhythmFootnote")}</p>
       </section>
 
       <section>

@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **383** The overseer can see the hour of the week (2026-11-22).
+
+  The weekly trend line answers "is the door busier than last week"; it cannot
+  answer "at which hour", because a week is its finest bucket. `/admin/rhythm`
+  adds the missing resolution: seven rows (Sunday-first, Postgres `DOW`) by
+  twenty-four UTC hours of `attention_events` landings over a rolling window,
+  returned dense and cached for 30 seconds alongside `total` and the single
+  `peak` cell. `?days=` clamps 7–84 (default 28; 0 answers the default). The
+  admin page draws it as a heat map with every cell's exact count in its title,
+  a quiet/peak legend, a horizontal scroll on narrow screens instead of squeezed
+  squares, and an explicit UTC footnote — the page converts nothing, so the
+  number on screen is the number in the ledger. Counts only, no reader row.
+  Five backend tests (dense zeros, additive buckets, malformed rows skipped,
+  window clamp, payload shape), backend unit suite **1,429 green**; frontend
+  route-parity gate moved (rhythm joins the twice-read list; bound params
+  72 → 73), 1,700 tests green, `tsc` clean.
+
 - [x] **382** The transport chip stops reading as "non-stream" (2026-11-22).
 
   The operator's complaint was precise: every engine call's trace row said
