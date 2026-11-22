@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T14:18:56.880557Z",
+  "generated_at": "2026-11-22T14:37:05.977502Z",
   "branch": "main",
-  "head": "a99c2e6",
-  "total_commits": 1868,
-  "milestone": "Epic 409",
-  "milestone_full": "the ledger of done epics (through 562 items), closed at Epic 409 — The find box answers to the slash (2026-11-22)",
+  "head": "957f32b",
+  "total_commits": 1870,
+  "milestone": "Epic 410",
+  "milestone_full": "the ledger of done epics (through 563 items), closed at Epic 410 — The month can say its own rhythm (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1806+",
+  "tests": "1809+",
   "test_files": 232,
-  "work_items": 562,
-  "epics": 275,
+  "work_items": 563,
+  "epics": 276,
   "feature_surface": [
+    "Epic 410 — The month can say its own rhythm (2026-11-22)",
     "Epic 409 — The find box answers to the slash (2026-11-22)",
     "Epic 408 — A long calendar can be searched (2026-11-22)",
     "Epic 407 — The company page remembers what the reader did with them (2026-11-22)",
     "Epic 406 — The shelf stops counting backwards (2026-11-22)",
-    "Epic 405 — The calendar cannot lose a question it already asked (2026-11-22)",
-    "Epic 404 — The month arithmetic survives a flood (2026-11-22)"
+    "Epic 405 — The calendar cannot lose a question it already asked (2026-11-22)"
   ]
 }
