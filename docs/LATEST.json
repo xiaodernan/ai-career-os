@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T11:06:07.481761Z",
+  "generated_at": "2026-11-22T11:18:59.678635Z",
   "branch": "main",
-  "head": "d6fb9c9",
-  "total_commits": 1816,
-  "milestone": "Epic 383",
-  "milestone_full": "the ledger of done epics (through 536 items), closed at Epic 383 — The overseer can see the hour of the week (2026-11-22)",
+  "head": "accca48",
+  "total_commits": 1818,
+  "milestone": "Epic 384",
+  "milestone_full": "the ledger of done epics (through 537 items), closed at Epic 384 — The shelf keeps letters to the future (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
-  "tests": "1700+",
-  "test_files": 221,
-  "work_items": 536,
-  "epics": 249,
+  "tests": "1713+",
+  "test_files": 223,
+  "work_items": 537,
+  "epics": 250,
   "feature_surface": [
+    "Epic 384 — The shelf keeps letters to the future (2026-11-22)",
     "Epic 383 — The overseer can see the hour of the week (2026-11-22)",
     "Epic 382 — The transport chip stops reading as \"non-stream\" (2026-11-22)",
     "Epic 381 — The front door fits a phone (2026-11-22)",
     "Epic 380 — The chronicle has a local pen (2026-11-22)",
-    "Epic 379 — The ledger still counsels when the model is dark (2026-11-22)",
-    "Epic 378 — The pressure verdict has a home in CI (2026-11-22)"
+    "Epic 379 — The ledger still counsels when the model is dark (2026-11-22)"
   ]
 }
