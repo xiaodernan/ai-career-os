@@ -129,8 +129,13 @@ def test_orchestrator_bounds_match_agents_doc():
     assert "`MAX_SUB_STEPS = 5`" in text
     assert "`RESULT_CHARS = 6000`" in text
     # Conversation window and memory read are stated claims; pin the code side too.
+    # Epic 378 made the window budget-driven, with the 12-turn count as the floor
+    # rather than the answer; AGENTS.md states that contract, so the gate pins it.
     assert getattr(orchestrator, "HISTORY_TURNS", None) == 12
-    assert "last 12 turns" in text
+    assert getattr(orchestrator, "HISTORY_TURN_SHARE", None) == 0.15
+    assert getattr(orchestrator, "HISTORY_BUDGET", None) == 120_000
+    assert "12-turn floor" in text
+    assert "`HISTORY_BUDGET`" in text
 
 
 def test_memory_read_limit_matches_agents_doc():

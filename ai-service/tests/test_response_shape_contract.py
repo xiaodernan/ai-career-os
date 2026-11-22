@@ -3279,7 +3279,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # grew the blocks above it by five lines; the sentence itself did not change.
         # 160 rather than 157 since Epic 372's search-miss count and its words list grew
         # the AdminAttention interface above it by three lines; the sentence did not change.
-        ("frontend/src/app/admin/admin-page.tsx", 160),
+        # 164 rather than 160 since Epic 379 added the local-forecast imports and the
+        # three-series constant above it; the sentence itself did not change.
+        ("frontend/src/app/admin/admin-page.tsx", 164),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.
