@@ -145,6 +145,10 @@ def test_the_hook_takes_a_window_and_keys_each_page_as_its_own_cache_entry():
          "{ page: state.page, size: PAGE_SIZE, applicationId, q: state.q, }"),
         ("components/ceremony/afterward-card.tsx",
          "{ size: 1, page: 0 }"),
+        # 369's frontier card counts the rehearsals still open -- the direction it names
+        # is the one thing a search regrets leaving. It asks the ceiling, not a page.
+        ("components/dashboard/frontier-card.tsx",
+         "{ size: 50 }"),
     ], f"the call sites moved: {hook_calls('useInterviewSessions')}"
 
 

@@ -9,8 +9,12 @@
 
 import { chromium } from "playwright";
 
-const API = process.env.E2E_API_URL ?? "http://127.0.0.1:8080/api/v1";
-const APP = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+// No origin default is asserted by the file -- pass the endpoint in, or the script refuses.
+// The CORS census in ai-service reads every checked-in text file for a loopback origin.
+const API = process.env.E2E_API_URL;
+if (!API) throw new Error("pass E2E_API_URL (this file asserts no origin of its own)");
+const APP = process.env.E2E_BASE_URL;
+if (!APP) throw new Error("pass E2E_BASE_URL (this file asserts no origin of its own)");
 
 const email = `surfaces-${Date.now()}@careeros.test`;
 const password = "Passw0rd!234";

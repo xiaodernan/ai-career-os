@@ -187,7 +187,11 @@ SITES = {
                         # 276's afterward card reads the applications total for its own
                         # three-number frame (role=progressbar).
                         ("components/ceremony/afterward-card.tsx",
-                         "{ size: 1, page: 0 }")],
+                         "{ size: 1, page: 0 }"),
+                        # 369's frontier card reads the board to name the stage the reader
+                        # owes a move in; it asks the ceiling, not a page.
+                        ("components/dashboard/frontier-card.tsx",
+                         "{ size: 50 }")],
     "useCompanies": [("app/(app)/companies/page.tsx",
                       # 58.2 gives the board the question its route has always answered: the
                       # words ride beside the window, so the pager counts the matches rather
@@ -227,7 +231,11 @@ SITES = {
         # Epic 276/277's afterward card reads the same total for the same reason —
         # only when the install actually has an account that carried anything.
         ("components/ceremony/afterward-card.tsx",
-         "{ size: 1, page: 0 }")],
+         "{ size: 1, page: 0 }"),
+        # 369's frontier card counts the rehearsals still open, which is the direction
+        # it names; the ceiling, not a page.
+        ("components/dashboard/frontier-card.tsx",
+         "{ size: 50 }")],
     "useActivityRuns": [("app/(app)/activity/page.tsx",
                          "{ page: state.page, size: PAGE_SIZE }"),
                         ("app/(app)/dashboard/page.tsx", "{ size: 5 }")],

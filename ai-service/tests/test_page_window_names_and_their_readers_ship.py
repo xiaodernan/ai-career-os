@@ -141,10 +141,16 @@ READERS = {
               # 47.3's job page asks the pipeline one question -- is this posting already on the
               # board -- and the answer it reads is the page's `items`, empty or not. It pages
               # nothing and reads no window, so it joins `items` alone.
+              # 374's rhythm card asks for every session so it can say how long it has
+              # been; the window it wants is the ceiling, and it reads the rows.
+              "app/(app)/interviews/page.tsx",
               "app/(app)/jobs/[id]/page.tsx", "app/(app)/jobs/page.tsx",
               "app/(app)/letters/page.tsx",
               "app/(app)/notifications/page.tsx", "app/(app)/replies/page.tsx",
               "components/common/module-view.tsx",
+              # 369's frontier card reads the board's rows to name the stage the reader
+              # owes a move in; it pages nothing and reads no window.
+              "components/dashboard/frontier-card.tsx",
               "components/ingestion/scheduled-feeds-panel.tsx",
               # The nightly history card (20.1) reads the page's rows and nothing else.
               "components/monitoring/nightly-history.tsx",

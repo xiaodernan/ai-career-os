@@ -3277,7 +3277,9 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         # the block above it by eleven lines; the sentence itself did not change.
         # 157 rather than 152 since Epic 353's bounce tiles + Epic 354's chronicle trend
         # grew the blocks above it by five lines; the sentence itself did not change.
-        ("frontend/src/app/admin/admin-page.tsx", 157),
+        # 160 rather than 157 since Epic 372's search-miss count and its words list grew
+        # the AdminAttention interface above it by three lines; the sentence did not change.
+        ("frontend/src/app/admin/admin-page.tsx", 160),
         # The run stream's own two, the population this ledger was written for.
         # 21 rather than 17 since 7e2f334's re-export block moved this comment block
         # down; the sentence itself did not change.
