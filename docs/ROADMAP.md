@@ -8198,6 +8198,29 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **386** The search gets a month (2026-11-22).
+
+  The product writes dated rows in seven places, and the reader plans in days,
+  but no screen laid those rows on a calendar. `/calendar` is the new room: a
+  Monday-first, always-six-week grid over the reader's own reminders,
+  follow-ups gone due, rehearsals and sealed letters. It is arithmetic over
+  rows the other screens already hold — no endpoint, no model call, no demo
+  rows. A follow-up lands on the day its relation's cadence runs out after the
+  last touch (overdue ones land on the day they went due); a sealed letter
+  contributes its opening day and never its prose; an unreadable date is
+  dropped rather than guessed. Days cap at three chips and say "+N more"; the
+  month walks back and forward through `?month=`, "Today" returns to the
+  reader's own month, and the month's counts, a legend and the next dated row
+  sit beside the grid. A month with nothing on it says so and offers the three
+  doors that fill it. The month page joins the navigation and the manual's
+  surface index. Pure `lib/search-calendar.ts` — 12 unit tests for month keys,
+  year boundaries, 42 Monday-first cells, both leap and 30-day months,
+  unreadable instants, reminder/interview/follow-up/capsule mapping, stable
+  ordering and grouping — plus 5 page tests for the drawn rows, the hidden-row
+  counter, the honest empty shelf, Chinese and the three controls. Full
+  frontend suite **227 files / 1,744 tests green**, `tsc --noEmit` clean;
+  EN+ZH copy in both tables, copy census 237 → 238.
+
 - [x] **385** The answers get an echo of their own (2026-11-22).
 
   Every number on the interview runner comes from the evaluator; none of them

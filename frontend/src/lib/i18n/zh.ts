@@ -27,6 +27,7 @@ export const zh = {
       rateLimit: "限流",
       activity: "活动",
       timeline: "时间线",
+      calendar: "日历",
       admin: "管理",
       settings: "设置",
       ingestion: "职位导入",
@@ -62,6 +63,7 @@ export const zh = {
       yourData: "导出、恢复与删减你的数据",
       activity: "AI 代理运行与轨迹",
       timeline: "一条时间线看懂整个求职闭环",
+      calendar: "把求职摊在一个月里：提醒、跟进、模拟面试与信",
       admin: "运营账本：统计、趋势与优化信号",
       settings: "账号与偏好",
       studio: "粘贴职位，看匹配度，定制你的简历",
@@ -78,6 +80,42 @@ export const zh = {
       saveShort: "收藏",
       saveHint: "收藏——把这个职位存进你的书签",
       removeHint: "移除——把这个职位从你的书签里拿走",
+    },
+    /**
+     * Epic 386——月历页。日历只是对别的页面已经持有的行做算术；这里的每句话
+     * 都在解释这件事，免得读者把一个提醒当成这一页许下的承诺。
+     */
+    monthCalendar: {
+      title: "日历",
+      description:
+        "把这场求职摊在一个月里，周一开头：提醒、到期未跟进的联系人、模拟面试，以及封存的信。每一行都来自其他页面已经持有的数据。",
+      prev: "上个月",
+      next: "下个月",
+      today: "回到本月",
+      hintPrev: "往前一个月——网格从周一开始",
+      hintNext: "往后一个月——网格从周一开始",
+      hintToday: "回到你正在过的这个月",
+      loadFailed: "日历的行暂时读不到。",
+      eventCount: "这个月有 {count} 件事",
+      more: "还有 {count} 件",
+      monthEmpty:
+        "这个月还没有落点。提醒、到期未跟进的联系人、模拟面试和封存的信，会在各自的日子出现。",
+      legendTitle: "圆点是什么意思",
+      legendReminder: "提醒",
+      legendFollowup: "该跟进了",
+      legendInterview: "模拟面试",
+      legendCapsule: "封存的信开启",
+      legendHint: "跟进日按联系人的节奏从上次触达推算；封存的信只显示开启日，不显示正文。",
+      nextTitle: "接下来",
+      noUpcoming: "日历前面还是空的。给某个申请设个提醒，或者给未来的自己封一封信。",
+      open: "打开",
+      capsuleEvent: "一封写给未来自己的信",
+      emptyTitle: "日历还是空白的",
+      emptyBody:
+        "它会从你已经拥有的行里长出来：申请上的提醒、冷掉的联系人、一场模拟面试，或一封封存的信。这里没有演示数据。",
+      emptyApplications: "打开申请板",
+      emptyTimeline: "去写一封信",
+      emptyNetworking: "看看谁该联系了",
     },
     /**
      * 一屏看懂整个求职闭环（Epic 81）：投递、笔记、联系人、简历版本、匹配与模拟面试，

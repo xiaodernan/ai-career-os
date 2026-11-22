@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { HelpCircle, FileText, Target, TrendingUp, Briefcase, CalendarClock, Feather, Handshake, Mic, MailOpen, Sparkles, BarChart3, Activity, History, Shield } from "lucide-react";
+import { HelpCircle, FileText, Target, TrendingUp, Briefcase, CalendarClock, CalendarDays, Feather, Handshake, Mic, MailOpen, Sparkles, BarChart3, Activity, History, Shield } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ const GROUPS = [
     descriptionKey: "chrome.manualSurfacesTrack",
     routes: [
       { href: "/applications", icon: CalendarClock, labelKey: "nav.applications", subKey: "navDescriptions.applications" },
+      { href: "/calendar", icon: CalendarDays, labelKey: "nav.calendar", subKey: "navDescriptions.calendar" },
       { href: "/letters", icon: Feather, labelKey: "nav.letters", subKey: "navDescriptions.letters" },
       { href: "/timeline", icon: History, labelKey: "nav.timeline", subKey: "navDescriptions.timeline" },
     ],

@@ -27,6 +27,7 @@ export const en = {
       rateLimit: "Rate limit",
       activity: "Activity",
       timeline: "Timeline",
+      calendar: "Calendar",
       admin: "Admin",
       settings: "Settings",
       ingestion: "Ingestion",
@@ -65,6 +66,7 @@ export const en = {
       yourData: "Export, restore and redact your data",
       activity: "AI agent runs and traces",
       timeline: "One ordered read of the whole loop",
+      calendar: "The search on a month: reminders, follow-ups, rehearsals, letters",
       admin: "Operator ledger: stats, trends, and optimization signals",
       settings: "Account and preferences",
       studio: "Paste a job, see your fit, tailor your resume",
@@ -94,6 +96,45 @@ export const en = {
       saveShort: "Save",
       saveHint: "Save — adds this role to your bookmarks",
       removeHint: "Remove — takes this role out of your bookmarks",
+    },
+    /**
+     * Epic 386 — the month page. The calendar is arithmetic over rows the other
+     * screens already hold; every sentence here explains that, so nobody reads a
+     * reminder as a promise this page made.
+     */
+    monthCalendar: {
+      title: "Calendar",
+      description:
+        "The search on a month, Monday-first: reminders, follow-ups gone due, rehearsals and sealed letters. Every row is one your other screens already hold.",
+      prev: "Previous month",
+      next: "Next month",
+      today: "Today",
+      hintPrev: "Back one month — the grid is Monday-first",
+      hintNext: "Forward one month — the grid is Monday-first",
+      hintToday: "Jump back to the month you are living in",
+      loadFailed: "The calendar's rows could not be read.",
+      eventCount: "{count} things on the month",
+      more: "+{count} more",
+      monthEmpty:
+        "Nothing lands on this month yet. Reminders, follow-ups gone due, rehearsals and sealed letters appear here on their own days.",
+      legendTitle: "What the dots mean",
+      legendReminder: "Reminder",
+      legendFollowup: "Follow-up due",
+      legendInterview: "Rehearsal",
+      legendCapsule: "Sealed letter opens",
+      legendHint:
+        "A follow-up is due one relation cadence after the last touch; a sealed letter shows only its opening day, never its body.",
+      nextTitle: "Next up",
+      noUpcoming:
+        "Nothing ahead on the calendar. Set a reminder on an application, or seal a letter to your future self.",
+      open: "Open",
+      capsuleEvent: "A letter to your future self",
+      emptyTitle: "The calendar is still blank",
+      emptyBody:
+        "It fills from rows you already own: a reminder on an application, a contact gone cold, a rehearsal, or a sealed letter. Nothing here is a demo row.",
+      emptyApplications: "Open the pipeline",
+      emptyTimeline: "Write a letter",
+      emptyNetworking: "See who is due",
     },
     /**
      * The one screen that answers "what has my search written down, in order" (Epic 81):
