@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -93,6 +94,54 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
      */
     @Query("select d.fileKey from Document d where d.fileKey is not null")
     List<String> findAllFileKeys();
+
+    /**
+     * The rows the repair clock may offer again (Epic 418): registered and never triggered
+     * ({@code 'pending'}), or triggered and left mid-task by a death ({@code 'indexing'}), both
+     * past the window. {@code 'ready'} and {@code 'failed'} are verdicts and {@code 'retired'}
+     * is terminal (44.1), so none of the three is ever a candidate. Oldest first, because a row
+     * stuck for a day deserves the next tick more than one stuck for the window, and the {@code
+     * id} is what makes that order total: a batch is a window, and two rows claiming at the same
+     * instant would otherwise be split differently by two plans, so one tick could offer a row the
+     * next tick never sees while the older one waits forever.
+     */
+    @Query("""
+            select d from Document d
+            where d.status in :statuses and d.updatedAt < :cutoff
+            order by d.updatedAt, d.id
+            """)
+    List<Document> findStuckForRepair(@Param("statuses") List<String> statuses,
+                                      @Param("cutoff") OffsetDateTime cutoff,
+                                      Pageable page);
+
+    /**
+     * Take one stuck row for this replica's tick, and for nobody else's.
+     *
+     * <p>The claim is the deduplication, which is why this clock needs no fleet lease: the test
+     * and the write are one statement, so of the replicas that wake at the same instant exactly
+     * one moves the row and the rest read 0 and step on. Postgres holds the row lock until this
+     * statement's transaction commits and then re-evaluates the predicate against the new row
+     * version, so the loser sees the {@code updated_at} the winner just moved forward and loses
+     * the comparison. A duplicate pass here would not merely be wasted work: two ingestions of
+     * one document delete and insert the same chunk ordinals, and an interleaving of the two can
+     * leave both sets behind.
+     *
+     * <p>The write is the attempt count, in {@code meta.repair.attempts} — a nested key, because
+     * the row's own {@code meta} belongs to the creator (the kind, and for a pasted note its
+     * inline text) and the repair trail must not disturb it. It also advances {@code updated_at}
+     * through the schema's own trigger, which is what gives the next window its start and keeps
+     * one stuck document from being re-offered every tick forever.
+     */
+    @Modifying
+    @Transactional
+    @Query(value = """
+            UPDATE documents
+               SET meta = jsonb_set(meta, '{repair}', jsonb_build_object('attempts',
+                       COALESCE((meta #>> '{repair,attempts}')::int, 0) + 1))
+             WHERE id = :id AND status IN (:statuses) AND updated_at < :cutoff
+            """, nativeQuery = true)
+    int claimForRepair(@Param("id") UUID id, @Param("statuses") List<String> statuses,
+                       @Param("cutoff") OffsetDateTime cutoff);
 
     List<Document> findBySourceId(UUID sourceId);
 

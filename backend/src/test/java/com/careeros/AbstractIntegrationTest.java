@@ -47,7 +47,17 @@ import org.springframework.test.web.servlet.MockMvc;
         // connections per context exhausted it mid-suite ("too many clients already",
         // FleetWiringIT, 2026-11-16). Two is enough for one MockMvc call at a time;
         // production's pool stays 20, untouched.
-        "spring.datasource.hikari.maximum-pool-size=2"
+        "spring.datasource.hikari.maximum-pool-size=2",
+        // The stuck-ingestion repair (Epic 418) is a fixedDelay clock, and Spring rings the first
+        // tick as the context boots -- before any test method has run. The sweep is fleet-wide by
+        // design, and other classes insert deliberately aged 'pending' rows to measure 44.3's
+        // window, so a boot tick would claim them, count an attempt against them and, after three
+        // context boots in one suite, write a failure verdict on a row whose own test only meant to
+        // leave it retryable. The suite therefore pins the clock inert: a window far wider than
+        // anything this harness backdates, and an interval longer than the run. IngestionRepairIT
+        // builds the service itself at the shipped window and calls sweep() when it wants the pass.
+        "careeros.ingestion.repair.window-minutes=1000000000",
+        "careeros.ingestion.repair.interval-ms=1000000000"
 })
 public abstract class AbstractIntegrationTest {
 

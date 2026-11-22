@@ -58,6 +58,28 @@ groups:
             feed's problem, a majority is the fetcher's or the planner's.
           runbook: "docs/RUNBOOK.md#a-night-where-every-feed-failed"
 
+      # The repair clock (Epic 418) is the install's answer to an upload that was registered and
+      # never finished, so what matters of it is whether the clock is alive: a tick that found an
+      # empty board moves this gauge, and a tick that could not read the table does not. 1800 is
+      # three ticks of the shipped ten-minute interval -- the same three-tick shape the reminder
+      # clock pages at -- and the `for` keeps one deploy's drain from paging by itself.
+      - alert: CareerOSIngestionRepairStale
+        expr: time() - careeros_ingestion_repair_last_tick_timestamp > 1800
+        for: 10m
+        labels:
+          service: career-os-backend
+          severity: warning
+        annotations:
+          summary: "The stuck-ingestion repair clock has not finished a tick in over half an hour"
+          description: >-
+            The last repair tick that completed was {{ $value | humanizeDuration }} ago, so the
+            documents left 'pending' or 'indexing' by a death in the gap between the commit and
+            the engine call are staying that way. Check `careeros.ingestion.repair.interval-ms`
+            (600000 by default) and that the backend's scheduling is on; a tick that could not
+            read the table logs "the stuck-ingestion repair could not run" and does not move this
+            gauge, which is the whole difference between a quiet install and a stopped clock.
+          runbook: "docs/RUNBOOK.md#an-upload-that-never-stopped-ingesting"
+
       # The nightly verification is the job that proves the stack still works together, and
       # it records its own finish through the internal surface. The marker moves on every
       # finished night, passed or failed -- this rule is about the cadence stopping, the

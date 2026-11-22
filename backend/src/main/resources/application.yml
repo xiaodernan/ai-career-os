@@ -223,6 +223,17 @@ careeros:
     # decides whether a cap matters to them. This is a gauge, not a gate: nothing is
     # refused; `0` removes the bar and the card renders "no cap configured".
     daily-spend-cap-usd: ${CAREEROS_DAILY_SPEND_CAP_USD:10.00}
+  # Epic 418 -- the clock that picks up uploads which were registered and never ingested. A
+  # document left 'pending' (its POST to the engine never happened, because the replica that
+  # committed it died) or 'indexing' (the engine died mid-task) is otherwise nobody's job again,
+  # and the reader's page keeps drawing "ingesting" over it. Each tick claims the rows past the
+  # window in the database and offers them back to the engine; three offers, then the row gets a
+  # recorded failure instead of a spinner. The two knobs are read together: a shorter interval
+  # without a shorter window only buys more ticks that find nothing.
+  ingestion:
+    repair:
+      window-minutes: ${CAREEROS_INGESTION_REPAIR_WINDOW_MINUTES:30}
+      interval-ms: ${CAREEROS_INGESTION_REPAIR_INTERVAL_MS:600000}
   # Epic 162 -- the backend's job queue over Redis Streams. false (the default) sends no
   # Redis command and runs no scheduled work: every producer keeps the inline path it had
   # before the queue existed. true hands background jobs to ONE consumer group shared by

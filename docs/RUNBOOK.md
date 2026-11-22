@@ -20,6 +20,7 @@ The surfaces this document is about:
 |-------|----------|----------|------------|
 | `CareerOSIngestionNightMissed` | critical | No ingestion run has completed in 26 hours | [A night that never succeeded](#a-night-that-never-succeeded) |
 | `CareerOSIngestionFailing` | warning | More than half the runs in six hours failed | [A night where every feed failed](#a-night-where-every-feed-failed) |
+| `CareerOSIngestionRepairStale` | warning | The stuck-ingestion repair clock has missed three of its ticks | [An upload that never stopped ingesting](#an-upload-that-never-stopped-ingesting) |
 | `CareerOSNightlyVerificationStale` | critical | No nightly verification has finished in 36 hours | [The nightly verification stopped reporting](#the-nightly-verification-stopped-reporting) |
 | `CareerOSNightlyVerificationFailing` | warning | Two or more of the newest nightly runs failed | [The nightly verification keeps failing](#the-nightly-verification-keeps-failing) |
 | `CareerOSAiBudgetBurn` | warning | The trailing 24 hours cost more than 5 USD | [The AI budget is burning](#the-ai-budget-is-burning) |
@@ -81,6 +82,60 @@ at that feed's owner.
 `GET /api/v1/health` says whether the stack is degraded, and the ai-service log has
 one line per failed planning call. A feed that answers 200 with a body the planner
 cannot read fails here without anything being down.
+
+## An upload that never stopped ingesting
+
+**What the alert looks like.** `CareerOSIngestionRepairStale` fires when
+`time() - careeros_ingestion_repair_last_tick_timestamp > 1800` has held for ten minutes — three
+ticks of the shipped ten-minute clock. Read it as what it is: this page says the **clock**
+stopped, not that an upload is stuck. A single stuck upload has never paged, and still does not.
+
+**Why the state exists at all.** An upload is two rows and one handover. The source and the
+document commit together inside one transaction, reading `ingesting` and `pending`, and the call
+that tells the engine to start runs *after* the commit, because a model call must not hold a
+transaction open. That ordering is deliberate and it leaves a gap of milliseconds: a replica
+drained or killed in it leaves a document nobody is working on. The second shape of the same
+silence is the engine dying mid-task, where no exception ever arrives to mark anything failed.
+Before Epic 418 nothing in the install looked at either row again, and the reader's page kept
+drawing "ingesting" over a document that was no longer anyone's job.
+
+**What the clock does about it.** Every `careeros.ingestion.repair.interval-ms` (600000, ten
+minutes) the backend claims the documents past `careeros.ingestion.repair.window-minutes` (30)
+that still read `pending` or `indexing` and offers each one back to the engine — safe, because the
+pipeline re-reads the stored bytes and replaces the chunk set rather than adding to it. Each row
+is claimed in the database before it is offered, so when several replicas wake at once exactly one
+works on a document; that is why this clock needs neither a fleet lease nor the queue. Three
+offers, then the row gets a verdict instead of a fourth spinner, and the sentence the reader's list
+shows is `ingestion never landed after 3 offers`.
+
+**Read it in this order.**
+
+1. `docker compose logs --since 40m backend | grep -i repair`. A clock that is running but cannot
+   read the table logs `the stuck-ingestion repair could not run` and does not move the gauge,
+   which is the alarm's other half; a clock that logs nothing at all is not scheduled — check
+   `careeros.ingestion.repair.interval-ms`, and that the backend started with scheduling on.
+2. `docker compose exec -T postgres psql -U career_os -d career_os -c "select status, count(*),
+   min(updated_at) from documents where status in ('pending','indexing') group by 1"`. What is
+   actually waiting, and how long the oldest has waited. This is the repair's own predicate: rows
+   past the window here are rows the next tick takes.
+3. `curl -s localhost:8080/actuator/prometheus | grep careeros_ingestion_repairs_total`. The four
+   outcomes say which side of the handover failed. `contended` is a sibling that got the row first
+   and is the expected reading on a multi-replica install. `refused` is the engine saying no, which
+   leaves the row for the next window rather than failing it — `refused` climbing while `requeued`
+   does not is an ai-service problem, not a repair problem, and the health line's ai-service
+   component says which. `exhausted` is the verdict, and it is the only outcome that writes a
+   `failed` row.
+4. The window itself, if a document that is legitimately still being embedded keeps getting
+   offered. A 300-page PDF also reads `indexing`, and the window is the only thing that tells a
+   slow ingest from a dead one: raising `careeros.ingestion.repair.window-minutes` is the answer,
+   and it costs nothing but latency on the repair.
+
+**What this does not mean.** A row the clock failed is not a lost upload. The bytes stay in the
+bucket and the row keeps its key, so the recovery is the ordinary one: upload the file again, or
+ask for the same internal handover the request thread asks for (`POST /internal/ingest/document/
+{id}` with the internal token and the owner's `X-User-Id`). And the alarm is not an upload's own
+page — on an install where the clock is healthy and one document is broken, the meter reads
+zero movement and no rule fires, because that is a document, not an outage.
 
 ## The AI budget is burning
 
@@ -420,7 +475,9 @@ once at boot), `backend/src/main/java/com/careeros/report/service/WeeklyDigestDe
 `backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java`
 (the signal-letter counter and the morning heartbeat), and
 `backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java`
-(the per-table deletion counter and the nightly sweep heartbeat). A metric missing
+(the per-table deletion counter and the nightly sweep heartbeat), and
+`backend/src/main/java/com/careeros/knowledge/service/IngestionRepairMetrics.java`
+(the repair clock's four outcomes and its own tick marker). A metric missing
 from the scrape means the bean did not start: the backend log has the reason.
 
 ## A reader quotes one request
@@ -1031,7 +1088,7 @@ container, an override file or an exported shell variable won the race against t
 written once at readiness:
 
 ```
-boot: env=prod port=8080 db=db.internal/career_os redis=cache.internal storage=objects.internal bucket=career_os_files ai=ai.internal mail=smtp push=keypair schedulers=[AiUsageMetrics, IngestionScheduler, NotificationMailScheduler, ReminderScheduler, RetentionSweeper, WeeklyDigestScheduler]
+boot: env=prod port=8080 db=db.internal/career_os redis=cache.internal storage=objects.internal bucket=career_os_files ai=ai.internal mail=smtp push=keypair schedulers=[AiOpsMetrics, AiUsageMetrics, IngestionRepairScheduler, IngestionScheduler, JobWorker, NotificationMailScheduler, ReminderScheduler, RetentionScheduler, WeeklyDigestScheduler]
 ```
 
 The line is the process describing the objects it actually bound — bound properties, the
@@ -1052,11 +1109,12 @@ context really registered — never a re-read of the environment. If it disagree
    says `console` was never configured. `mail=smtp` is the configured transport.
 5. `push=off`. No VAPID pair: registrations are still stored, but no wake is ever signed.
 6. `schedulers=` missing a name you rely on. The full set is
-   `[AiUsageMetrics, IngestionScheduler, NotificationMailScheduler, ReminderScheduler,
-   RetentionSweeper, WeeklyDigestScheduler]`; an empty list means the clock is off
-   entirely, and one missing name is a bean that did not load — read earlier in the log
-   for why. None of the alarms above can fire from a process with no scheduler, which is
-   why this line comes before them.
+   `[AiOpsMetrics, AiUsageMetrics, IngestionRepairScheduler, IngestionScheduler, JobWorker,
+   NotificationMailScheduler, ReminderScheduler, RetentionScheduler,
+   WeeklyDigestScheduler]`; an empty list means the clock is off entirely, and one missing
+   name is a bean that did not load — read earlier in the log for why. None of the alarms
+   above can fire from a process with no scheduler, which is why this line comes before
+   them.
 
 **What the line never contains.** Passwords, tokens, JDBC or Redis URLs, SMTP credentials
 or the private VAPID key — only hosts, names and choices. A unit test builds the line

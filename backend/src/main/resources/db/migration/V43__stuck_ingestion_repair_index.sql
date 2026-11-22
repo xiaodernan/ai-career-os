@@ -1,0 +1,11 @@
+-- The repair clock (Epic 418) asks one question every tick: which documents were registered
+-- and never finished, and have been sitting that way longer than the window. Nothing answers
+-- it. idx_docs_retired_age covers status='retired', idx_docs_user is keyed by owner, which this
+-- query does not filter on, so each pass would read the whole corpus table to find the handful
+-- of rows stuck in 'pending' or 'indexing'.
+--
+-- The predicate is partial on purpose, and the two statuses are exactly the stuck ones:
+-- 'ready' and 'failed' are verdicts the pipeline writes and nothing re-offers, and 'retired' is
+-- terminal by Epic 44.1 — a sweep must never be able to claim it. On a healthy install the
+-- indexed slice holds almost nothing, which is what makes a ten-minute clock cheap.
+CREATE INDEX idx_docs_stuck_ingest ON documents(updated_at) WHERE status IN ('pending', 'indexing');

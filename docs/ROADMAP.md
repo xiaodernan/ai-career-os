@@ -8378,6 +8378,128 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   handler hands the payload to `bump` instead of reading the client itself. The
   representative gate sweep is **602 passed**.
 
+- [x] **418** The upload that never stopped ingesting gets a clock, an index
+  and a verdict (2026-11-23).
+
+  An upload is two rows and one handover, and the handover is the part that can
+  be lost. `FileIngestService` commits the source and the document inside one
+  transaction — `ingesting` and `pending` — and tells the engine to start only
+  after that commit, because a model call must not hold a transaction open. The
+  ordering is deliberate and it leaves a gap of milliseconds. A replica drained
+  or killed in the gap leaves a document nobody is working on; the engine dying
+  mid-task leaves the same row, because its task bus is a module-level dict in
+  one process and a death there arrives as no exception at all. Nothing in the
+  install looked at either row again, and the reader's page kept drawing
+  "ingesting" over an upload that had stopped being anyone's job — the shape
+  this project keeps meeting in the read-failure campaign, where a failed act
+  is answered with silence instead of a verdict.
+
+  So the install gained the pass that asks the question. `V43` puts a partial
+  index on `documents(updated_at) WHERE status IN ('pending','indexing')`, the
+  one question the tick asks, and `DocumentRepository` answers it twice:
+  `findStuckForRepair` narrows to the two stuck states past the window, oldest
+  first, a bounded page; `claimForRepair` takes one row for this replica's tick
+  in a single statement that tests `updated_at` and moves it, writing the
+  attempt count into `meta.repair.attempts` — nested, because the rest of that
+  jsonb belongs to whoever created the row. The claim is the deduplication,
+  which is why this clock needs neither a fleet lease nor the queue: of the
+  replicas that wake at the same instant, exactly one moves the row and the
+  rest read 0 and step on. Correctness therefore does not depend on
+  `careeros.queue.enabled`, on Redis, or on which replica booted first. The
+  page itself comes from `Paging.first`, because `PagingWiringTest` walks every
+  shipped source for a `PageRequest.of(` written outside `Paging.java` and it
+  caught this pass's first draft; the gate held and the call moved.
+
+  Three offers, then a verdict. A document the engine keeps refusing is not a
+  job this clock can rescue, and a row re-offered every ten minutes for a month
+  is the same lie in a different font, so the last word is `markFailed` — the
+  call the request thread already makes, which moves the source and the
+  document together, records a reason an operator can read
+  (`ingestion never landed after 3 offers`), and refuses to overwrite a
+  retirement. The verdict tick claims nothing, so the number a reader finds is
+  the POSTs actually made rather than one more than the engine was ever asked
+  for. A refused offer is not a verdict: an engine that is restarting is a
+  reason to try again, so the row keeps its retryable state and spends one of
+  its three. The request thread fails at once because a reader is waiting on an
+  answer; nobody is waiting on this clock, so it can afford to wait too.
+
+  The window is the whole safety of re-offering, and it is the only tuning knob
+  the pass has. A 300-page PDF that is genuinely still being embedded also
+  reads `indexing`, and two writers on one document can interleave the chunk
+  pipeline's delete-before-insert and leave both sets behind. So the window is
+  a floor on how long real work may take, not a convenience; the offer limit
+  and the per-tick batch are module constants, for the reason the task bus
+  gives for its own — a knob nobody would read is a knob that does nothing.
+
+  The night is measured, not assumed. `IngestionRepairMetrics` carries
+  `careeros_ingestion_repairs_total{outcome=…}` with all four outcomes
+  registered at boot, because a `rate()` over a tag never yet seen answers
+  nothing and a clock that has never been refused would then look healthier
+  than one that is refusing; and
+  `careeros_ingestion_repair_last_tick_timestamp` moves on every tick, empty
+  board included, seeded at the process's own boot rather than at 1970 so a
+  fresh deploy does not page before its first pass.
+  `CareerOSIngestionRepairStale` reads the second: three ticks missed is the
+  alarm, which pages on the clock stopping and never on one upload being stuck.
+
+  One harness detail is worth writing down because it is invisible in a green
+  suite. `@Scheduled(fixedDelay…)` rings its first tick as the context boots,
+  before any test method runs, and this sweep is fleet-wide by design — so
+  `AbstractIntegrationTest` pins both knobs inert, since other classes insert
+  deliberately aged `pending` rows to measure 44.3's window and three context
+  boots in one suite would otherwise have claimed them and finally failed them.
+  `IngestionRepairIT` builds its own service at thirty minutes, clears the
+  board in its fixture, and ages rows at INSERT for the reason 44.3's IT gives:
+  `touch_updated_at` rewrites `updated_at` on every UPDATE, so the statement
+  that backdated a row would silently re-age it.
+
+  Docs: `.env.example` gains the two knobs with the window documented as a
+  floor; the DEPLOYMENT roster carries the gauge under
+  `CareerOSIngestionRepairStale` and excuses the counter by naming all four
+  outcomes; the RUNBOOK gains 「An upload that never stopped ingesting」 with
+  why the state exists, what the clock does, the four-step reading order
+  (logs, the repair's own predicate in `psql`, the outcome counter, the window)
+  and what a failed row does not mean — the bytes and the key survive, so the
+  recovery is the ordinary re-upload or the internal handover by name.
+
+  Measured: the lane ships **20 new tests**. `IngestionRepairServiceTest` is
+  ten of them — the decision table, plus the two shapes a mock can prove and
+  the real code once got wrong: a spent limit claims nothing, and the board is
+  read once rather than re-polled row by row. `IngestionRepairSchedulerTest` is
+  three: a tick that throws is swallowed, a tick that found nothing still moves
+  the marker, and the clock rings on the knob the example declares rather than
+  on a number this file also owns. `IngestionRepairIT` is seven against the
+  schema Flyway built: the claim offers a row and re-arms the window so the
+  next tick reads 0; a second claim of one row is refused by the row itself;
+  `ready`, `retired`, `failed` and a row still inside the window are never
+  touched; the spent limit writes `failed` with its sentence and leaves the
+  count where the verdict was read; a refusal spends one attempt and keeps the
+  state retryable; the page is bounded and oldest-first; and `V43` is in
+  `pg_indexes` with both statuses in its predicate. The full backend suite is
+  **1,607 tests, 0 failures, 0 errors, 0 skipped, BUILD SUCCESS** — twenty
+  above the 1,587 that closed Epic 417, and those twenty are exactly the cases
+  above, with `PagingWiringTest` unchanged at three.
+
+  Four ai-service censuses moved, and each move is a fact about the pass rather
+  than a formality. The ordering census made `findStuckForRepair` end in
+  `d.id`: a batch is a window, and two rows aged in the same instant would
+  otherwise be split differently by two plans, so one tick could offer a row
+  the next never sees. The consumer roster gained
+  `IngestionRepairService.java`, which reads nothing from the engine's answer
+  because the handover is the whole contract — the shape two controllers
+  already carry in that ledger. The shared-noun vocabulary census gained the
+  two classes, which each borrow the word for a sixth clock and state no window
+  beside it; the metrics class stays out because it names its own marker
+  instead. And the lifetime census charged this pass's window to a credential,
+  because the reset token lives for the same number of minutes — so the alarm
+  summary, the roster row, the RUNBOOK's alarm table and the two test comments
+  now read the clock's own ticks where they first read a bare count of minutes,
+  and the IT clears its board by status instead of re-stating the window. Those
+  four files are **54 passed**. The full ai-service suite is **3,033 passed, 8
+  skipped** and the representative gate sweep **602 passed**: the census rows
+  are data inside gates that already counted them, so no Python test joined the
+  run.
+
 - [x] **413** The local analyst reads the attention ledger (2026-11-22).
 
   The ledger records the exact behaviours the brief names — a reader who leaves

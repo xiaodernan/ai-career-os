@@ -80,6 +80,9 @@ RETENTION_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "au
 UNNAMED_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "auth" / "retention" / "UnnamedObjectReclaimer.java"
 STORED_OBJECT_RECLAIMER = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "StoredObjectReclaimer.java"
 RAG_CACHE_INVALIDATOR = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "RagCacheInvalidator.java"
+# Epic 418: the clock that picks up the uploads a commit registered and the engine never
+# started, so a reader's "ingesting" cannot last forever.
+INGESTION_REPAIR_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "knowledge" / "service" / "IngestionRepairMetrics.java"
 # Epic 150: the backend's Prometheus collector over the ai-service's two read-only ops verdicts.
 AI_OPS_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ai" / "service" / "AiOpsMetrics.java"
 RATE_LIMIT_METRICS = BACKEND / "src" / "main" / "java" / "com" / "careeros" / "ratelimit" / "RateLimitMetrics.java"
@@ -105,6 +108,12 @@ NIGHTLY_CARD = ROOT / "frontend" / "src" / "components" / "monitoring" / "nightl
 METRICS = {
     "careeros_ingestion_runs_total": (INGESTION_METRICS, "careeros.ingestion.runs"),
     "careeros_ingestion_last_success_timestamp": (INGESTION_METRICS, "careeros.ingestion.last.success.timestamp"),
+    # Epic 418's repair clock. The marker is alarmed because a clock that stopped is the whole
+    # failure this pass exists to prevent; the four outcomes are excused, because `contended` is
+    # a sibling replica winning the row (the design working) and `refused` is the engine's own
+    # outage, which the health line and the breaker already page on.
+    "careeros_ingestion_repair_last_tick_timestamp": (INGESTION_REPAIR_METRICS, "careeros.ingestion.repair.last.tick.timestamp"),
+    "careeros_ingestion_repairs_total": (INGESTION_REPAIR_METRICS, "careeros.ingestion.repairs"),
     "careeros_ai_cost_usd_24h": (AI_USAGE_METRICS, "careeros.ai.cost.usd.24h"),
     "careeros_ai_tokens_24h": (AI_USAGE_METRICS, "careeros.ai.tokens.24h"),
     "careeros_ai_calls_24h": (AI_USAGE_METRICS, "careeros.ai.calls.24h"),
@@ -161,6 +170,7 @@ METRICS = {
 ALERT_NAMES = frozenset({
     "CareerOSIngestionNightMissed",
     "CareerOSIngestionFailing",
+    "CareerOSIngestionRepairStale",
     "CareerOSNightlyVerificationStale",
     "CareerOSNightlyVerificationFailing",
     "CareerOSAiBudgetBurn",

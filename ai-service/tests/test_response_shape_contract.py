@@ -405,7 +405,12 @@ def test_the_backend_readers_this_gate_walks_are_the_ones_that_exist():
         "AdminCounselController.java", "AiOpsMetrics.java", "ConversationService.java",
         "CopilotStreamService.java",
         "FileIngestService.java",
-        "GrowthService.java", "InboundDecodeService.java", "InboundMailService.java", "InterviewService.java",
+        "GrowthService.java", "InboundDecodeService.java", "InboundMailService.java",
+        # Epic 418's repair pass asks the engine to start and then discards the answer: the handover
+        # is the whole contract (`_flows()` finds no key read to follow), which is the shape
+        # AdminCounselController and TimelineController already carry in this ledger.
+        "IngestionRepairService.java",
+        "InterviewService.java",
         "JobService.java", "MemoryController.java", "QueryEmbeddingService.java",
         "RagCacheInvalidator.java", "ResumeService.java", "ScheduledIngestionService.java",
         # Epic 345: TimelineController threads the whole narrative result out to the
@@ -3255,6 +3260,13 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java": 1,
         "backend/src/main/java/com/careeros/auth/retention/RetentionScheduler.java": 1,
         "backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java": 1,
+        # Epic 418's repair clock calls its own tick marker a heartbeat in the two sentences that
+        # explain what the gauge is for. Neither states an interval beside the word -- the window is
+        # `careeros.ingestion.repair.window-minutes` and the ring is `…interval-ms`, both named
+        # settings -- so these are noun vocabulary for a sixth clock, not a second definer. The
+        # metrics class is absent because it says "tick marker".
+        "backend/src/main/java/com/careeros/knowledge/service/IngestionRepairScheduler.java": 1,
+        "backend/src/main/java/com/careeros/knowledge/service/IngestionRepairService.java": 1,
         "backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java": 2,
         "backend/src/main/java/com/careeros/notification/service/NotificationMailService.java": 1,
         # 35.1's minute clock: a fifth reader of the word, with a gauge of its own because a
