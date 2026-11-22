@@ -8198,6 +8198,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **413** The local analyst reads the attention ledger (2026-11-22).
+
+  The ledger records the exact behaviours the brief names — a reader who leaves
+  almost as soon as they land, a reader who clicks around without settling, a
+  search that came back empty — and the admin page drew them as counters. They
+  were not measures: nothing said "this number is why, and here is the door".
+  Three deterministic rules now cross that line, with no model and no network.
+  A bounce rate at or above 35% on at least 50 landings names the count, the
+  rate and the window, and opens the front door; a total of at least 10 empty
+  searches with a named word opens the board with that word quoted; at least 20
+  aimless clicks against at least 50 landings opens the manual. Every rule is
+  silent under its bar, and the three join the existing falling-tide and cold-
+  cache rules in the same four-measure, most-urgent-first list. The analyst
+  snapshot now carries the same three fields, so a returning model reasons over
+  the ledger the rules already read rather than a reduced copy of it.
+
+  Measured: full frontend suite **233 files / 1,820 tests green** (+4 in
+  `admin-forecast.test.ts`: the bounce bar, the small-sample silence and rate
+  arithmetic, the miss word with its trimming and threshold, and the aimless
+  pair), `tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes,
+  copy census stays 238.
+
 - [x] **412** The calendar leaves as an agenda (2026-11-22).
 
   The grid could leave as a file and as an ICS feed, but neither is something a

@@ -101,11 +101,23 @@ export function detectAnomalies(
   return out.sort((a, b) => Math.abs(b.z) - Math.abs(a.z));
 }
 
+export interface LocalMeasureAttention {
+  days?: number;
+  landings?: number;
+  bounces?: number;
+  bounceRatePct?: number;
+  aimless?: number;
+  /** 372: searches the product could not answer, and the words readers used. */
+  searchMiss?: number;
+  searchMissWords?: Array<{ word?: string; misses?: number }>;
+}
+
 export interface LocalMeasureInput {
   trends?: { series?: Record<string, number[] | undefined>; weeks?: string[] } | null;
   cache?: {
     totals?: { calls?: number; hit_pct?: number | null };
   } | null;
+  attention?: LocalMeasureAttention | null;
 }
 
 export interface LocalMeasure {
@@ -187,6 +199,64 @@ export function deriveLocalMeasures(input: LocalMeasureInput): LocalMeasure[] {
       href: "/monitoring",
       severity: 70,
     });
+  }
+
+  // Epic 413 — the attention ledger already holds the three behaviours the brief
+  // names (an impatient close, a lost click, a search with no answer). They were
+  // read only as counters; these rules turn the ones that cross a bar into
+  // measures with a door, and stay silent under it, because a small sample is
+  // not a finding.
+  const attention = input.attention;
+  if (attention) {
+    const days = isNum(attention.days) && attention.days > 0 ? Math.round(attention.days) : 30;
+    const landings = isNum(attention.landings) ? attention.landings : 0;
+    const bounces = isNum(attention.bounces) ? attention.bounces : 0;
+    const rate = isNum(attention.bounceRatePct)
+      ? attention.bounceRatePct
+      : landings > 0
+        ? (100 * bounces) / landings
+        : 0;
+    if (landings >= 50 && rate >= 35) {
+      out.push({
+        id: "local-attention-bounce",
+        titleKey: "admin.localBounceTitle",
+        bodyKey: "admin.localBounceBody",
+        vars: { days, landings, bounces, rate: Math.round(rate * 10) / 10 },
+        href: "/",
+        severity: 92,
+      });
+    }
+
+    const misses = isNum(attention.searchMiss) ? attention.searchMiss : 0;
+    const word = (attention.searchMissWords ?? []).find(
+      (candidate) =>
+        typeof candidate.word === "string" &&
+        candidate.word.trim() !== "" &&
+        isNum(candidate.misses) &&
+        candidate.misses > 0
+    );
+    if (misses >= 10 && word) {
+      out.push({
+        id: "local-attention-search-miss",
+        titleKey: "admin.localSearchMissTitle",
+        bodyKey: "admin.localSearchMissBody",
+        vars: { days, misses, word: word.word!.trim(), wordMisses: word.misses! },
+        href: "/jobs",
+        severity: 86,
+      });
+    }
+
+    const aimless = isNum(attention.aimless) ? attention.aimless : 0;
+    if (aimless >= 20 && landings >= 50) {
+      out.push({
+        id: "local-attention-aimless",
+        titleKey: "admin.localAimlessTitle",
+        bodyKey: "admin.localAimlessBody",
+        vars: { days, aimless, landings },
+        href: "/playbook",
+        severity: 74,
+      });
+    }
   }
 
   return out.sort((a, b) => b.severity - a.severity).slice(0, 4);

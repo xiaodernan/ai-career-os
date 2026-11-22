@@ -265,6 +265,11 @@ export default function AdminPage() {
       landings: attention.landings, dwells: attention.dwells, acts: attention.acts,
       signedLandings: attention.signedLandings, anonymousLandings: attention.anonymousLandings,
       dwellPerLandingMs: attention.dwellPerLandingMs,
+      // Epic 413: the three behaviours the local rules now read travel with the
+      // snapshot too, so a returning analyst reasons over the same ledger.
+      bounces: attention.bounces, bounceRatePct: attention.bounceRatePct,
+      aimless: attention.aimless,
+      searchMiss: attention.searchMiss, searchMissWords: attention.searchMissWords,
     } : undefined,
     funnel: funnel?.stages ?? undefined,
   }), [stats, cohort, cacheEconomy, trends, attention, funnel]);
@@ -469,7 +474,7 @@ export default function AdminPage() {
     const values = trends?.series?.[series.key] ?? [];
     return { ...series, values, read: forecast(values, 4) };
   });
-  const localMeasures = deriveLocalMeasures({ trends, cache: cacheEconomy });
+  const localMeasures = deriveLocalMeasures({ trends, cache: cacheEconomy, attention });
   const hasLocalForecast = localForecasts.some((item) => item.read !== null);
 
   return (

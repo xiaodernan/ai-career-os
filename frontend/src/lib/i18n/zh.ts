@@ -4698,6 +4698,15 @@ export const zh = {
       localCacheColdTitle: "缓存变冷了",
       localCacheColdBody:
         "最近 {calls} 次模型调用里只有 {hit}% 的输入来自缓存。先确认每次调用都以同一段前缀开头，再检查并行会话是否把前缀切碎。",
+      localBounceTitle: "刚落地就转身的人偏多",
+      localBounceBody:
+        "过去 {days} 天里 {landings} 次落地中有 {bounces} 次几乎立刻离开（{rate}%）。用一个陌生人的眼睛重读第一屏：它说了什么、读完要多久、下一步在哪里。",
+      localSearchMissTitle: "读者在找「{word}」，产品没有答案",
+      localSearchMissBody:
+        "过去 {days} 天里有 {misses} 次搜索落空，其中「{word}」被搜了 {wordMisses} 次。把这个词加进岗位库或知识库，或者让搜索接受它的同义词。",
+      localAimlessTitle: "有人在页面之间来回走，却始终没有停下来",
+      localAimlessBody:
+        "过去 {days} 天里记录了 {aimless} 次没有落点的点击（对照 {landings} 次落地）。让说明书和下一步提示在这些路径上更显眼，让每个空状态都指向一个可做的动作。",
       optimizationsLede:
         "这些不是编出来的建议——它们是这一页自己的数据线在你打开它那一刻跑出来的规则。看不到输入的规则保持沉默；从最难闻的那一条开工。",
       counselFunnelTitle: "交接处正在出血",

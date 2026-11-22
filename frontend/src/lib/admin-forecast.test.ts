@@ -89,4 +89,48 @@ describe("deriveLocalMeasures", () => {
     expect(out[0].id).toBe("local-applications-falling");
     expect(out[out.length - 1].id).toBe("local-cache-cold");
   });
+
+  it("turns a high bounce rate into a measure with the front door behind it", () => {
+    const out = deriveLocalMeasures({
+      attention: { days: 30, landings: 400, bounces: 180, bounceRatePct: 45 },
+    });
+    expect(out[0].id).toBe("local-attention-bounce");
+    expect(out[0].vars).toEqual({ days: 30, landings: 400, bounces: 180, rate: 45 });
+    expect(out[0].href).toBe("/");
+  });
+
+  it("stays silent on a small sample and computes the rate when the server omits it", () => {
+    expect(deriveLocalMeasures({ attention: { landings: 20, bounces: 20 } })).toEqual([]);
+    const out = deriveLocalMeasures({ attention: { landings: 100, bounces: 40 } });
+    expect(out[0].vars).toMatchObject({ rate: 40 });
+  });
+
+  it("names the word readers searched for and could not find", () => {
+    const out = deriveLocalMeasures({
+      attention: {
+        days: 7,
+        landings: 10,
+        bounceRatePct: 0,
+        searchMiss: 12,
+        searchMissWords: [
+          { word: "", misses: 9 },
+          { word: "  rust  ", misses: 5 },
+        ],
+      },
+    });
+    const measure = out.find((m) => m.id === "local-attention-search-miss")!;
+    expect(measure.vars).toMatchObject({ days: 7, misses: 12, word: "rust", wordMisses: 5 });
+    expect(measure.href).toBe("/jobs");
+    expect(
+      deriveLocalMeasures({ attention: { searchMiss: 3, searchMissWords: [{ word: "rust", misses: 3 }] } })
+    ).toEqual([]);
+  });
+
+  it("flags a lost walk once it has both clicks and landings", () => {
+    const out = deriveLocalMeasures({
+      attention: { landings: 200, aimless: 40, bounceRatePct: 0 },
+    });
+    expect(out.map((m) => m.id)).toContain("local-attention-aimless");
+    expect(deriveLocalMeasures({ attention: { landings: 10, aimless: 40 } })).toEqual([]);
+  });
 });

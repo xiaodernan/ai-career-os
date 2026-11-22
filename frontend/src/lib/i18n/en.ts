@@ -5009,6 +5009,15 @@ export const en = {
       localCacheColdTitle: "The cache has gone cold",
       localCacheColdBody:
         "Only {hit}% of the input across the last {calls} model calls came from cache. Confirm every call opens with the same prefix, then check whether parallel sessions are splitting that prefix.",
+      localBounceTitle: "More visitors leave than stay",
+      localBounceBody:
+        "In the last {days} days, {bounces} of {landings} landings left almost immediately ({rate}%). Read the first screen as a stranger: what it says, how long it takes to read, and where the next step is.",
+      localSearchMissTitle: "Readers search for \"{word}\" and there is no answer",
+      localSearchMissBody:
+        "Searches came back empty {misses} times in the last {days} days; \"{word}\" alone was searched {wordMisses} times. Add it to the job corpus or the knowledge base, or let search accept its synonyms.",
+      localAimlessTitle: "Readers wander without settling",
+      localAimlessBody:
+        "The ledger recorded {aimless} clicks with no settled read in the last {days} days, against {landings} landings. Put the manual and the next-step hint closer to those paths, and give every empty state one action.",
       optimizationsLede:
         "These aren't invented ideas — they're rules reading this page's own wires at the moment you opened it. A rule that cannot see its input stays silent; pick the top item that smells hardest and start there.",
       counselFunnelTitle: "The hand-off is bleeding",
