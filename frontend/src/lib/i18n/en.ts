@@ -3435,6 +3435,23 @@ export const en = {
     },
     // Applications
     applications: {
+      // 376: the shape of one reader's search. A description, never a score.
+      portraitEyebrow: "The shape of your search",
+      portraitSingleTitle: "One application so far",
+      portraitSingleBody:
+        "A fact, not a pattern yet. The shape appears once there are a few to read.",
+      portraitBurstTitle: "A burst",
+      portraitBurstBody:
+        "{count} applications over {span} days, {busiest} of them inside one week from {from}. Concentrated, not scattered.",
+      portraitSteadyTitle: "A steady search",
+      portraitSteadyBody:
+        "{count} applications spread over {span} days, with no single week carrying most of them.",
+      portraitLongTailTitle: "A long tail",
+      portraitLongTailBody:
+        "{count} applications over {span} days — the slow, patient shape. Nothing here is better or worse than a burst.",
+      portraitRestingTitle: "Resting",
+      portraitRestingBody:
+        "{count} applications, the last one a while ago. The shape is history rather than now — which is a fine place to be.",
       title: "Applications",
       description:
         "Every role in flight. Drag a card to move it through the pipeline, or open one to add notes and a reminder — the dashboard counts follow the same data.",

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApplication, useApplications } from "@/lib/hooks/resources";
 import { useReorderApplication } from "@/lib/hooks/actions";
+import { SearchPortraitCard } from "@/components/applications/search-portrait-card";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Application, ApplicationStatus } from "@/lib/api/types";
@@ -101,6 +102,15 @@ export default function ApplicationsPage() {
   }, [applications.data, state.page, lastPage, setUrl]);
 
   return (
+    <div className="space-y-4">
+      {/* 376: the shape of this reader's search, read off the board they are looking at. */}
+      <SearchPortraitCard
+        input={{
+          applications: (applications.data?.items ?? []).map((row) => ({
+            at: row.appliedAt ?? row.createdAt,
+          })),
+        }}
+      />
     <ModuleView
       title={t("applications.title")}
       description={t("applications.description")}
@@ -219,5 +229,6 @@ export default function ApplicationsPage() {
         onOpenChange={handleDialogOpenChange}
       />
     </ModuleView>
+    </div>
   );
 }

@@ -3173,6 +3173,20 @@ export const zh = {
     },
     // Applications
     applications: {
+      // 376: 一场寻职的形状。是描述，从来不是分数。
+      portraitEyebrow: "你这场寻职的形状",
+      portraitSingleTitle: "目前只有一个投递",
+      portraitSingleBody: "这是一个事实，还不构成形状。等有了几个，形状才会显出来。",
+      portraitBurstTitle: "一阵爆发",
+      portraitBurstBody:
+        "{span} 天里 {count} 个投递，其中 {busiest} 个集中在 {from} 起的那一周。集中，而不是散开。",
+      portraitSteadyTitle: "一段匀速的寻职",
+      portraitSteadyBody: "{count} 个投递铺在 {span} 天里，没有任何单独一周承担大半。",
+      portraitLongTailTitle: "一条长尾",
+      portraitLongTailBody:
+        "{span} 天里 {count} 个投递——慢而耐心的形状。这和爆发比，没有好坏之分。",
+      portraitRestingTitle: "正在休息",
+      portraitRestingBody: "{count} 个投递，最后一个已经过了一段时间。这形状是历史而不是当下——待在这里没什么不好。",
       title: "申请",
       description:
         "所有在飞的职位。拖动卡片就能在流水线里移动它，或打开一个加上备注和提醒——仪表盘的计数读的是同一份数据。",
