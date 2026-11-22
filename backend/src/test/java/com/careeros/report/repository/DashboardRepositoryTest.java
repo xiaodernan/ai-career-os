@@ -85,6 +85,39 @@ class DashboardRepositoryTest {
     }
 
     @Test
+    void mapsTheSkillsArrayTheDriverActuallyHandsBack() {
+        // `jobs.skills` is a Postgres `text[]`, so the driver answers a `String[]`, not a
+        // `String`. The inline `(String) row[8]` cast that used to sit here threw
+        // ClassCastException on every dashboard read -- the whole aggregate answered 500
+        // because of one column's shape.
+        Object[] row = new Object[]{jobId, "Backend Eng", "Acme", "Remote", "remote",
+                Timestamp.from(Instant.parse("2026-01-02T03:04:05Z")), 0.75, matchId,
+                new String[]{"Java", "Kafka", "Spring Boot"}};
+        List<Object[]> data = new ArrayList<>();
+        data.add(row);
+        rows(data);
+
+        RecommendedJob job = repo.recommendedJobs(userId, 8).get(0);
+        assertThat(job.skills()).isEqualTo("Java, Kafka, Spring Boot");
+    }
+
+    @Test
+    void keepsAScalarSkillsColumnWorkingForADeploymentWhoseColumnIsScalar() {
+        // Both spellings are handled: the shape is the column's, and a deployment whose
+        // column is a plain string must not start failing now that the array is handled.
+        Object[] row = new Object[]{jobId, "Backend Eng", "Acme", "Remote", "remote",
+                Timestamp.from(Instant.parse("2026-01-02T03:04:05Z")), null, null,
+                "Java, Kafka"};
+        List<Object[]> data = new ArrayList<>();
+        data.add(row);
+        rows(data);
+
+        RecommendedJob job = repo.recommendedJobs(userId, 8).get(0);
+        assertThat(job.skills()).isEqualTo("Java, Kafka");
+        assertThat(job.matchOverall()).isNull();
+    }
+
+    @Test
     void bindsExactlyTheReferencedParameters() {
         rows(List.of());
         repo.recommendedJobs(userId, 8);

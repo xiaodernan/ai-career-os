@@ -20,6 +20,33 @@ public class DashboardRepository {
     }
 
     /**
+     * `jobs.skills` is a Postgres `text[]`, so the driver hands back a `String[]` rather
+     * than a `String`.
+     *
+     * <p>The cast that used to sit inline (`(String) row[8]`) threw
+     * `ClassCastException` on every dashboard read -- a `String[]` cannot be cast to
+     * `String` -- which made the whole aggregate answer 500 rather than the one row.
+     * The shape is the column's, not the driver's whim, and the two spellings are both
+     * handled: an array is joined with commas the way the frontend's own tag list reads,
+     * and a plain string passes through untouched for a deployment whose column is scalar.
+     */
+    private static String skills(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof String[] list) {
+            return String.join(", ", list);
+        }
+        if (raw instanceof Object[] list) {
+            return java.util.Arrays.stream(list)
+                    .map(String::valueOf)
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse(null);
+        }
+        return String.valueOf(raw);
+    }
+
+    /**
      * Open jobs the user has not applied to, newest first, with their latest match score attached.
      * Single query (company join + lateral match) so there is no per-row N+1.
      */
@@ -46,7 +73,7 @@ public class DashboardRepository {
                         (UUID) row[0], (String) row[1], (String) row[2], (String) row[3],
                         (String) row[4], Times.offset(row[5]),
                         row[6] == null ? null : ((Number) row[6]).floatValue(),
-                        (UUID) row[7], (String) row[8]))
+                        (UUID) row[7], skills(row[8])))
                 .toList();
     }
 
