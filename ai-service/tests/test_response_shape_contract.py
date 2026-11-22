@@ -1150,8 +1150,15 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # RagAnswerRequest (the `{query, kinds?, documentIds?, topK?, contextSummary?}` body the
     # knowledge controller binds) makes it 253. Epic 354's ChronicleRequest (the
     # `{events, milestones, locale}` body the timeline controller binds) makes it 254.
-    assert len(declared) == 254, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 254 measured"
+    # 256 with the two records that landed beside their own gates and outran this one:
+    # `AdminRhythmService.Grid` (the 7x24 landing rhythm's cell matrix) and `CalendarFeed.Capsule`
+    # (Epic 387's all-day opening row). Neither pass recounted, so the pin was already red on
+    # HEAD when Epic 415 came looking; this sentence is the recount, not a relaxation.
+    # 255 with Epic 415: `CachedReport` left with the two-second burst cache it existed for, and
+    # the coalescing replacement is a `ProbeSet` class (a latch and a mutable answer is not a
+    # record), so the census loses the pair it gained at 228 rather than renaming it.
+    assert len(declared) == 255, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 255 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3218,78 +3225,60 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         f"{per_file}: the docs' own vocabulary is censused, so this pass is not reporting on an "
         "empty set -- and a second file picking up the word is a signal the ledger has to grow")
 
-    assert [(row["file"], row["line"]) for row in spans["vocabulary"]] == [
-        # Three ai-service worker-liveness nouns (Epics 140/144/146): the workqueue verdict's
-        # consumer tick, the delay-set black-hole warning and the reclaimed-count repair borrow
-        # "heartbeat" for a *different* clock than this test's 15s SSE keep-alive. Each states
-        # no interval beside the word (its window is `stale_s`, a named setting), so they are
-        # noun vocabulary, not a second definer. They went uncounted while this was a full-suite
-        # gate; Epic 147's census pass brought them into the ledger rather than renaming honest
-        # comments to dodge a count.
-        # 95 rather than 87 since Epic 340 added the llm_input_char_budget setting
-        # above this comment; the sentence itself did not change.
-        ("ai-service/app/core/config.py", 95),
-        ("ai-service/app/core/workqueue.py", 569),
-        ("ai-service/app/ops/embed_workers.py", 314),
-        # Epic 279's attention-pulse rows: the admin trends javadoc names the
-        # attention ledger's own heartbeat, the SERIES comment beside the
-        # constant filter states it again, and the admin page's trend-series
-        # comment names the pair weekly. All three state no interval --
-        # each is noun vocabulary for the attention clock, not a keep-alive.
-        ("backend/src/main/java/com/careeros/admin/AdminTrendsService.java", 11),
-        ("backend/src/main/java/com/careeros/admin/AdminTrendsService.java", 33),
-        # The other clocks that share the word -- 22.3's signal mail, 22.4's Monday letter and
-        # 28.2's retention sweep each call their pass marker a heartbeat, so their comments name
-        # the word and state no interval. They are not run-stream claims, but the noun census is
-        # over the word, and listing them keeps its population counted rather than pruned.
-        ("backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java", 13),
-        # Epic 168's producer scheduler: its class doc explains that a stopped Monday clock
-        # is the sweep's heartbeat alarm to catch, and the span's first line names it.
-        ("backend/src/main/java/com/careeros/auth/retention/RetentionScheduler.java", 14),
-        # 44.3's purge added an import above this comment block, so the span now starts at 20
-        # rather than 18; Epic 168's nightly() removal returned it to 17. The sentence itself
-        # did not change.
-        ("backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java", 17),
-        ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 11),
-        ("backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java", 82),
-        ("backend/src/main/java/com/careeros/notification/service/NotificationMailService.java", 22),
+    # A file set and a per-file count rather than a line ledger -- the shape the doc census
+    # above already reads in, adopted here because this row was re-pinned five times
+    # (141 -> 152 -> 157 -> 160 -> 164 -> 175) each time an import grew above a comment whose
+    # sentence never changed. The population is still measured: a file that stops naming the
+    # word drops its count, a new file naming it joins the ledger, and an extra mention inside a
+    # listed file is a red. What no longer reds is an unrelated edit two hundred lines away.
+    # The three ai-service worker-liveness nouns (Epics 140/144/146) -- the workqueue verdict's
+    # consumer tick, the delay-set black-hole warning and the reclaimed-count repair -- borrow
+    # "heartbeat" for a *different* clock than this test's 15s SSE keep-alive. Each states no
+    # interval beside the word (its window is `stale_s`, a named setting), so they are noun
+    # vocabulary, not a second definer. They went uncounted while this was a full-suite gate;
+    # Epic 147's census pass brought them into the ledger rather than renaming honest comments
+    # to dodge a count.
+    vocab: dict[str, int] = {}
+    for row in spans["vocabulary"]:
+        vocab[row["file"]] = vocab.get(row["file"], 0) + 1
+    assert vocab == {
+        "ai-service/app/core/config.py": 1,
+        "ai-service/app/core/workqueue.py": 1,
+        "ai-service/app/ops/embed_workers.py": 1,
+        # Epic 279's attention-pulse rows: the trends javadoc names the attention ledger's own
+        # heartbeat and the SERIES comment beside the constant filter states it again. Neither
+        # states an interval -- noun vocabulary for the attention clock, not a keep-alive.
+        "backend/src/main/java/com/careeros/admin/AdminTrendsService.java": 2,
+        # The other clocks that share the word: 22.3's signal mail, 22.4's Monday letter and
+        # 28.2's retention sweep each call their pass marker a heartbeat, and Epic 168's
+        # scheduler doc says a stopped Monday clock is that sweep's alarm to catch.
+        "backend/src/main/java/com/careeros/auth/retention/RetentionMetrics.java": 1,
+        "backend/src/main/java/com/careeros/auth/retention/RetentionScheduler.java": 1,
+        "backend/src/main/java/com/careeros/auth/retention/RetentionSweeper.java": 1,
+        "backend/src/main/java/com/careeros/notification/service/NotificationDeliveryMetrics.java": 2,
+        "backend/src/main/java/com/careeros/notification/service/NotificationMailService.java": 1,
         # 35.1's minute clock: a fifth reader of the word, with a gauge of its own because a
         # tick that stops is not the morning sweep's fault and its alert has to say so.
-        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 17),
-        ("backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java", 96),
-        # 33.3's morning ring explains why it adds no second marker: same pass, same clock. 35.1
-        # extended the class doc and the due-tick recorder, so the meter now states the word twice.
-        ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 13),
-        ("backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java", 74),
-        # Epic 169 moved the Monday clock into the fleet queue: the span moved to the handler,
-        # whose class doc carries the Monday promise; the scheduler kept its own span with the
-        # same word inside. One clock, two files, two mentions. The lease helper (Epic 169) also
-        # carries the word in its class doc: it is the scheduler's sibling, and its span encloses
-        # "the heartbeat the verification section's alarm answers".
-        ("backend/src/main/java/com/careeros/queue/RedisDayLease.java", 8),
-        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestComposeHandler.java", 12),
-        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 11),
-        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java", 82),
-        ("backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java", 14),
-        # 141 rather than 140 since Epic 319's cache-economy tile grew the import block above it
-        # by one line; the sentence itself did not change.
-        # 152 rather than 141 since Epic 342's AdminMeasure interface + Badge import grew
-        # the block above it by eleven lines; the sentence itself did not change.
-        # 157 rather than 152 since Epic 353's bounce tiles + Epic 354's chronicle trend
-        # grew the blocks above it by five lines; the sentence itself did not change.
-        # 160 rather than 157 since Epic 372's search-miss count and its words list grew
-        # the AdminAttention interface above it by three lines; the sentence did not change.
-        # 164 rather than 160 since Epic 379 added the local-forecast imports and the
-        # three-series constant above it; the sentence itself did not change.
-        ("frontend/src/app/admin/admin-page.tsx", 164),
+        "backend/src/main/java/com/careeros/notification/service/ReminderScheduler.java": 2,
+        # 33.3's morning ring explains why it adds no second marker: same pass, same clock.
+        # 35.1 extended the class doc and the due-tick recorder, so the meter states it twice.
+        "backend/src/main/java/com/careeros/push/service/PushDeliveryMetrics.java": 2,
+        # Epic 169 moved the Monday clock into the fleet queue: one clock, two files, two
+        # mentions, with the lease helper carrying the word as the scheduler's sibling.
+        "backend/src/main/java/com/careeros/queue/RedisDayLease.java": 1,
+        "backend/src/main/java/com/careeros/report/service/WeeklyDigestComposeHandler.java": 1,
+        "backend/src/main/java/com/careeros/report/service/WeeklyDigestDeliveryMetrics.java": 2,
+        "backend/src/main/java/com/careeros/report/service/WeeklyDigestScheduler.java": 1,
+        # The attention tiles (279) and the local analyst's rows (413) both live in this file;
+        # the sentence this row existed to pin is unchanged, so its line is no longer pinned.
+        "frontend/src/app/admin/admin-page.tsx": 1,
         # The run stream's own two, the population this ledger was written for.
-        # 21 rather than 17 since 7e2f334's re-export block moved this comment block
-        # down; the sentence itself did not change.
-        ("frontend/src/components/ai/task-stream.tsx", 21),
-        ("frontend/src/lib/sse/use-sse.ts", 9),
-    ], ("spans that name the keep-alive and state no interval: the shape an edited claim leaves behind, "
-        "listed so a claim cannot escape the census above by losing its number -- the fifteen Java rows "
-        "are the other clocks that share the word, kept here so a sixteenth clock is a red, not a silent join")
+        "frontend/src/components/ai/task-stream.tsx": 1,
+        "frontend/src/lib/sse/use-sse.ts": 1,
+    }, ("spans that name the keep-alive and state no interval: the shape an edited claim leaves "
+        "behind, counted so a claim cannot escape the census above by losing its number -- the "
+        "twelve Java files behind those seventeen mentions are the other clocks that share the "
+        "word, kept here so a thirteenth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
         # 86.1's door walk grew `consume` by the retry loop, so the parser's trailing
         # comment moved 136 -> 155; the sentence itself did not change.

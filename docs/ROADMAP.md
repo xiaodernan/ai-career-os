@@ -8220,6 +8220,53 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   excluded here and fixed in Epic 415), frontend suite untouched at **1,820
   green**, `tsc --noEmit` and `npm run lint` clean.
 
+- [x] **415** The readiness line answers with what it just asked, not with what it
+  asked two seconds ago (2026-11-22).
+
+  Three ledger rows called `HealthIT` red and blamed the Docker environment. The
+  environment was fine; the readiness route was not. Epic 314 had given `/health`
+  a two-second burst cache so that a hundred-way spike would not open four hundred
+  probes — and a cache answers with the last probe's verdict rather than with the
+  deployment's state. The first case warmed it, the second flipped the engine to
+  down, and 41 ms later was told `ok` by a probe set that had run before the engine
+  went down. On the one route whose entire purpose is naming which half is down, a
+  two-second window is not protection: it is a truth claim that can be false, and
+  it had already spent three rows blaming a container for a code path.
+
+  The protection the spike actually needs is kept and the staleness is given up.
+  A caller that arrives while a probe set is in flight joins it and reads that same
+  answer; a caller that arrives after it landed asks again. Concurrency — which is
+  the shape of the stampede — pays for one set of probes; a sequence of separate
+  calls never inherits an earlier verdict. Every caller still gets its own copy of
+  the map, a degraded set is shared with the burst rather than hidden from it, a
+  joiner's wait is bounded by the same budget as the probes and its interrupt is
+  restored instead of swallowed, and a leader that outlives a joiner's bound leaves
+  that joiner with its own bounded probe set: the route's worst case is two bounds
+  and its answer is always a live one. The cache's `CachedReport` record left with
+  the cache it existed for, so the response-shape census loses the pair it gained
+  at 228 rather than renaming it (255).
+
+  Measured: `HealthServiceBurstTest` **6/6** (one net new case: the truthfulness
+  half — ok, then the engine down, then the next call says degraded — which the
+  cache made impossible and no test asserted), `HealthServiceTest` **10/10**,
+  `HealthIT` **2/2** with its two assertions unchanged, and for the first time
+  since 314 the whole backend suite runs with the readiness route inside it:
+  **1,578 of 1,578 green, 0 skipped** (was 1,575 reachable with `HealthIT`
+  excluded, which is the shape the mis-attribution left behind). The offline gate
+  sweep is **602 passed** and `test_response_shape_contract.py` is **32/32**. One
+  red during this epic's sweep was the runner, not the code: this machine's proxy
+  settings put `[::1]` in `NO_PROXY`, which `httpx` cannot parse into a port, so
+  `AsyncClient` raises at construction in any gate that builds a client — the
+  sweep has to run with `NO_PROXY` unset. RUNBOOK now carries that trap beside the
+  compose-side `NO_PROXY` story from 286, because a gate that reds on the
+  developer's shell reads exactly like a gate that reds on the code. The full
+  ai-service suite ran alongside it: **3,022 passed, 8 skipped, 11 failed** — and
+  all eleven are frontend census rows the calendar/timeline/offers wave outran
+  (a 41st page file, `useKnowledgeNotes` gaining calendar and timeline callers,
+  an offers screen that still does its own page arithmetic where `lastPageOf`
+  is the one home, a calendar test that writes a bare `30` beside a token name),
+  not one sentence of this epic; they are opened as 416.
+
 - [x] **413** The local analyst reads the attention ledger (2026-11-22).
 
   The ledger records the exact behaviours the brief names — a reader who leaves

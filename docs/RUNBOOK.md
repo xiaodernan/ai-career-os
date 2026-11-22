@@ -256,6 +256,23 @@ interpolated into `${NO_PROXY:-…}` and deleted the fleet bypass. The compose
 file now pins the fleet bypass literally; an override wants both proxy knobs
 and never the `NO_PROXY` one.
 
+## The local gate sweep reds in `AsyncClient` construction, on a machine that is otherwise fine
+
+**What the alert looks like.** `bash scripts/verify_gates.sh` answers one failure,
+in whichever gate builds an HTTP client, with
+`httpx.InvalidURL: Invalid port: ':1]'` from `_urlparse.normalize_port` -- not a
+timeout, not a refusal, and the same gate passes when run by itself.
+
+**What to read.** `python -c "import os; print(os.environ.get('NO_PROXY'))"`. On a
+machine routing through a local proxy (Clash Verge and friends) that value ends in
+`[::1],::1`, and `httpx` parses every entry as a URL: the bracketed form leaves `:1]`
+where a port belongs, so constructing any client raises before a request is made. The
+fleet's own bypass is a separate problem, documented above; this one is only about the
+shell a developer runs gates from. Run the sweep with the variable cleared --
+`env -u NO_PROXY -u no_proxy bash scripts/verify_gates.sh` -- the same way the
+ai-service suites are run. Nothing in the repo works around it, because a proxy
+variable that breaks the client is worth seeing rather than hiding.
+
 ## The nightly dies with 'too many clients already'
 
 **What the alert looks like.** The IT step reds with

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
@@ -41,47 +42,34 @@ public class HealthService {
     /** The whole report's budget, not each probe's: the four run concurrently. */
     static final Duration DEFAULT_PROBE_TIMEOUT = Duration.ofSeconds(2);
 
-    /** How long the deep report may be served from the burst cache. A probe hit at
-     * the head of a 100-way burst pays for all of them; two seconds of staleness is
-     * the price of a readiness check that does not collapse the pool at line rate.
-     */
-    static final Duration DEFAULT_REPORT_CACHE_TTL = Duration.ofSeconds(2);
-
     private final DataSource dataSource;
     private final RedisTemplate<String, ?> redisTemplate;
     private final Optional<StorageService> storage;
     private final AiServiceClient aiService;
     private final Duration probeTimeout;
-    private final Duration cacheTtl;
     /** The image's own commit: `APP_BUILD_SHA` env (baked by the Dockerfile), else "dev". */
     private final String buildSha;
     private final long startedAtNanos = System.nanoTime();
-    private volatile CachedReport cache;
+    /** Guards {@link #inFlight} alone, and is never held across a probe. */
+    private final Object probeGate = new Object();
+    /** The probe set running right now, or null between bursts. */
+    private ProbeSet inFlight;
 
     @Autowired
     public HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
                          Optional<StorageService> storage, AiServiceClient aiService) {
-        this(dataSource, redisTemplate, storage, aiService, DEFAULT_PROBE_TIMEOUT,
-                DEFAULT_REPORT_CACHE_TTL);
+        this(dataSource, redisTemplate, storage, aiService, DEFAULT_PROBE_TIMEOUT);
     }
 
     /** The test seam: a shorter bound than the shipped one, for a probe that never answers. */
     HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
                   Optional<StorageService> storage, AiServiceClient aiService,
                   Duration probeTimeout) {
-        this(dataSource, redisTemplate, storage, aiService, probeTimeout, Duration.ZERO);
-    }
-
-    /** The other test seam: the deep report's burst cache, shorter than production's. */
-    HealthService(DataSource dataSource, RedisTemplate<String, ?> redisTemplate,
-                  Optional<StorageService> storage, AiServiceClient aiService,
-                  Duration probeTimeout, Duration cacheTtl) {
         this.dataSource = dataSource;
         this.redisTemplate = redisTemplate;
         this.storage = storage;
         this.aiService = aiService;
         this.probeTimeout = probeTimeout;
-        this.cacheTtl = cacheTtl;
         String env = System.getenv("APP_BUILD_SHA");
         this.buildSha = env != null && !env.isBlank() ? env.trim() : "dev";
     }
@@ -132,26 +120,68 @@ public class HealthService {
 
     /**
      * The readiness line, served for bursts of callers. The probes are the same four,
-     * unchanged; what changes is that a 100-way concurrency spike pays for one report and
-     * shares it, instead of stampeding the database for one hundred. The cache is
-     * monotonic-clocked, never longer than {@link #DEFAULT_REPORT_CACHE_TTL}, and never
-     * consulted to hide a failure: a degraded report is cached on exactly the same
-     * terms as an ok one, because hiding half fails costs more than showing one.
+     * unchanged; what changes is that a 100-way concurrency spike pays for one set of them
+     * instead of one hundred: a caller that arrives while a probe set is running joins it
+     * and reads the same answer, and one that arrives after it finished asks again.
+     *
+     * <p>This replaced a two-second cache (314), and the reason is a truth claim. A cache
+     * answers with the last probe's verdict rather than the deployment's state, so the engine
+     * going down stayed invisible for two seconds on the one route whose entire purpose is
+     * naming which half is down -- which is what the readiness IT had been asserting, and
+     * what three ledger rows then blamed on the Docker environment instead. Coalescing keeps
+     * the protection the burst actually needs (the stampede is concurrent, not sequential)
+     * and gives up no freshness to it: no caller is ever handed a verdict a probe contradicts.
      */
     public Map<String, Object> reportCached() {
-        long now = System.nanoTime();
-        CachedReport hit = cache;
-        if (hit != null && hit.expiresAtNanos > now) {
-            return new LinkedHashMap<>(hit.report);
-        }
-        synchronized (this) {
-            hit = cache;
-            if (hit != null && hit.expiresAtNanos > System.nanoTime()) {
-                return new LinkedHashMap<>(hit.report);
+        ProbeSet joined;
+        boolean leads;
+        synchronized (probeGate) {
+            leads = inFlight == null;
+            if (leads) {
+                inFlight = joined = new ProbeSet();
+            } else {
+                joined = inFlight;
             }
+        }
+        if (leads) {
             Map<String, Object> fresh = report();
-            cache = new CachedReport(fresh, System.nanoTime() + cacheTtl.toNanos());
+            synchronized (probeGate) {
+                if (inFlight == joined) {
+                    inFlight = null;
+                }
+            }
+            joined.complete(fresh);
             return new LinkedHashMap<>(fresh);
+        }
+        Map<String, Object> shared = joined.await(probeTimeout);
+        // The leader outlived the whole budget: a caller waiting on the readiness line gets its
+        // own bounded probe rather than a hang. `report()` cannot exceed that budget itself, so
+        // the route's worst case is two bounds and its answer is always a live one.
+        return new LinkedHashMap<>(shared == null ? report() : shared);
+    }
+
+    /**
+     * One probe set in flight: the leader computes, every joiner waits on the same answer.
+     * The write before {@link #complete} is what the latch publishes to a joiner.
+     */
+    private static final class ProbeSet {
+
+        private final CountDownLatch done = new CountDownLatch(1);
+        private Map<String, Object> report;
+
+        void complete(Map<String, Object> fresh) {
+            report = fresh;
+            done.countDown();
+        }
+
+        /** The leader's answer, or null if it never landed inside the caller's own budget. */
+        Map<String, Object> await(Duration budget) {
+            try {
+                return done.await(budget.toMillis(), TimeUnit.MILLISECONDS) ? report : null;
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
         }
     }
 
@@ -168,9 +198,6 @@ public class HealthService {
         body.put("uptimeMs", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAtNanos));
         body.put("buildSha", buildSha);
         return body;
-    }
-
-    private record CachedReport(Map<String, Object> report, long expiresAtNanos) {
     }
 
     private static <T> FutureTask<T> startProbe(String name, Callable<T> probe) {

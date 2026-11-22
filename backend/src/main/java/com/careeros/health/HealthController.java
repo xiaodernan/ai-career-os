@@ -18,8 +18,8 @@ public class HealthController {
     /**
      * The readiness report. Always 200, whatever it says -- the body is the message,
      * and a probe that refuses to answer cannot tell a monitor which half is missing.
-     * The report is burst-cached for two seconds: a dashboard that fans out to every
-     * replica at once reads one probe's answer, not one hundred's.
+     * A fan-out of concurrent callers shares one set of probes (Epic 415) and every
+     * caller reads a verdict that was live when it asked, never the last one's.
      */
     @GetMapping
     public Map<String, Object> health() {
