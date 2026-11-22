@@ -4045,10 +4045,10 @@ export const zh = {
         "/resumes 简历的结构化版本；/knowledge AI 读的知识库；/interviews 自适应模拟面试；/copilot 全知代理副驾；/studio 覆盖 JD 本身。",
       surfacesTrack: "跟申请",
       surfacesTrackBody:
-        "/applications 申请看板；/letters 你留下的每封信；/notifications 收件箱；/replies 招聘方回来的信；/timeline 一张清单列完整个闭环。",
+        "/applications 申请看板；/calendar 把提醒、跟进和封存的信摊在一个月里；/letters 你留下的每封信；/notifications 收件箱；/replies 招聘方回来的信；/timeline 一张清单列完整个闭环。",
       surfacesDecide: "做决定",
       surfacesDecideBody:
-        "/offers 货架——数字、还价、对比；然后 decide：拿哪份？入职包、第一季度、终章仪式——球在你这边。",
+        "/offers 货架——数字、还价、对比；然后做决定：拿哪份？入职包、第一季度、终章仪式——球在你这边。",
       surfacesSee: "看系统",
       surfacesSeeBody:
         "/analysis 漏斗、比例、节奏图；/monitoring 引擎健康度；/activity 智能体轨迹；/data 每一个字节——能导出、能脱敏。",

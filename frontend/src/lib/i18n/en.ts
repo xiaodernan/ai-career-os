@@ -4351,7 +4351,7 @@ export const en = {
         "/resumes — your evidence in structured form; /knowledge — the base the AI reads; /interviews — adaptive rehearsal with scoring; /copilot — the agent that knows all of it; /studio covers the JD itself.",
       surfacesTrack: "Track the work",
       surfacesTrackBody:
-        "/applications — the kanban; /letters — every letter you kept; /notifications — the inbox; /replies — letters back to you from recruiters; /timeline — everything in one ordered read.",
+        "/applications — the kanban; /calendar — the month of reminders, follow-ups and sealed letters; /letters — every letter you kept; /notifications — the inbox; /replies — letters back to you from recruiters; /timeline — everything in one ordered read.",
       surfacesDecide: "Decide",
       surfacesDecideBody:
         "/offers — the shelf with the numbers, the counter and the comparison; then decide: which keeps? The packet (day-one), the quarter, the closing ceremony — your move to make.",
