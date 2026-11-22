@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T14:59:46.423123Z",
+  "generated_at": "2026-11-22T15:05:40.486591Z",
   "branch": "main",
-  "head": "9f3421c",
-  "total_commits": 1874,
-  "milestone": "Epic 412",
-  "milestone_full": "the ledger of done epics (through 565 items), closed at Epic 412 — The calendar leaves as an agenda (2026-11-22)",
+  "head": "faf6e32",
+  "total_commits": 1876,
+  "milestone": "Epic 413",
+  "milestone_full": "the ledger of done epics (through 566 items), closed at Epic 413 — The local analyst reads the attention ledger (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1816+",
+  "tests": "1820+",
   "test_files": 233,
-  "work_items": 565,
-  "epics": 278,
+  "work_items": 566,
+  "epics": 279,
   "feature_surface": [
+    "Epic 413 — The local analyst reads the attention ledger (2026-11-22)",
     "Epic 412 — The calendar leaves as an agenda (2026-11-22)",
     "Epic 411 — The month's rhythm counts its weekends (2026-11-22)",
     "Epic 410 — The month can say its own rhythm (2026-11-22)",
     "Epic 409 — The find box answers to the slash (2026-11-22)",
-    "Epic 408 — A long calendar can be searched (2026-11-22)",
-    "Epic 407 — The company page remembers what the reader did with them (2026-11-22)"
+    "Epic 408 — A long calendar can be searched (2026-11-22)"
   ]
 }
