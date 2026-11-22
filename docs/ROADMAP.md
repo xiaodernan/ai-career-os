@@ -8198,6 +8198,28 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **414** The register door stores a name a screen can draw (2026-11-22).
+
+  The adversarial fuzz of the auth door (same day) answered `201 Created` to a
+  display name carrying a bell character, a line break, a zero-width space and
+  a right-to-left override. None of those is a crash, and React escapes what it
+  renders — but each is a way to distort the name in a header, a nav or an
+  export, which is exactly the class of visual damage the brief asks to fix.
+  Registration and the profile update now pass the name through one fold:
+  NFKC (so full-width and mathematical letters become readable letters, not
+  pictures), no C0/C1 controls, no bidi marks or isolates and no zero-width
+  space; whitespace runs collapse to one space; the result is stripped, must
+  contain something readable, and is held to 120 code points after
+  normalization (a ligature-heavy input can expand). Emoji survive, including
+  ZWJ sequences, because those are symbols rather than controls. A name that is
+  only invisible characters answers `VALIDATION_FAILED` instead of being stored
+  blank.
+
+  Measured: backend **1,575 of 1,575 reachable tests green** (8 new: six folds
+  in `DisplayNamesTest`, one register case and one profile case; `HealthIT` is
+  excluded here and fixed in Epic 415), frontend suite untouched at **1,820
+  green**, `tsc --noEmit` and `npm run lint` clean.
+
 - [x] **413** The local analyst reads the attention ledger (2026-11-22).
 
   The ledger records the exact behaviours the brief names — a reader who leaves

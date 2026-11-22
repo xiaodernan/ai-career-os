@@ -93,7 +93,7 @@ screen. A malformed inbound value is replaced, never refused.
 
 | Method | Path | Body / notes |
 |---|---|---|
-| POST | `/auth/register` | `{email, password, displayName}` → tokens + user |
+| POST | `/auth/register` | `{email, password, displayName}` → tokens + user. `displayName` is folded before it is stored (Epic 414): NFKC, controls and bidi/zero-width marks removed, whitespace runs collapsed, at most 120 code points; a name with nothing readable left answers **400** `VALIDATION_FAILED` rather than being stored blank |
 | POST | `/auth/login` | `{email, password, code?}` → tokens. The optional `code` is the account's second factor: six digits from the authenticator app, or one of the printed recovery codes. An enabled factor answers a missing code with **401** `MFA_REQUIRED` — the browser's cue to show the field — and a wrong one with **401** `MFA_INVALID`, but only after the password matched, so a stranger learns nothing about which accounts carry a factor. A verified code moves the account's spent-step mark forward (a replayed code is refused) or burns the printed code, in the login's own transaction. The route is metered per client IP (`RATE_LIMITED`) |
 | POST | `/auth/refresh` | `{refreshToken}` → new token pair (rotates; reuse revokes) |
 | POST | `/auth/logout` | `{refreshToken}` |
@@ -106,7 +106,7 @@ screen. A malformed inbound value is replaced, never refused.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/me` | account summary, including the account's role (user or admin, the users table's own words) and the account's language (locale, en or zh) |
-| PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences, locale}` — every field optional, `null` means leave unchanged. Locale is the language the account is written to: the screen's own copy is the browser's cookie, but the nightly letter has no browser, so this is the copy a sweep can read; anything but en or zh is a 400 |
+| PATCH | `/me` | `{displayName, headline, location, summary, yearsExperience, targetRoles, targetLocations, links, workAuthorization, preferences, locale}` — every field optional, `null` means leave unchanged. Locale is the language the account is written to: the screen's own copy is the browser's cookie, but the nightly letter has no browser, so this is the copy a sweep can read; anything but en or zh is a 400. `displayName` is folded by the same rule registration uses (Epic 414) |
 | PATCH | `/me/password` | `{currentPassword, newPassword}` — re-authenticates with the current password (a wrong one is a **401** `CURRENT_PASSWORD_INCORRECT`), refuses a new value equal to the current one (**400** `PASSWORD_UNCHANGED`), stores the new hash and revokes every refresh token, so every other device signs in again; the caller's own access token expires at its short lifetime like any other |
 | GET | `/users/me` | alias of `/me` (binding seam) |
 | PATCH | `/users/me` | same body as `PATCH /me` (`{displayName, headline, location, ...}`) |

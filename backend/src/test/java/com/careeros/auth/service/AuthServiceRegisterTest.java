@@ -70,6 +70,17 @@ class AuthServiceRegisterTest {
     }
 
     @Test
+    void aNameWithControlsIsStoredAsOneReadableLine() {
+        when(users.existsByEmail(any())).thenReturn(false);
+        when(users.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User created = service.register(new RegisterRequest(
+                "  ada@example.invalid  ", PASSWORD, "  Ada\u0007\n  Lovelace  "));
+
+        assertThat(created.getDisplayName()).isEqualTo("Ada Lovelace");
+    }
+
+    @Test
     void aDuplicatePreCheckAnswersWithTheConflictAndNeverReachesTheInsert() {
         when(users.existsByEmail("taken@example.invalid")).thenReturn(true);
 

@@ -36,7 +36,7 @@ public class UserService {
         User user = requireUser(userId);
         UserProfile profile = requireProfile(userId);
         if (request.displayName() != null) {
-            user.setDisplayName(request.displayName().trim());
+            user.setDisplayName(DisplayNames.clean(request.displayName()));
         }
         if (request.headline() != null) {
             profile.setHeadline(request.headline().trim());

@@ -68,7 +68,7 @@ public class AuthService {
         User user = new User();
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setDisplayName(request.displayName().trim());
+        user.setDisplayName(DisplayNames.clean(request.displayName()));
         try {
             // Flush now, inside the try: the pre-check and the INSERT are two statements,
             // and a deferred flush moves the constraint check out of this block and into
