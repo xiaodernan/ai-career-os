@@ -125,6 +125,35 @@ export const en = {
       chronicleUntitled: "Untitled chapter",
       chronicleEpilogue: "The epilogue",
       chronicleLocked: "Write the chronicle to unlock its chapters.",
+      localTitle: "The local chronicle",
+      localDescription:
+        "Written on this machine from your ledger — every sentence comes from a fact that already happened.",
+      localBadge: "local · 0 model calls",
+      localOpeningTitle: "Opening · {days} days",
+      localOpeningBody:
+        "The ledger runs from {first} to {last}: {total} facts across {regions} regions.",
+      localApplicationsTitle: "Applications · {count}",
+      localApplicationsBody:
+        "You sent {count} applications; the first on {first}, the latest on {last}.",
+      localInterviewsTitle: "Rehearsals · {count}",
+      localInterviewsBody:
+        "{count} mock interviews are on the record; the latest on {last}.",
+      localPeopleTitle: "People · {count}",
+      localPeopleBody: "{count} contacts entered the ledger; the latest touch on {last}.",
+      localRecordTitle: "The written record · {count}",
+      localRecordBody:
+        "{notes} notes and {versions} resume versions remain in the book; the latest on {last}.",
+      localNowTitle: "Now · {title}",
+      localNowBody:
+        "The newest fact landed {days} days ago; the ledger has opened {regions} regions.",
+      localLoreApplication: "Applied: {title}",
+      localLoreInterview: "Rehearsed: {title}",
+      localLoreContact: "Contact: {title}",
+      localLoreRecord: "Written: {title}",
+      localFrontierTitle: "Regions not yet opened",
+      localEpilogue:
+        "{days} days and {total} facts, written on this machine with no model call. When the model returns, another pen will write longer.",
+      localEmpty: "The ledger is empty; write the first fact and the book has its first page.",
       atlasTitle: "The Career Atlas",
       atlasDescription:
         "A map of the places your search has actually been. Every region is a timeline kind and every site is one of your own events — no invented lands, no filler.",
@@ -3612,6 +3641,7 @@ export const en = {
       adaptivity: "Adaptivity",
       explainability: "Explainability",
       reviewerAgent: "Reviewer agent",
+      localChronicler: "Local chronicler",
       history: "History",
       dataSources: "Data sources",
       workHistory: "Work history",

@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **380** The chronicle has a local pen (2026-11-22).
+
+  The timeline's two story surfaces both needed a live provider: "tell me this
+  search" and "write the chronicle" are model calls, and with the account closed
+  they could only explain their own failure. The page now carries a third card,
+  the **local chronicle**, written from the `TimelineEntry` rows already on
+  screen: opening span, applications, rehearsals, people, the written record, and
+  "now", plus the atlas regions not yet opened. Every chapter is absent unless
+  its rows exist; every lore line is the reader's own title under a translated
+  frame; the card badges itself "local · 0 model calls" and says so again in the
+  epilogue. The card follows the timeline's kind filter, so narrowing to one
+  region narrows the book with it. Pure `lib/local-chronicle.ts`, 6 tests for
+  spans, counts, lore order, frontier and unreadable timestamps; full frontend
+  suite **221 files / 1,700 tests green**, `tsc --noEmit` clean. EN+ZH copy in
+  both tables; the copy census moved 234 → 235 with the new surface.
+
 - [x] **379** The ledger still counsels when the model is dark (2026-11-22).
 
   The operator's account was closed on 2026-11-22 ("后续开发可能无法调用这个大模型api了"),

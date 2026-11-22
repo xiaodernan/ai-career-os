@@ -107,6 +107,33 @@ export const zh = {
       chronicleUntitled: "未命名章节",
       chronicleEpilogue: "尾声",
       chronicleLocked: "写下编年史，解锁它的章节。",
+      localTitle: "本机编年史",
+      localDescription:
+        "不调用模型，直接从你的账本成书：每一句都来自已经发生的事实。",
+      localBadge: "本机 · 0 次模型调用",
+      localOpeningTitle: "开篇 · {days} 天",
+      localOpeningBody:
+        "账本从 {first} 写到 {last}，一共 {total} 条事实，铺开 {regions} 个区域。",
+      localApplicationsTitle: "投递 · {count} 次",
+      localApplicationsBody:
+        "你把 {count} 份申请送出门；最早一次在 {first}，最近一次在 {last}。",
+      localInterviewsTitle: "演练 · {count} 次",
+      localInterviewsBody: "{count} 次模拟面试被记下；最近一次在 {last}。",
+      localPeopleTitle: "相遇 · {count} 人",
+      localPeopleBody: "{count} 位联系人进入账本；最近一次联系在 {last}。",
+      localRecordTitle: "留痕 · {count} 条",
+      localRecordBody:
+        "{notes} 条笔记与 {versions} 个简历版本留在这本账里；最近一笔在 {last}。",
+      localNowTitle: "此刻 · {title}",
+      localNowBody: "最近一条事实发生在 {days} 天前；账本已经铺开 {regions} 个区域。",
+      localLoreApplication: "投递：{title}",
+      localLoreInterview: "演练：{title}",
+      localLoreContact: "联系：{title}",
+      localLoreRecord: "记录：{title}",
+      localFrontierTitle: "尚未点亮的地图",
+      localEpilogue:
+        "全书 {days} 天、{total} 条事实；由本机写成，未调用任何模型。模型回来时，另一支笔会写得更长。",
+      localEmpty: "账本还是空的；写下第一条事实，书就有了第一页。",
       atlasTitle: "求职版图",
       atlasDescription:
         "这张图只画你的求职真正到过的地方：每个区域是时间线的一种类型，每个地点是你自己留下的一条事件——没有编造的大陆，也没有凑数的空白。",
@@ -3340,6 +3367,7 @@ export const zh = {
       adaptivity: "适应性",
       explainability: "可解释性",
       reviewerAgent: "评审代理",
+      localChronicler: "本机编年史官",
       history: "历史",
       dataSources: "数据来源",
       workHistory: "工作经历",

@@ -21,6 +21,7 @@ import { useTimeline } from "@/lib/hooks/timeline";
 import { useMilestones } from "@/lib/hooks/monitoring";
 import { CareerNarrativeCard } from "@/components/timeline/career-narrative-card";
 import { CareerChronicleCard } from "@/components/timeline/career-chronicle-card";
+import { LocalChronicleCard } from "@/components/timeline/local-chronicle-card";
 import { CareerAtlas } from "@/components/timeline/career-atlas";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -241,6 +242,11 @@ export default function TimelinePage() {
       {/* Epic 354 — the chaptered chronicle: the meaning behind the milestone shelf. */}
       {query.data && query.data.length > 0 && (
         <CareerChronicleCard events={query.data} milestones={milestones.data} />
+      )}
+      {/* Epic 380 — the local pen: the same book, written on this machine with
+          zero model calls, so a closed provider cannot leave the page silent. */}
+      {query.data && query.data.length > 0 && (
+        <LocalChronicleCard events={visible} />
       )}
       <QueryBoundary
         query={query}
