@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T11:55:36.657990Z",
+  "generated_at": "2026-11-22T11:58:38.672365Z",
   "branch": "main",
-  "head": "c0afb51",
-  "total_commits": 1827,
-  "milestone": "Epic 388",
-  "milestone_full": "the ledger of done epics (through 541 items), closed at Epic 388 — The month turns into a week without leaving the room (2026-11-22)",
+  "head": "c497300",
+  "total_commits": 1829,
+  "milestone": "Epic 389",
+  "milestone_full": "the ledger of done epics (through 542 items), closed at Epic 389 — The manual learns the quiet instruments (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1753+",
+  "tests": "1754+",
   "test_files": 227,
-  "work_items": 541,
-  "epics": 254,
+  "work_items": 542,
+  "epics": 255,
   "feature_surface": [
+    "Epic 389 — The manual learns the quiet instruments (2026-11-22)",
     "Epic 388 — The month turns into a week without leaving the room (2026-11-22)",
     "Epic 387 — A sealed letter reaches the calendar you already own (2026-11-22)",
     "Epic 386 — The search gets a month (2026-11-22)",
     "Epic 385 — The answers get an echo of their own (2026-11-22)",
-    "Epic 384 — The shelf keeps letters to the future (2026-11-22)",
-    "Epic 383 — The overseer can see the hour of the week (2026-11-22)"
+    "Epic 384 — The shelf keeps letters to the future (2026-11-22)"
   ]
 }
