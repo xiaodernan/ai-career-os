@@ -161,6 +161,8 @@ describe("the calendar page", () => {
     expect(html).toContain('aria-pressed="true"');
     // Epic 391 — the days on screen can leave as a calendar file.
     expect(html).toContain("Export calendar");
+    // Epic 394 — the keyboard is named where the legend lives.
+    expect(html).toContain("Keyboard: ← → walk one month or week, T returns to today.");
   });
 
   it("opens a week with every row of each day, detail and all", () => {

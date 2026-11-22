@@ -24,6 +24,7 @@ import { formatDateOnly } from "@/lib/format";
 import { useApplications, useDashboard, useInterviewSessions, useKnowledgeNotes } from "@/lib/hooks/resources";
 import { CAPSULE_TAG, daysUntil, localDateKey } from "@/lib/time-capsule";
 import { buildCalendarIcs } from "@/lib/calendar-ics";
+import { calendarNavFromKey } from "@/lib/calendar-keys";
 import {
   buildEvents,
   eventsInMonth,
@@ -189,6 +190,35 @@ export default function CalendarPage() {
     // Walking back to the month keeps the week the reader was looking at.
     setUrl({ view: undefined, day: undefined, month: weekAnchor.slice(0, 7) });
   };
+
+  // Epic 394 — arrows walk the grid and T comes home, but never while the
+  // reader is typing and never over a browser or palette shortcut.
+  React.useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const action = calendarNavFromKey(event.key, {
+        inField:
+          target?.isContentEditable === true ||
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT",
+        modifier: event.metaKey || event.ctrlKey || event.altKey,
+      });
+      if (!action) return;
+      event.preventDefault();
+      if (action === "today") {
+        if (view === "week") setUrl({ day: today, month: undefined });
+        else setUrl({ month: monthKeyOf(), day: undefined });
+        return;
+      }
+      const delta = action === "next" ? 1 : -1;
+      if (view === "week") setUrl({ day: shiftDays(weekAnchor, delta * 7) });
+      else setUrl({ month: shiftMonth(month, delta) });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [view, weekAnchor, month, today, setUrl]);
 
   // Epic 391 — the grid the reader is looking at, as a file any calendar reads.
   // It is the same arithmetic the page already did; nothing is re-read, invented
@@ -422,6 +452,9 @@ export default function CalendarPage() {
                 </ul>
                 <p className="mt-3 text-2xs leading-relaxed text-muted-foreground">
                   {t("monthCalendar.legendHint")}
+                </p>
+                <p className="mt-2 border-t border-border/50 pt-2 text-2xs text-muted-foreground">
+                  {t("monthCalendar.keysHint")}
                 </p>
               </CardContent>
             </Card>

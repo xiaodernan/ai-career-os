@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **394** The calendar answers the keyboard (2026-11-22).
+
+  A reader planning in days usually has one hand on the arrows already, so the
+  calendar now honours them: ← and → walk one month (or one week, in the week
+  view), and T returns to today. The rule is pure and testable —
+  `calendarNavFromKey` — and it declines every key it does not own. Two
+  refusals matter more than the three accepts: a key pressed while the reader
+  is typing (input, textarea, select, contenteditable) belongs to the field,
+  and any Meta/Ctrl/Alt combination belongs to the browser or the command
+  palette. The page attaches one listener and cleans it up, reusing the same
+  `go` logic as the buttons; the legend card names the three keys in both
+  languages, and the manual's calendar card says the same. Five new unit tests
+  cover the strides, both cases of T, fields, modifiers and the keys that must
+  stay untouched. Full frontend suite **230 files / 1,770 tests green**,
+  `tsc --noEmit` clean; no new source component, copy census stays 238.
+
 - [x] **393** The calendar names a runway, not just the next step (2026-11-22).
 
   "Next up" named one row; a reader planning a week needs the next few. The
