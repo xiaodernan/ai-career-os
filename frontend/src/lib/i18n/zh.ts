@@ -126,6 +126,8 @@ export const zh = {
       atlasFrontierInterviews: "模拟面试",
       atlasFrontierNetworking: "联系人脉",
       atlasFrontierResumes: "打磨简历",
+      // 377: 唯一一个随时都能开辟的区域——写笔记不需要先去别的房间。
+      atlasFrontierNotes: "写一条笔记",
       // 364: 从一个已经探索过的区域走出去的那扇门——地图点出每一个房间，而这些门通向
       // 房间本身。用自己的键而不是前沿的：前沿是没人去过的房间，门是回到去过的房间的
       // 路，两者混为一谈会让「全部已探索」说成「无处可去」。

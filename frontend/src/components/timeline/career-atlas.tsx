@@ -184,6 +184,9 @@ const FRONTIERS = [
   { kind: "interview", key: "timeline.atlasFrontierInterviews", href: "/interviews" },
   { kind: "contact", key: "timeline.atlasFrontierNetworking", href: "/networking" },
   { kind: "resume_version", key: "timeline.atlasFrontierResumes", href: "/resumes" },
+  // 377: the one region that can be opened at any moment, from any screen -- a note
+  // is the only fact here that does not need another room to have been visited first.
+  { kind: "note", key: "timeline.atlasFrontierNotes", href: "/knowledge" },
 ] as const;
 
 export function CareerAtlas({ events }: { events: TimelineEntry[] }) {

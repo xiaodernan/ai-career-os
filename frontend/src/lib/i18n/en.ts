@@ -144,6 +144,8 @@ export const en = {
       atlasFrontierInterviews: "Rehearse an interview",
       atlasFrontierNetworking: "Meet a contact",
       atlasFrontierResumes: "Shape a resume",
+      // 377: the one region that opens at any moment -- a note needs no other room first.
+      atlasFrontierNotes: "Write a note",
       // 364: the door out of a region the reader has already charted -- the map names
       // every room, and these are the rooms themselves. Their own keys rather than the
       // frontier's: a frontier is a room nobody has been to, a door is the way back into

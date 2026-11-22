@@ -140,6 +140,17 @@ describe("CareerAtlas", () => {
     expect(neighboursOf(one.sites[0], undefined)).toEqual([]);
   });
 
+  it("377: offers the knowledge base as a frontier -- the region that opens at any moment", () => {
+    // Every other frontier needs another room to have been visited first. A note does
+    // not, so it is the one door the strip can always offer.
+    const only: TimelineEntry[] = [
+      { at: "2026-09-01T09:00:00Z", kind: "application", title: "Backend · Acme", refId: "a-1", summary: "" },
+    ];
+    const html = renderToStaticMarkup(<CareerAtlas events={only} />);
+    expect(html).toContain("[timeline.atlasFrontierNotes]");
+    expect(html).toContain('href="/knowledge"');
+  });
+
   it("365: the drawn legs join region centres, so the line follows the facts", () => {
     const html = renderToStaticMarkup(<CareerAtlas events={EVENTS} />);
     // Two legs for three regions, dashed because it is a path taken rather than a
@@ -175,7 +186,10 @@ describe("CareerAtlas", () => {
   });
 
   it("says every known frontier is charted instead of offering doors to visited regions", () => {
-    const charted: TimelineEntry[] = ["match", "application", "interview", "contact", "resume_version"].map(
+    // All six regions the map knows, so the frontier strip has nothing left to
+    // offer -- including the note region 377 added, which is the one that opens at
+    // any moment.
+    const charted: TimelineEntry[] = ["match", "application", "interview", "contact", "resume_version", "note"].map(
       (kind, i) => ({
         at: `2026-10-0${i + 1}T09:00:00Z`,
         kind,
