@@ -159,6 +159,8 @@ describe("the calendar page", () => {
     expect(html).toContain(">Month<");
     expect(html).toContain(">Week<");
     expect(html).toContain('aria-pressed="true"');
+    // Epic 397 — a day number is a door into that day's week.
+    expect(html).toContain('title="See this day in the week"');
     // Epic 391 — the days on screen can leave as a calendar file.
     expect(html).toContain("Export calendar");
     // Epic 394 — the keyboard is named where the legend lives.
@@ -190,6 +192,8 @@ describe("the calendar page", () => {
     expect(html).toContain('href="/applications?application=app-1"');
     expect(html).toContain('aria-label="Previous week"');
     expect(html).toContain('aria-label="Next week"');
+    // Epic 397 — every day header is a door back to that day's month.
+    expect(html).toContain('title="See this day in the month"');
     // Days with nothing still hold their column.
     expect(html.match(/—/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
   });

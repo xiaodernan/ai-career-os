@@ -368,7 +368,15 @@ export default function CalendarPage() {
           )}
 
           {view === "week" ? (
-            <WeekGrid cells={week} events={weekEvents} weekdays={weekdays} today={today} />
+            <WeekGrid
+              cells={week}
+              events={weekEvents}
+              weekdays={weekdays}
+              today={today}
+              onOpenMonth={(date) =>
+                setUrl({ view: undefined, day: undefined, month: date.slice(0, 7) })
+              }
+            />
           ) : (
           <Card className="overflow-hidden">
             <CardContent className="p-0">
@@ -405,15 +413,19 @@ export default function CalendarPage() {
                               cell.inMonth ? "text-muted-foreground" : "text-muted-foreground/50",
                             ].join(" ")}
                           >
-                            <span
-                              className={
+                            <button
+                              type="button"
+                              title={t("monthCalendar.openWeek")}
+                              onClick={() => setUrl({ view: "week", day: cell.date })}
+                              className={[
+                                "rounded-full transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                                 isToday
-                                  ? "inline-flex size-5 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground"
-                                  : ""
-                              }
+                                  ? "inline-flex size-5 items-center justify-center bg-primary font-semibold text-primary-foreground"
+                                  : "inline-flex size-5 items-center justify-center",
+                              ].join(" ")}
                             >
                               {Number(cell.date.slice(8, 10))}
-                            </span>
+                            </button>
                           </div>
                           <ul className="space-y-1">
                             {shown.map((event) => (
@@ -562,11 +574,13 @@ function WeekGrid({
   events,
   weekdays,
   today,
+  onOpenMonth,
 }: {
   cells: { date: string; inMonth: boolean }[];
   events: Map<string, CalendarEvent[]>;
   weekdays: string[];
   today: string;
+  onOpenMonth: (date: string) => void;
 }) {
   const { t, locale } = useLocale();
   const dayFormatter = React.useMemo(
@@ -595,24 +609,27 @@ function WeekGrid({
                     isToday ? "ring-1 ring-inset ring-primary/50" : "",
                   ].join(" ")}
                 >
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => onOpenMonth(cell.date)}
+                    title={t("monthCalendar.openMonth")}
                     className={[
-                      "border-b border-border/60 px-2 py-2",
+                      "block w-full border-b border-border/60 px-2 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40",
                       isToday ? "bg-primary/10" : "bg-muted/30",
                     ].join(" ")}
                   >
-                    <p className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <span className="block text-2xs font-medium uppercase tracking-wide text-muted-foreground">
                       {weekdays[index]}
-                    </p>
-                    <p
+                    </span>
+                    <span
                       className={[
-                        "mt-0.5 text-xs tabular-nums",
+                        "mt-0.5 block text-xs tabular-nums",
                         isToday ? "font-semibold text-primary" : "text-foreground",
                       ].join(" ")}
                     >
                       {dayFormatter.format(new Date(`${cell.date}T00:00:00`))}
-                    </p>
-                  </div>
+                    </span>
+                  </button>
                   {dayEvents.length > 0 ? (
                     <ul className="space-y-1.5 p-1.5">
                       {dayEvents.map((event) => (

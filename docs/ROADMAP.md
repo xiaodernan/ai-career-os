@@ -8198,6 +8198,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **397** The two grids are doors to each other (2026-11-22).
+
+  The month could already jump to a day's week through the "+N more" counter,
+  but the plain day number was inert, and the week's own headers only named a
+  date. Both are now doors: every day number in the month opens that day's
+  week, and every day header in the week opens that day's month — so a reader
+  can move between the two scales without the view switch, the arrows or the
+  keyboard. The controls are real buttons with their own titles
+  ("See this day in the week" / "在周视图里看这一天", and the reverse), so the
+  affordance is announced rather than guessed. The manual's calendar card now
+  says both directions, and the page tests pin each title. A stray "这场寻寻"
+  in the Chinese afterword — a doubled character that survived every earlier
+  pass — is now "这场寻找". Full frontend suite **231 files / 1,776 tests
+  green**, `tsc --noEmit` clean; no new source file, copy census stays 238.
+
 - [x] **396** The sealed letter offers a first sentence (2026-11-22).
 
   A capsule asks the reader to write to their future self, and the blank box is
