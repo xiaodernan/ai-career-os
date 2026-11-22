@@ -96,7 +96,17 @@ results.legacy = await page.evaluate(() => {
   };
 });
 
-// 5. The growth panel's engine hints.
+// 5. The search portrait on the applications board.
+await open("/applications");
+results.portrait = await page.evaluate(() => {
+  const card = document.querySelector('[data-testid="portrait-card"]');
+  return {
+    present: !!card,
+    text: card ? card.innerText.replace(/\s+/g, " ").slice(0, 140) : null,
+  };
+});
+
+// 6. The growth panel's engine hints.
 await open("/growth");
 results.growth = await page.evaluate(() => {
   const triggers = (document.body.innerHTML.match(/data-slot="tooltip-trigger"/g) ?? []).length;
@@ -110,6 +120,7 @@ const ok =
   results.frontier.present &&
   results.atlas.routeLegs > 0 &&
   results.rhythm.present &&
+  results.portrait.present &&
   errors.length === 0;
 console.log(ok
   ? "PASS: the new surfaces render with the reader's own data"
