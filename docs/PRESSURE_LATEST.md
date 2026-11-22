@@ -95,3 +95,36 @@ the ramp's improvement over the 2026-11-21 run (285 rps at 10 workers against 35
 host load, not the change. The honest reading: the same saturation curve, measured on a
 quieter box. What did not change in either direction is the one that matters — no 5xx at
 any level, and the auth limiter still engaging under storm.
+
+# Re-measured 2026-11-22 (after the frontend rebuild + the dashboard fix)
+
+The stack was rebuilt from the tree (backend and frontend images), so the numbers
+were re-taken rather than carried over.
+
+## concurrency_smoke.py
+- 128 calls, 16 workers, 4 shared tokens, wall 1.3s
+- p50 45ms | p95 534ms | max 732ms
+- codes: {200: 96, 201: 32}
+- 5xx: 0 — **CONCURRENCY OK**
+
+## load_probe.py (health ramp, 4s each)
+
+| workers | requests | status | p50 ms | p90 ms | p99 ms | max ms | rps |
+|---:|---:|---|---:|---:|---:|---:|---:|
+| 1 | 753 | 200:753 | 4.6 | 7.1 | 11.3 | 126.0 | 188.2 |
+| 10 | 1220 | 200:1220 | 18.9 | 61.5 | 241.7 | 403.9 | 305.0 |
+| 25 | 1007 | 200:1007 | 58.3 | 233.5 | 558.9 | 984.4 | 251.8 |
+| 50 | 704 | 200:704 | 163.2 | 709.6 | 2968.8 | 3593.0 | 176.0 |
+| 100 | 437 | 200:437 | 742.6 | 2132.0 | 4248.4 | 4485.3 | 109.2 |
+
+- Auth gate (100 wrong-password attempts): {401: 95, 429: 5}, post-storm health 200, 5xx: 0.
+- Authed read (/api/v1/jobs), 60 requests: all 200, p50 287ms | p90 332ms | max 357ms.
+- Total 4281 requests across the run. **Zero 5xx at every level.**
+
+### What this run was for
+
+The earlier run in this file was taken before the frontend and backend images were
+rebuilt from the tree, and before the dashboard 500 was found and fixed (Epic 375).
+A run that only exercises /health cannot see an aggregate that throws — which is
+exactly what the browser sweep caught — so the honest reading of this table is "the
+edge holds", and the browser sweep is what says the pages do.
