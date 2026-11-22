@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T14:02:51.050132Z",
+  "generated_at": "2026-11-22T14:09:03.351358Z",
   "branch": "main",
-  "head": "67cd14d",
-  "total_commits": 1864,
-  "milestone": "Epic 407",
-  "milestone_full": "the ledger of done epics (through 560 items), closed at Epic 407 — The company page remembers what the reader did with them (2026-11-22)",
+  "head": "d3bf3b7",
+  "total_commits": 1866,
+  "milestone": "Epic 408",
+  "milestone_full": "the ledger of done epics (through 561 items), closed at Epic 408 — A long calendar can be searched (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1799+",
+  "tests": "1803+",
   "test_files": 232,
-  "work_items": 560,
-  "epics": 273,
+  "work_items": 561,
+  "epics": 274,
   "feature_surface": [
+    "Epic 408 — A long calendar can be searched (2026-11-22)",
     "Epic 407 — The company page remembers what the reader did with them (2026-11-22)",
     "Epic 406 — The shelf stops counting backwards (2026-11-22)",
     "Epic 405 — The calendar cannot lose a question it already asked (2026-11-22)",
     "Epic 404 — The month arithmetic survives a flood (2026-11-22)",
-    "Epic 403 — The public tour finally mentions the calendar (2026-11-22)",
-    "Epic 402 — The power moves learn the calendar, and the tour stops miscounting (2026-11-22)"
+    "Epic 403 — The public tour finally mentions the calendar (2026-11-22)"
   ]
 }
