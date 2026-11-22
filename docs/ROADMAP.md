@@ -8198,6 +8198,24 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **391** The days on screen can leave as a calendar file (2026-11-22).
+
+  The subscription feed is the server's standing offer, but a reader who wants
+  only the month they are looking at had no way to take it. The calendar now
+  exports what the grid holds — month or week, exactly the rows on screen — as
+  an RFC 5545 `.ics`: one all-day VEVENT per row, the next day exclusive,
+  stable UIDs, `TRANSP:TRANSPARENT`, no alarms, and a sealed letter contributes
+  only its opening day. Dates are the product's own local day keys; nothing is
+  re-read and nothing leaves the account. Pure `lib/calendar-ics.ts` does the
+  writing: the five RFC escapes, UTF-8-aware folding at 75 octets (a Chinese
+  summary folds where a character count would not), and a fixed `DTSTAMP`
+  input so the file is reproducible. 6 unit tests cover the envelope, the
+  all-day pair, empty details, escapes, folding/unfolding and deterministic
+  ordering; the page test pins the export control and its disabled state when
+  a range holds nothing. Full frontend suite **228 files / 1,760 tests
+  green**, `tsc --noEmit` clean; EN+ZH copy in both tables, copy census stays
+  238.
+
 - [x] **390** The counter under a busy day is a door (2026-11-22).
 
   The month grid says "+N more" when a day holds past three rows, and that

@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Download,
   Feather,
   Sparkles,
   Users,
@@ -22,6 +23,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateOnly } from "@/lib/format";
 import { useApplications, useDashboard, useInterviewSessions, useKnowledgeNotes } from "@/lib/hooks/resources";
 import { CAPSULE_TAG, localDateKey } from "@/lib/time-capsule";
+import { buildCalendarIcs } from "@/lib/calendar-ics";
 import {
   buildEvents,
   eventsInMonth,
@@ -188,6 +190,32 @@ export default function CalendarPage() {
     setUrl({ view: undefined, day: undefined, month: weekAnchor.slice(0, 7) });
   };
 
+  // Epic 391 — the grid the reader is looking at, as a file any calendar reads.
+  // It is the same arithmetic the page already did; nothing is re-read, invented
+  // or sent anywhere.
+  const exportCalendar = () => {
+    const rows = [...shownEvents.values()].flat();
+    if (rows.length === 0) return;
+    const ics = buildCalendarIcs(rows, {
+      calendarName: `${t("monthCalendar.icsCalendarName")} · ${view === "week" ? weekLabel : monthLabel}`,
+      kindLabels: {
+        reminder: t("monthCalendar.legendReminder"),
+        followup: t("monthCalendar.legendFollowup"),
+        interview: t("monthCalendar.legendInterview"),
+        capsule: t("monthCalendar.legendCapsule"),
+      },
+    });
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `career-os-${view === "week" ? week[0].date : month}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -245,6 +273,17 @@ export default function CalendarPage() {
                 onClick={() => go(1)}
               >
                 <ChevronRight aria-hidden className="size-4" />
+              </Button>
+            </Hint>
+            <Hint side="bottom" label={t("monthCalendar.exportHint")}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={[...shownEvents.values()].flat().length === 0}
+                onClick={exportCalendar}
+              >
+                <Download aria-hidden className="size-4" />
+                {t("monthCalendar.export")}
               </Button>
             </Hint>
           </div>

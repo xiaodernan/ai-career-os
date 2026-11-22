@@ -128,6 +128,9 @@ export const en = {
       eventCount: "{count} things on the month",
       more: "+{count} more",
       moreHint: "See every row on this day, in the week",
+      export: "Export calendar",
+      exportHint: "Download the days you are looking at as a calendar file",
+      icsCalendarName: "Career search",
       monthEmpty:
         "Nothing lands on this month yet. Reminders, follow-ups gone due, rehearsals and sealed letters appear here on their own days.",
       legendTitle: "What the dots mean",
@@ -4622,7 +4625,7 @@ export const en = {
         "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, and every chip is a door to the row it came from.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
-        "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open.",
+        "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, no feed required.",
       quietlyClosing:
         "These three are the quiet half of the product: nothing is generated, nothing is guessed, and nothing leaves the account. They exist so the dates you already own are easy to keep.",
       quietlyCtaCalendar: "Open the calendar",

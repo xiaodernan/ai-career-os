@@ -139,6 +139,8 @@ describe("the calendar page", () => {
     expect(html).toContain(">Month<");
     expect(html).toContain(">Week<");
     expect(html).toContain('aria-pressed="true"');
+    // Epic 391 — the days on screen can leave as a calendar file.
+    expect(html).toContain("Export calendar");
   });
 
   it("opens a week with every row of each day, detail and all", () => {
@@ -172,6 +174,8 @@ describe("the calendar page", () => {
     expect(html).toContain("Sep 14 – Sep 20, 2026");
     expect(html).toContain("0 things this week");
     expect(html).toContain("Nothing lands on this week yet");
+    // Nothing to carry: the export stays disabled rather than writing an empty file.
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[\s\S]*?Export calendar<\/button>/);
   });
 
   it("speaks a week in Chinese, controls and all", () => {
