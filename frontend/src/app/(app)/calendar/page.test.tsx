@@ -114,6 +114,24 @@ describe("the calendar page", () => {
     expect(html).not.toContain("Reminder · Role 4");
   });
 
+  it("reads the month's own rhythm, weekends and open runway included", () => {
+    // 2026-09-05 is a Saturday; two rows on Monday the 21st make it the fullest day.
+    state.applications = [
+      { id: "app-1", title: "Weekend reminder", companyName: "Acme", status: "applied", reminderAt: "2026-09-05T09:00:00Z" },
+      { id: "app-2", title: "Later reminder", companyName: "Acme", status: "applied", reminderAt: "2026-09-21T09:00:00Z" },
+      { id: "app-3", title: "Later follow-up", companyName: "Acme", status: "applied", reminderAt: "2026-09-21T10:00:00Z" },
+    ];
+
+    const html = render();
+    expect(html).toContain("3 rows across 2 days; Sep 21, 2026 is the fullest with 2");
+    expect(html).toContain("15 days ahead still carry nothing");
+    expect(html).toContain("1 of them land on a weekend, worth handling early");
+
+    const zh = render("zh");
+    expect(zh).toContain("本月 3 项安排落在 2 天里");
+    expect(zh).toContain("其中 1 项落在周末");
+  });
+
   it("puts a pending offer deadline on the month and keeps a decided one out", () => {
     state.offers = [
       {

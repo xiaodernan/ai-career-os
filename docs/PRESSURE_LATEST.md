@@ -128,3 +128,42 @@ rebuilt from the tree, and before the dashboard 500 was found and fixed (Epic 37
 A run that only exercises /health cannot see an aggregate that throws — which is
 exactly what the browser sweep caught — so the honest reading of this table is "the
 edge holds", and the browser sweep is what says the pages do.
+
+# Re-measured 2026-11-22 (after Epic 410, same day, later window)
+
+Same scripts, same host, same running stack — taken again after the calendar work,
+with no backend change in between, so this is a second sample of the same shape
+rather than a before/after.
+
+## concurrency_smoke.py
+- 128 calls, 16 workers, 4 shared tokens, wall 0.9s
+- p50 17ms | p95 541ms | max 594ms
+- codes: {200: 96, 201: 32}
+- 5xx: 0 — **CONCURRENCY OK**
+
+## load_probe.py --strict (health ramp, 4s each)
+
+| workers | requests | status | p50 ms | p90 ms | p99 ms | max ms | rps |
+|---:|---:|---|---:|---:|---:|---:|---:|
+| 1 | 1186 | 200:1186 | 3.2 | 4.2 | 6.0 | 64.6 | 296.5 |
+| 10 | 2091 | 200:2091 | 10.8 | 39.6 | 122.9 | 233.9 | 522.8 |
+| 25 | 1641 | 200:1641 | 35.9 | 144.1 | 307.0 | 670.2 | 410.2 |
+| 50 | 1512 | 200:1512 | 94.4 | 296.0 | 584.9 | 868.8 | 378.0 |
+| 100 | 1220 | 200:1220 | 251.9 | 739.2 | 1408.0 | 2324.1 | 305.0 |
+
+- Auth gate (100 concurrent wrong-password attempts): {401: 99, 429: 1},
+  post-storm health 200, 5xx: 0.
+- Authed read (/api/v1/jobs), 60 requests: all 200, p50 400ms | p90 418ms | max 433ms.
+- Total 7,810 requests. **Zero 5xx at every level. Verdict: PASS.**
+
+### The limiter was measured, not assumed
+
+The first concurrency smoke of this window was itself refused with `429` at
+registration, because the 100-way wrong-password storm had just spent the auth
+bucket (`RATELIMIT_AUTH_PER_MINUTE=100` on this stack). Sixty-five seconds later,
+with the one-minute window drained, the same 128 calls all landed (96×200, 32×201).
+That is the limiter doing its job in both directions: the storm could not turn into
+a credential-stuffing sled, and an ordinary registration was not permanently locked
+out. Every one of the 7,810 measured requests in this window was answered — none
+was a 5xx, and none was a connection error.
+

@@ -6,6 +6,7 @@ import {
   daysPast,
   eventsInMonth,
   eventsInWeek,
+  fallsOnWeekend,
   followUpDue,
   isOverdue,
   monthCells,
@@ -410,6 +411,7 @@ describe("the month's rhythm", () => {
       openDays: 28,
       busiest: { date: "2026-09-04", count: 2 },
       openAhead: 16,
+      weekendRows: 0,
     });
   });
 
@@ -434,8 +436,23 @@ describe("the month's rhythm", () => {
       openDays: 29,
       busiest: null,
       openAhead: 29,
+      weekendRows: 0,
     });
     expect(monthTempo(new Map(), "2026-02", TODAY).daysInMonth).toBe(28);
+  });
+
+  it("counts the rows that land on a weekend, not the weekend days", () => {
+    // September 2026: the 5th is a Saturday, the 6th a Sunday.
+    const events = new Map<string, CalendarEvent[]>([
+      ["2026-09-05", [row("2026-09-05", "sat-a"), row("2026-09-05", "sat-b")]],
+      ["2026-09-06", [row("2026-09-06", "sun")]],
+      ["2026-09-07", [row("2026-09-07", "mon")]],
+    ]);
+    const tempo = monthTempo(events, "2026-09", TODAY);
+    expect(tempo.weekendRows).toBe(3);
+    expect(fallsOnWeekend("2026-09-05")).toBe(true);
+    expect(fallsOnWeekend("2026-09-06")).toBe(true);
+    expect(fallsOnWeekend("2026-09-07")).toBe(false);
   });
 });
 

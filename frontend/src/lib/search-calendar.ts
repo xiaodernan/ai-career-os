@@ -281,6 +281,14 @@ export interface MonthTempo {
   busiest: { date: string; count: number } | null;
   /** Days on or after today that carry nothing; 0 once the month is past. */
   openAhead: number;
+  /** Rows that land on a Saturday or Sunday — a deadline keeper should see them early. */
+  weekendRows: number;
+}
+
+/** A local `YYYY-MM-DD` that falls on Saturday or Sunday. */
+export function fallsOnWeekend(date: string): boolean {
+  const day = new Date(`${date}T00:00:00`).getDay();
+  return day === 0 || day === 6;
 }
 
 /**
@@ -302,6 +310,7 @@ export function monthTempo(
   let total = 0;
   let activeDays = 0;
   let openAhead = 0;
+  let weekendRows = 0;
   let busiest: { date: string; count: number } | null = null;
   for (let day = 1; day <= daysInMonth; day += 1) {
     const date = `${key}-${String(day).padStart(2, "0")}`;
@@ -309,12 +318,22 @@ export function monthTempo(
     total += count;
     if (count > 0) {
       activeDays += 1;
+      if (fallsOnWeekend(date)) weekendRows += count;
       if (busiest === null || count > busiest.count) busiest = { date, count };
     } else if (date >= today) {
       openAhead += 1;
     }
   }
-  return { key, daysInMonth, total, activeDays, openDays: daysInMonth - activeDays, busiest, openAhead };
+  return {
+    key,
+    daysInMonth,
+    total,
+    activeDays,
+    openDays: daysInMonth - activeDays,
+    busiest,
+    openAhead,
+    weekendRows,
+  };
 }
 
 export function summarize(events: CalendarEvent[]): Record<CalendarKind, number> {

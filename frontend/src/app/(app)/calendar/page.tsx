@@ -501,6 +501,12 @@ export default function CalendarPage() {
                   {t("monthCalendar.monthTempoAhead", { count: monthRhythm.openAhead })}
                 </>
               )}
+              {monthRhythm.weekendRows > 0 && (
+                <>
+                  {" · "}
+                  {t("monthCalendar.monthTempoWeekend", { count: monthRhythm.weekendRows })}
+                </>
+              )}
             </p>
           )}
 

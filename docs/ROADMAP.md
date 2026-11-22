@@ -8198,6 +8198,31 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **411** The month's rhythm counts its weekends (2026-11-22).
+
+  A deadline that lands on a Saturday is a deadline a reader meets alone: the
+  recruiter is away, the bank is shut, and the row is half a week older by the
+  time Monday arrives. The month's rhythm now says how many of its rows fall on
+  a weekend, counted per row rather than per day (two rows on one Sunday are
+  two), read from the local date the grid already draws — never from a UTC
+  instant, which would move the weekend for half the world. `fallsOnWeekend` is
+  the one predicate; `monthTempo` carries the count beside the open runway, and
+  the line stays silent when the count is zero, because "0 on weekends" is not
+  a finding. The month rhythm test pins a Saturday and a Sunday, and the page
+  test pins the sentence in both languages.
+
+  Same window, the live install was re-measured under pressure: 7,810 requests
+  at 1/10/25/50/100-way concurrency, **zero 5xx**, p99 1.4s at the 100-way
+  peak, `--strict` verdict **PASS**; the 128-call concurrency smoke (16 workers,
+  four shared tokens) finished in 0.9s with p95 541ms and no 5xx. The auth
+  limiter refused the first smoke of the window with `429` because the 100-way
+  wrong-password storm had just spent its bucket — the limiter working in both
+  directions. Recorded in `docs/PRESSURE_LATEST.md`.
+
+  Measured: full frontend suite **232 files / 1,811 tests green** (+2),
+  `tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes, copy
+  census stays 238.
+
 - [x] **410** The month can say its own rhythm (2026-11-22).
 
   The month view counted its rows and drew them; it could not say how those rows
