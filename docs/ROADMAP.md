@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **389** The manual learns the quiet instruments (2026-11-22).
+
+  Epic 384's sealed letter, 385's answer echo and 386/387's calendar shipped
+  as instruments but not as chapters: a reader who found them had to find
+  them alone. The playbook now carries chapter 22, "Written quietly" /
+  "安静写下的" — four cards that teach the whole of each: how to seal a note
+  on the timeline and what the mailbox shows before its day; what the echo
+  counts after a rehearsal and that it is arithmetic, not a transcript read;
+  how the month caps a day at three rows while the week hides nothing, and
+  how the arrows, Today and every chip behave; and how to copy the private
+  feed into Google Calendar, Apple Calendar or Outlook, including that the
+  feed carries opening days and deadlines as all-day events with no alarms
+  and no letter bodies. Three doors close the chapter — the calendar, the
+  timeline, and the settings page that holds the feed address. The chapter
+  rail gains its entry in document order (the rail-order test pins the two
+  together), EN+ZH copy lands in both tables, and a stray "行 flips 到
+  accepted" in the Chinese aftercare card is now fully Chinese. Full
+  frontend suite **227 files / 1,754 tests green**, `tsc --noEmit` clean;
+  no new source file, copy census stays 238.
+
 - [x] **388** The month turns into a week without leaving the room (2026-11-22).
 
   The month grid (Epic 386) trims a day to three chips and a "+N more" — right

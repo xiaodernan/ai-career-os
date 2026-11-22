@@ -64,6 +64,30 @@ describe("/playbook — the manual", () => {
     }
   });
 
+  it("389: teaches the quiet instruments — capsule, echo, calendar and its feed", () => {
+    const html = renderToStaticMarkup(<PlaybookPage />);
+    expect(html).toContain('id="quietly"');
+    for (const key of [
+      "playbook.quietlyEyebrow",
+      "playbook.quietlyTitle",
+      "playbook.quietlyIntro",
+      "playbook.quietlyCapsuleTitle",
+      "playbook.quietlyCapsuleBody",
+      "playbook.quietlyEchoTitle",
+      "playbook.quietlyEchoBody",
+      "playbook.quietlyCalendarTitle",
+      "playbook.quietlyCalendarBody",
+      "playbook.quietlyFeedTitle",
+      "playbook.quietlyFeedBody",
+      "playbook.quietlyClosing",
+      "playbook.quietlyCtaCalendar",
+    ]) {
+      expect(html, key).toContain(key);
+    }
+    expect(html).toContain('href="/calendar"');
+    expect(html).toContain('href="/settings"');
+  });
+
   it("honors the same anchor shape the route prints", () => {
     const html = renderToStaticMarkup(<PlaybookPage />);
 

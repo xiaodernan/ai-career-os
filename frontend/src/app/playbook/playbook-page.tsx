@@ -696,6 +696,46 @@ export default function PlaybookPage() {
           <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.lettersClosing")}</p>
         </section>
 
+        {/* Written quietly — the three instruments that need no model (Epic 389) */}
+        <section id="quietly" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.quietlyEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">22</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.quietlyTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.quietlyIntro")}</p>
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {[
+              { title: t("playbook.quietlyCapsuleTitle"), body: t("playbook.quietlyCapsuleBody") },
+              { title: t("playbook.quietlyEchoTitle"), body: t("playbook.quietlyEchoBody") },
+              { title: t("playbook.quietlyCalendarTitle"), body: t("playbook.quietlyCalendarBody") },
+              { title: t("playbook.quietlyFeedTitle"), body: t("playbook.quietlyFeedBody") },
+            ].map((item, index) => (
+              <li key={index} className="rounded-2xl border border-border/60 bg-card/60 p-5">
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  {String(index + 1).padStart(2, "0")} · {item.title}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-foreground/90">{item.body}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.quietlyClosing")}</p>
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/calendar">
+                {t("playbook.quietlyCtaCalendar")}
+                <ArrowRight aria-hidden className="size-4" />
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/timeline">{t("playbook.quietlyCtaTimeline")}</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/settings">{t("playbook.quietlyCtaSettings")}</Link>
+            </Button>
+          </div>
+        </section>
+
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
           <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("playbook.codaTitle")}</h2>
           <p className="max-w-3xl text-base leading-relaxed text-foreground/90">{t("playbook.codaBody")}</p>

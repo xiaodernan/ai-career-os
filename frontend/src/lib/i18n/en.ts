@@ -4606,6 +4606,27 @@ export const en = {
         "Before you answer the call, one sheet: the anchor read, the number you own, the pause, the floor, and the graceful no. Every figure on it comes from the offer on your shelf; an anchor we cannot verify does not get invented.",
       lettersClosing:
         "The shelf holds the facts; the letters only ever reuse them. A reader who trusts their own numbers and sends honest letters keeps both the deal and the dignity.",
+      quietlyEyebrow: "WRITTEN QUIETLY",
+      quietlyTitle: "Three instruments that need no model",
+      quietlyIntro:
+        "Not every useful page needs a call out. Three instruments on this install are arithmetic over rows you already wrote: a letter you seal for later, an echo of the answers you gave, and a calendar that lays your dates out in days. Each one works offline, and each one shows only what you actually wrote.",
+      quietlyCapsuleTitle: "A letter to your future self",
+      quietlyCapsuleBody:
+        "On the timeline, write a note and seal it with an opening date. Until that day the mailbox shows only the envelope, never the prose; on the day itself the letter opens in your own hands, and nothing about it is sent anywhere. The opening day also enters the calendar, so the letter waits where you plan your weeks.",
+      quietlyEchoTitle: "The echo of an answer",
+      quietlyEchoBody:
+        "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",
+      quietlyCalendarTitle: "A month and a week",
+      quietlyCalendarBody:
+        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, and every chip is a door to the row it came from.",
+      quietlyFeedTitle: "Put it on your own calendar",
+      quietlyFeedBody:
+        "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open.",
+      quietlyClosing:
+        "These three are the quiet half of the product: nothing is generated, nothing is guessed, and nothing leaves the account. They exist so the dates you already own are easy to keep.",
+      quietlyCtaCalendar: "Open the calendar",
+      quietlyCtaTimeline: "Write a letter",
+      quietlyCtaSettings: "Copy the feed address",
       colophonTitle: "The close",
       codaLive:
         "The same loop keeps a public card, measured on every push and re-measured when the numbers move — an iframe you can drop anywhere:",
