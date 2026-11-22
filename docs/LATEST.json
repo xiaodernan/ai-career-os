@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T12:49:36.660169Z",
+  "generated_at": "2026-11-22T12:56:03.291532Z",
   "branch": "main",
-  "head": "098ddbe",
-  "total_commits": 1845,
-  "milestone": "Epic 397",
-  "milestone_full": "the ledger of done epics (through 550 items), closed at Epic 397 — The two grids are doors to each other (2026-11-22)",
+  "head": "9b723ae",
+  "total_commits": 1847,
+  "milestone": "Epic 398",
+  "milestone_full": "the ledger of done epics (through 551 items), closed at Epic 398 — The offer deadline reaches the page and the file (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1776+",
+  "tests": "1778+",
   "test_files": 231,
-  "work_items": 550,
-  "epics": 263,
+  "work_items": 551,
+  "epics": 264,
   "feature_surface": [
+    "Epic 398 — The offer deadline reaches the page and the file (2026-11-22)",
     "Epic 397 — The two grids are doors to each other (2026-11-22)",
     "Epic 396 — The sealed letter offers a first sentence (2026-11-22)",
     "Epic 395 — The week reads its own rhythm aloud (2026-11-22)",
     "Epic 394 — The calendar answers the keyboard (2026-11-22)",
-    "Epic 393 — The calendar names a runway, not just the next step (2026-11-22)",
-    "Epic 392 — The Chinese table stops borrowing English prose (2026-11-22)"
+    "Epic 393 — The calendar names a runway, not just the next step (2026-11-22)"
   ]
 }
