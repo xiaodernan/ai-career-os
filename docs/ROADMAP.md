@@ -8198,6 +8198,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **407** The company page remembers what the reader did with them (2026-11-22).
+
+  The company page could describe what the corpus knew about an employer and
+  never say what the reader had already done with them: two applications and a
+  rehearsal sat on other screens, and the page a reader opens before an
+  interview said nothing about either. A new fold (`company-history.ts`) joins
+  the two lists the calendar already reads — applications and rehearsals — into
+  one file, newest first, with a door back to each row. A row belongs when its
+  company id matches, or, for rows written before the link existed, when the
+  name matches after trimming and folding case; an id match survives a renamed
+  company, and a misspelling stays a different company rather than becoming
+  somebody else's history. A rehearsal belongs when it names the company or when
+  it was started from an application already in the file, so a session with no
+  company name of its own still lands where it happened. A row with no readable
+  stamp is left out of the list and the counts instead of being dated by
+  guesswork; a failed read says so and offers the retry instead of claiming the
+  file is empty. The card sits above the overview — the reader's own facts
+  before the corpus's — and the counts and the stage and mode words are
+  translated, never the wire values.
+
+  Measured: full frontend suite **232 files / 1,799 tests green** (+1 file,
+  +7 tests), `tsc --noEmit` clean, `npm run lint` clean, `npm run build` passes,
+  copy census stays 238 (no new component).
+
 - [x] **406** The shelf stops counting backwards (2026-11-22).
 
   The offer shelf's deadline badge was a countdown that could run the wrong way:

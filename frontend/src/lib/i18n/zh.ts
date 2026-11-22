@@ -3188,6 +3188,17 @@ export const zh = {
       detail: {
         loadFailed: "没能加载这家公司",
         loading: "正在加载公司…",
+        historyTitle: "你和这家公司的往来",
+        historyCounts: "{applications} 次投递 · {interviews} 次模拟面试",
+        historyApplication: "投递",
+        historyInterview: "模拟面试",
+        historyRehearsal: "一场模拟面试",
+        historyOpen: "打开那一行",
+        historyEmpty:
+          "还没有记录。这份档案从你投递的那天开始——这家公司的每一次投递和模拟面试都会落在这里，最新的在最前。",
+        historyReading: "正在读你和这家公司的往来…",
+        historyUnavailable: "这份往来暂时读不到。",
+        historyRetry: "重试",
         website: "官网",
         overview: "概览",
         noOverview: "暂时还没有概览。",

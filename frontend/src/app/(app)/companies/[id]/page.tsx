@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
 import { Building2, Globe, Tag, Code, Users, MapPin, ExternalLink } from "lucide-react";
@@ -9,9 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { PreinterviewKit } from "@/components/companies/preinterview-kit";
-import { useCompany } from "@/lib/hooks/resources";
+import { useApplications, useCompany, useInterviewSessions } from "@/lib/hooks/resources";
 import { useCompanyBrief } from "@/lib/hooks/growth";
-import { salaryBandWord } from "@/lib/status-words";
+import { companyHistory } from "@/lib/company-history";
+import { formatDate } from "@/lib/format";
+import { stageLabel } from "@/lib/pipeline";
+import { interviewModeName, salaryBandWord } from "@/lib/status-words";
 import { safeHref } from "@/lib/safe-href";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { ApiError } from "@/lib/api/client";
@@ -29,7 +33,7 @@ import type { CompanySource, Job } from "@/lib/api/types";
  */
 export default function CompanyDetailPage() {
   const params = useParams<{ id: string }>();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const id = params?.id ?? null;
   const company = useCompany(id);
   // 4.8 — what the corpus says about this company. The engine reads the seeded
@@ -37,6 +41,21 @@ export default function CompanyDetailPage() {
   // is called before the early returns below, because a hook after an early
   // return is a hook that is sometimes not called at all.
   const brief = useCompanyBrief();
+  // Epic 407 — the reader's own rows with this employer. Two list reads the
+  // calendar already makes; the fold matches an id or an exact name and never
+  // guesses, and it runs before the early returns for the same reason as above.
+  const applications = useApplications({ size: 100 });
+  const interviews = useInterviewSessions({ size: 100 });
+  const history = React.useMemo(() => {
+    const row = company.data?.company;
+    if (!row) return null;
+    return companyHistory({
+      companyId: row.id,
+      companyName: row.name,
+      applications: applications.data?.items,
+      interviews: interviews.data?.items,
+    });
+  }, [company.data, applications.data, interviews.data]);
 
   if (company.isPending) {
     return (
@@ -130,6 +149,84 @@ export default function CompanyDetailPage() {
             </div>
           </div>
         </CardHeader>
+      </Card>
+
+      {/* Epic 407 — the reader's file with this employer, before the corpus's */}
+      <Card className="col-span-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{t("companies.detail.historyTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {applications.isError || interviews.isError ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-muted-foreground">{t("companies.detail.historyUnavailable")}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  void applications.refetch();
+                  void interviews.refetch();
+                }}
+              >
+                {t("companies.detail.historyRetry")}
+              </Button>
+            </div>
+          ) : applications.isPending || interviews.isPending ? (
+            <p className="text-sm text-muted-foreground">{t("companies.detail.historyReading")}</p>
+          ) : history && history.touches.length > 0 ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {t("companies.detail.historyCounts", {
+                  applications: history.applicationCount,
+                  interviews: history.interviewCount,
+                })}
+              </p>
+              <ol className="mt-3 space-y-3">
+                {history.touches.map((touch) => (
+                  <li key={touch.id} className="flex items-start gap-3">
+                    <span
+                      aria-hidden
+                      className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                        touch.kind === "application" ? "bg-primary" : "bg-warning"
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-baseline gap-2 text-sm leading-relaxed text-foreground">
+                        {touch.title || t("companies.detail.historyRehearsal")}
+                        <span className="text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {t(
+                            touch.kind === "application"
+                              ? "companies.detail.historyApplication"
+                              : "companies.detail.historyInterview"
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(touch.at, locale)}
+                        {touch.kind === "application" && touch.word
+                          ? ` · ${stageLabel(t, touch.word)}`
+                          : ""}
+                        {touch.kind === "interview" && touch.word
+                          ? ` · ${interviewModeName(t, touch.word)}`
+                          : ""}
+                      </p>
+                      <Link
+                        href={touch.href}
+                        className="mt-1 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        {t("companies.detail.historyOpen")}
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : (
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              {t("companies.detail.historyEmpty")}
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       <Card className="col-span-full">

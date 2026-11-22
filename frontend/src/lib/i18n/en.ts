@@ -3453,6 +3453,17 @@ export const en = {
       detail: {
         loadFailed: "Couldn't load this company",
         loading: "Loading company…",
+        historyTitle: "Your file with them",
+        historyCounts: "{applications} applications · {interviews} rehearsals",
+        historyApplication: "Application",
+        historyInterview: "Rehearsal",
+        historyRehearsal: "A rehearsal",
+        historyOpen: "Open the row",
+        historyEmpty:
+          "Nothing yet. This file starts the day you apply — every application and rehearsal for this company lands here, newest first.",
+        historyReading: "Reading your file with this company…",
+        historyUnavailable: "Your file could not be read just now.",
+        historyRetry: "Try again",
         website: "Website",
         overview: "Overview",
         noOverview: "No overview available yet.",
