@@ -8198,6 +8198,30 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **405** The calendar cannot lose a question it already asked (2026-11-22).
+
+  The runway, "Next up", keeps only rows on or after today — which is right for
+  a runway and wrong for a debt. A follow-up that went due last week and was
+  never answered left the one card a reader checks in the morning; the only way
+  to find it again was to walk back to its month and hope to notice. The month
+  grid had it all along, and nothing above it did. Now a row whose day passed
+  while its question is still open is lifted out of the grid and set above it,
+  oldest first — the one that has waited longest is the one to answer first —
+  with its own date, its kind, its days late and a door back to the row. Only
+  three kinds owe an answer: a reminder that fired, a follow-up whose cadence
+  ran out, and an offer deadline that passed with the decision still pending.
+  A rehearsal that happened and a letter that opened are history, not debt, and
+  the separator is pinned in `isOverdue`. Today is not late, so the comparison
+  is strict; the list caps at five and the count does not, so a reader with
+  nine late rows is told nine and shown five. The "Next up" card stops saying
+  "nothing ahead" as if the calendar were clear: with late rows above it, it
+  says how many are still waiting. The manual's calendar chapter and the
+  legend's hint both name the new card, in both languages.
+
+  Measured: full frontend suite **231 files / 1,788 tests green** (+6, all in
+  `search-calendar.test.ts`), `tsc --noEmit` clean, `npm run lint` clean, copy
+  census stays 238.
+
 - [x] **404** The month arithmetic survives a flood (2026-11-22).
 
   The calendar's fold is the one place every dated row in the product passes

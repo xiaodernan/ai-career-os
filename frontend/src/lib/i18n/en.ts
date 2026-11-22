@@ -144,13 +144,20 @@ export const en = {
       legendOffer: "Offer deadline",
       legendCapsule: "Sealed letter opens",
       legendHint:
-        "A follow-up is due one relation cadence after the last touch; an offer deadline stays while the decision is pending; a sealed letter shows only its opening day, never its body. When a day says \"+N more\", tap the counter to see that day's full list in the week.",
+        "A follow-up is due one relation cadence after the last touch; an offer deadline stays while the decision is pending; a sealed letter shows only its opening day, never its body. When a day says \"+N more\", tap the counter to see that day's full list in the week. Past rows that still ask for something are listed above the grid, oldest first, until you answer them.",
+      overdueTitle: "Past their date, still open",
+      overdueBody:
+        "A reminder that fired, a follow-up whose cadence ran out, or an offer deadline that passed while the decision is pending. A rehearsal that happened and a letter that opened are history, not late.",
+      overdueDay: "1 day late",
+      overdueDays: "{days} days late",
+      overdueMore: "and {count} more past their date",
       nextTitle: "Next up",
       nextToday: "Today",
       nextTomorrow: "Tomorrow",
       nextInDays: "In {days} days",
       noUpcoming:
         "Nothing ahead on the calendar. Set a reminder on an application, or seal a letter to your future self.",
+      noUpcomingOverdue: "Nothing ahead. The {count} rows above passed their date and are still waiting on you.",
       open: "Open",
       capsuleEvent: "A letter to your future self",
       emptyTitle: "The calendar is still blank",
@@ -4647,7 +4654,7 @@ export const en = {
         "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",
       quietlyCalendarTitle: "A month and a week",
       quietlyCalendarBody:
-        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal, offer deadline and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month.",
+        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal, offer deadline and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month. A reminder, a follow-up or an offer deadline that passes unanswered does not vanish with the runway: it moves to the card above the grid, oldest first, with its days late counted, until you answer it.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
         "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, each keeping a link back to its row, no feed required.",

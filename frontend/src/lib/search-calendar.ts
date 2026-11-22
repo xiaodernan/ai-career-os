@@ -287,6 +287,56 @@ export function nextEvent(events: CalendarEvent[], today: string = localDateKey(
 }
 
 /**
+ * Epic 405 — the three kinds that ask the reader for something. A rehearsal
+ * that happened and a letter that opened are history, not debt: they stay in
+ * the grid and are never late. A reminder that fired, a follow-up whose cadence
+ * ran out, and an offer deadline that passed while the decision is pending are
+ * questions the reader still owes an answer.
+ */
+export const OVERDUE_KINDS: CalendarKind[] = ["reminder", "followup", "offer"];
+
+/** Whole days a date sits before today; 0 on or after today and when unreadable. */
+export function daysPast(date: string, today: string = localDateKey()): number {
+  const target = new Date(`${date}T00:00:00`).getTime();
+  const now = new Date(`${today}T00:00:00`).getTime();
+  if (!Number.isFinite(target) || !Number.isFinite(now)) return 0;
+  return Math.max(0, Math.round((now - target) / 86_400_000));
+}
+
+/**
+ * A row whose day has passed while the question it asks is still open. Today is
+ * not late — it is still in the runway — so the comparison is strict.
+ */
+export function isOverdue(event: CalendarEvent, today: string = localDateKey()): boolean {
+  return event.date < today && OVERDUE_KINDS.includes(event.kind);
+}
+
+export interface OverdueSlice {
+  /** The oldest rows first, capped at the caller's limit. */
+  items: CalendarEvent[];
+  /** Every open past row, including the ones past the cap. */
+  total: number;
+}
+
+/**
+ * Epic 405 — what the runway cannot say. `upcomingEvents` keeps only rows on or
+ * after today, so a follow-up that went due last week and was never answered
+ * fell off the one card a reader checks in the morning. This fold puts those
+ * rows back in front of them, oldest first: the one that has waited longest is
+ * the one to answer first. The cap shortens the list, never the count.
+ */
+export function overdueEvents(
+  events: CalendarEvent[],
+  today: string = localDateKey(),
+  limit: number = 5
+): OverdueSlice {
+  const late = events.filter((event) => isOverdue(event, today));
+  late.sort((a, b) => a.date.localeCompare(b.date) || KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
+  const take = Math.max(0, Math.floor(limit));
+  return { items: late.slice(0, take), total: late.length };
+}
+
+/**
  * Epic 393 — the runway, not just the next step. The card used to name one
  * row; a reader planning a week needs the next few. The list is already
  * sorted by `buildEvents`, so this is a slice, never a re-sort.

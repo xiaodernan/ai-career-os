@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   buildEvents,
   dateKeyOf,
+  daysPast,
   eventsInMonth,
   eventsInWeek,
   followUpDue,
+  isOverdue,
   monthCells,
   monthKeyOf,
   nextEvent,
+  overdueEvents,
   readCalendarView,
   readDayKey,
   readMonthKey,
@@ -374,5 +377,76 @@ describe("the week's rhythm", () => {
       openDays: 7,
       busiest: null,
     });
+  });
+});
+
+/**
+ * Epic 405 — the runway keeps only rows on or after today, so a follow-up that
+ * went due last week used to fall off the one card a reader checks in the
+ * morning. These cases pin what "late" means: only the three kinds that ask for
+ * an answer, only strictly before today, and the oldest row first.
+ */
+describe("the rows the runway cannot hold", () => {
+  const row = (date: string, kind: CalendarEvent["kind"]): CalendarEvent => ({
+    id: `${kind}-${date}`,
+    date,
+    kind,
+    title: `${kind} on ${date}`,
+  });
+
+  it("counts a reminder, a follow-up and an offer as late once their day passes", () => {
+    expect(isOverdue(row("2026-09-14", "reminder"), TODAY)).toBe(true);
+    expect(isOverdue(row("2026-09-14", "followup"), TODAY)).toBe(true);
+    expect(isOverdue(row("2026-09-14", "offer"), TODAY)).toBe(true);
+  });
+
+  it("leaves today alone and keeps a rehearsal or an opened letter as history", () => {
+    expect(isOverdue(row("2026-09-15", "reminder"), TODAY)).toBe(false);
+    expect(isOverdue(row("2026-09-16", "offer"), TODAY)).toBe(false);
+    expect(isOverdue(row("2026-09-14", "interview"), TODAY)).toBe(false);
+    expect(isOverdue(row("2026-09-14", "capsule"), TODAY)).toBe(false);
+  });
+
+  it("puts the row that has waited longest first, and caps the list but not the count", () => {
+    const events = [
+      row("2026-09-10", "followup"),
+      row("2026-09-12", "reminder"),
+      row("2026-09-08", "offer"),
+      row("2026-09-14", "capsule"),
+      row("2026-09-13", "interview"),
+    ];
+    const slice = overdueEvents(events, TODAY, 2);
+    expect(slice.items.map((event) => event.id)).toEqual(["offer-2026-09-08", "followup-2026-09-10"]);
+    expect(slice.total).toBe(3);
+    expect(overdueEvents(events, TODAY, 0)).toEqual({ items: [], total: 3 });
+  });
+
+  it("does not reorder the caller's array", () => {
+    const events = [row("2026-09-10", "followup"), row("2026-09-08", "offer")];
+    overdueEvents(events, TODAY, 5);
+    expect(events.map((event) => event.date)).toEqual(["2026-09-10", "2026-09-08"]);
+  });
+
+  it("finds a follow-up that went due and an offer still pending in the rows themselves", () => {
+    const events = buildEvents({
+      followUps: [followUp({ daysSince: 12, cadenceDays: 7 })],
+      offers: [
+        offer({ id: "o-pending", deadline: "2026-09-12T00:00:00Z", decision: "pending" }),
+        offer({ id: "o-taken", deadline: "2026-09-12T00:00:00Z", decision: "accepted" }),
+      ],
+      today: TODAY,
+    });
+    const slice = overdueEvents(events, TODAY, 5);
+    expect(slice.total).toBe(2);
+    expect(slice.items.map((event) => event.kind)).toEqual(["followup", "offer"]);
+    expect(slice.items.every((event) => event.date < TODAY)).toBe(true);
+  });
+
+  it("measures lateness in whole local days and never counts forward", () => {
+    expect(daysPast("2026-09-14", TODAY)).toBe(1);
+    expect(daysPast("2026-09-01", TODAY)).toBe(14);
+    expect(daysPast("2026-09-15", TODAY)).toBe(0);
+    expect(daysPast("2026-09-16", TODAY)).toBe(0);
+    expect(daysPast("not a date", TODAY)).toBe(0);
   });
 });

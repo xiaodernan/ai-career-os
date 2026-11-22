@@ -28,10 +28,12 @@ import { buildCalendarIcs } from "@/lib/calendar-ics";
 import { calendarNavFromKey } from "@/lib/calendar-keys";
 import {
   buildEvents,
+  daysPast,
   eventsInMonth,
   eventsInWeek,
   monthCells,
   monthKeyOf,
+  overdueEvents,
   readCalendarView,
   readDayKey,
   readMonthKey,
@@ -150,6 +152,10 @@ export default function CalendarPage() {
     [shownEvents]
   );
   const upcoming = React.useMemo(() => upcomingEvents(events, today, 5), [events, today]);
+  // Epic 405 — the rows the runway cannot hold. A reminder, a follow-up and an
+  // offer deadline are questions; once their day passes unanswered they leave
+  // `upcomingEvents` entirely. This is where they come back, oldest first.
+  const overdue = React.useMemo(() => overdueEvents(events, today, 5), [events, today]);
   const cells = React.useMemo(() => monthCells(month), [month]);
 
   const monthLabel = React.useMemo(
@@ -387,6 +393,61 @@ export default function CalendarPage() {
             </p>
           )}
 
+          {overdue.total > 0 && (
+            <Card className="border-warning/40 bg-warning/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex flex-wrap items-baseline gap-2 text-base">
+                  {t("monthCalendar.overdueTitle")}
+                  <span className="font-mono text-xs font-normal tabular-nums text-warning">
+                    {overdue.total}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("monthCalendar.overdueBody")}
+                </p>
+                <ol className="space-y-3">
+                  {overdue.items.map((event) => {
+                    const late = daysPast(event.date, today);
+                    return (
+                      <li key={event.id} className="flex items-start gap-3">
+                        <span
+                          aria-hidden
+                          className={`mt-1.5 size-2 shrink-0 rounded-full ${KIND_VISUALS[event.kind].dot}`}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm leading-relaxed text-foreground">
+                            {event.title || t("monthCalendar.capsuleEvent")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDateOnly(event.date, locale)} · {t(KIND_VISUALS[event.kind].labelKey)} ·{" "}
+                            {late === 1
+                              ? t("monthCalendar.overdueDay")
+                              : t("monthCalendar.overdueDays", { days: late })}
+                          </p>
+                          {event.href && (
+                            <Link
+                              href={event.href}
+                              className="mt-1 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
+                            >
+                              {t("monthCalendar.open")}
+                            </Link>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+                {overdue.total > overdue.items.length && (
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t("monthCalendar.overdueMore", { count: overdue.total - overdue.items.length })}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {view === "week" ? (
             <WeekGrid
               cells={week}
@@ -553,7 +614,11 @@ export default function CalendarPage() {
                     })}
                   </ol>
                 ) : (
-                  <p className="text-sm leading-relaxed text-muted-foreground">{t("monthCalendar.noUpcoming")}</p>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {overdue.total > 0
+                      ? t("monthCalendar.noUpcomingOverdue", { count: overdue.total })
+                      : t("monthCalendar.noUpcoming")}
+                  </p>
                 )}
               </CardContent>
             </Card>
