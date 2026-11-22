@@ -4287,7 +4287,7 @@ export const en = {
       faqWhat: "An open-source, local-first career operating system. It reads your resume, grounds every AI claim in it, and walks the full loop — from first job to signed offer — in one workspace.",
       faqWho: "Anyone who cares about the quality of their own search. Engineers, designers, data folks, managers, students in their last year — anyone whose work needs a sharper case file.",
       faqPrice: "Open source. Yours to run on your own laptop or VPS. The model tier is whatever you put in .env — bring your own OpenAI key, or run fully local with Ollama.",
-      faqOffline: "The UI runs fine offline as a Next.js app; the engines need a model provider. Without one, the product says \"degraded\" honestly instead of faking answers.",
+      faqOffline: "The UI runs fine offline as a Next.js app; the engines need a model provider. Without one, the product says \"degraded\" honestly and keeps the local arithmetic: the timeline writes its local chronicle, and the admin page prints local forecasts and measures — no model answers are faked.",
       faqData: "Postgres on your machine. Nothing leaves the box. /data exports every byte as a JSON bundle you can re-import anywhere — or redact into a shareable anonymized copy.",
       faqHuman: "The loop ends in a human. Every offer, every decision, every letter — yours to write. The product is the coach who never tires and never lies; it is not a stand-in for you.",
       codaTitle: "The close",
