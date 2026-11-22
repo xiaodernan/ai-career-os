@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T05:58:30.882404Z",
+  "generated_at": "2026-11-22T10:22:34.863109Z",
   "branch": "main",
-  "head": "6d42883",
-  "total_commits": 1802,
-  "milestone": "Epic 378",
-  "milestone_full": "the ledger of done epics (through 531 items), closed at Epic 378 — The pressure verdict has a home in CI (2026-11-22)",
+  "head": "dfa4317",
+  "total_commits": 1805,
+  "milestone": "Epic 379",
+  "milestone_full": "the ledger of done epics (through 532 items), closed at Epic 379 — The ledger still counsels when the model is dark (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
-  "tests": "1684+",
-  "test_files": 219,
-  "work_items": 531,
-  "epics": 244,
+  "tests": "1694+",
+  "test_files": 220,
+  "work_items": 532,
+  "epics": 245,
   "feature_surface": [
+    "Epic 379 — The ledger still counsels when the model is dark (2026-11-22)",
     "Epic 378 — The pressure verdict has a home in CI (2026-11-22)",
     "Epic 377 — The knowledge base is the frontier that opens at any moment (2026-11-22)",
     "Epic 376 — The shape of this reader's search (2026-11-22)",
     "Epic 375 — A browser sweep of the new surfaces, and the 500 it found (2026-11-22)",
-    "Epic 374 — How long it has been since the reader last rehearsed (2026-11-22)",
-    "Epic 373 — The search and the reading are two questions, and the page says so (2026-11-22)"
+    "Epic 374 — How long it has been since the reader last rehearsed (2026-11-22)"
   ]
 }
