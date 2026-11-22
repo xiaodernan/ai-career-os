@@ -4410,6 +4410,7 @@ export const en = {
       key2: "/ (slash) — enter search from any board.",
       key3: "g d / g c / g o / g t — go to dashboard, copilot, offers, timeline.",
       key4: "? — this playbook.",
+      key5: "Calendar — ← → walk a month or a week, T returns to today; a day number opens that day's week.",
       faqQ1: "What is Career OS, in one breath?",
       faqQ2: "Who is this for?",
       faqQ3: "Is it free?",

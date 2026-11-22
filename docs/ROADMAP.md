@@ -8198,6 +8198,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **402** The power moves learn the calendar, and the tour stops miscounting (2026-11-22).
+
+  The manual's "commands worth memorising" list stopped at four and never
+  named the room the reader now lives in: it gains a fifth line — ← → walk a
+  month or a week, T returns to today, a day number opens that day's week.
+  Both languages. The public tour was worse: its own comment called the walk
+  "eight beats" in one place and "nine beats" in another while the page has
+  rendered ten for many epics; both comments now say ten, which is what the
+  copy and the list already said. One playbook test pins the new key. Full
+  frontend suite **231 files / 1,781 tests green**, `tsc --noEmit` and
+  `npm run lint` clean; no new source file, copy census stays 238.
+
 - [x] **401** The first walk ends at the calendar (2026-11-22).
 
   The quick start opened with four beats and stopped at the pipeline, so the

@@ -208,7 +208,7 @@ export default function PlaybookPage() {
           </div>
           <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.keyboardTitle")}</h2>
           <ul className="max-w-2xl space-y-2 text-sm text-foreground/90">
-            {[t("playbook.key1"), t("playbook.key2"), t("playbook.key3"), t("playbook.key4")].map((line, index) => (
+            {[t("playbook.key1"), t("playbook.key2"), t("playbook.key3"), t("playbook.key4"), t("playbook.key5")].map((line, index) => (
               <li key={index} className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/60 px-4 py-2 font-mono">
                 <Keyboard aria-hidden className="size-4 text-muted-foreground" />
                 <span>{line}</span>

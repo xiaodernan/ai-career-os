@@ -4105,6 +4105,7 @@ export const zh = {
       key2: "/ —— 从任意看板直接进入搜索。",
       key3: "g d / g c / g o / g t —— 去 dashboard / copilot / offers / timeline。",
       key4: "? —— 这份指南。",
+      key5: "日历 —— ← → 走一个月或一周，T 回到今天；点某天的数字，打开那一天所在的周。",
       faqQ1: "Career OS 到底是什么？",
       faqQ2: "谁适合用？",
       faqQ3: "免费吗？",

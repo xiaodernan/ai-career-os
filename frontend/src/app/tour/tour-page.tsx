@@ -27,7 +27,7 @@ import { ProductPreview } from "@/components/marketing/product-preview";
  * /tour — the ten-minute start (Epic 244).
  *
  * The public front door for the reader who wants to know what walking
- * through the door means before they register. Eight beats from signup to
+ * through the door means before they register. Ten beats from signup to
  * the closing ceremony; each one names a real screen, with its honest cost
  * and its one action. It answers the only question a first-time reader
  * ever has: what do I actually do here, and in what order.
@@ -98,7 +98,7 @@ export default function TourPage() {
           </figcaption>
         </figure>
 
-        {/* The nine beats */}
+        {/* The ten beats */}
         <ol className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {BEATS.map((beat, index) => {
             const Icon = beat.icon;
