@@ -8198,6 +8198,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **398** The offer deadline reaches the page and the file (2026-11-22).
+
+  The subscription feed has carried offer deadlines since Epic 196, but the
+  calendar page did not: a reader planning the month saw reminders, follow-ups,
+  rehearsals and sealed letters, and then had to remember the one date that
+  costs money to miss. `buildEvents` now reads the offer shelf through the same
+  `useOfferShelf` the offers room already uses: a pending row with a readable
+  deadline becomes an all-day `offer` event titled with the offer's own label
+  and linked to `/offers`; a decided row is no longer a question and stays off,
+  exactly as the backend feed filters it. The legend gains a fifth dot
+  ("Offer deadline" / "录用截止日"), the month and week grids both show it, the
+  `.ics` export carries it through the same kind-label table, and the page's
+  loading, error and refresh paths now include the shelf. Two tests cover the
+  rules (pending with a deadline in; accepted, declined and undated out; an
+  undecided row treated as pending) and the page renders one pending offer while
+  keeping an accepted one off. Manual, nav description and legend hint now name
+  the deadline. Full frontend suite **231 files / 1,778 tests green**,
+  `tsc --noEmit` clean; backend unchanged and still **1,433 green**.
+
 - [x] **397** The two grids are doors to each other (2026-11-22).
 
   The month could already jump to a day's week through the "+N more" counter,

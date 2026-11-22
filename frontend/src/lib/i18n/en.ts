@@ -66,7 +66,7 @@ export const en = {
       yourData: "Export, restore and redact your data",
       activity: "AI agent runs and traces",
       timeline: "One ordered read of the whole loop",
-      calendar: "The search on a month: reminders, follow-ups, rehearsals, letters",
+      calendar: "The search on a month: reminders, follow-ups, rehearsals, offer deadlines, letters",
       admin: "Operator ledger: stats, trends, and optimization signals",
       settings: "Account and preferences",
       studio: "Paste a job, see your fit, tailor your resume",
@@ -105,7 +105,7 @@ export const en = {
     monthCalendar: {
       title: "Calendar",
       description:
-        "The search on a month, Monday-first: reminders, follow-ups gone due, rehearsals and sealed letters. Every row is one your other screens already hold.",
+        "The search on a month, Monday-first: reminders, follow-ups gone due, rehearsals, offer deadlines and sealed letters. Every row is one your other screens already hold.",
       prev: "Previous month",
       next: "Next month",
       today: "Today",
@@ -136,14 +136,15 @@ export const en = {
       exportHint: "Download the days you are looking at as a calendar file",
       icsCalendarName: "Career search",
       monthEmpty:
-        "Nothing lands on this month yet. Reminders, follow-ups gone due, rehearsals and sealed letters appear here on their own days.",
+        "Nothing lands on this month yet. Reminders, follow-ups gone due, rehearsals, offer deadlines and sealed letters appear here on their own days.",
       legendTitle: "What the dots mean",
       legendReminder: "Reminder",
       legendFollowup: "Follow-up due",
       legendInterview: "Rehearsal",
+      legendOffer: "Offer deadline",
       legendCapsule: "Sealed letter opens",
       legendHint:
-        "A follow-up is due one relation cadence after the last touch; a sealed letter shows only its opening day, never its body. When a day says \"+N more\", tap the counter to see that day's full list in the week.",
+        "A follow-up is due one relation cadence after the last touch; an offer deadline stays while the decision is pending; a sealed letter shows only its opening day, never its body. When a day says \"+N more\", tap the counter to see that day's full list in the week.",
       nextTitle: "Next up",
       nextToday: "Today",
       nextTomorrow: "Tomorrow",
@@ -4641,7 +4642,7 @@ export const en = {
         "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",
       quietlyCalendarTitle: "A month and a week",
       quietlyCalendarBody:
-        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month.",
+        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal, offer deadline and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, the Next up card names the next five dated rows with the wait beside each, and every chip is a door to the row it came from. On a keyboard, ← and → walk and T returns to today. In the week view, one line of arithmetic names how many days carry a row, which day is fullest, and how many stay open. Every day number in the month opens that day's week, and every day header in the week opens its month.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
         "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open. The calendar itself also exports the month or week you are looking at as a file — the same rows, the same all-day events, no feed required.",

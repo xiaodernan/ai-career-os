@@ -13,6 +13,7 @@ const LABELS: Record<CalendarKind, string> = {
   reminder: "Reminder",
   followup: "Follow-up due",
   interview: "Rehearsal",
+  offer: "Offer deadline",
   capsule: "Sealed letter opens",
 };
 

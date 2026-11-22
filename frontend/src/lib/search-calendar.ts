@@ -5,14 +5,15 @@
  * reader plans in days. This module is the pure fold that puts them there.
  *
  * It is arithmetic over rows the page already holds — no endpoint, no model call.
- * A row whose date cannot be read is dropped rather than guessed, and a sealed
- * capsule contributes its opening date only, never its body.
+ * A row whose date cannot be read is dropped rather than guessed; a sealed
+ * capsule contributes its opening date only, never its body; a decided offer is
+ * no longer a question and stays off.
  */
 
-import type { Application, FollowUpItem, InterviewSession, KnowledgeNote } from "@/lib/api/types";
+import type { Application, FollowUpItem, InterviewSession, KnowledgeNote, OfferShelfItem } from "@/lib/api/types";
 import { addDays, localDateKey, readCapsules } from "@/lib/time-capsule";
 
-export type CalendarKind = "reminder" | "interview" | "followup" | "capsule";
+export type CalendarKind = "reminder" | "interview" | "followup" | "offer" | "capsule";
 
 export interface CalendarEvent {
   id: string;
@@ -69,7 +70,7 @@ export function weekCells(date: string): MonthCell[] {
   });
 }
 
-const KIND_ORDER: CalendarKind[] = ["reminder", "followup", "interview", "capsule"];
+const KIND_ORDER: CalendarKind[] = ["reminder", "followup", "interview", "offer", "capsule"];
 
 /** A local `YYYY-MM` for a date; the calendar never shifts a row into another month by UTC. */
 export function monthKeyOf(date: Date = new Date()): string {
@@ -128,6 +129,8 @@ export interface CalendarInput {
   applications?: Application[];
   interviews?: InterviewSession[];
   followUps?: FollowUpItem[];
+  /** The offer shelf (Epic 185): a pending deadline is a dated decision. */
+  offers?: OfferShelfItem[];
   notes?: KnowledgeNote[];
   today?: string;
 }
@@ -172,6 +175,21 @@ export function buildEvents(input: CalendarInput): CalendarEvent[] {
       title: item.name || item.id,
       detail: item.company ?? item.relation ?? undefined,
       href: "/networking",
+    });
+  }
+
+  for (const offer of input.offers ?? []) {
+    // A decided offer is no longer a question; the backend's feed filters the
+    // same way, so the page and the subscription cannot disagree.
+    if (offer.decision && offer.decision !== "pending") continue;
+    const date = dateKeyOf(offer.deadline);
+    if (!date) continue;
+    events.push({
+      id: `offer-${offer.id}`,
+      date,
+      kind: "offer",
+      title: offer.label,
+      href: "/offers",
     });
   }
 
@@ -256,6 +274,7 @@ export function summarize(events: CalendarEvent[]): Record<CalendarKind, number>
     reminder: 0,
     interview: 0,
     followup: 0,
+    offer: 0,
     capsule: 0,
   };
   for (const event of events) counts[event.kind] += 1;

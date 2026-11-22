@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Download,
   Feather,
+  Handshake,
   Sparkles,
   Users,
   type LucideIcon,
@@ -21,7 +22,7 @@ import { Hint } from "@/components/ui/hint";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateOnly } from "@/lib/format";
-import { useApplications, useDashboard, useInterviewSessions, useKnowledgeNotes } from "@/lib/hooks/resources";
+import { useApplications, useDashboard, useInterviewSessions, useKnowledgeNotes, useOfferShelf } from "@/lib/hooks/resources";
 import { CAPSULE_TAG, daysUntil, localDateKey } from "@/lib/time-capsule";
 import { buildCalendarIcs } from "@/lib/calendar-ics";
 import { calendarNavFromKey } from "@/lib/calendar-keys";
@@ -70,6 +71,12 @@ const KIND_VISUALS: Record<CalendarKind, { icon: LucideIcon; labelKey: string; d
     dot: "bg-warning",
     chip: "border-warning/40 bg-warning/10 text-warning",
   },
+  offer: {
+    icon: Handshake,
+    labelKey: "monthCalendar.legendOffer",
+    dot: "bg-destructive",
+    chip: "border-destructive/40 bg-destructive/10 text-destructive",
+  },
   capsule: {
     icon: Feather,
     labelKey: "monthCalendar.legendCapsule",
@@ -78,18 +85,19 @@ const KIND_VISUALS: Record<CalendarKind, { icon: LucideIcon; labelKey: string; d
   },
 };
 
-const KIND_ORDER: CalendarKind[] = ["reminder", "followup", "interview", "capsule"];
+const KIND_ORDER: CalendarKind[] = ["reminder", "followup", "interview", "offer", "capsule"];
 
 /** A chip is one fact; past this many the cell says "+N" instead of growing a wall. */
 const MAX_CHIPS = 3;
 
 /**
- * Epic 386 — the search on a calendar. The product writes dated rows in seven
+ * Epic 386 — the search on a calendar. The product writes dated rows in eight
  * places, and the reader plans in days: a reminder, a follow-up gone due, a
- * rehearsal and a sealed letter are all "a day". This page lays the rows the
- * other screens already hold on a Monday-first month, with no new endpoint and
- * no model call. A row without a readable date is dropped rather than guessed;
- * a sealed letter contributes its opening day, never its body.
+ * rehearsal, an offer deadline and a sealed letter are all "a day". This page
+ * lays the rows the other screens already hold on a Monday-first month, with no
+ * new endpoint and no model call. A row without a readable date is dropped
+ * rather than guessed; a sealed letter contributes its opening day, never its
+ * body; a decided offer is no longer a question and stays off.
  */
 export default function CalendarPage() {
   const { t, locale } = useLocale();
@@ -102,6 +110,7 @@ export default function CalendarPage() {
   const interviews = useInterviewSessions({ size: 100 });
   const dashboard = useDashboard();
   const notes = useKnowledgeNotes({ tag: CAPSULE_TAG, size: 50 });
+  const offers = useOfferShelf();
 
   const events = React.useMemo(
     () =>
@@ -109,10 +118,18 @@ export default function CalendarPage() {
         applications: applications.data?.items,
         interviews: interviews.data?.items,
         followUps: dashboard.data?.followUps,
+        offers: offers.data?.items,
         notes: notes.data?.items,
         today,
       }),
-    [applications.data?.items, interviews.data?.items, dashboard.data?.followUps, notes.data?.items, today]
+    [
+      applications.data?.items,
+      interviews.data?.items,
+      dashboard.data?.followUps,
+      offers.data?.items,
+      notes.data?.items,
+      today,
+    ]
   );
 
   const monthEvents = React.useMemo(() => eventsInMonth(events, month), [events, month]);
@@ -163,14 +180,15 @@ export default function CalendarPage() {
     return `${formatter.format(first)} – ${formatter.format(last)}, ${last.getFullYear()}`;
   }, [week, locale]);
 
-  const pending = applications.isPending || interviews.isPending;
-  const failed = applications.isError || interviews.isError;
+  const pending = applications.isPending || interviews.isPending || offers.isPending;
+  const failed = applications.isError || interviews.isError || offers.isError;
 
   const refresh = () => {
     void applications.refetch();
     void interviews.refetch();
     void dashboard.refetch();
     void notes.refetch();
+    void offers.refetch();
   };
 
   const go = (delta: number) => {
@@ -240,6 +258,7 @@ export default function CalendarPage() {
         reminder: t("monthCalendar.legendReminder"),
         followup: t("monthCalendar.legendFollowup"),
         interview: t("monthCalendar.legendInterview"),
+        offer: t("monthCalendar.legendOffer"),
         capsule: t("monthCalendar.legendCapsule"),
       },
     });
@@ -331,9 +350,9 @@ export default function CalendarPage() {
       {failed && (
         <ErrorState
           title={t("monthCalendar.loadFailed")}
-          error={applications.error ?? interviews.error}
+          error={applications.error ?? interviews.error ?? offers.error}
           onRetry={refresh}
-          retrying={applications.isFetching || interviews.isFetching}
+          retrying={applications.isFetching || interviews.isFetching || offers.isFetching}
         />
       )}
 

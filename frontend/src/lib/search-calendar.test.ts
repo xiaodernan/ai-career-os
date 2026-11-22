@@ -20,7 +20,7 @@ import {
   weekTempo,
   type CalendarEvent,
 } from "@/lib/search-calendar";
-import type { Application, FollowUpItem, InterviewSession, KnowledgeNote } from "@/lib/api/types";
+import type { Application, FollowUpItem, InterviewSession, KnowledgeNote, OfferShelfItem } from "@/lib/api/types";
 
 /**
  * Epic 386 — the month is arithmetic over rows the page already holds. Every
@@ -58,6 +58,25 @@ function followUp(overrides: Partial<FollowUpItem> = {}): FollowUpItem {
 
 function capsule(tags: string[], content = "a secret plan"): KnowledgeNote {
   return { id: "n-1", title: "", content, tags };
+}
+
+function offer(overrides: Partial<OfferShelfItem> = {}): OfferShelfItem {
+  return {
+    id: "offer-1",
+    label: "Lunar Works · Staff Engineer",
+    base: 180000,
+    bonus: 20000,
+    equity: 40000,
+    currency: "USD",
+    remoteType: "hybrid",
+    deadline: "2026-09-24T12:00:00Z",
+    notes: null,
+    totalComp: 240000,
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-01T00:00:00Z",
+    decision: "pending",
+    ...overrides,
+  };
 }
 
 describe("the month grid", () => {
@@ -148,6 +167,28 @@ describe("buildEvents", () => {
     expect(buildEvents({ notes: [capsule(["capsule", "capsule-not-a-date"])], today: TODAY })).toEqual([]);
   });
 
+  it("puts a pending offer deadline on its day and drops a decided one", () => {
+    const events = buildEvents({
+      offers: [
+        offer(),
+        offer({ id: "offer-2", decision: "accepted" }),
+        offer({ id: "offer-3", decision: "declined" }),
+        offer({ id: "offer-4", deadline: null }),
+      ],
+      today: TODAY,
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      id: "offer-offer-1",
+      kind: "offer",
+      title: "Lunar Works · Staff Engineer",
+      href: "/offers",
+    });
+    expect(events[0].date).toMatch(/^2026-09-(24|25)$/);
+    // An offer without a decision is still pending, not silently dropped.
+    expect(buildEvents({ offers: [offer({ decision: undefined })], today: TODAY })).toHaveLength(1);
+  });
+
   it("sorts the day's rows in a stable order and groups them by date", () => {
     const events = buildEvents({
       applications: [application()],
@@ -174,7 +215,7 @@ describe("buildEvents", () => {
       followUps: [followUp()],
       today: TODAY,
     });
-    expect(summarize(events)).toEqual({ reminder: 1, interview: 1, followup: 1, capsule: 0 });
+    expect(summarize(events)).toEqual({ reminder: 1, interview: 1, followup: 1, offer: 0, capsule: 0 });
     expect(nextEvent(events, TODAY)?.date).toBe("2026-09-20");
     expect(nextEvent(events, "2026-10-01")).toBeNull();
   });
@@ -242,6 +283,7 @@ describe("the week around a day", () => {
       reminder: 0,
       interview: 0,
       followup: 0,
+      offer: 0,
       capsule: 0,
     });
     expect(nextEvent(events, "2026-09-10")?.id).toBe("reminder-app-1");

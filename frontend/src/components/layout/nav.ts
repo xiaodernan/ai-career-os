@@ -63,7 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/resumes", label: "Resumes", labelKey: "nav.resumes", descriptionKey: "navDescriptions.resumes", icon: FileText, description: "Resume versions and structured profile" },
   { href: "/jobs", label: "Jobs", labelKey: "nav.jobs", descriptionKey: "navDescriptions.jobs", icon: Briefcase, description: "Discovered jobs and AI matches" },
   { href: "/applications", label: "Applications", labelKey: "nav.applications", descriptionKey: "navDescriptions.applications", icon: CalendarClock, description: "Pipeline kanban and reminders" },
-  { href: "/calendar", label: "Calendar", labelKey: "nav.calendar", descriptionKey: "navDescriptions.calendar", icon: CalendarDays, description: "The month of the search: reminders, follow-ups, rehearsals, letters" },
+  { href: "/calendar", label: "Calendar", labelKey: "nav.calendar", descriptionKey: "navDescriptions.calendar", icon: CalendarDays, description: "The month of the search: reminders, follow-ups, rehearsals, offer deadlines, letters" },
   { href: "/letters", label: "Letters", labelKey: "nav.letters", descriptionKey: "navDescriptions.letters", icon: Feather, description: "Every letter you kept, in one gallery" },
   { href: "/interviews", label: "Interviews", labelKey: "nav.interviews", descriptionKey: "navDescriptions.interviews", icon: Sparkles, description: "Adaptive AI mock interviews" },
   { href: "/copilot", label: "Copilot", labelKey: "nav.copilot", descriptionKey: "navDescriptions.copilot", icon: MessageSquare, description: "Career agent conversation" },

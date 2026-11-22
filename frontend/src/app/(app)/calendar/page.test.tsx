@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   applications: [] as Record<string, unknown>[],
   interviews: [] as Record<string, unknown>[],
   followUps: [] as Record<string, unknown>[],
+  offers: [] as Record<string, unknown>[],
   notes: [] as Record<string, unknown>[],
   url: { month: "2026-09" } as { month?: string; view?: string; day?: string },
   written: undefined as Record<string, unknown> | undefined,
@@ -16,6 +17,7 @@ vi.mock("@/lib/hooks/resources", () => ({
   useApplications: () => ({ data: { items: state.applications, total: state.applications.length }, ...quiet }),
   useInterviewSessions: () => ({ data: { items: state.interviews, total: state.interviews.length }, ...quiet }),
   useDashboard: () => ({ data: { followUps: state.followUps }, ...quiet }),
+  useOfferShelf: () => ({ data: { items: state.offers, total: state.offers.length }, ...quiet }),
   useKnowledgeNotes: () => ({ data: { items: state.notes, total: state.notes.length }, ...quiet }),
 }));
 
@@ -53,6 +55,7 @@ beforeEach(() => {
   state.applications = [];
   state.interviews = [];
   state.followUps = [];
+  state.offers = [];
   state.notes = [];
   state.url = { month: "2026-09" };
   state.written = undefined;
@@ -109,6 +112,29 @@ describe("the calendar page", () => {
     expect(html).toContain("Role 2");
     expect(html).toContain("Role 3");
     expect(html).not.toContain("Reminder · Role 4");
+  });
+
+  it("puts a pending offer deadline on the month and keeps a decided one out", () => {
+    state.offers = [
+      {
+        id: "offer-1",
+        label: "Lunar Works · Staff Engineer",
+        decision: "pending",
+        deadline: "2026-09-24T12:00:00Z",
+      },
+      {
+        id: "offer-2",
+        label: "Accepted Offer",
+        decision: "accepted",
+        deadline: "2026-09-25T12:00:00Z",
+      },
+    ];
+    const html = render();
+    expect(html).toContain("Lunar Works · Staff Engineer");
+    expect(html).toContain('href="/offers"');
+    expect(html).toContain("Offer deadline");
+    // A decided offer is no longer a question.
+    expect(html).not.toContain("Accepted Offer");
   });
 
   it("names the next five rows as a runway, with the wait beside each", () => {
