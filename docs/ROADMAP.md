@@ -8198,6 +8198,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **377** The knowledge base is the frontier that opens at any moment (2026-11-22).
+
+  Brief VI: "无尽开放世界感". Every other frontier on the atlas strip needs another room
+  to have been visited first — a board with no application, a rehearsal list nobody
+  opened. A note does not: it is the one fact in the ledger that can be written from
+  any screen at any time, so the map can always offer that door even to a reader who
+  has been nowhere else.
+
+  The all-charted fixture now covers all six regions, so the strip's honest silence is
+  measured against the whole vocabulary rather than five of its six names. EN+ZH, one
+  key. 22 atlas tests green (+1), tsc clean, eslint clean.
+
 - [x] **376b** Six surfaces, measured in a real browser on the rebuilt stack (2026-11-22).
 
   The frontend image was rebuilt from the tree and `e2e/surfaces-probe.mjs` extended to
