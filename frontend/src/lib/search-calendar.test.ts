@@ -15,7 +15,9 @@ import {
   shiftDays,
   shiftMonth,
   summarize,
+  upcomingEvents,
   weekCells,
+  type CalendarEvent,
 } from "@/lib/search-calendar";
 import type { Application, FollowUpItem, InterviewSession, KnowledgeNote } from "@/lib/api/types";
 
@@ -242,5 +244,32 @@ describe("the week around a day", () => {
       capsule: 0,
     });
     expect(nextEvent(events, "2026-09-10")?.id).toBe("reminder-app-1");
+  });
+});
+
+describe("the runway ahead", () => {
+  const rows: CalendarEvent[] = Array.from({ length: 7 }, (_, index) => ({
+    id: `e-${index}`,
+    date: `2026-09-${String(14 + index).padStart(2, "0")}`,
+    kind: "reminder",
+    title: `Row ${index}`,
+  }));
+
+  it("starts on today, never in the past, and takes only what was asked", () => {
+    const runway = upcomingEvents(rows, "2026-09-15", 5);
+    expect(runway.map((event) => event.date)).toEqual([
+      "2026-09-15",
+      "2026-09-16",
+      "2026-09-17",
+      "2026-09-18",
+      "2026-09-19",
+    ]);
+    expect(upcomingEvents(rows, "2026-09-15", 0)).toEqual([]);
+    expect(upcomingEvents(rows, "2026-09-15", -3)).toEqual([]);
+    expect(upcomingEvents(rows, "2026-10-01")).toEqual([]);
+  });
+
+  it("keeps the first row of the runway identical to the old next-up", () => {
+    expect(nextEvent(rows, "2026-09-15")?.id).toBe(upcomingEvents(rows, "2026-09-15", 5)[0].id);
   });
 });

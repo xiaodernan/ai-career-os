@@ -22,7 +22,7 @@ import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDateOnly } from "@/lib/format";
 import { useApplications, useDashboard, useInterviewSessions, useKnowledgeNotes } from "@/lib/hooks/resources";
-import { CAPSULE_TAG, localDateKey } from "@/lib/time-capsule";
+import { CAPSULE_TAG, daysUntil, localDateKey } from "@/lib/time-capsule";
 import { buildCalendarIcs } from "@/lib/calendar-ics";
 import {
   buildEvents,
@@ -30,13 +30,13 @@ import {
   eventsInWeek,
   monthCells,
   monthKeyOf,
-  nextEvent,
   readCalendarView,
   readDayKey,
   readMonthKey,
   shiftDays,
   shiftMonth,
   summarize,
+  upcomingEvents,
   weekCells,
   type CalendarEvent,
   type CalendarKind,
@@ -123,7 +123,7 @@ export default function CalendarPage() {
     () => summarize([...shownEvents.values()].flat()),
     [shownEvents]
   );
-  const upcoming = React.useMemo(() => nextEvent(events, today), [events, today]);
+  const upcoming = React.useMemo(() => upcomingEvents(events, today, 5), [events, today]);
   const cells = React.useMemo(() => monthCells(month), [month]);
 
   const monthLabel = React.useMemo(
@@ -431,29 +431,42 @@ export default function CalendarPage() {
                 <CardTitle className="text-base">{t("monthCalendar.nextTitle")}</CardTitle>
               </CardHeader>
               <CardContent>
-                {upcoming ? (
-                  <div className="flex items-start gap-3">
-                    <span
-                      aria-hidden
-                      className={`mt-1.5 size-2 shrink-0 rounded-full ${KIND_VISUALS[upcoming.kind].dot}`}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm leading-relaxed text-foreground">
-                        {upcoming.title || t("monthCalendar.capsuleEvent")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateOnly(upcoming.date, locale)} · {t(KIND_VISUALS[upcoming.kind].labelKey)}
-                      </p>
-                      {upcoming.href && (
-                        <Link
-                          href={upcoming.href}
-                          className="mt-1 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {t("monthCalendar.open")}
-                        </Link>
-                      )}
-                    </div>
-                  </div>
+                {upcoming.length > 0 ? (
+                  <ol className="space-y-3">
+                    {upcoming.map((event) => {
+                      const days = daysUntil(event.date, today);
+                      const when =
+                        days === 0
+                          ? t("monthCalendar.nextToday")
+                          : days === 1
+                            ? t("monthCalendar.nextTomorrow")
+                            : t("monthCalendar.nextInDays", { days });
+                      return (
+                        <li key={event.id} className="flex items-start gap-3">
+                          <span
+                            aria-hidden
+                            className={`mt-1.5 size-2 shrink-0 rounded-full ${KIND_VISUALS[event.kind].dot}`}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm leading-relaxed text-foreground">
+                              {event.title || t("monthCalendar.capsuleEvent")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDateOnly(event.date, locale)} · {t(KIND_VISUALS[event.kind].labelKey)} · {when}
+                            </p>
+                            {event.href && (
+                              <Link
+                                href={event.href}
+                                className="mt-1 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
+                              >
+                                {t("monthCalendar.open")}
+                              </Link>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
                 ) : (
                   <p className="text-sm leading-relaxed text-muted-foreground">{t("monthCalendar.noUpcoming")}</p>
                 )}

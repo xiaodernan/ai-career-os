@@ -108,7 +108,27 @@ describe("the calendar page", () => {
     expect(html).toContain("Role 1");
     expect(html).toContain("Role 2");
     expect(html).toContain("Role 3");
-    expect(html).not.toContain("Role 4<");
+    expect(html).not.toContain("Reminder · Role 4");
+  });
+
+  it("names the next five rows as a runway, with the wait beside each", () => {
+    state.applications = Array.from({ length: 6 }, (_, index) => ({
+      id: `app-${index + 1}`,
+      title: `Later ${index + 1}`,
+      companyName: "Acme",
+      status: "applied",
+      reminderAt: `2026-10-${String(index + 1).padStart(2, "0")}T12:00:00Z`,
+    }));
+
+    const html = render();
+
+    // October rows are not on the September grid, yet the runway still names them.
+    expect(html).toContain("Next up");
+    for (let index = 1; index <= 5; index += 1) expect(html).toContain(`Later ${index}`);
+    expect(html).not.toContain("Later 6");
+    expect(html).toContain("In 16 days");
+    expect(html).toContain('href="/applications?application=app-5"');
+    expect(html).not.toContain('href="/applications?application=app-6"');
   });
 
   it("keeps the grid honest when the month holds nothing", () => {

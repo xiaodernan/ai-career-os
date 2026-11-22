@@ -231,5 +231,19 @@ export function summarize(events: CalendarEvent[]): Record<CalendarKind, number>
 
 /** The first event on or after today, with the reader able to see the whole list too. */
 export function nextEvent(events: CalendarEvent[], today: string = localDateKey()): CalendarEvent | null {
-  return events.find((event) => event.date >= today) ?? null;
+  return upcomingEvents(events, today, 1)[0] ?? null;
+}
+
+/**
+ * Epic 393 — the runway, not just the next step. The card used to name one
+ * row; a reader planning a week needs the next few. The list is already
+ * sorted by `buildEvents`, so this is a slice, never a re-sort.
+ */
+export function upcomingEvents(
+  events: CalendarEvent[],
+  today: string = localDateKey(),
+  limit: number = 5
+): CalendarEvent[] {
+  const take = Math.max(0, Math.floor(limit));
+  return events.filter((event) => event.date >= today).slice(0, take);
 }

@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **393** The calendar names a runway, not just the next step (2026-11-22).
+
+  "Next up" named one row; a reader planning a week needs the next few. The
+  card now lists the next five dated rows — application reminders, rehearsals,
+  follow-ups come due, sealed letters opening — each with its own day, its kind
+  and the wait beside it ("Today", "Tomorrow", "In 16 days"), and each a door
+  to the row it came from. The arithmetic is a slice of the list that
+  `buildEvents` already sorted: today counts, the past does not, and a limit of
+  zero (or less) returns nothing rather than a surprise. `nextEvent` is now
+  literally the first row of that runway, so the old behaviour cannot drift
+  from the new one. Two library tests pin the bounds and the identity; the page
+  test uses six October rows against a September grid to prove the fifth is
+  named and the sixth is not. The manual's calendar card mentions the card.
+  Full frontend suite **229 files / 1,765 tests green**, `tsc --noEmit` clean;
+  EN+ZH copy in both tables, copy census stays 238.
+
 - [x] **392** The Chinese table stops borrowing English prose (2026-11-22).
 
   Bilingual copy fails quietly: the page is "translated", yet a Chinese reader
