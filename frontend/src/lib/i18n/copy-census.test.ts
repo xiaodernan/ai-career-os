@@ -186,7 +186,8 @@ describe("the browser's copy", () => {
     // 233 with Epic 374: components/interviews/rhythm-card.tsx.
     // 234 with Epic 376: components/applications/search-portrait-card.tsx.
     // 235 with Epic 380: components/timeline/local-chronicle-card.tsx.
-    expect(browserSources().length).toBe(235);
+    // 236 with Epic 384: components/timeline/time-capsule-card.tsx.
+    expect(browserSources().length).toBe(236);
   });
 
   it("finds a sentence, however long it is", () => {

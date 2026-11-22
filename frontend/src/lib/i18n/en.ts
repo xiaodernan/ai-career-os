@@ -156,6 +156,25 @@ export const en = {
       localEpilogue:
         "{days} days and {total} facts, written on this machine with no model call. When the model returns, another pen will write longer.",
       localEmpty: "The ledger is empty; write the first fact and the book has its first page.",
+      capsuleTitle: "Letters to the future",
+      capsuleDescription:
+        "Seal a letter and name the day it opens; until then the card shows an envelope, never the prose. The letter travels in your data export with every other note.",
+      capsuleWrite: "Write one",
+      capsuleCancel: "Close",
+      capsuleBodyLabel: "The letter",
+      capsulePlaceholder:
+        "Write to yourself a few months from now: what worries you, what you want to remember, what you would say to the person who opens this.",
+      capsuleDateLabel: "Opening date",
+      capsuleSeal: "Seal this letter",
+      capsuleSealing: "Sealing…",
+      capsuleNeedContent: "Write something before sealing it.",
+      capsuleNeedFuture: "The opening date must be at least tomorrow.",
+      capsuleSealed: "Sealed",
+      capsuleOpen: "Opened",
+      capsuleSealedUntil: "Opens in {days} days · {date}",
+      capsuleEmpty: "No letters yet. Write the first one and leave a light for your future self.",
+      capsuleDelete: "Delete this letter",
+      capsuleUnavailable: "The ledger cannot be read right now; the letter is still there — come back later.",
       atlasTitle: "The Career Atlas",
       atlasDescription:
         "A map of the places your search has actually been. Every region is a timeline kind and every site is one of your own events — no invented lands, no filler.",
@@ -3646,6 +3665,7 @@ export const en = {
       explainability: "Explainability",
       reviewerAgent: "Reviewer agent",
       localChronicler: "Local chronicler",
+      timeCapsule: "Time capsule",
       history: "History",
       dataSources: "Data sources",
       workHistory: "Work history",

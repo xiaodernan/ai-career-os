@@ -8198,6 +8198,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **384** The shelf keeps letters to the future (2026-11-22).
+
+  Every notebook eventually asks the same thing: what did I believe before
+  this search started? The timeline now carries **Letters to the future**: the
+  reader writes a letter, picks the day it may be opened (tomorrow at the
+  earliest), and seals it. A sealed letter renders as an envelope with its
+  opening date and the days still to wait — never as prose, not even in the
+  page source this component controls — and the body appears on the day the
+  date arrives. A capsule is an ordinary `user_notes` row wearing two tags
+  (`capsule` and `capsule-YYYY-MM-DD`), so it needs no new table, no new
+  endpoint, and it already travels in the reader's own export, import and
+  note search; a row wearing the tag without a readable date is ignored rather
+  than guessed. The card lists up to fifty letters newest-tagged first, offers
+  a delete per row, and says on an empty shelf what a first letter is for.
+  Pure `lib/time-capsule.ts` (date keys, day arithmetic, sealing, tag
+  building, the read), 8 unit tests + 5 component tests covering sealed
+  silence, the opening day, the quiet shelf, an unreadable date, and the same
+  split in English. Full frontend suite **223 files / 1,713 tests green**,
+  `tsc --noEmit` clean; EN+ZH copy in both tables, copy census 235 → 236.
+
 - [x] **383** The overseer can see the hour of the week (2026-11-22).
 
   The weekly trend line answers "is the door busier than last week"; it cannot

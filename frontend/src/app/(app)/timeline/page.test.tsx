@@ -52,6 +52,19 @@ vi.mock("@/lib/hooks/use-url-state", () => ({
   ],
 }));
 
+// Epic 384: the capsule card reads the reader's notes. The page test grades the
+// ledger, not the note shelf, so an empty shelf and inert mutations are enough.
+vi.mock("@/lib/hooks/resources", () => ({
+  useKnowledgeNotes: () => ({ data: undefined, isPending: false, isError: false }),
+}));
+
+vi.mock("@/lib/hooks/actions", () => ({
+  useNoteMutations: () => ({
+    create: { mutate: () => undefined, isPending: false },
+    remove: { mutate: () => undefined, isPending: false },
+  }),
+}));
+
 import TimelinePage from "./page";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 

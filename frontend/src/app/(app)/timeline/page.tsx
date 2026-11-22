@@ -22,6 +22,7 @@ import { useMilestones } from "@/lib/hooks/monitoring";
 import { CareerNarrativeCard } from "@/components/timeline/career-narrative-card";
 import { CareerChronicleCard } from "@/components/timeline/career-chronicle-card";
 import { LocalChronicleCard } from "@/components/timeline/local-chronicle-card";
+import { TimeCapsuleCard } from "@/components/timeline/time-capsule-card";
 import { CareerAtlas } from "@/components/timeline/career-atlas";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -248,6 +249,8 @@ export default function TimelinePage() {
       {query.data && query.data.length > 0 && (
         <LocalChronicleCard events={visible} />
       )}
+      {/* Epic 384 — a letter sealed in the reader's own notes, opened by date. */}
+      <TimeCapsuleCard />
       <QueryBoundary
         query={query}
         boxed={false}

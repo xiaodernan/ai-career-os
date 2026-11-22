@@ -136,6 +136,25 @@ export const zh = {
       localEpilogue:
         "全书 {days} 天、{total} 条事实；由本机写成，未调用任何模型。模型回来时，另一支笔会写得更长。",
       localEmpty: "账本还是空的；写下第一条事实，书就有了第一页。",
+      capsuleTitle: "写给未来的信",
+      capsuleDescription:
+        "封存一段话，设一个开启日期；到期前只显示信封。信会随你的全部数据一起导出。",
+      capsuleWrite: "写一封",
+      capsuleCancel: "收起",
+      capsuleBodyLabel: "信的内容",
+      capsulePlaceholder:
+        "写给几个月后的自己：此刻在担心什么、希望记住什么、想对那时的自己说什么。",
+      capsuleDateLabel: "开启日期",
+      capsuleSeal: "封存这封信",
+      capsuleSealing: "正在封存…",
+      capsuleNeedContent: "先写点什么，再封存。",
+      capsuleNeedFuture: "开启日期至少要是明天。",
+      capsuleSealed: "封存中",
+      capsuleOpen: "已开启",
+      capsuleSealedUntil: "还要 {days} 天 · {date} 开启",
+      capsuleEmpty: "还没有信。写第一封，给未来的自己留一盏灯。",
+      capsuleDelete: "删除这封信",
+      capsuleUnavailable: "账本暂时读不到；信还在，稍后再来。",
       atlasTitle: "求职版图",
       atlasDescription:
         "这张图只画你的求职真正到过的地方：每个区域是时间线的一种类型，每个地点是你自己留下的一条事件——没有编造的大陆，也没有凑数的空白。",
@@ -3372,6 +3391,7 @@ export const zh = {
       explainability: "可解释性",
       reviewerAgent: "评审代理",
       localChronicler: "本机编年史官",
+      timeCapsule: "时间胶囊",
       history: "历史",
       dataSources: "数据来源",
       workHistory: "工作经历",
