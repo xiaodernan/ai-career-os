@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T10:22:34.863109Z",
+  "generated_at": "2026-11-22T10:27:06.898187Z",
   "branch": "main",
-  "head": "dfa4317",
-  "total_commits": 1805,
-  "milestone": "Epic 379",
-  "milestone_full": "the ledger of done epics (through 532 items), closed at Epic 379 — The ledger still counsels when the model is dark (2026-11-22)",
+  "head": "2dea4d6",
+  "total_commits": 1807,
+  "milestone": "Epic 380",
+  "milestone_full": "the ledger of done epics (through 533 items), closed at Epic 380 — The chronicle has a local pen (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 40,
   "nav_routes": 25,
-  "tests": "1694+",
-  "test_files": 220,
-  "work_items": 532,
-  "epics": 245,
+  "tests": "1700+",
+  "test_files": 221,
+  "work_items": 533,
+  "epics": 246,
   "feature_surface": [
+    "Epic 380 — The chronicle has a local pen (2026-11-22)",
     "Epic 379 — The ledger still counsels when the model is dark (2026-11-22)",
     "Epic 378 — The pressure verdict has a home in CI (2026-11-22)",
     "Epic 377 — The knowledge base is the frontier that opens at any moment (2026-11-22)",
     "Epic 376 — The shape of this reader's search (2026-11-22)",
-    "Epic 375 — A browser sweep of the new surfaces, and the 500 it found (2026-11-22)",
-    "Epic 374 — How long it has been since the reader last rehearsed (2026-11-22)"
+    "Epic 375 — A browser sweep of the new surfaces, and the 500 it found (2026-11-22)"
   ]
 }
