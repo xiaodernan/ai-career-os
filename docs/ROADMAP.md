@@ -8223,7 +8223,9 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   its rows exist; every lore line is the reader's own title under a translated
   frame; the card badges itself "local · 0 model calls" and says so again in the
   epilogue. The card follows the timeline's kind filter, so narrowing to one
-  region narrows the book with it. Pure `lib/local-chronicle.ts`, 6 tests for
+  region narrows the book with it, and the whole book can be copied or downloaded
+  as Markdown so the story leaves the page with the reader. Pure
+  `lib/local-chronicle.ts`, 6 tests for
   spans, counts, lore order, frontier and unreadable timestamps; full frontend
   suite **221 files / 1,700 tests green**, `tsc --noEmit` clean. EN+ZH copy in
   both tables; the copy census moved 234 → 235 with the new surface.

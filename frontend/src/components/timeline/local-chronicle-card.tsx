@@ -4,7 +4,7 @@ import * as React from "react";
 import { BookOpenText, Cpu } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SectionHeading } from "@/components/common/export-buttons";
+import { CopyButton, DownloadButton, SectionHeading } from "@/components/common/export-buttons";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { formatDate } from "@/lib/format";
 import { buildLocalChronicle, type ChronicleVar } from "@/lib/local-chronicle";
@@ -36,6 +36,24 @@ export function LocalChronicleCard({ events }: { events: TimelineEntry[] }) {
 
   if (book.empty) return null;
 
+  const markdown = [
+    `# ${t("timeline.localTitle")}`,
+    "",
+    t("timeline.localDescription"),
+    "",
+    ...book.chapters.flatMap((chapter) => [
+      `## ${t(chapter.titleKey, withDates(chapter.titleVars))}`,
+      "",
+      t(chapter.bodyKey, withDates(chapter.bodyVars)),
+      "",
+      ...chapter.lore.map((line) => `- ${t(line.key, line.vars)}`),
+      ...(chapter.lore.length > 0 ? [""] : []),
+    ]),
+    "---",
+    "",
+    t(book.epilogueKey, withDates(book.epilogueVars)),
+  ].join("\n");
+
   return (
     <Card className="border-border/70 shadow-card">
       <CardHeader className="pb-3">
@@ -51,6 +69,16 @@ export function LocalChronicleCard({ events }: { events: TimelineEntry[] }) {
           <Cpu aria-hidden className="size-3" />
           {t("timeline.localBadge")}
         </Badge>
+
+        <div className="flex flex-wrap gap-2">
+          <CopyButton text={markdown} label={t("timeline.localCopy")} size="xs" />
+          <DownloadButton
+            text={markdown}
+            filename="career-chronicle.md"
+            label={t("timeline.localDownload")}
+            size="xs"
+          />
+        </div>
 
         <ol className="space-y-3">
           {book.chapters.map((chapter, index) => (

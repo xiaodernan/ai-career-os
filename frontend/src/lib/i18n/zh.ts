@@ -111,6 +111,8 @@ export const zh = {
       localDescription:
         "不调用模型，直接从你的账本成书：每一句都来自已经发生的事实。",
       localBadge: "本机 · 0 次模型调用",
+      localCopy: "复制全文",
+      localDownload: "下载小书（Markdown）",
       localOpeningTitle: "开篇 · {days} 天",
       localOpeningBody:
         "账本从 {first} 写到 {last}，一共 {total} 条事实，铺开 {regions} 个区域。",

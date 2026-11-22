@@ -129,6 +129,8 @@ export const en = {
       localDescription:
         "Written on this machine from your ledger — every sentence comes from a fact that already happened.",
       localBadge: "local · 0 model calls",
+      localCopy: "Copy the book",
+      localDownload: "Download the book (Markdown)",
       localOpeningTitle: "Opening · {days} days",
       localOpeningBody:
         "The ledger runs from {first} to {last}: {total} facts across {regions} regions.",
