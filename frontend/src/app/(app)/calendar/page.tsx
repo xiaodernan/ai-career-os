@@ -334,9 +334,14 @@ export default function CalendarPage() {
                             ))}
                           </ul>
                           {hidden > 0 && (
-                            <p className="mt-1 px-1 text-2xs text-muted-foreground tabular-nums">
+                            <button
+                              type="button"
+                              title={t("monthCalendar.moreHint")}
+                              onClick={() => setUrl({ view: "week", day: cell.date })}
+                              className="mt-1 block w-full rounded px-1 text-left text-2xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                            >
                               {t("monthCalendar.more", { count: hidden })}
-                            </p>
+                            </button>
                           )}
                         </div>
                       );

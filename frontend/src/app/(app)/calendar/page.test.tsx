@@ -101,6 +101,8 @@ describe("the calendar page", () => {
     const html = render();
 
     expect(html).toContain("+1 more");
+    // Epic 390 — the counter is a door into that day's complete week column.
+    expect(html).toMatch(/<button[^>]*title="See every row on this day, in the week"[^>]*>\+1 more<\/button>/);
     expect(html).toContain("4 things on the month");
     // Three chips are drawn; the fourth is named by the counter.
     expect(html).toContain("Role 1");
@@ -155,7 +157,7 @@ describe("the calendar page", () => {
     expect(html).toContain("5 things this week");
     // The week has room for the whole day: no chip is folded behind a counter.
     for (let index = 1; index <= 5; index += 1) expect(html).toContain(`Role ${index}`);
-    expect(html).not.toContain("more");
+    expect(html).not.toContain("more</button>");
     expect(html).toContain("Acme Robotics");
     expect(html).toContain('href="/applications?application=app-1"');
     expect(html).toContain('aria-label="Previous week"');

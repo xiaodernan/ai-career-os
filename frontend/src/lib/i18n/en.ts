@@ -127,6 +127,7 @@ export const en = {
       loadFailed: "The calendar's rows could not be read.",
       eventCount: "{count} things on the month",
       more: "+{count} more",
+      moreHint: "See every row on this day, in the week",
       monthEmpty:
         "Nothing lands on this month yet. Reminders, follow-ups gone due, rehearsals and sealed letters appear here on their own days.",
       legendTitle: "What the dots mean",
@@ -135,7 +136,7 @@ export const en = {
       legendInterview: "Rehearsal",
       legendCapsule: "Sealed letter opens",
       legendHint:
-        "A follow-up is due one relation cadence after the last touch; a sealed letter shows only its opening day, never its body.",
+        "A follow-up is due one relation cadence after the last touch; a sealed letter shows only its opening day, never its body. When a day says \"+N more\", tap the counter to see that day's full list in the week.",
       nextTitle: "Next up",
       noUpcoming:
         "Nothing ahead on the calendar. Set a reminder on an application, or seal a letter to your future self.",
@@ -4618,7 +4619,7 @@ export const en = {
         "When a rehearsal ends, the runner adds a card computed in your browser from the answers already on the page: how many answers you gave, how long they ran on average, the average sentence, the filler words, the figures you cited, and whether you leaned on \"I\" or \"we\". It is arithmetic, not a verdict — no model reads the transcript for this card.",
       quietlyCalendarTitle: "A month and a week",
       quietlyCalendarBody:
-        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, and every chip is a door to the row it came from.",
+        "Open the calendar from the sidebar. The month gives you six Monday-first weeks with at most three rows a day and a \"+N more\" counter — tap that counter and the week opens on that very day; the week switch lays the same rows out in seven columns and hides nothing, so a busy Wednesday lists every reminder, follow-up, rehearsal and sealed letter with its company or relation. The arrows walk one month or one week, Today comes back, and every chip is a door to the row it came from.",
       quietlyFeedTitle: "Put it on your own calendar",
       quietlyFeedBody:
         "In settings, copy the calendar's private feed address into Google Calendar, Apple Calendar or Outlook. The feed carries application reminders, offer deadlines and the opening days of your sealed letters as all-day events — no alarms, no letter bodies. It refreshes on the other app's schedule; this page never needs to stay open.",

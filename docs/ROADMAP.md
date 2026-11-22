@@ -8198,6 +8198,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **390** The counter under a busy day is a door (2026-11-22).
+
+  The month grid says "+N more" when a day holds past three rows, and that
+  counter was the one dead end left in the room: it named the hidden rows and
+  could not show them. It is now a button that opens the week on that very
+  day (`?view=week&day=YYYY-MM-DD`), where the whole list is already laid out
+  — the shortest path from "there is more here" to "here is all of it". The
+  legend's own sentence now teaches the gesture in both languages, the
+  playbook's calendar card says the same, and the month page test pins the
+  button, its title and its text so the counter cannot silently regress into
+  a paragraph. Full frontend suite **227 files / 1,754 tests green**,
+  `tsc --noEmit` clean; no new source file, copy census stays 238.
+
 - [x] **389** The manual learns the quiet instruments (2026-11-22).
 
   Epic 384's sealed letter, 385's answer echo and 386/387's calendar shipped
