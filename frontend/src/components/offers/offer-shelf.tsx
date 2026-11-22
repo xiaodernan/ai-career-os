@@ -418,11 +418,13 @@ function DecisionLetter({
 function daysLeft(deadline: string | null): number | null {
   if (!deadline) return null;
   const ms = new Date(deadline).getTime() - Date.now();
-  const days = ms / 86_400_000;
-  // Ceiling, spelled floor with a remainder test so the pager-census gate
-  // (which forbids that call outside `lastPageOf`) sees no match. For
-  // positive durations the identity holds; the negative case reads as lapsed.
-  return days > 0 ? Math.floor(days) + (ms % 86_400_000 > 0 ? 1 : 0) : days >= 0 ? 0 : -1;
+  if (!Number.isFinite(ms)) return null;
+  // Whole days remaining, floored: 36 hours ahead is "1d left", and the final
+  // day before the deadline is 0 — the badge calls that the last day. A lapsed
+  // deadline is negative on purpose: the badge says so instead of printing a
+  // countdown that ran backwards. Floor is also what the pager-census gate
+  // requires (no `Math.ceil` outside `lastPageOf`).
+  return Math.floor(ms / 86_400_000);
 }
 
 export function OfferShelf() {
@@ -612,7 +614,11 @@ export function OfferShelf() {
                               : "font-normal"
                           }
                         >
-                          {t("offers.shelfDaysLeft", { count: left })}
+                          {left < 0
+                            ? t("offers.shelfDaysLapsed")
+                            : left === 0
+                              ? t("offers.shelfDaysToday")
+                              : t("offers.shelfDaysLeft", { count: left })}
                         </Badge>
                       )}
                       <span className="text-base font-semibold tabular-nums">

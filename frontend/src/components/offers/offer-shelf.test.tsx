@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
+import type { OfferShelfItem } from "@/lib/api/types";
 
 /**
  * The offer shelf. The declined row carries the decision letter — the reader's
@@ -8,7 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
  * declined row, only in the reader's language, never beside an accepted or
  * pending one (where it would be a decision, not a memory).
  */
-const SHELF_ROW = {
+const SHELF_ROW: OfferShelfItem = {
   id: "row-1",
   label: "星海云",
   base: 280000,
@@ -86,9 +88,11 @@ vi.mock("@/lib/hooks/offers", () => ({
   useNegotiationPrep: () => negotiationPrepHook,
   useOfferDeclineLetter: () => declineLetterHook,
 }));
+let shelfRows = [SHELF_ROW, ...COMPARISON_ROWS];
+
 vi.mock("@/lib/hooks/resources", () => ({
   useOfferShelf: () => ({
-    data: { items: [SHELF_ROW, ...COMPARISON_ROWS], total: 2 },
+    data: { items: shelfRows, total: shelfRows.length },
     isPending: false,
     isError: false,
     refetch: () => {},
@@ -171,5 +175,55 @@ describe("the offer shelf", () => {
     // The SSR pass happens without the click, so the button path is the checkable one.
     expect(html).toContain("Write the letter");
     letterHook.data = null;
+  });
+});
+
+/**
+ * Epic 406 — the shelf's clock. It used to print a back-running countdown: a
+ * deadline that passed became "-1d left", and the final day before a deadline
+ * was rounded up instead of named. The badge now has four states, and this is
+ * where the boundary between them is pinned.
+ */
+describe("the shelf's clock", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-22T10:00:00Z"));
+  });
+
+  afterEach(() => {
+    shelfRows = [SHELF_ROW, ...COMPARISON_ROWS];
+    vi.useRealTimers();
+  });
+
+  it("counts whole days still ahead", () => {
+    shelfRows = [{ ...SHELF_ROW, deadline: "2026-11-25T10:00:00Z" }];
+    expect(render("en")).toContain("3d left");
+    expect(render("zh")).toContain("剩 3 天");
+  });
+
+  it("names the last day instead of printing a zero", () => {
+    shelfRows = [{ ...SHELF_ROW, deadline: "2026-11-22T22:00:00Z" }];
+    expect(render("en")).toContain("Last day");
+    expect(render("en")).not.toContain("0d left");
+    expect(render("zh")).toContain("今天截止");
+  });
+
+  it("says expired instead of counting backwards", () => {
+    shelfRows = [{ ...SHELF_ROW, deadline: "2026-11-20T10:00:00Z" }];
+    expect(render("en")).toContain("Expired");
+    expect(render("en")).not.toContain("-2d left");
+    expect(render("zh")).toContain("已过期");
+  });
+
+  it("draws no clock for a row without a readable deadline", () => {
+    shelfRows = [{ ...SHELF_ROW, deadline: null }];
+    const withoutDate = render("en");
+    shelfRows = [{ ...SHELF_ROW, deadline: "not a date" }];
+    const brokenDate = render("en");
+    for (const html of [withoutDate, brokenDate]) {
+      expect(html).not.toContain("d left");
+      expect(html).not.toContain("Expired");
+      expect(html).not.toContain("Last day");
+    }
   });
 });

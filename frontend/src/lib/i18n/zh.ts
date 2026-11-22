@@ -1176,6 +1176,8 @@ export const zh = {
       shelfBest: "最优总价",
       shelfEquityYear: "股权/年",
       shelfDaysLeft: "剩 {count} 天",
+      shelfDaysToday: "今天截止",
+      shelfDaysLapsed: "已过期",
       shelfEdit: "编辑这份 Offer",
       shelfDelete: "移除这份 Offer",
       shelfLabel: "Offer",

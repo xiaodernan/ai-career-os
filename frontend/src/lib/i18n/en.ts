@@ -1275,6 +1275,8 @@ export const en = {
       shelfBest: "Best total comp",
       shelfEquityYear: "Equity / yr",
       shelfDaysLeft: "{count}d left",
+      shelfDaysToday: "Last day",
+      shelfDaysLapsed: "Expired",
       shelfEdit: "Edit this offer",
       shelfDelete: "Remove this offer",
       shelfLabel: "Offer",

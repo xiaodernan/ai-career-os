@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **406** The shelf stops counting backwards (2026-11-22).
+
+  The offer shelf's deadline badge was a countdown that could run the wrong way:
+  a deadline that had passed rendered "-1d left" in red, and the last 24 hours
+  before a deadline were rounded up to "1d left", so the final day never had a
+  name of its own. `daysLeft` now returns whole days floored — 36 hours ahead is
+  "1d left", the last day is 0, and a lapsed deadline stays negative on purpose —
+  and the badge has four states instead of three: a countdown, "Last day",
+  "Expired", and nothing at all when the row has no readable date (a malformed
+  string used to be able to reach the badge as `NaN`). Both languages carry the
+  two new sentences, and the boundary between the states is pinned with a frozen
+  clock rather than a sleep.
+
+  Measured: full frontend suite **231 files / 1,792 tests green** (+4, all in
+  `offer-shelf.test.tsx`), `tsc --noEmit` clean, `npm run lint` clean, copy
+  census stays 238.
+
 - [x] **405** The calendar cannot lose a question it already asked (2026-11-22).
 
   The runway, "Next up", keeps only rows on or after today — which is right for
