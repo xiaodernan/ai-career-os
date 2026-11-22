@@ -477,9 +477,11 @@ through `fit_json`, so the measurement is also proof the change works on the rea
 
 Five readers sending the same deterministic question concurrently: **1** real provider
 call, 2.0 s, every reader answered `Blue`. Re-run cold with eight readers and a
-different question: **1** call, 2.2 s, every reader answered `Mars`. The coalescing is
-real on the relay, not only in the unit test — and each reader is still billed its own
-usage row (`cached_tokens 4180` on every one), because the accounting is per caller.
+different question: **1** call, 2.2 s, every reader answered `Mars`. Re-measured the
+same day after the images were rebuilt: **1** call for 8 readers, 2.3 s, every reader
+answered `Oxygen`. The coalescing is real on the relay, not only in the unit test — and
+each reader is still billed its own usage row (`cached_tokens 4180` on every one),
+because the accounting is per caller.
 
 The first attempt at measurement 3 said 5 calls for 5 readers. That was not the change
 failing: the container was built from an image that predated it. The image was rebuilt
