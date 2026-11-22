@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-22T12:29:22.981410Z",
+  "generated_at": "2026-11-22T12:36:43.555732Z",
   "branch": "main",
-  "head": "b60094b",
-  "total_commits": 1837,
-  "milestone": "Epic 393",
-  "milestone_full": "the ledger of done epics (through 546 items), closed at Epic 393 — The calendar names a runway, not just the next step (2026-11-22)",
+  "head": "0b15da1",
+  "total_commits": 1839,
+  "milestone": "Epic 394",
+  "milestone_full": "the ledger of done epics (through 547 items), closed at Epic 394 — The calendar answers the keyboard (2026-11-22)",
   "pushed_at": "2026-11-22",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1765+",
-  "test_files": 229,
-  "work_items": 546,
-  "epics": 259,
+  "tests": "1770+",
+  "test_files": 230,
+  "work_items": 547,
+  "epics": 260,
   "feature_surface": [
+    "Epic 394 — The calendar answers the keyboard (2026-11-22)",
     "Epic 393 — The calendar names a runway, not just the next step (2026-11-22)",
     "Epic 392 — The Chinese table stops borrowing English prose (2026-11-22)",
     "Epic 391 — The days on screen can leave as a calendar file (2026-11-22)",
     "Epic 390 — The counter under a busy day is a door (2026-11-22)",
-    "Epic 389 — The manual learns the quiet instruments (2026-11-22)",
-    "Epic 388 — The month turns into a week without leaving the room (2026-11-22)"
+    "Epic 389 — The manual learns the quiet instruments (2026-11-22)"
   ]
 }
