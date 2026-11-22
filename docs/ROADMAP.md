@@ -8198,6 +8198,23 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **376** The shape of this reader's search (2026-11-22).
+
+  Brief VI asks for "宏观史诗叙事 + 细节包罗万象", and the honest version of that on a job
+  search is a portrait: not "you applied to 12 jobs" but "your search was a burst that
+  lasted three weeks and then stopped". Two readers with the same count can have
+  completely different searches, and the count cannot tell them apart.
+
+  Three measurements — the span, the busiest seven-day window, and the shape name —
+  each stated rather than derived. The busiest window is a two-pointer walk over sorted
+  days rather than a scan of every possible start, which is O(n) rather than O(n^2) and
+  matters on a long history. It is a description, never a score: a burst is not better
+  or worse than a long tail, and the card says so. One application is a fact rather
+  than a pattern, and an empty board draws nothing rather than an invented shape.
+
+  Ten pure tests on the rule (span, the busiest window, all five shapes at their edges,
+  the never-applied case, an unreadable date), four on the card. Copy census 233 → 234.
+
 - [x] **375** A browser sweep of the new surfaces, and the 500 it found (2026-11-22).
 
   `e2e/surfaces-probe.mjs` drives the running stack through the routes this arc added
