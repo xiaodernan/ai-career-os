@@ -2428,7 +2428,7 @@ export const zh = {
 
     /** Epic 347 —— 新读者首次打开时那一次性的、嵌入应用内的引导。 */
     quickstart: {
-      title: "你的头四步",
+      title: "你的头五步",
       description: "用 30 秒走一遍真实的工作台。每一步都会打开它提到的页面；随时可以点指南针按钮回到这份引导。",
       progress: "第 {current} 步 / 共 {total} 步",
       stepsLabel: "快速上手步骤",
@@ -2448,6 +2448,10 @@ export const zh = {
       step4Body: "在看板上移动职位、给招聘方回信、把每个 Offer 都放在同一个架子上。想要完整地图时，说明书（? 键）随时都在。",
       step4Href: "/applications",
       step4HrefLabel: "查看求职流水线",
+      step5Title: "把日期摊到日历上",
+      step5Body: "日历会把提醒、到期跟进、模拟面试、录用截止日和封存的信放在周一到周一的月份里。切到按周能看到每一行，把这一段导出成文件，或在设置里复制私人订阅地址。",
+      step5Href: "/calendar",
+      step5HrefLabel: "打开日历",
       skip: "暂时跳过",
       back: "返回",
       next: "下一步",
@@ -4082,7 +4086,7 @@ export const zh = {
         "/resumes 简历的结构化版本；/knowledge AI 读的知识库；/interviews 自适应模拟面试；/copilot 全知代理副驾；/studio 覆盖 JD 本身。",
       surfacesTrack: "跟申请",
       surfacesTrackBody:
-        "/applications 申请看板；/calendar 把提醒、跟进和封存的信摊在一个月里；/letters 你留下的每封信；/notifications 收件箱；/replies 招聘方回来的信；/timeline 一张清单列完整个闭环。",
+        "/applications 申请看板；/calendar 把提醒、跟进、录用截止日和封存的信摊在一个月里；/letters 你留下的每封信；/notifications 收件箱；/replies 招聘方回来的信；/timeline 一张清单列完整个闭环。",
       surfacesDecide: "做决定",
       surfacesDecideBody:
         "/offers 货架——数字、还价、对比；然后做决定：拿哪份？入职包、第一季度、终章仪式——球在你这边。",

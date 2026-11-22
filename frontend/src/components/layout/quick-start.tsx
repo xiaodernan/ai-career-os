@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Compass, HelpCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Compass, HelpCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  *
  * The product teaches in depth (/tour, /playbook, the manual, the nine quests)
  * but nothing walked a NEW reader through the real UI once when they arrived.
- * This is that walk: four short steps, each pointing at a real control and a
+ * This is that walk: five short steps, each pointing at a real control and a
  * real route, with Next/Back/Skip. It opens once on first login (persisted via
  * lib/onboarding), and the topbar help button can reopen it through the same
  * custom event, so "read it again" is one click. All copy is locale-keyed.
@@ -31,7 +31,11 @@ const STEPS = [
   { icon: Sparkles, titleKey: "quickstart.step2Title", bodyKey: "quickstart.step2Body", hrefKey: "quickstart.step2Href", hrefLabelKey: "quickstart.step2HrefLabel" },
   { icon: HelpCircle, titleKey: "quickstart.step3Title", bodyKey: "quickstart.step3Body", hrefKey: "quickstart.step3Href", hrefLabelKey: "quickstart.step3HrefLabel" },
   { icon: Check, titleKey: "quickstart.step4Title", bodyKey: "quickstart.step4Body", hrefKey: "quickstart.step4Href", hrefLabelKey: "quickstart.step4HrefLabel" },
+  { icon: CalendarDays, titleKey: "quickstart.step5Title", bodyKey: "quickstart.step5Body", hrefKey: "quickstart.step5Href", hrefLabelKey: "quickstart.step5HrefLabel" },
 ] as const;
+
+/** The five beats, in order — exported so a test can pin the walk without a browser. */
+export const QUICK_START_STEPS = STEPS;
 
 export const QUICK_START_EVENT = "careeros:open-quick-start";
 

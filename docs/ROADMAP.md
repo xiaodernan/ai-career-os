@@ -8198,6 +8198,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **401** The first walk ends at the calendar (2026-11-22).
+
+  The quick start opened with four beats and stopped at the pipeline, so the
+  room that holds every date — the one the product now leans on for reminders,
+  follow-ups, rehearsals, offer deadlines and sealed letters — was the only
+  major surface a new reader never saw in the first thirty seconds. It now has
+  a fifth beat: "Put the dates on a calendar" / "把日期摊到日历上", pointing at
+  `/calendar` and naming what can be done there — the month, the week that
+  hides nothing, the range export, the private feed in settings. The title now
+  says five and the step list is exported as `QUICK_START_STEPS`, so a test can
+  pin the count and the fifth route without a browser. The playbook's own
+  "Five steps" page and this guide finally agree on the number. The map of the
+  product also learns that `/calendar` carries offer deadlines. Full frontend
+  suite **231 files / 1,780 tests green**, `tsc --noEmit` and `npm run lint`
+  clean; no new source file, copy census stays 238.
+
 - [x] **400** The lint board goes quiet (2026-11-22).
 
   Twenty-one warnings had accumulated across the frontend, and three of them

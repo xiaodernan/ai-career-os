@@ -15,11 +15,22 @@ vi.mock("@/lib/onboarding", () => ({
   markQuickStartSeen: () => undefined,
 }));
 
-import { QUICK_START_EVENT, QuickStart } from "./quick-start";
+/**
+ * Epic 401 — the walk grew a fifth beat. The quick start is a server-safe sheet,
+ * so the contract this test can honestly grade is the step list itself: five
+ * beats, each with a real route, and the calendar among them.
+ */
+import { QUICK_START_EVENT, QUICK_START_STEPS, QuickStart } from "./quick-start";
 
 describe("QuickStart", () => {
   it("exposes the replay event so the topbar can reopen the guide", () => {
     expect(QUICK_START_EVENT).toBe("careeros:open-quick-start");
+  });
+
+  it("walks five beats and points the fifth at the calendar", () => {
+    expect(QUICK_START_STEPS).toHaveLength(5);
+    expect(QUICK_START_STEPS[4].titleKey).toBe("quickstart.step5Title");
+    expect(QUICK_START_STEPS[4].hrefKey).toBe("quickstart.step5Href");
   });
 
   it("renders cleanly on the server (closed on first paint, opened by effect in the browser)", () => {

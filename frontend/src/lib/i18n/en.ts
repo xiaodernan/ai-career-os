@@ -2646,7 +2646,7 @@ export const en = {
 
     /** Epic 347 — the one-time, in-app guided hello on a new reader's first open. */
     quickstart: {
-      title: "Your first four steps",
+      title: "Your first five steps",
       description: "A 30-second walk through the real workspace. Each step opens the screen it names; come back to the guide any time from the compass button.",
       progress: "Step {current} of {total}",
       stepsLabel: "Quick start steps",
@@ -2666,6 +2666,10 @@ export const en = {
       step4Body: "Move roles across the board, write back to recruiters, and keep every offer on one shelf. The manual (the ? key) is always there when you want the full map.",
       step4Href: "/applications",
       step4HrefLabel: "See the pipeline",
+      step5Title: "Put the dates on a calendar",
+      step5Body: "The calendar lays reminders, follow-ups gone due, rehearsals, offer deadlines and sealed letters on a Monday-first month. Switch to the week to see every row, export the range as a file, or copy the private feed in settings.",
+      step5Href: "/calendar",
+      step5HrefLabel: "Open the calendar",
       skip: "Skip for now",
       back: "Back",
       next: "Next",
@@ -4387,7 +4391,7 @@ export const en = {
         "/resumes — your evidence in structured form; /knowledge — the base the AI reads; /interviews — adaptive rehearsal with scoring; /copilot — the agent that knows all of it; /studio covers the JD itself.",
       surfacesTrack: "Track the work",
       surfacesTrackBody:
-        "/applications — the kanban; /calendar — the month of reminders, follow-ups and sealed letters; /letters — every letter you kept; /notifications — the inbox; /replies — letters back to you from recruiters; /timeline — everything in one ordered read.",
+        "/applications — the kanban; /calendar — the month of reminders, follow-ups, offer deadlines and sealed letters; /letters — every letter you kept; /notifications — the inbox; /replies — letters back to you from recruiters; /timeline — everything in one ordered read.",
       surfacesDecide: "Decide",
       surfacesDecideBody:
         "/offers — the shelf with the numbers, the counter and the comparison; then decide: which keeps? The packet (day-one), the quarter, the closing ceremony — your move to make.",
