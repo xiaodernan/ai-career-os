@@ -8198,6 +8198,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **376b** Six surfaces, measured in a real browser on the rebuilt stack (2026-11-22).
+
+  The frontend image was rebuilt from the tree and `e2e/surfaces-probe.mjs` extended to
+  cover the portrait card. All six render with the reader's own data, with zero console
+  errors: the frontier ("1 rehearsal(s) still open" → `/interviews`), the atlas (four
+  region doors, one route leg), the rhythm ("The habit is warm"), the legacy, the
+  portrait ("One application so far / A fact, not a pattern yet" — the single-row case
+  answered honestly rather than as a pattern), and the growth panel's fourteen engine
+  hints.
+
 - [x] **376** The shape of this reader's search (2026-11-22).
 
   Brief VI asks for "宏观史诗叙事 + 细节包罗万象", and the honest version of that on a job
