@@ -8198,6 +8198,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **403** The public tour finally mentions the calendar (2026-11-22).
+
+  The ten-minute start is the first page a stranger reads, and its "track"
+  beat still described the board as if reminders lived only in an inbox; its
+  "offers" beat described the shelf without ever saying that the decision day
+  has a place to live. Both now name the calendar: every dated row — offer
+  deadlines and sealed letters included — lands on it, and each offer's
+  decision deadline is one of those rows. The Chinese beat also stopped
+  calling an offer a "报价" (a price quote) and calls it a "录用", matching
+  the rest of the room. Copy only, no logic; full frontend suite **231 files
+  / 1,781 tests green**, `tsc --noEmit` and `npm run lint` clean; copy census
+  stays 238.
+
 - [x] **402** The power moves learn the calendar, and the tour stops miscounting (2026-11-22).
 
   The manual's "commands worth memorising" list stopped at four and never
