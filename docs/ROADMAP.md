@@ -8198,6 +8198,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   tsc clean; verify_gates yellow (566 passed + 3 quiescent waitrails — sama
   rotas kept their long-time behaviour).)
 
+- [x] **375** A browser sweep of the new surfaces, and the 500 it found (2026-11-22).
+
+  `e2e/surfaces-probe.mjs` drives the running stack through the routes this arc added
+  and reads what actually rendered. All five new cards answered with the reader's own
+  data: the frontier card ("1 rehearsal(s) still open" → `/interviews`), the atlas (four
+  region doors, one route leg), the rhythm card ("0 day(s) since the last one / The
+  habit is warm"), the legacy card ("What this search leaves behind"), and the growth
+  panel's fourteen engine hints. Zero console errors.
+
+  The sweep also found a real regression on `main`: **the whole dashboard aggregate
+  answered 500**. `DashboardRepository.recommendedJobs` cast `jobs.skills` — a Postgres
+  `text[]` — to `String`, and the driver hands back a `String[]`. One column's shape
+  took down the page. The unit test had used a pre-joined `String`, which is why it
+  passed: the fixture was shaped like the code's assumption rather than like the
+  column. Two regression tests now cover both spellings.
+
+  Found by a browser driving the real stack, not by a test that could see it — which
+  is the argument for keeping the probes.
+
 - [x] **369b** The frontier card, measured in a real browser (2026-11-22).
 
   The verification Epic 369 was owed. A throwaway account, a rehearsal started and
