@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-23T04:15:34.139322Z",
+  "generated_at": "2026-11-23T04:35:16.056562Z",
   "branch": "main",
-  "head": "199e5f6",
-  "total_commits": 1884,
+  "head": "9ce0a02",
+  "total_commits": 1886,
   "milestone": "Epic 420",
   "milestone_full": "the ledger of done epics (through 573 items), closed at Epic 420 — Teaching tips on the jobs board, without clobbering state (2026-11-23)",
   "pushed_at": "2026-11-23",
