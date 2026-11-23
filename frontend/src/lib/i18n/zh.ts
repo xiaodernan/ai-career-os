@@ -3912,6 +3912,18 @@ export const zh = {
       discoverTab: "发现",
       savedTab: "收藏",
       researchRoles: "调研职位",
+      hintResearchRoles:
+        "用一句话说清目标；调研代理会把它变成这个看板能读的条件，并把找到的职位放上来。",
+      hintFilters:
+        "这里的每一项筛选都会写进网址，所以筛好的看板是一道可以保存、分享、回来再看的提问。",
+      hintSort:
+        "「最佳匹配」按你的简历排序；其余四项按市场自己的字段给同样的结果排序。",
+      hintDiscoverTab: "市场上所有能回答这组条件的职位，匹配度高的排在前面。",
+      hintSavedTab: "只显示你收藏过的职位。这里的数字是命中这组条件的收藏数，不是收藏总数。",
+      hintClearFilters: "清空网址里的每一项条件，重新读取整块看板。",
+      hintBrowseDiscover: "把这道提问从收藏夹挪回整个市场，没收藏的职位在那里。",
+      hintAskCopilot:
+        "用大白话说出职位，副驾驶会追问缺的信息，再把结果放上看板。",
       detail: {
         seededBoard: "种子职位库",
         foundByResearch: "调研代理找到的",
@@ -4038,6 +4050,8 @@ export const zh = {
     jd: {
       title: "JD 智能分析",
       openAction: "分析一段 JD",
+      openHint:
+        "把一段 JD 交给分析器：它会说明这份招聘要什么，以及你的简历里找不到哪些技能。",
       analyzeAction: "分析",
       badge: "JD 分析",
       keepText: "保留这段文本",
@@ -4067,6 +4081,8 @@ export const zh = {
     import: {
       title: "导入职位发布",
       openAction: "粘贴一条职位发布",
+      openHint:
+        "把你在别处看到的招聘帖贴进来：分析师会补齐公司、技能和职责，然后把这个职位记进你的跟踪线。",
       importAction: "导入",
       runFailed: "导入失败了。",
       characterCount: "{count} 个字符",

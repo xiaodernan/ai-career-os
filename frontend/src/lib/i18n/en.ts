@@ -4215,6 +4215,20 @@ export const en = {
       noteLabel: "Note:",
       discoverTab: "Discover",
       researchRoles: "Research roles",
+      hintResearchRoles:
+        "Describe a target in one sentence; the research agent turns it into the predicates this board reads and posts the hits here.",
+      hintFilters:
+        "Every predicate here moves the URL, so a filtered board is a question you can save, share and come back to.",
+      hintSort:
+        "Best match ranks against your resume; the other four order the same rows by the market's own fields.",
+      hintDiscoverTab: "Everything on the market that answers the panel, best-matching first.",
+      hintSavedTab:
+        "Only what you bookmarked. The number counts the bookmarks that answer this panel, not the whole shelf.",
+      hintClearFilters: "Wipes every predicate out of the URL and re-reads the whole board.",
+      hintBrowseDiscover:
+        "Moves the question off the shelf and back onto the market, where the un-bookmarked rows are.",
+      hintAskCopilot:
+        "Say the role in plain words; Copilot asks for what is missing and puts the answer on this board.",
       detail: {
         seededBoard: "Seeded board",
         foundByResearch: "Found by the research agent",
@@ -4324,6 +4338,8 @@ export const en = {
     jd: {
       title: "JD intelligence",
       openAction: "Analyze a JD",
+      openHint:
+        "Runs one pasted JD through the analyst: it answers what the posting wants and which of your skills it cannot find.",
       analyzeAction: "Analyze",
       badge: "JD analysis",
       keepText: "Keep this text",
@@ -4353,6 +4369,8 @@ export const en = {
     import: {
       title: "Import a job posting",
       openAction: "Paste a posting",
+      openHint:
+        "Pastes a posting you found anywhere: the analyst fills in the company, the skills and the duties, then files the role in your tracker.",
       importAction: "Import",
       runFailed: "Import failed.",
       characterCount: "{count} characters",

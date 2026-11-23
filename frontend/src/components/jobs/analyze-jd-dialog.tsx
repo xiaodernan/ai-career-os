@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -102,12 +103,16 @@ export function AnalyzeJdDialog({ onUseText }: { onUseText?: (text: string) => v
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <ClipboardPaste aria-hidden />
-          {t("jd.openAction")}
-        </Button>
-      </DialogTrigger>
+      {/* The tip says what the run costs and what it returns, which is the question a
+          reader has before pasting four hundred words of somebody else's job ad. */}
+      <Hint side="bottom" label={t("jd.openHint")}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <ClipboardPaste aria-hidden />
+            {t("jd.openAction")}
+          </Button>
+        </DialogTrigger>
+      </Hint>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-base">{t("jd.title")}</DialogTitle>

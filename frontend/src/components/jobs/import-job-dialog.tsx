@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,12 +87,16 @@ export function ImportJobDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <FilePlus2 aria-hidden />
-          {t("import.openAction")}
-        </Button>
-      </DialogTrigger>
+      {/* The tip is the dialog's own instruction, not a restatement of the label: a reader
+          who has never pasted a posting needs to know what arrives and where it is filed. */}
+      <Hint side="bottom" label={t("import.openHint")}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <FilePlus2 aria-hidden />
+            {t("import.openAction")}
+          </Button>
+        </DialogTrigger>
+      </Hint>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="text-base">{t("import.title")}</DialogTitle>

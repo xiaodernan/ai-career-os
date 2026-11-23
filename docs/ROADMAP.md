@@ -8500,6 +8500,21 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **420** Teaching tips on the jobs board, without clobbering state (2026-11-23).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". The jobs board's research,
+  filter, sort, tab and dialog buttons carried labels but no teaching text — a reader
+  could not tell what a predicate does or where a pasted JD is filed. Added `Hint` tips
+  to every control (bilingual en/zh). The risky half was composition, found in a browser:
+  Radix `Slot` gives the caller props precedence, and `TooltipTrigger` writes `data-state`
+  — the same attribute `tabs.tsx` reads to paint the active tab. A wrapped selected tab
+  reported `aria-selected="true"` beside `data-state="closed"` (the tooltip's state),
+  breaking the active-tab style. Added `anchor="span"`, which binds the tip to a boxless
+  `display:contents` wrapper so the control keeps its own state; hover/focus bubble from
+  the control, so the tip still opens from the keyboard. Pinned both shapes in a 5-case
+  test. Committed from work interrupted by a server restart; debug browser scripts
+  cleaned up.
+
 - [x] **419** The engine's outbound door reads the bypass list its operators
   write (2026-11-23).
 

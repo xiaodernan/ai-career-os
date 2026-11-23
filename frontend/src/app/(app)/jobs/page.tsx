@@ -12,6 +12,7 @@ import { LoadingJobCardSkeleton } from "@/components/common/loading-skeletons";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -173,12 +174,14 @@ export default function JobsPage() {
               <div className="animate-fade-up flex flex-wrap items-center gap-2" style={{ animationDelay: "160ms" }}>
                 <ImportJobDialog />
                 <AnalyzeJdDialog />
-                <Button variant="ai" size="sm" className="glow-halo glow-on-hover" asChild>
-                  <Link href="/copilot">
-                    <Sparkles aria-hidden />
-                    {t("jobs.researchRoles")}
-                  </Link>
-                </Button>
+                <Hint side="bottom" label={t("jobs.hintResearchRoles")}>
+                  <Button variant="ai" size="sm" className="glow-halo glow-on-hover" asChild>
+                    <Link href="/copilot">
+                      <Sparkles aria-hidden />
+                      {t("jobs.researchRoles")}
+                    </Link>
+                  </Button>
+                </Hint>
               </div>
             }
           />
@@ -190,16 +193,18 @@ export default function JobsPage() {
       <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-20 lg:self-start">
           {/* Filters are always visible from lg up; collapsible on small screens */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full lg:hidden"
-            aria-expanded={mobileFilters}
-            onClick={() => setMobileFilters((v) => !v)}
-          >
-            <SlidersHorizontal aria-hidden />
-            {t("jobs.filtersButton")}
-          </Button>
+          <Hint side="bottom" label={t("jobs.hintFilters")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full lg:hidden"
+              aria-expanded={mobileFilters}
+              onClick={() => setMobileFilters((v) => !v)}
+            >
+              <SlidersHorizontal aria-hidden />
+              {t("jobs.filtersButton")}
+            </Button>
+          </Hint>
           <div className={cn("mt-3 rounded-xl border border-border/70 bg-card p-4 lg:mt-0 lg:border-0 lg:bg-transparent lg:p-0", !mobileFilters && "hidden lg:block")}>
             <SavedSearchPanel
               value={filters}
@@ -218,21 +223,27 @@ export default function JobsPage() {
         <div className="min-w-0 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <Tabs value={tab} onValueChange={(v) => { setTab(v as typeof tab); setFilters({ page: 0 }); }}>
+              {/* anchor="span" here is not decoration: a tab reads its own selected state from
+                  data-state, and a tooltip trigger writes that same attribute with open/closed. */}
               <TabsList variant="line">
-                <TabsTrigger value="discover">
-                  <Briefcase aria-hidden />
-                  {t("jobs.discoverTab")}
-                </TabsTrigger>
-                <TabsTrigger value="saved">
-                  <Bookmark aria-hidden />
-                  {t("jobs.savedTab")}
-                  {/* The shelf is filtered on the wire now (74.1), so this is the number of
-                      bookmarks that answer the panel -- the same count the panel prints -- rather
-                      than the size of the whole shelf. */}
-                  {saved.data?.total ? (
-                    <span className="ml-1 text-2xs text-muted-foreground tabular-nums">{saved.data.total}</span>
-                  ) : null}
-                </TabsTrigger>
+                <Hint side="bottom" anchor="span" label={t("jobs.hintDiscoverTab")}>
+                  <TabsTrigger value="discover">
+                    <Briefcase aria-hidden />
+                    {t("jobs.discoverTab")}
+                  </TabsTrigger>
+                </Hint>
+                <Hint side="bottom" anchor="span" label={t("jobs.hintSavedTab")}>
+                  <TabsTrigger value="saved">
+                    <Bookmark aria-hidden />
+                    {t("jobs.savedTab")}
+                    {/* The shelf is filtered on the wire now (74.1), so this is the number of
+                        bookmarks that answer the panel -- the same count the panel prints -- rather
+                        than the size of the whole shelf. */}
+                    {saved.data?.total ? (
+                      <span className="ml-1 text-2xs text-muted-foreground tabular-nums">{saved.data.total}</span>
+                    ) : null}
+                  </TabsTrigger>
+                </Hint>
               </TabsList>
             </Tabs>
 
@@ -248,9 +259,11 @@ export default function JobsPage() {
                   value={filters.sort || "auto"}
                   onValueChange={(v) => setFilters({ sort: v === "auto" ? "" : v, page: 0 })}
                 >
-                  <SelectTrigger id="jobs-sort" size="sm" className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <Hint side="bottom" label={t("jobs.hintSort")}>
+                    <SelectTrigger id="jobs-sort" size="sm" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </Hint>
                   <SelectContent>
                     {SORT_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
@@ -274,9 +287,11 @@ export default function JobsPage() {
                     title: t("jobs.noSavedMatch"),
                     description: t("jobs.noSavedMatchDescription"),
                     action: (
-                      <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
-                        {t("jobs.clearFilters")}
-                      </Button>
+                      <Hint side="top" label={t("jobs.hintClearFilters")}>
+                        <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
+                          {t("jobs.clearFilters")}
+                        </Button>
+                      </Hint>
                     ),
                   }
                 : tab === "saved"
@@ -285,9 +300,11 @@ export default function JobsPage() {
                       title: t("jobs.nothingSaved"),
                       description: t("jobs.nothingSavedDescription"),
                       action: (
-                        <Button variant="outline" size="sm" onClick={() => setTab("discover")}>
-                          {t("jobs.browseDiscover")}
-                        </Button>
+                        <Hint side="top" label={t("jobs.hintBrowseDiscover")}>
+                          <Button variant="outline" size="sm" onClick={() => setTab("discover")}>
+                            {t("jobs.browseDiscover")}
+                          </Button>
+                        </Hint>
                       ),
                     }
                   : filteredToEmpty
@@ -297,12 +314,16 @@ export default function JobsPage() {
                         description: t("jobs.boardIsQuietDescription"),
                         action: (
                           <>
-                            <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
-                              {t("jobs.clearFilters")}
-                            </Button>
-                            <Button variant="ai" size="sm" asChild>
-                              <Link href="/copilot">{t("jobs.askCopilot")}</Link>
-                            </Button>
+                            <Hint side="top" label={t("jobs.hintClearFilters")}>
+                              <Button variant="outline" size="sm" onClick={() => setFilters(DEFAULTS, { replaceAll: true })}>
+                                {t("jobs.clearFilters")}
+                              </Button>
+                            </Hint>
+                            <Hint side="top" label={t("jobs.hintAskCopilot")}>
+                              <Button variant="ai" size="sm" asChild>
+                                <Link href="/copilot">{t("jobs.askCopilot")}</Link>
+                              </Button>
+                            </Hint>
                           </>
                         ),
                       }
@@ -317,9 +338,11 @@ export default function JobsPage() {
                         title: t("jobs.boardEmpty"),
                         description: t("jobs.boardEmptyDescription"),
                         action: (
-                          <Button variant="ai" size="sm" asChild>
-                            <Link href="/copilot">{t("jobs.askCopilot")}</Link>
-                          </Button>
+                          <Hint side="top" label={t("jobs.hintAskCopilot")}>
+                            <Button variant="ai" size="sm" asChild>
+                              <Link href="/copilot">{t("jobs.askCopilot")}</Link>
+                            </Button>
+                          </Hint>
                         ),
                       }
             }
