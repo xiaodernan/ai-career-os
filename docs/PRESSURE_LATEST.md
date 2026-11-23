@@ -167,3 +167,24 @@ a credential-stuffing sled, and an ordinary registration was not permanently loc
 out. Every one of the 7,810 measured requests in this window was answered — none
 was a 5xx, and none was a connection error.
 
+# Credential-stuffing siege — 2026-11-23 (Block XI: 撞库)
+
+The one pressure shape the brief names explicitly and that had never been *run* —
+`scripts/credential-stuff.js` (k6 v2.0.0-rc1) — was finally fired at the live stack.
+Read-only by construction: every request is a wrong password on a synthetic email,
+so nothing is created, updated or authenticated. Bounded burst: 60 VUs × 20s.
+
+| metric | measured |
+|---|---|
+| requests | 11,052 (551/s) |
+| answer shape | 10,943 × 429 + 109 × 401 — **100% 401/429, zero 5xx, zero timeouts** |
+| `check` "answer is 401 or 429 (never a crash)" | 11,052 / 11,052 passed (100%) |
+| http_req_duration | avg 50ms · p90 111ms · p95 175ms · max 1.56s |
+| post-storm health | `/actuator/health`, `/api/v1/health`, ai `/health` all 200 |
+
+Note on the k6 `http_req_failed 100%` line: k6 marks any non-2xx/3xx as a "failed"
+request, so 401/429 count there by definition. The script's own custom rate
+(`http_req_failed_custom = 0%`) and its 100%-passing check are the honest signal:
+the stack answered every stuffing attempt with a refusal, never a crash. This is
+the 撞库 scenario the brief asked to simulate, now measured rather than assumed.
+
