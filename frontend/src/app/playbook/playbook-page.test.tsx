@@ -88,6 +88,22 @@ describe("/playbook — the manual", () => {
     expect(html).toContain('href="/settings"');
   });
 
+  it("423: teaches the three newest instruments — the manual covers every door", () => {
+    const html = renderToStaticMarkup(<PlaybookPage />);
+    expect(html).toContain('id="newinstruments"');
+    for (const key of [
+      "playbook.newInstrumentsEyebrow",
+      "playbook.newInstrumentsTitle",
+      "playbook.newInstrumentsIntro",
+      "playbook.newInstrumentsStoryBody",
+      "playbook.newInstrumentsAnswerBody",
+      "playbook.newInstrumentsLostBody",
+      "playbook.newInstrumentsClosing",
+    ]) {
+      expect(html, key).toContain(key);
+    }
+  });
+
   it("402: lists the calendar among the power moves", () => {
     const html = renderToStaticMarkup(<PlaybookPage />);
     expect(html).toContain("playbook.key5");

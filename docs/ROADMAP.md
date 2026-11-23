@@ -8500,6 +8500,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **423** The manual names every door — three new chapters taught (2026-11-23).
+
+  Brief VII: "里面简明描述用户如何充分体验、使用项目的所有完整功能". The `/playbook`
+  manual's own contract (en.ts:4603) is that it describes every surface a reader can
+  stand on, and its tests encode the same rule. Audit found three complete, mounted
+  features the manual never taught: Career Chronicle (354), ask-your-evidence RAG
+  answer (352), and the bounce/aimless lost-reader events (353). For 353 it was worse —
+  the ledger chapter stated there were "two instruments of attention" when there are now
+  three weekly lines. Added a `newinstruments` chapter (number 23) with a
+  `NewInstrumentsCard` (three doors: /timeline, /knowledge, /admin), the chapter-rail
+  entry, en/zh copy, and corrected the stale two→three claim. Static copy only — no
+  LLM, no API. Copy census 238→239. Verified: frontend 1830 passed, tsc clean.
+
 - [x] **422** The ledger now advises on the readers it watched getting lost (2026-11-23).
 
   Brief IX: "管理员页面能……根据这些数据给出下一步应该采取的深度优化措施". Epic 353 made

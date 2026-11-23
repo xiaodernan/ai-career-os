@@ -4596,7 +4596,7 @@ export const en = {
         "The ledger opens with one word, and it is the word the operator chose for this install — 123 — precisely because everyone is meant to know it. It is a courtesy, not a wall. Behind it: the counter, straight off the tables. Counts only. No name, no content, no per-reader row ever crosses that door.",
       ledgerWeeksTitle: "Seven Mondays on one wall",
       ledgerWeeksBody:
-        "The wall reads week over week now — Monday-anchored, UTC, dense-filled. Five lines are instruments of use: signups, applications, rehearsals, agent runs, AI calls. Two are instruments of attention: landings and dwell reads — the same rows the thirty-day view counts, weekly. A quiet week reads as zero, not as a gap.",
+        "The wall reads week over week now — Monday-anchored, UTC, dense-filled. Five lines are instruments of use: signups, applications, rehearsals, agent runs, AI calls. Three are instruments of attention: landings, dwell reads and bounces — readers who arrived and left almost at once, the same rows the thirty-day view counts, weekly. A quiet week reads as zero, not as a gap.",
       /**
        * The atlas — chapter 21 (Epic 366).
        *
@@ -4707,6 +4707,28 @@ export const en = {
       quietlyCtaCalendar: "Open the calendar",
       quietlyCtaTimeline: "Write a letter",
       quietlyCtaSettings: "Copy the feed address",
+      /** Epic 423 — the manual's newest chapter: the three instruments built after the atlas. */
+      newInstrumentsEyebrow: "THE NEW INSTRUMENTS",
+      newInstrumentsTitle: "What was built since the atlas",
+      newInstrumentsIntro:
+        "A manual has to name every door a reader can stand in front of. These three arrived after the atlas was drawn — a book that writes itself from your own record, an answer that cites only your own evidence, and a window onto the readers who got lost. Each one opens below.",
+      newInstrumentsStoryTitle: "The career chronicle",
+      newInstrumentsStoryBody:
+        "The timeline is a ledger; this is the book written over it. Chapters unfold as your milestones and events warrant — each with a grounded act, lore entries citing your own numbers, and an epilogue. Nothing is invented: a chapter that cannot cite a figure the record carries stays unwritten.",
+      newInstrumentsAnswerTitle: "Ask your evidence",
+      newInstrumentsAnswerBody:
+        "A grounded answer over the documents you own. Every [n] in the reply is a verified citation you can trace back to the exact quote it came from — and the engine strikes any claim that points past what was actually retrieved. Silence, not a guess, when the evidence is thin.",
+      newInstrumentsLostTitle: "The readers who got lost",
+      newInstrumentsLostBody:
+        "The ledger now sees two ways a reader is lost: a bounce, when someone leaves almost as soon as they land, and an aimless hop, when they click room to room without settling. Both are counted, and both feed the advice about what to fix next.",
+      newInstrumentsCtaTimeline: "Open the timeline",
+      newInstrumentsCtaKnowledge: "Open the knowledge base",
+      newInstrumentsCtaAdmin: "Open the ledger",
+      newInstrumentsHintTimeline: "The chronicle sits beneath your ordered events on the timeline.",
+      newInstrumentsHintKnowledge: "Ask your evidence sits beside your sources in the knowledge base.",
+      newInstrumentsHintAdmin: "The lost-reader counters and their advice live in the operator's ledger.",
+      newInstrumentsClosing:
+        "A manual that stops growing is a map with roads missing. These three doors are open now; the next instrument will be taught here the day it ships.",
       colophonTitle: "The close",
       codaLive:
         "The same loop keeps a public card, measured on every push and re-measured when the numbers move — an iframe you can drop anywhere:",

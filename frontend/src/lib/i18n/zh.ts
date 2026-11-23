@@ -4289,7 +4289,7 @@ export const zh = {
         "这本账只用一个词打开——这个词是这台实例的主人自己选的，就是 123——他选它恰恰因为希望每个人都知道。它不是一堵墙，是一种礼节。门后面：那个直接从表里读出来的计数器。只有数。没有名字、没有内容、没有任何读者级的行穿过这扇门。",
       ledgerWeeksTitle: "七个周一的账面",
       ledgerWeeksBody:
-        "这面墙现在按周读——周一起始、UTC、密集填充。五行是「使用的乐器」：注册、投递、实战场次、agent 运行、AI 调用。另两行是「注意力的乐器」：落地和停留读数——与那个三十天窗口数的是同一些行，只是按周记。安静的一周读作零，而不是一个空白。",
+        "这面墙现在按周读——周一起始、UTC、密集填充。五行是「使用的乐器」：注册、投递、实战场次、agent 运行、AI 调用。另三行是「注意力的乐器」：落地、停留读数和跳出——刚到就走的读者，与那个三十天窗口数的是同一些行，只是按周记。安静的一周读作零，而不是一个空白。",
       /**
        * 求职版图——第 21 章（Epic 366）。
        *
@@ -4399,6 +4399,28 @@ export const zh = {
       quietlyCtaCalendar: "打开日历",
       quietlyCtaTimeline: "去写一封信",
       quietlyCtaSettings: "去复制订阅地址",
+      /** Epic 423 —— 手册的新章：版图绘成之后新增的三件乐器。 */
+      newInstrumentsEyebrow: "新添的乐器",
+      newInstrumentsTitle: "版图绘成之后新增的东西",
+      newInstrumentsIntro:
+        "说明书必须写下读者能站在门前的每一扇门。这三样是在版图绘好之后才来的——一本从你自己的记录里写出来的书、一个只引用你自己证据的回答、一扇望向迷失读者的窗。每一扇都在下面打开。",
+      newInstrumentsStoryTitle: "职业编年史",
+      newInstrumentsStoryBody:
+        "时间线是账本；这是写在它之上的书。章节随你的里程碑与事件逐一展开——每一章都有接地的叙述、引用你自己数字的见闻条目，以及尾声。什么都不编造：一章若找不到账本里真实存在的数字，就保持空白。",
+      newInstrumentsAnswerTitle: "向你的证据提问",
+      newInstrumentsAnswerBody:
+        "一个基于你自己文档的、有依据的回答。回答里的每个 [n] 都是可追溯的引用，你能顺着它找到原文的那句话——任何指向并未检索到的内容的论断都会被剔除。证据太薄时，它宁可沉默，也不瞎猜。",
+      newInstrumentsLostTitle: "迷路的读者",
+      newInstrumentsLostBody:
+        "账本现在能看见读者迷失的两种方式：跳出——刚到就离开；瞎点——在房间之间来回却没有停留。两者都被记数，也都进入「下一步该修什么」的建议。",
+      newInstrumentsCtaTimeline: "打开时间线",
+      newInstrumentsCtaKnowledge: "打开知识库",
+      newInstrumentsCtaAdmin: "打开账本",
+      newInstrumentsHintTimeline: "编年史就在时间线里有序事件的上方。",
+      newInstrumentsHintKnowledge: "「向你的证据提问」就在知识库里、你的来源旁边。",
+      newInstrumentsHintAdmin: "迷失读者的计数和给它们的建议，都在运营者的账本里。",
+      newInstrumentsClosing:
+        "停止生长的说明书，是一张缺了道路的地图。这三扇门如今都开着；下一件乐器上线那天，它也会被写在这里。",
       colophonTitle: "终章",
       codaLive:
         "同一台实例有一张公开的卡片——每次推送都重新测量，数字有挪动才会更新——可以直接嵌进任意页面：",

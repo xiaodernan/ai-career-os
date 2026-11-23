@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ChapterRail } from "@/components/playbook/chapter-rail";
 import { FirstWeekGame } from "@/components/playbook/first-week-game";
+import { NewInstrumentsCard } from "@/components/playbook/new-instruments-card";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -732,6 +733,18 @@ export default function PlaybookPage() {
               <Link href="/settings">{t("playbook.quietlyCtaSettings")}</Link>
             </Button>
           </div>
+        </section>
+
+        {/* Epic 423 — the three newest instruments, taught where the reader learns the whole loop. */}
+        <section id="newinstruments" className="mt-14 space-y-6 border-t border-border/50 pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">{t("playbook.newInstrumentsEyebrow")}</p>
+            <span className="text-2xs tabular-nums text-muted-foreground">23</span>
+          </div>
+          <h2 className="font-serif text-3xl font-semibold tracking-tight">{t("playbook.newInstrumentsTitle")}</h2>
+          <p className="max-w-4xl text-base leading-relaxed text-foreground/90">{t("playbook.newInstrumentsIntro")}</p>
+          <NewInstrumentsCard />
+          <p className="max-w-4xl text-sm italic leading-relaxed text-muted-foreground">{t("playbook.newInstrumentsClosing")}</p>
         </section>
 
         <section id="about" className="mt-14 space-y-4 border-t border-border/50 pt-14">
