@@ -5005,12 +5005,6 @@ export const en = {
       rhythmThursday: "Thu",
       rhythmFriday: "Fri",
       rhythmSaturday: "Sat",
-      journeyTitle: "The golden journey, station by station",
-      journeyLede:
-        "Measured live on this install. Best-case times — under a quiet machine. Every station hits the real stack; the slow ones are LLM-bound and the cache hit rate is why.",
-      journeyStation: "Station",
-      journeyP50: "p50 (ms)",
-      journeyP95: "p95 (ms)",
       optimizationsTitle: "What to do next on this install",
       analysisButton: "Generate deep analysis",
       analysisThinking: "Analyzing…",

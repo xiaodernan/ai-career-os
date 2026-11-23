@@ -8500,6 +8500,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **424** The admin journey table stops presenting invented numbers as measured (2026-11-23).
+
+  Brief IX: "不要全部是演示数据堆砌——用户会觉得虚假". The /admin ledger carried a
+  "golden journey" latency table (STATIONS, 9 rows) whose every p50 EQUALS its p95 —
+  impossible for measured data — while its lede claimed "Measured live on this install".
+  No backing source exists: scripts/journey_api.py prints per-call baselines to stdout
+  and persists nothing. Removed the fabricated table, its 5 en/zh i18n keys, and added
+  a source-contract test pinning that the numbers ("39604", "15226", "STATIONS",
+  "Measured live on this install") cannot return. The real observability surfaces
+  (agent runs, cache ledger, attention, cohort, counsel) remain untouched. Offline,
+  no LLM/API. Verified: frontend 1831 passed, tsc clean, copy census unchanged.
+
 - [x] **423** The manual names every door — three new chapters taught (2026-11-23).
 
   Brief VII: "里面简明描述用户如何充分体验、使用项目的所有完整功能". The `/playbook`

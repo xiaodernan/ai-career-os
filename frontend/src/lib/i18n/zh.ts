@@ -4692,12 +4692,6 @@ export const zh = {
       rhythmThursday: "周四",
       rhythmFriday: "周五",
       rhythmSaturday: "周六",
-      journeyTitle: "黄金旅程，逐站验收",
-      journeyLede:
-        "本实例实测值。机器空闲的时候的数。每一站都是真实调用，慢的是 AI 调用，快的因为命中缓存。",
-      journeyStation: "站",
-      journeyP50: "p50 (ms)",
-      journeyP95: "p95 (ms)",
       optimizationsTitle: "这个实例下一步该做什么",
       analysisButton: "生成深度分析",
       analysisThinking: "分析中……",

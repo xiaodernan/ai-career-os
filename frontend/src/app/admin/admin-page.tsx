@@ -146,18 +146,6 @@ interface AdminAttention {
 
 const SECRET = "123"; // the install's one passphrase, by the operator's own choosing
 
-const STATIONS = [
-  { name: "register", p50: 950, p95: 950 },
-  { name: "who am I", p50: 46, p95: 46 },
-  { name: "save profile", p50: 466, p95: 466 },
-  { name: "upload resume", p50: 1428, p95: 1428 },
-  { name: "resume detail", p50: 227, p95: 227 },
-  { name: "ingest text", p50: 931, p95: 931 },
-  { name: "list knowledge", p50: 50, p95: 50 },
-  { name: "search jobs", p50: 15226, p95: 15226 },
-  { name: "job match", p50: 39604, p95: 39604 },
-] as const;
-
 const FUNNEL_STAGE_KEYS: Record<string, string> = {
   registered: "admin.funnelStageRegistered",
   uploaded: "admin.funnelStageUploaded",
@@ -957,31 +945,6 @@ export default function AdminPage() {
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{t("admin.rhythmEmpty")}</p>
         )}
         <p className="mt-2 text-2xs italic leading-relaxed text-muted-foreground">{t("admin.rhythmFootnote")}</p>
-      </section>
-
-      <section>
-        <h2 className="font-serif text-xl font-semibold tracking-tight">{t("admin.journeyTitle")}</h2>
-        <p className="mt-1 max-w-4xl text-sm leading-relaxed text-muted-foreground">{t("admin.journeyLede")}</p>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border/60">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border/60 bg-muted/40 text-left text-2xs uppercase tracking-widest text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2.5">{t("admin.journeyStation")}</th>
-                <th className="px-4 py-2.5 text-right">{t("admin.journeyP50")}</th>
-                <th className="px-4 py-2.5 text-right">{t("admin.journeyP95")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {STATIONS.map((station) => (
-                <tr key={station.name}>
-                  <td className="px-4 py-2 font-medium">{station.name}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{station.p50.toLocaleString()} ms</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">{station.p95.toLocaleString()} ms</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </section>
 
       <section>
