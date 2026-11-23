@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-23T05:46:32.597571Z",
+  "generated_at": "2026-11-23T05:58:21.417271Z",
   "branch": "main",
-  "head": "65a01e2",
-  "total_commits": 1892,
+  "head": "7861c04",
+  "total_commits": 1893,
   "milestone": "Epic 424",
   "milestone_full": "the ledger of done epics (through 577 items), closed at Epic 424 — The admin journey table stops presenting invented numbers as measured (2026-11-23)",
   "pushed_at": "2026-11-23",
