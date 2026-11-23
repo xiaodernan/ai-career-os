@@ -199,6 +199,10 @@ ingest bumps the epoch so new documents are visible immediately. `app/core/cache
 `InProcessBudget` keeps the current single-process bucket and bounds its identity map; `RedisBudget`
 runs one atomic Lua script (HGET/HSET/PEXPIRE) so every replica spends from the same bucket. Errors
 fall back to the in-process budget with the `careeros.gateway.ratelimit.fallback` counter and a warning.
+The backend's own per-minute buckets share that discipline: `RedisSlidingWindowRateLimiter` takes
+its ceiling in one atomic Lua script (trim, count, add) over one key, so the replicas behind the
+backend share a single limit rather than each enforcing its own; an outage fails open so nobody
+is locked out.
 
 ## 6. Distributed tracing and correlation
 

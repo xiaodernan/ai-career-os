@@ -8500,6 +8500,25 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **421** One bucket across the fleet — the backend limiter is atomic (2026-11-23).
+
+  Briefs III/XI: Redis, concurrency, high availability, "高并发/容灾/鲁棒性". Audit found
+  the backend's `RedisSlidingWindowRateLimiter` took its ceiling in FOUR separate commands
+  (ZREMRANGEBYSCORE → ZCOUNT → ZADD → EXPIRE). Two concurrent callers — production runs
+  three backend replicas behind many Tomcat threads — could both read `live < limit`, both
+  add, and exceed the configured ceiling under exactly the concurrency it exists to bound.
+  The gateway's edge budget had held the same invariant in one Lua script since Epic 120;
+  the backend never got the fix. Rewrote `tryAcquire` as ONE atomic Lua script (trim → count
+  → add → TTL) over one key, preserving the exact window boundary and the backend's historic
+  fail-open posture (an outage must not lock users out — deliberately the opposite of the
+  edge's fail-closed). `remaining` stays a separate, non-authoritative read.
+  Verified offline (no LLM, no live probe): a 6-case `RedisSlidingWindowAtomicityTest` pins
+  one script call / one key / five args / fail-open / distinct members; an offline source
+  gate `test_the_backend_rate_limiter_is_one_atomic_script.py` fails if a future refactor
+  reintroduces `opsForZSet().count` in the admission path — registered in both verify_gates
+  scripts (614 gates green). RateLimitIT (6 live-Redis cases) still passes. A flaky
+  JobQueueIT consumer timing case reddened one full run but passes in isolation; unrelated.
+
 - [x] **420** Teaching tips on the jobs board, without clobbering state (2026-11-23).
 
   Brief V: "主界面给各种按键和操作加上附带的教学说明". The jobs board's research,

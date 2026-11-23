@@ -87,6 +87,7 @@ TESTS=(
   ai-service/tests/test_the_algorithms_module.py
   ai-service/tests/test_the_engine_door_reads_the_bypass_list_its_operators_write.py
   ai-service/tests/test_the_shared_provider_client_is_bounded.py
+  ai-service/tests/test_the_backend_rate_limiter_is_one_atomic_script.py
 )
 
 echo "== verify_gates: representative offline contract gates =="
