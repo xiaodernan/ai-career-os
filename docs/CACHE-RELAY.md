@@ -1,5 +1,13 @@
 # The relay's cache reporting, measured (2026-11-15)
 
+> **Status 2026-11-23: the live API is closed.** The owner shut the `aizzz.xyz` key
+> off for cost/usage control. Everything below and in the addenda is the historical
+> record of what was measured while it was live (including the 2026-11-21 probes:
+> stream + non-stream both carried 16620/18469 ≈ 90% cached; parallel sessions were
+> nondeterministic — see Addendum 6). Future work validates LLM features through the
+> **mock provider and the offline contract/shape gates**, which encode the same
+> grounding discipline without spending a token. No new live probe should be attempted.
+
 The user's question, verbatim: "检查一下为什么你调用我的openai 大模型api的时候缓存命中率这么低
 而且一直显示非流 好像显示流的时候缓存命中率好的多 肯定是调用方法出了问题 进行深度修正并且实测
 来大幅提高缓存命中率和token利用效率 这里面肯定是有问题的".
