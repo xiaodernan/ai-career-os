@@ -8500,6 +8500,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **422** The ledger now advises on the readers it watched getting lost (2026-11-23).
+
+  Brief IX: "管理员页面能……根据这些数据给出下一步应该采取的深度优化措施". Epic 353 made
+  bounce (left almost at once) and aimless (clicked around without settling) first-class
+  events and put their counters on the admin wall — but the deterministic counsel that
+  turns the ledger into "what to do next" never read them: a capability built and shown,
+  yet absent from the advice. Wired both into `admin-counsel.ts`: an impatient-bounce rule
+  (bounces >= 10 and bounceRatePct >= 40 → lead with the first-screen result) and an
+  aimless-clicking rule (aimless >= 10 and >= 1/4 of landings → point at the ten-beat tour).
+  Both stay silent below the sample floor, the repo's honesty default. en/zh counsel copy,
+  3 focused tests (routing, numbers, silence). No LLM, no API — offline-verifiable.
+
 - [x] **421** One bucket across the fleet — the backend limiter is atomic (2026-11-23).
 
   Briefs III/XI: Redis, concurrency, high availability, "高并发/容灾/鲁棒性". Audit found

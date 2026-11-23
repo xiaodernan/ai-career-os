@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-23T04:46:02.820650Z",
+  "generated_at": "2026-11-23T05:06:02.936603Z",
   "branch": "main",
-  "head": "6abbc93",
-  "total_commits": 1887,
-  "milestone": "Epic 421",
-  "milestone_full": "the ledger of done epics (through 574 items), closed at Epic 421 — One bucket across the fleet",
+  "head": "3c8fe36",
+  "total_commits": 1888,
+  "milestone": "Epic 422",
+  "milestone_full": "the ledger of done epics (through 575 items), closed at Epic 422 — The ledger now advises on the readers it watched getting lost (2026-11-23)",
   "pushed_at": "2026-11-23",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1825+",
+  "tests": "1828+",
   "test_files": 234,
-  "work_items": 574,
-  "epics": 287,
+  "work_items": 575,
+  "epics": 288,
   "feature_surface": [
+    "Epic 422 — The ledger now advises on the readers it watched getting lost (2026-11-23)",
     "Epic 421 — One bucket across the fleet",
     "Epic 420 — Teaching tips on the jobs board, without clobbering state (2026-11-23)",
     "Epic 419 — The engine's outbound door reads the bypass list its operators",
     "Epic 418 — The upload that never stopped ingesting gets a clock, an index",
-    "Epic 417 — A delete hands its cache invalidation to the fleet (2026-11-23)",
-    "Epic 416 — The censuses learn about the screens the calendar, timeline and company"
+    "Epic 417 — A delete hands its cache invalidation to the fleet (2026-11-23)"
   ]
 }

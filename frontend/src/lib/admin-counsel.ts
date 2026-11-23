@@ -39,6 +39,11 @@ export interface CounselAttention {
   landings?: number;
   dwells?: number;
   acts?: number;
+  /** The two lost-reader behaviours the operator asked to observe (Block IX):
+   *  bounce = left almost as soon as they landed, aimless = clicked around without settling. */
+  bounces?: number;
+  bounceRatePct?: number;
+  aimless?: number;
   signedLandings?: number;
   anonymousLandings?: number;
   dwellPerLandingMs?: number;
@@ -149,6 +154,30 @@ function attentionSignals(attention: CounselAttention | null | undefined): Couns
       bodyKey: "admin.counselDwellBody",
       vars: { pct: pct(dwells, landings), dwells, landings },
       href: "/",
+    });
+  }
+  // The two behaviours named in the brief — impatient leave and aimless clicking — now
+  // reach the "what to do next" section too, not just the counters above it. A rule that
+  // cannot see its number stays silent; the honest default when the sensors have no rows.
+  const bounces = attention?.bounces;
+  const bounceRate = attention?.bounceRatePct;
+  if (isNum(bounces) && isNum(bounceRate) && bounces >= 10 && bounceRate >= 40) {
+    items.push({
+      id: "impatient-bounce",
+      titleKey: "admin.counselBounceTitle",
+      bodyKey: "admin.counselBounceBody",
+      vars: { bounces, pct: bounceRate, landings },
+      href: "/",
+    });
+  }
+  const aimless = attention?.aimless;
+  if (isNum(aimless) && aimless >= 10 && aimless >= landings / 4) {
+    items.push({
+      id: "aimless-clicking",
+      titleKey: "admin.counselAimlessTitle",
+      bodyKey: "admin.counselAimlessBody",
+      vars: { aimless, landings },
+      href: "/tour",
     });
   }
   const signed = attention?.signedLandings;

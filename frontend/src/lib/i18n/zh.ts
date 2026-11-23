@@ -4746,6 +4746,12 @@ export const zh = {
       counselAnonymousTitle: "一本陌生人的账",
       counselAnonymousBody:
         "三十天 {landings} 次落地，全部是匿名读者。签名路径——注册、第一次见到价值、第一次留下东西——从未真正被走通。请你自己完整走一遍，计时，痛处自然会浮上来。",
+      counselBounceTitle: "还没落地就离开的读者",
+      counselBounceBody:
+        "{bounces} 位读者刚到就走了——占三十天 {landings} 次落地的 {pct}%。门开了，却没有东西留住他们：首屏先亮出这台实例能给出的那个结果，而不是罗列它能做什么。",
+      counselAimlessTitle: "点了却没落到任何地方的读者",
+      counselAimlessBody:
+        "{aimless} 次瞎点，对着 {landings} 次落地——读者在房间之间来回却没有停留。地图没起作用：让每一步的下一步都显而易见，把迷路的人领回十拍旅程。",
       counselTrendTitle: "投递量正在变薄",
       counselTrendBody:
         "窗口内投递量在下落（首周 {first} 份、末周 {last} 份，共 {weeks} 周）。是需求先变了——喂热这块板：保存的搜索、定时摄取的频率，以及那个提醒「某份投递还在」的轻推。",

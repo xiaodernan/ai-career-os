@@ -5059,6 +5059,12 @@ export const en = {
       counselAnonymousTitle: "A ledger of strangers",
       counselAnonymousBody:
         "Every one of the {landings} landing readers in thirty days was anonymous. The signed journey — signup, first value, the first keep — was never exercised. Walk it once yourself, time it, and see where it stalls.",
+      counselBounceTitle: "Readers leaving before they land",
+      counselBounceBody:
+        "{bounces} readers left almost as soon as they arrived — {pct}% of the {landings} landings in thirty days. The door opens but nothing holds them: lead with the one result this install can show in the first screen, not a tour of what it can do.",
+      counselAimlessTitle: "Readers clicking without landing anywhere",
+      counselAimlessBody:
+        "{aimless} aimless hops against {landings} landings — readers are moving room to room without settling. The map is not doing its job: make the next step obvious on each screen, and point the lost ones back to the ten-beat tour.",
       counselTrendTitle: "Applications are thinning",
       counselTrendBody:
         "Applications fell across the window ({first} in the opening week, {last} in the last, across {weeks} weeks). Demand thinned — feed the board: saved searches, ingestion cadence, and the nudge that reminds a stalled application it exists.",

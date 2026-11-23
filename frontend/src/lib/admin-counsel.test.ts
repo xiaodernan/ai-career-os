@@ -176,4 +176,35 @@ describe("deriveCounsel", () => {
     const items = deriveCounsel({ attention: { landings: 5, dwells: 0, acts: 0, signedLandings: 0, anonymousLandings: 5 } });
     expect(items).toEqual([]);
   });
+
+  // Epic 422 — the lost-reader behaviours (bounce / aimless) reach the ledger's advice.
+  it("names impatient bounces and sends the reader back to the first screen", () => {
+    const items = deriveCounsel({
+      attention: { landings: 200, bounces: 90, bounceRatePct: 45, dwells: 60, acts: 5,
+        signedLandings: 20, anonymousLandings: 180 },
+    });
+    const bounce = items.find((i) => i.id === "impatient-bounce")!;
+    expect(bounce.href).toBe("/");
+    expect(bounce.vars).toMatchObject({ bounces: 90, pct: 45, landings: 200 });
+  });
+
+  it("names aimless clicking and points the lost ones at the tour", () => {
+    const items = deriveCounsel({
+      attention: { landings: 200, aimless: 60, bounces: 5, bounceRatePct: 2.5,
+        dwells: 60, acts: 5, signedLandings: 20, anonymousLandings: 180 },
+    });
+    const aimless = items.find((i) => i.id === "aimless-clicking")!;
+    expect(aimless.href).toBe("/tour");
+    expect(aimless.vars).toMatchObject({ aimless: 60, landings: 200 });
+  });
+
+  it("stays silent on the lost-reader rules until the sample is real", () => {
+    // bounceRate high but too few bounces; aimless present but a small share — both quiet.
+    const items = deriveCounsel({
+      attention: { landings: 200, bounces: 4, bounceRatePct: 50, aimless: 5,
+        dwells: 60, acts: 5, signedLandings: 20, anonymousLandings: 180 },
+    });
+    expect(items.find((i) => i.id === "impatient-bounce")).toBeUndefined();
+    expect(items.find((i) => i.id === "aimless-clicking")).toBeUndefined();
+  });
 });
