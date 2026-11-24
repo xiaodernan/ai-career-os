@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T08:12:45.500985Z",
+  "generated_at": "2026-11-24T10:51:28.613310Z",
   "branch": "main",
-  "head": "5d0b04c",
-  "total_commits": 1906,
+  "head": "2547df4",
+  "total_commits": 1907,
   "milestone": "Epic 440",
   "milestone_full": "the ledger of done epics (through 593 items), closed at Epic 440 — Admin: a landing-without-action measure from the real attention ledger (Block IX) (2026-11-24)",
   "pushed_at": "2026-11-24",
