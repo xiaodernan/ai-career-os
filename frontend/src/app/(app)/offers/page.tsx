@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/common/empty-state";
+import { Hint } from "@/components/ui/hint";
 import {
   useCompareOffers,
   useCounterOffer,
@@ -173,78 +174,92 @@ export default function OffersPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="offer-role">{t("offers.role")}</Label>
-              <Input
-                id="offer-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                placeholder={t("offers.rolePlaceholder")}
-                autoComplete="off"
-              />
+              <Hint anchor="span" label={t("offers.hintRoleInput")}>
+                <Input
+                  id="offer-role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  placeholder={t("offers.rolePlaceholder")}
+                  autoComplete="off"
+                />
+              </Hint>
             </div>
             <div className="space-y-2">
               <Label htmlFor="offer-location">{t("offers.location")}</Label>
-              <Input
-                id="offer-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder={t("offers.locationPlaceholder")}
-                autoComplete="off"
-              />
+              <Hint anchor="span" label={t("offers.hintLocationInput")}>
+                <Input
+                  id="offer-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder={t("offers.locationPlaceholder")}
+                  autoComplete="off"
+                />
+              </Hint>
             </div>
             <div className="space-y-2">
               <Label htmlFor="offer-base">{t("offers.offerBase")}</Label>
-              <Input
-                id="offer-base"
-                type="number"
-                value={offerBase}
-                onChange={(e) => setOfferBase(e.target.value)}
-                placeholder={t("offers.basePlaceholder")}
-                autoComplete="off"
-              />
+              <Hint anchor="span" label={t("offers.hintOfferBaseInput")}>
+                <Input
+                  id="offer-base"
+                  type="number"
+                  value={offerBase}
+                  onChange={(e) => setOfferBase(e.target.value)}
+                  placeholder={t("offers.basePlaceholder")}
+                  autoComplete="off"
+                />
+              </Hint>
             </div>
             <div className="space-y-2">
               <Label htmlFor="offer-match">{t("offers.yourMatch")}</Label>
-              <Input
-                id="offer-match"
-                type="number"
-                value={matchScore}
-                onChange={(e) => setMatchScore(e.target.value)}
-                placeholder={t("offers.matchPlaceholder")}
-                autoComplete="off"
-              />
+              <Hint anchor="span" label={t("offers.hintMatchInput")}>
+                <Input
+                  id="offer-match"
+                  type="number"
+                  value={matchScore}
+                  onChange={(e) => setMatchScore(e.target.value)}
+                  placeholder={t("offers.matchPlaceholder")}
+                  autoComplete="off"
+                />
+              </Hint>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ai"
-              size="sm"
-              loading={benchmark.isPending}
-              disabled={!roleOk}
-              onClick={runBenchmark}
-            >
-              <BadgeDollarSign aria-hidden />
-              {t("offers.benchmark")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={negotiate.isPending}
-              disabled={!roleOk || !baseOk}
-              onClick={runNegotiate}
-            >
-              <Handshake aria-hidden />
-              {t("offers.coachMe")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={counter.isPending}
-              disabled={!roleOk || !baseOk}
-              onClick={runCounter}
-            >
-              <Target aria-hidden />
-              {t("offers.draftCounter")}
-            </Button>
+            <Hint anchor="span" label={t("offers.hintBenchmark")}>
+              <Button
+                variant="ai"
+                size="sm"
+                loading={benchmark.isPending}
+                disabled={!roleOk}
+                onClick={runBenchmark}
+              >
+                <BadgeDollarSign aria-hidden />
+                {t("offers.benchmark")}
+              </Button>
+            </Hint>
+            <Hint anchor="span" label={t("offers.hintNegotiate")}>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={negotiate.isPending}
+                disabled={!roleOk || !baseOk}
+                onClick={runNegotiate}
+              >
+                <Handshake aria-hidden />
+                {t("offers.coachMe")}
+              </Button>
+            </Hint>
+            <Hint anchor="span" label={t("offers.hintCounter")}>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={counter.isPending}
+                disabled={!roleOk || !baseOk}
+                onClick={runCounter}
+              >
+                <Target aria-hidden />
+                {t("offers.draftCounter")}
+              </Button>
+            </Hint>
           </div>
         </CardContent>
       </Card>
@@ -360,24 +375,28 @@ export default function OffersPage() {
         <CardContent className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="offer-labels">{t("offers.offerLabels")}</Label>
-            <Textarea
-              id="offer-labels"
-              value={offerLabels}
-              onChange={(e) => setOfferLabels(e.target.value)}
-              rows={3}
-              placeholder={"Offer A\nOffer B"}
-            />
+            <Hint anchor="span" label={t("offers.hintOfferLabelsInput")}>
+              <Textarea
+                id="offer-labels"
+                value={offerLabels}
+                onChange={(e) => setOfferLabels(e.target.value)}
+                rows={3}
+                placeholder={"Offer A\nOffer B"}
+              />
+            </Hint>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            loading={compare.isPending}
-            disabled={!roleOk}
-            onClick={runCompare}
-          >
-            <Scale aria-hidden />
-            {t("offers.compare")}
-          </Button>
+          <Hint anchor="span" label={t("offers.hintCompare")}>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={compare.isPending}
+              disabled={!roleOk}
+              onClick={runCompare}
+            >
+              <Scale aria-hidden />
+              {t("offers.compare")}
+            </Button>
+          </Hint>
 
           {comparison && (
             <>
@@ -434,10 +453,12 @@ export default function OffersPage() {
           conversation is actually about, with the AI kitchen off the page. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4 print:hidden">
         <p className="max-w-md text-xs leading-relaxed text-muted-foreground">{t("offers.packetPrintHint")}</p>
-        <Button variant="outline" size="sm" onClick={() => window.print()}>
-          <Printer aria-hidden className="size-4" />
-          <span>{t("offers.packetPrint")}</span>
-        </Button>
+        <Hint label={t("offers.hintPrintPacket")}>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer aria-hidden className="size-4" />
+            <span>{t("offers.packetPrint")}</span>
+          </Button>
+        </Hint>
       </div>
     </div>
   );

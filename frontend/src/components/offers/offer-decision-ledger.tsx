@@ -109,17 +109,17 @@ export function OfferDecisionLedger() {
           <CardDescription>{t("offers.ledgerDescription")}</CardDescription>
         </div>
         {dirty && (
-          <Hint side="left" label={t("chrome.resetHint")}>
-<Button
-            variant="ghost"
-            size="sm"
-            className="ml-auto shrink-0"
-            onClick={handleReset}
-            aria-label={t("offers.ledgerReset")}
-          >
-            <RotateCcw aria-hidden className="size-4" />
-            <span className="hidden sm:inline">{t("offers.ledgerReset")}</span>
-          </Button>
+          <Hint side="left" label={t("offers.hintLedgerReset")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto shrink-0"
+              onClick={handleReset}
+              aria-label={t("offers.ledgerReset")}
+            >
+              <RotateCcw aria-hidden className="size-4" />
+              <span className="hidden sm:inline">{t("offers.ledgerReset")}</span>
+            </Button>
           </Hint>
         )}
       </CardHeader>
@@ -183,12 +183,14 @@ export function OfferDecisionLedger() {
                           value={String(criterion.weight)}
                           onValueChange={(value) => setState(setWeight(state, criterion.id, Number(value)))}
                         >
-                          <SelectTrigger
-                            className="h-9 w-[8.5rem] text-2xs"
-                            aria-label={t("offers.ledgerWeightFor", { criterion: name })}
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
+                          <Hint anchor="span" label={t("offers.hintLedgerWeight")}>
+                            <SelectTrigger
+                              className="h-9 w-[8.5rem] text-2xs"
+                              aria-label={t("offers.ledgerWeightFor", { criterion: name })}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                          </Hint>
                           <SelectContent>
                             {[0, 1, 2, 3, 4, 5].map((weight) => (
                               <SelectItem key={weight} value={String(weight)}>
@@ -202,33 +204,35 @@ export function OfferDecisionLedger() {
                         const score = state.scores[offer.id]?.[criterion.id];
                         return (
                           <td key={offer.id} className="py-2 px-1 text-center">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={LEDGER_MAX_SCORE}
-                              step={1}
-                              inputMode="numeric"
-                              aria-label={t("offers.ledgerOfferScore", { criterion: name, offer: offer.label })}
-                              className="h-9 w-14 px-1 text-center text-xs tabular-nums"
-                              value={score === undefined ? "" : String(score)}
-                              placeholder="–"
-                              onChange={(event) =>
-                                setState(setScore(state, offer.id, criterion.id, event.target.value))
-                              }
-                            />
+                            <Hint label={t("offers.hintLedgerScore")}>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={LEDGER_MAX_SCORE}
+                                step={1}
+                                inputMode="numeric"
+                                aria-label={t("offers.ledgerOfferScore", { criterion: name, offer: offer.label })}
+                                className="h-9 w-14 px-1 text-center text-xs tabular-nums"
+                                value={score === undefined ? "" : String(score)}
+                                placeholder="–"
+                                onChange={(event) =>
+                                  setState(setScore(state, offer.id, criterion.id, event.target.value))
+                                }
+                              />
+                            </Hint>
                           </td>
                         );
                       })}
                       <td className="py-2 pl-2 text-right">
-                        <Hint side="left" label={t("chrome.deleteHint")}>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={t("offers.ledgerRemoveCriterion")}
-                          onClick={() => setState(removeCriterion(state, criterion.id))}
-                        >
-                          <Trash2 aria-hidden className="size-3.5 text-muted-foreground" />
-                        </Button>
+                        <Hint side="left" label={t("offers.hintLedgerRemove")}>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={t("offers.ledgerRemoveCriterion")}
+                            onClick={() => setState(removeCriterion(state, criterion.id))}
+                          >
+                            <Trash2 aria-hidden className="size-3.5 text-muted-foreground" />
+                          </Button>
                         </Hint>
                       </td>
                     </tr>
@@ -265,20 +269,23 @@ export function OfferDecisionLedger() {
                 <Label htmlFor="ledger-new-criterion" className="text-2xs text-muted-foreground">
                   {t("offers.ledgerAddCriterion")}
                 </Label>
-                <Input
-                  id="ledger-new-criterion"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder={t("offers.ledgerAddPlaceholder")}
-                  autoComplete="off"
-                  maxLength={120}
-                  disabled={state.criteria.length >= LEDGER_MAX_CRITERIA}
-                />
-              </div>
-              <Button type="submit" variant="outline" size="sm" disabled={!draft.trim() || state.criteria.length >= LEDGER_MAX_CRITERIA}>
-                <Plus aria-hidden className="size-4" />
-                {t("offers.ledgerAddButton")}
-              </Button>
+                <Hint label={t("offers.hintLedgerNewCriterion")}>
+                  <Input
+                    id="ledger-new-criterion"
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder={t("offers.ledgerAddPlaceholder")}
+                    autoComplete="off"
+                    maxLength={120}
+                    disabled={state.criteria.length >= LEDGER_MAX_CRITERIA}
+                  />
+                </Hint>              </div>
+              <Hint label={t("offers.hintLedgerAdd")}>
+                <Button type="submit" variant="outline" size="sm" disabled={!draft.trim() || state.criteria.length >= LEDGER_MAX_CRITERIA}>
+                  <Plus aria-hidden className="size-4" />
+                  {t("offers.ledgerAddButton")}
+                </Button>
+              </Hint>
             </form>
 
             <p role="status" aria-live="polite" className="mt-3 text-xs leading-relaxed text-foreground/90">

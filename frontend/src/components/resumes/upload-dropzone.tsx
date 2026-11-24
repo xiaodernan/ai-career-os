@@ -5,6 +5,7 @@ import { FileUp, TriangleAlert, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { Hint } from "@/components/ui/hint";
 import { TaskProgress } from "@/components/ai/task-stream";
 import { pickResumeId, pickTaskId } from "@/lib/resume-upload";
 import { ingestSeed } from "@/lib/ingest-steps";
@@ -99,64 +100,66 @@ export function UploadDropzone({ onUploaded, className, compact = false, ...prop
 
   return (
     <div className={cn("space-y-3", className)} {...props}>
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label={t("upload.ariaLabel")}
-        onClick={() => !upload.isPending && inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          handleFiles(e.dataTransfer.files);
-        }}
-        className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
-          compact ? "px-4 py-6" : "px-6 py-10",
-          dragging
-            ? "border-primary bg-primary/5"
-            : rejected
-              ? "border-destructive/50 bg-destructive/5"
-              : "border-border/80 bg-muted/20 hover:border-primary/40 hover:bg-accent/30"
-        )}
-      >
-        <span className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-soft">
-          {upload.isPending ? (
-            <FileUp className="size-5 animate-pulse" aria-hidden />
-          ) : (
-            <Upload className="size-5" aria-hidden />
-          )}
-        </span>
-        <p className="text-sm font-medium">
-          {upload.isPending ? t("upload.uploading") : t("upload.dropHere")}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {t("upload.accepted", {
-            formats: RESUME_ACCEPT.join(" · "),
-            mb: RESUME_MAX_BYTES / 1024 / 1024,
-          })}
-        </p>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-          className="sr-only"
-          onChange={(e) => {
-            handleFiles(e.target.files);
-            e.target.value = "";
+      <Hint label={t("upload.hintDropzone")}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={t("upload.ariaLabel")}
+          onClick={() => !upload.isPending && inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
           }}
-        />
-      </div>
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            handleFiles(e.dataTransfer.files);
+          }}
+          className={cn(
+            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed text-center transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
+            compact ? "px-4 py-6" : "px-6 py-10",
+            dragging
+              ? "border-primary bg-primary/5"
+              : rejected
+                ? "border-destructive/50 bg-destructive/5"
+                : "border-border/80 bg-muted/20 hover:border-primary/40 hover:bg-accent/30"
+          )}
+        >
+          <span className="flex size-10 items-center justify-center rounded-xl border border-border/70 bg-card text-muted-foreground shadow-soft">
+            {upload.isPending ? (
+              <FileUp className="size-5 animate-pulse" aria-hidden />
+            ) : (
+              <Upload className="size-5" aria-hidden />
+            )}
+          </span>
+          <p className="text-sm font-medium">
+            {upload.isPending ? t("upload.uploading") : t("upload.dropHere")}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {t("upload.accepted", {
+              formats: RESUME_ACCEPT.join(" · "),
+              mb: RESUME_MAX_BYTES / 1024 / 1024,
+            })}
+          </p>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            className="sr-only"
+            onChange={(e) => {
+              handleFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      </Hint>
 
       {rejected && (
         <p role="alert" className="flex items-center gap-1.5 text-xs text-destructive">

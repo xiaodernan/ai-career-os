@@ -5,6 +5,7 @@ import { Check, Copy, Download, Feather, Send, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Hint } from "@/components/ui/hint";
 import { copyText } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { useOfferShelf } from "@/lib/hooks/resources";
@@ -152,12 +153,14 @@ function ReplyRow({
           <p className="mt-1 text-xs text-muted-foreground">{line}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={() => setReveal((v) => !v)} aria-expanded={reveal}>
-            {reveal
-              ? <X aria-hidden className="size-4" />
-              : <Feather aria-hidden className="size-4" />}
-            <span className="hidden sm:inline">{reveal ? t("offers.replyHide") : t("offers.replyRead")}</span>
-          </Button>
+          <Hint label={t("offers.hintReplyRead")}>
+            <Button variant="ghost" size="sm" onClick={() => setReveal((v) => !v)} aria-expanded={reveal}>
+              {reveal
+                ? <X aria-hidden className="size-4" />
+                : <Feather aria-hidden className="size-4" />}
+              <span className="hidden sm:inline">{reveal ? t("offers.replyHide") : t("offers.replyRead")}</span>
+            </Button>
+          </Hint>
         </div>
       </div>
 
@@ -167,22 +170,28 @@ function ReplyRow({
             {letter}
           </pre>
           <div className="flex flex-wrap items-center gap-1.5">
-            <Button variant="outline" size="sm" onClick={copy} data-testid={`${testId}-copy`}>
-              {copied
-                ? <Check aria-hidden className="size-4 text-success" />
-                : <Copy aria-hidden className="size-4" />}
-              <span>{copied ? t("common.copied") : t("common.copy")}</span>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={download} data-testid={`${testId}-download`}>
-              <Download aria-hidden className="size-4" />
-              <span>{t("offers.replyDownload")}</span>
-            </Button>
-            <Button asChild variant="ai" size="sm">
-              <a href={`mailto:?subject=${encodeURIComponent("Thank you — " + label)}&body=${encodeURIComponent(letter)}`}>
-                <Send aria-hidden className="size-4" />
-                <span>{t("offers.replyMailto")}</span>
-              </a>
-            </Button>
+            <Hint label={t("offers.hintReplyCopy")}>
+              <Button variant="outline" size="sm" onClick={copy} data-testid={`${testId}-copy`}>
+                {copied
+                  ? <Check aria-hidden className="size-4 text-success" />
+                  : <Copy aria-hidden className="size-4" />}
+                <span>{copied ? t("common.copied") : t("common.copy")}</span>
+              </Button>
+            </Hint>
+            <Hint label={t("offers.hintReplyDownload")}>
+              <Button variant="ghost" size="sm" onClick={download} data-testid={`${testId}-download`}>
+                <Download aria-hidden className="size-4" />
+                <span>{t("offers.replyDownload")}</span>
+              </Button>
+            </Hint>
+            <Hint label={t("offers.hintReplyMailto")}>
+              <Button asChild variant="ai" size="sm">
+                <a href={`mailto:?subject=${encodeURIComponent("Thank you — " + label)}&body=${encodeURIComponent(letter)}`}>
+                  <Send aria-hidden className="size-4" />
+                  <span>{t("offers.replyMailto")}</span>
+                </a>
+              </Button>
+            </Hint>
           </div>
           <p className="text-2xs text-muted-foreground">{caption}</p>
         </div>

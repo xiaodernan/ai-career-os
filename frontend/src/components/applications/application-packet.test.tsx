@@ -58,6 +58,7 @@ describe("ApplicationPacketPanel", () => {
     // 59.2: and how it went, beside the count rather than instead of it.
     expect(html).toContain("applications.dialog.packet.rehearsalCountBest");
     expect(html).toContain('href="/interviews?application=app-1"');
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(4);
   });
 
   it("keeps an attached-but-unreadable row apart from an empty column", () => {

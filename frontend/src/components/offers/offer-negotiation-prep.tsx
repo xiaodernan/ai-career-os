@@ -12,7 +12,8 @@ import { useNegotiationPrep } from "@/lib/hooks/offers";
  * Epic 337 — the twelve lines the reader carries into the call where they answer
  * the offer on the table. Second person, never to the company; the counter-letter
  * drafts the email that leaves the reader, this writes the sheet they sit with first.
- * Ask-first: nothing is written on mount; the button carries the Hint.
+ * Ask-first: nothing is written on mount; the button carries the Hint. The sheet
+ * stays on this device until generated, and copying changes only the clipboard.
  */
 export function OfferNegotiationPrep({ rowId }: { rowId: string }) {
   const { t, locale } = useLocale();
@@ -40,17 +41,19 @@ export function OfferNegotiationPrep({ rowId }: { rowId: string }) {
       {text ? (
         <>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
-          <Button variant="ghost" size="sm" className="mt-2" onClick={() => void copy()} aria-label={t("common.copy")} title={t("common.copy")}>
-            {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-            {copied ? t("offers.negotiationPrepCopied") : t("offers.negotiationPrepCopy")}
-          </Button>
+          <Hint label={t("offers.hintCopyDraft")}>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => void copy()} aria-label={t("common.copy")} title={t("common.copy")}>
+              {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+              {copied ? t("offers.negotiationPrepCopied") : t("offers.negotiationPrepCopy")}
+            </Button>
+          </Hint>
         </>
       ) : silent ? (
         <p className="mt-1 text-xs text-muted-foreground">{t("offers.negotiationPrepSilent")}</p>
       ) : (
         <>
           <p className="mt-1 text-xs text-muted-foreground">{t("offers.negotiationPrepHint")}</p>
-          <Hint label={t("offers.negotiationPrepHint")}>
+          <Hint anchor="span" label={t("offers.negotiationPrepHint")}>
             <Button
               variant="outline"
               size="sm"

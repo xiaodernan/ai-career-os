@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Library } from "lucide-react";
+import { Hint } from "@/components/ui/hint";
 import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
@@ -38,6 +40,13 @@ export default function KnowledgePage() {
   // the UUID binder has to reject. Blank means "the whole board", which is also what clearing does.
   const src = knowledgeFocus(state.src);
   const showAll = () => setUrl({ src: undefined });
+  const showAllAction = (
+    <Hint label={t("knowledge.hintShowAllSources")}>
+      <Button variant="outline" size="sm" onClick={showAll}>
+        {t("knowledge.showAllSources")}
+      </Button>
+    </Hint>
+  );
   // Live while anything is still ingesting: the list polls every few seconds until
   // every row reads ready/failed, so an upload visibly moves without a reload.
   const sources = useKnowledgeSources(true, src, { page: state.page, size: PAGE_SIZE });
@@ -64,23 +73,13 @@ export default function KnowledgePage() {
           : t("knowledge.description")
       }
       query={sources}
-      actions={
-        src ? (
-          <Button variant="outline" size="sm" onClick={showAll}>
-            {t("knowledge.showAllSources")}
-          </Button>
-        ) : undefined
-      }
+      actions={src ? showAllAction : undefined}
       emptyHint={
         src
           ? {
               title: t("knowledge.noSourceMatches"),
               description: t("knowledge.noSourceMatchesDescription"),
-              action: (
-                <Button variant="outline" size="sm" onClick={showAll}>
-                  {t("knowledge.showAllSources")}
-                </Button>
-              ),
+              action: showAllAction,
             }
           : {
               title: t("knowledge.baseIsEmpty"),
@@ -91,10 +90,15 @@ export default function KnowledgePage() {
                 t("knowledge.baseIsEmptyProof2"),
                 t("knowledge.baseIsEmptyProof3"),
               ],
+              action: (
+                <Hint label={t("knowledge.hintAskCopilotToIngest")}>
+                  <Button variant="ai" size="sm" asChild>
+                    <Link href="/copilot">{t("knowledge.askCopilotToIngest")}</Link>
+                  </Button>
+                </Hint>
+              ),
             }
       }
-      ctaHref="/copilot"
-      ctaLabel={t("knowledge.askCopilotToIngest")}
       footer={
         !src && total > PAGE_SIZE && (
           <Pagination

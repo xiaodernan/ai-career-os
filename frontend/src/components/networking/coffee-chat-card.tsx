@@ -49,10 +49,11 @@ export function CoffeeChatCard() {
   const [state, setState] = React.useState<CoffeeChatState>(() =>
     loadCoffeeChat(typeof window === "undefined" ? null : window.localStorage)
   );
+  const [verdictOpen, setVerdictOpen] = React.useState(() => coffeeAnswered(state));
   const [, setRevealed] = React.useState<Record<string, boolean>>({});
   const [step, setStep] = React.useState(0);
 
-  const done = coffeeAnswered(state);
+  const done = verdictOpen && coffeeAnswered(state);
   const current = COFFEE_MOMENTS[step];
   const picked = current ? state.scores[current.id] : undefined;
   const total = coffeeTotalScore(state);
@@ -78,10 +79,17 @@ export function CoffeeChatCard() {
     clearCoffeeChat();
     setState({ scores: {}, sentence: "" });
     setRevealed({});
+    setVerdictOpen(false);
     setStep(0);
   };
 
-  const advance = () => setStep((currentStep) => Math.min(currentStep + 1, COFFEE_MOMENTS.length - 1));
+  const advance = () => {
+    if (isLast) {
+      setVerdictOpen(true);
+      return;
+    }
+    setStep((currentStep) => Math.min(currentStep + 1, COFFEE_MOMENTS.length - 1));
+  };
 
   return (
     <Card
@@ -97,10 +105,16 @@ export function CoffeeChatCard() {
           <CardDescription>{t("networking.coffeeDescription")}</CardDescription>
         </div>
         {Object.keys(state.scores).length > 0 && (
-                    <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("networking.coffeeReset")} title={t("networking.coffeeReset")}>
-            <RotateCcw aria-hidden className="size-4" />
-          </Button>
+          <Hint side="left" label={t("networking.coffeeHintReset")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="ml-auto shrink-0"
+              onClick={reset}
+              aria-label={t("networking.coffeeReset")}
+            >
+              <RotateCcw aria-hidden className="size-4" />
+            </Button>
           </Hint>
         )}
       </CardHeader>
@@ -117,15 +131,17 @@ export function CoffeeChatCard() {
             <div className="space-y-1.5">
               <Label htmlFor="coffee-keep">{t("networking.coffeeKeepTitle")}</Label>
               <p className="text-2xs text-muted-foreground">{t("networking.coffeeKeepDescription")}</p>
-              <Textarea
-                id="coffee-keep"
-                value={state.sentence}
-                onChange={setSentence}
-                placeholder={t("networking.coffeeKeepPlaceholder")}
-                rows={2}
-                maxLength={2000}
-                className="text-sm leading-relaxed"
-              />
+              <Hint anchor="span" label={t("networking.coffeeHintKeep")}>
+                <Textarea
+                  id="coffee-keep"
+                  value={state.sentence}
+                  onChange={setSentence}
+                  placeholder={t("networking.coffeeKeepPlaceholder")}
+                  rows={2}
+                  maxLength={2000}
+                  className="text-sm leading-relaxed"
+                />
+              </Hint>
               {state.sentence.trim() !== "" && (
                 <p className="inline-flex items-center gap-1.5 text-2xs text-success">
                   <Check aria-hidden className="size-3" />
@@ -146,32 +162,37 @@ export function CoffeeChatCard() {
                 const known = picked !== undefined;
                 const score = coffeeScoreOf(current.id, reply.id);
                 return (
-                  <button
-                    key={reply.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => pick(current.id, reply.id)}
-                    className={cn(
-                      "rounded-lg border border-border/60 p-3 text-left text-sm transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-success/30",
-                      active && "border-success/40 bg-success/10",
-                      !active && "hover:border-border hover:bg-accent/30"
-                    )}
-                  >
-                    {t(`networking.coffeeReply_${current.id}_${reply.id}`)}
-                    {known && active && (
-                      <span className="mt-2 block text-2xs font-medium text-muted-foreground">
-                        {score}/3 · {t(FEEDBACK_KEY(score))}
-                      </span>
-                    )}
-                  </button>
+                  <Hint key={reply.id} label={t("networking.coffeeHintReply")}>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => pick(current.id, reply.id)}
+                      className={cn(
+                        "rounded-lg border border-border/60 p-3 text-left text-sm transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-success/30",
+                        active && "border-success/40 bg-success/10",
+                        !active && "hover:border-border hover:bg-accent/30"
+                      )}
+                    >
+                      {t(`networking.coffeeReply_${current.id}_${reply.id}`)}
+                      {known && active && (
+                        <span className="mt-2 block text-2xs font-medium text-muted-foreground">
+                          {score}/3 · {t(FEEDBACK_KEY(score))}
+                        </span>
+                      )}
+                    </button>
+                  </Hint>
                 );
               })}
             </div>
             {picked && (
-              <Button variant="ai" size="sm" onClick={advance} className="w-full">
-                {isLast ? t("networking.coffeeSeeVerdict") : t("networking.coffeeNext")}
-              </Button>
+              <Hint
+                label={t(isLast ? "networking.coffeeHintVerdict" : "networking.coffeeHintNext")}
+              >
+                <Button variant="ai" size="sm" onClick={advance} className="w-full">
+                  {isLast ? t("networking.coffeeSeeVerdict") : t("networking.coffeeNext")}
+                </Button>
+              </Hint>
             )}
           </div>
         )}

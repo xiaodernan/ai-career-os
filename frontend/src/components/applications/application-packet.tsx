@@ -6,6 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Skeleton } from "@/components/ui/skeleton";
 import { relativeTime } from "@/lib/format";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -29,6 +30,7 @@ interface PacketRow {
   primary: string;
   secondary?: string;
   href?: string;
+  hint?: string;
   state: "ready" | "unavailable" | "missing";
   /** Set for the two counting rows (letters, rehearsals) instead of a state badge. */
   count?: number;
@@ -58,6 +60,7 @@ function resumeRow(
       .filter(Boolean)
       .join(" · "),
     href: value?.resumeId ? `/resumes/${encodeURIComponent(value.resumeId)}` : undefined,
+    hint: "applications.dialog.packet.hintOpenResume",
     state: !packet.resumeLinked ? "missing" : value ? "ready" : "unavailable",
   };
 }
@@ -72,6 +75,7 @@ function jdRow(application: Application, packet: ApplicationPacket, t: Translate
       .filter(Boolean)
       .join(" · "),
     href: value?.jobId ? `/jobs/${encodeURIComponent(value.jobId)}` : undefined,
+    hint: "applications.dialog.packet.hintOpenJd",
     state: !packet.jdLinked ? "missing" : value ? "ready" : "unavailable",
   };
 }
@@ -86,6 +90,7 @@ function matchRow(packet: ApplicationPacket, t: Translate, locale: "en" | "zh"):
       : t("applications.dialog.packet.untitledMatch"),
     secondary: value?.createdAt ? relativeTime(value.createdAt, locale) : undefined,
     href: value?.jobId ? `/jobs/${encodeURIComponent(value.jobId)}` : undefined,
+    hint: "applications.dialog.packet.hintOpenMatch",
     state: !packet.matchLinked ? "missing" : value ? "ready" : "unavailable",
   };
 }
@@ -140,6 +145,7 @@ function rehearsalsRow(
             })
         : t("applications.dialog.packet.noRehearsals"),
     href: count > 0 ? `/interviews?application=${encodeURIComponent(application.id)}` : undefined,
+    hint: "applications.dialog.packet.hintOpenRehearsals",
     state: count > 0 ? "ready" : "missing",
     count,
   };
@@ -150,14 +156,16 @@ function Status({ row, t }: { row: PacketRow; t: Translate }) {
   // thing twice, and "Not linked" would be false for a letter that simply was never written.
   // The rehearsal count keeps its link, though: a count of something that has a screen is a door.
   if (row.count !== undefined && !row.href) return null;
-  if (row.href) {
+  if (row.href && row.hint) {
     return (
-      <Button asChild size="sm" variant="ghost">
-        <Link href={row.href}>
-          {t("applications.dialog.packet.open")}
-          <ArrowUpRight aria-hidden />
-        </Link>
-      </Button>
+      <Hint label={t(row.hint)}>
+        <Button asChild size="sm" variant="ghost">
+          <Link href={row.href}>
+            {t("applications.dialog.packet.open")}
+            <ArrowUpRight aria-hidden />
+          </Link>
+        </Button>
+      </Hint>
     );
   }
   return (

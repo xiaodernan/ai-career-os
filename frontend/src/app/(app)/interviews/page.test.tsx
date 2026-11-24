@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { InterviewSession } from "@/lib/api/types";
 
 /**
@@ -53,6 +55,24 @@ vi.mock("@/lib/hooks/use-url-state", () => ({
 
 import InterviewsPage from "./page";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
+
+const PAGE = readFileSync(fileURLToPath(new URL("./page.tsx", import.meta.url)), "utf8");
+const PAGE_HINT_KEYS = [
+  "hintSearch",
+  "hintClearSearch",
+  "hintAllInterviews",
+  "hintStartInterview",
+  "hintOpenApplication",
+  "hintOpenSession",
+  "hintDelete",
+  "hintPickTargetJob",
+];
+
+function actionMarkup(html: string, text: string): string {
+  const label = html.indexOf(`>${text}<`);
+  const start = Math.max(html.lastIndexOf("<button", label), html.lastIndexOf("<a", label));
+  return html.slice(start, label + text.length + 1);
+}
 
 const ITEMS: InterviewSession[] = [
   {
@@ -242,5 +262,76 @@ describe("the rehearsals board", () => {
     expect(render("zh")).toContain("清除搜索");
     expect(render("zh")).toContain('placeholder="搜索面试"');
     expect(render("zh")).toContain("按公司、职位或模式搜索面试");
+  });
+});
+
+describe("the rehearsal list's primary actions teach their consequences", () => {
+  it("puts the search, clear and filter reset controls behind tooltip triggers", () => {
+    state.url = { page: 0, q: "acme", application: "app-9" };
+    withSessions(ITEMS, 2);
+    const html = render();
+
+    for (const label of ["Search", "Clear search", "All interviews"]) {
+      expect(actionMarkup(html, label), label).toContain('data-slot="tooltip-trigger"');
+    }
+  });
+
+  it("teaches both row doors and the icon-only delete action", () => {
+    withSessions(ITEMS, 2);
+    const html = render();
+
+    for (const label of ["Open application", "Continue", "View report"]) {
+      expect(actionMarkup(html, label), label).toContain('data-slot="tooltip-trigger"');
+    }
+    const remove = html.indexOf('aria-label="Delete this rehearsal"');
+    expect(html.slice(html.lastIndexOf("<button", remove), remove)).toContain(
+      'data-slot="tooltip-trigger"',
+    );
+  });
+
+  it("teaches every empty-state action", () => {
+    withSessions([], 0);
+    expect(actionMarkup(render(), "Pick a target job first")).toContain('data-slot="tooltip-trigger"');
+
+    state.url = { page: 0, q: "missing" };
+    expect(actionMarkup(render(), "Clear search")).toContain('data-slot="tooltip-trigger"');
+
+    state.url = { page: 0, application: "app-9" };
+    expect(actionMarkup(render(), "All interviews")).toContain('data-slot="tooltip-trigger"');
+  });
+
+  it("keeps the dropdown trigger's own state and slot outside the tooltip wrapper", () => {
+    withSessions(ITEMS, 2);
+    const html = render();
+    const start = actionMarkup(html, "Start interview");
+
+    expect(start).toContain('data-slot="dropdown-menu-trigger"');
+    expect(start).toContain('data-state="closed"');
+    expect(start).not.toContain('data-slot="tooltip-trigger"');
+    expect(html).toContain('<span class="contents" data-state="closed" data-slot="tooltip-trigger"><button');
+    expect(PAGE).toContain('<Hint anchor="span" label={t("interviews.hintStartInterview")}>');
+  });
+
+  it("keeps the same trigger count in Chinese and resolves every sentence from the tables", () => {
+    withSessions(ITEMS, 2);
+    const en = readFileSync(
+      fileURLToPath(new URL("../../../lib/i18n/en.ts", import.meta.url)),
+      "utf8",
+    );
+    const zh = readFileSync(
+      fileURLToPath(new URL("../../../lib/i18n/zh.ts", import.meta.url)),
+      "utf8",
+    );
+    const triggers = (html: string) => html.match(/data-slot="tooltip-trigger"/g)?.length ?? 0;
+
+    expect(triggers(render("zh"))).toBe(triggers(render("en")));
+    for (const key of PAGE_HINT_KEYS) {
+      expect(PAGE).toContain(`t("interviews.${key}")`);
+      expect(en).toContain(`${key}:`);
+      expect(zh).toContain(`${key}:`);
+    }
+    const wired = PAGE.match(/interviews\.hint\w+/g) ?? [];
+    expect(new Set(wired).size).toBe(PAGE_HINT_KEYS.length);
+    expect(PAGE).not.toMatch(/label="[A-Z][a-z]+ [a-z]/);
   });
 });

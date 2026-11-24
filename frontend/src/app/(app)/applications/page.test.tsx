@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { Application } from "@/lib/api/types";
 
 const state = vi.hoisted(() => ({
@@ -81,6 +83,15 @@ const ITEMS: Application[] = [
     updatedAt: "2026-11-02T10:00:00Z",
   },
 ];
+
+const PAGE = readFileSync(fileURLToPath(new URL("./page.tsx", import.meta.url)), "utf8");
+const PAGE_HINT_KEYS = ["hintSearch", "hintClearSearch", "hintAdd"];
+
+function buttonMarkup(html: string, text: string): string {
+  const label = html.indexOf(`>${text}</button>`);
+  const start = html.lastIndexOf("<button", label);
+  return html.slice(start, label + text.length + 9);
+}
 
 function withApplications(items: Application[], total: number, page = 0): void {
   state.applications = {
@@ -199,5 +210,47 @@ describe("the pipeline board", () => {
     // server's, so the second page of a word is the second page of the matches.
     expect(html).toContain("101–141 of 141 applications");
     expect(state.params).toEqual({ page: 1, size: 100, q: "acme" });
+  });
+});
+
+describe("the board's primary actions teach their consequences", () => {
+  it("puts search, clear and add behind real tooltip triggers", () => {
+    state.url = { page: 0, q: "acme" };
+    withApplications(ITEMS, 2);
+    const html = render();
+
+    for (const label of ["Search", "Clear search", "Add"]) {
+      expect(buttonMarkup(html, label), label).toContain('data-slot="tooltip-trigger"');
+    }
+  });
+
+  it("teaches the action on each empty state as well", () => {
+    withApplications([], 0);
+    expect(buttonMarkup(render(), "Add application")).toContain('data-slot="tooltip-trigger"');
+
+    state.url = { page: 0, q: "missing" };
+    expect(buttonMarkup(render(), "Clear search")).toContain('data-slot="tooltip-trigger"');
+  });
+
+  it("keeps the same trigger count in Chinese and resolves every sentence from the tables", () => {
+    const en = readFileSync(
+      fileURLToPath(new URL("../../../lib/i18n/en.ts", import.meta.url)),
+      "utf8",
+    );
+    const zh = readFileSync(
+      fileURLToPath(new URL("../../../lib/i18n/zh.ts", import.meta.url)),
+      "utf8",
+    );
+    const triggers = (html: string) => html.match(/data-slot="tooltip-trigger"/g)?.length ?? 0;
+
+    expect(triggers(render("zh"))).toBe(triggers(render("en")));
+    for (const key of PAGE_HINT_KEYS) {
+      expect(PAGE).toContain(`t("applications.${key}")`);
+      expect(en).toContain(`${key}:`);
+      expect(zh).toContain(`${key}:`);
+    }
+    const wired = PAGE.match(/applications\.hint\w+/g) ?? [];
+    expect(new Set(wired).size).toBe(PAGE_HINT_KEYS.length);
+    expect(PAGE).not.toMatch(/label="[A-Z][a-z]+ [a-z]/);
   });
 });

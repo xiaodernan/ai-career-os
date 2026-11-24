@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { CopyButton, DownloadButton } from "@/components/common/export-buttons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
 import { Label } from "@/components/ui/label";
@@ -57,9 +58,11 @@ function LetterResumeVersion({ versionId }: { versionId: string }) {
     <p className="mb-2 text-xs text-muted-foreground">
       {t("applications.dialog.letterWrittenWith")}{" "}
       {resumeId ? (
-        <Link href={`/resumes/${resumeId}`} className="underline underline-offset-2 hover:text-foreground">
-          {name}
-        </Link>
+        <Hint label={t("applications.dialog.hintVersionLink")}>
+          <Link href={`/resumes/${resumeId}`} className="underline underline-offset-2 hover:text-foreground">
+            {name}
+          </Link>
+        </Hint>
       ) : (
         name
       )}
@@ -123,12 +126,14 @@ export function ApplicationLettersPanel({
         <p className="text-sm text-muted-foreground">
           {t("applications.dialog.lettersEmpty")}{" "}
           {jobId ? (
-            <Link
-              href={`/jobs/${jobId}#cover-letter`}
-              className="text-xs underline underline-offset-2 hover:text-foreground"
-            >
-              {t("applications.dialog.lettersWriteOne")}
-            </Link>
+            <Hint label={t("applications.dialog.hintWriteOne")}>
+              <Link
+                href={`/jobs/${jobId}#cover-letter`}
+                className="text-xs underline underline-offset-2 hover:text-foreground"
+              >
+                {t("applications.dialog.lettersWriteOne")}
+              </Link>
+            </Hint>
           ) : (
             <span className="text-xs">{t("applications.dialog.lettersHint")}</span>
           )}
@@ -152,16 +157,18 @@ export function ApplicationLettersPanel({
           return (
             <li key={letter.id}>
               <details className="group rounded-lg border border-border/70 bg-muted/20">
-                <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-sm">
-                  <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{firstLine(letter)}</span>
-                  {dials && (
-                    <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-                      {dials}
-                    </span>
-                  )}
-                  <span className="shrink-0 text-xs text-muted-foreground">{moment}</span>
-                </summary>
+                <Hint label={t("applications.dialog.hintDisclosure")}>
+                  <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-sm">
+                    <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{firstLine(letter)}</span>
+                    {dials && (
+                      <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                        {dials}
+                      </span>
+                    )}
+                    <span className="shrink-0 text-xs text-muted-foreground">{moment}</span>
+                  </summary>
+                </Hint>
                 <div className="border-t border-border/70 p-3">
                   {letter.resumeVersionId && (
                     <LetterResumeVersion versionId={letter.resumeVersionId} />
@@ -185,54 +192,64 @@ export function ApplicationLettersPanel({
                   <div className="mt-3 flex flex-wrap justify-end gap-1.5">
                     {!isEditing && (
                       <>
-                        <CopyButton
-                          text={letter.body ?? ""}
-                          label={t("applications.dialog.letterCopy")}
-                          variant="ghost"
-                          size="sm"
-                        />
-                        <DownloadButton
-                          text={letter.body ?? ""}
-                          filename={letterDownloadName(letter, jobLabel)}
-                          label={t("applications.dialog.letterDownload")}
-                          mime="text/markdown;charset=utf-8"
-                          variant="ghost"
-                          size="sm"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={!letter.id}
-                          onClick={() => letter.id && setEditingId(letter.id)}
-                          aria-label={t("applications.dialog.letterEdit")}
-                          title={t("applications.dialog.letterEdit")}
-                        >
-                          <Pencil aria-hidden />
-                          {t("applications.dialog.letterEdit")}
-                        </Button>
-                        {jobId && (
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href={letterRewriteHref(jobId, letter)}>
-                              <PenLine aria-hidden />
-                              {t("applications.dialog.letterRewrite")}
-                            </Link>
+                        <Hint anchor="span" label={t("applications.dialog.hintCopy")}>
+                          <CopyButton
+                            text={letter.body ?? ""}
+                            label={t("applications.dialog.letterCopy")}
+                            variant="ghost"
+                            size="sm"
+                          />
+                        </Hint>
+                        <Hint anchor="span" label={t("applications.dialog.hintDownload")}>
+                          <DownloadButton
+                            text={letter.body ?? ""}
+                            filename={letterDownloadName(letter, jobLabel)}
+                            label={t("applications.dialog.letterDownload")}
+                            mime="text/markdown;charset=utf-8"
+                            variant="ghost"
+                            size="sm"
+                          />
+                        </Hint>
+                        <Hint label={t("applications.dialog.hintEdit")}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={!letter.id}
+                            onClick={() => letter.id && setEditingId(letter.id)}
+                            aria-label={t("applications.dialog.letterEdit")}
+                            title={t("applications.dialog.letterEdit")}
+                          >
+                            <Pencil aria-hidden />
+                            {t("applications.dialog.letterEdit")}
                           </Button>
+                        </Hint>
+                        {jobId && (
+                          <Hint label={t("applications.dialog.hintRewrite")}>
+                            <Button asChild variant="ghost" size="sm">
+                              <Link href={letterRewriteHref(jobId, letter)}>
+                                <PenLine aria-hidden />
+                                {t("applications.dialog.letterRewrite")}
+                              </Link>
+                            </Button>
+                          </Hint>
                         )}
                       </>
                     )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={isEditing}
-                      onClick={() => setPendingRemoval(letter)}
-                      aria-label={t("applications.dialog.letterDelete")}
-                      title={t("applications.dialog.letterDelete")}
-                    >
-                      <Trash2 aria-hidden />
-                      {t("applications.dialog.letterDelete")}
-                    </Button>
+                    <Hint label={t("applications.dialog.hintRemove")}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={isEditing}
+                        onClick={() => setPendingRemoval(letter)}
+                        aria-label={t("applications.dialog.letterDelete")}
+                        title={t("applications.dialog.letterDelete")}
+                      >
+                        <Trash2 aria-hidden />
+                        {t("applications.dialog.letterDelete")}
+                      </Button>
+                    </Hint>
                   </div>
                 </div>
               </details>
@@ -299,63 +316,71 @@ export function LetterEditor({
           <Label htmlFor={`letter-tone-${suffix}`} className="text-xs">
             {t("coverLetter.tone")}
           </Label>
-          <Select
-            value={dials.tone}
-            onValueChange={(tone) => setDials((current) => ({ ...current, tone }))}
-          >
-            <SelectTrigger id={`letter-tone-${suffix}`} size="sm" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={UNSET_DIAL}>{t("applications.dialog.letterDialUnset")}</SelectItem>
-              {dialOptions(COVER_LETTER_TONES, dials.tone).map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.labelKey ? t(option.labelKey) : option.value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Hint anchor="span" label={t("applications.dialog.hintTone")}>
+            <Select
+              value={dials.tone}
+              onValueChange={(tone) => setDials((current) => ({ ...current, tone }))}
+            >
+              <SelectTrigger id={`letter-tone-${suffix}`} size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNSET_DIAL}>{t("applications.dialog.letterDialUnset")}</SelectItem>
+                {dialOptions(COVER_LETTER_TONES, dials.tone).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.labelKey ? t(option.labelKey) : option.value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Hint>
         </div>
         <div className="space-y-1">
           <Label htmlFor={`letter-length-${suffix}`} className="text-xs">
             {t("coverLetter.length")}
           </Label>
-          <Select
-            value={dials.length}
-            onValueChange={(length) => setDials((current) => ({ ...current, length }))}
-          >
-            <SelectTrigger id={`letter-length-${suffix}`} size="sm" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={UNSET_DIAL}>{t("applications.dialog.letterDialUnset")}</SelectItem>
-              {dialOptions(COVER_LETTER_LENGTHS, dials.length).map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.labelKey ? t(option.labelKey) : option.value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Hint anchor="span" label={t("applications.dialog.hintLength")}>
+            <Select
+              value={dials.length}
+              onValueChange={(length) => setDials((current) => ({ ...current, length }))}
+            >
+              <SelectTrigger id={`letter-length-${suffix}`} size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={UNSET_DIAL}>{t("applications.dialog.letterDialUnset")}</SelectItem>
+                {dialOptions(COVER_LETTER_LENGTHS, dials.length).map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.labelKey ? t(option.labelKey) : option.value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Hint>
         </div>
       </div>
       <div className="flex justify-end gap-1.5">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving} aria-label={t("common.cancel")} title={t("common.cancel")}>
-          <X aria-hidden />
-          {t("applications.dialog.letterCancel")}
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          loading={saving}
-          disabled={!body.trim()}
-          onClick={() => onSave(body, dials)}
-          aria-label={t("common.save")}
-          title={t("common.save")}
-        >
-          <Check aria-hidden />
-          {t("applications.dialog.letterSave")}
-        </Button>
+        <Hint label={t("applications.dialog.hintCancelEdit")}>
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving} aria-label={t("common.cancel")} title={t("common.cancel")}>
+            <X aria-hidden />
+            {t("applications.dialog.letterCancel")}
+          </Button>
+        </Hint>
+        <Hint anchor="span" label={t("applications.dialog.hintSaveEdit")}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            loading={saving}
+            disabled={!body.trim()}
+            onClick={() => onSave(body, dials)}
+            aria-label={t("common.save")}
+            title={t("common.save")}
+          >
+            <Check aria-hidden />
+            {t("applications.dialog.letterSave")}
+          </Button>
+        </Hint>
       </div>
     </div>
   );

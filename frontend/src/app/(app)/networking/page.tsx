@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import { Search, Users } from "lucide-react";
+import Link from "next/link";
 import { ModuleView } from "@/components/common/module-view";
 import { CoffeeChatCard } from "@/components/networking/coffee-chat-card";
 import { Pagination } from "@/components/common/pagination";
+import { Hint } from "@/components/ui/hint";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,26 +116,29 @@ export default function NetworkingPage() {
           role="group"
           aria-label={t("networking.relationFilter")}
         >
-          <Button
-            type="button"
-            size="sm"
-            variant={state.relation ? "ghost" : "secondary"}
-            onClick={() => setUrl({ relation: undefined, page: 0 })}
-          >
-            {t("networking.relationFilterAll")}
-          </Button>
-          {relations.data?.map(({ relation, count }) => (
+          <Hint label={t("networking.hintRelationFilterAll")}>
             <Button
-              key={relation}
               type="button"
               size="sm"
-              variant={state.relation === relation ? "secondary" : "ghost"}
-              onClick={() => pickRelation(relation)}
-              aria-pressed={state.relation === relation}
+              variant={state.relation ? "ghost" : "secondary"}
+              onClick={() => setUrl({ relation: undefined, page: 0 })}
             >
-              {relation}
-              <span className="ml-1 tabular-nums text-muted-foreground">{count}</span>
+              {t("networking.relationFilterAll")}
             </Button>
+          </Hint>
+          {relations.data?.map(({ relation, count }) => (
+            <Hint key={relation} label={t("networking.hintRelationFilter", { relation })}>
+              <Button
+                type="button"
+                size="sm"
+                variant={state.relation === relation ? "secondary" : "ghost"}
+                onClick={() => pickRelation(relation)}
+                aria-pressed={state.relation === relation}
+              >
+                {relation}
+                <span className="ml-1 tabular-nums text-muted-foreground">{count}</span>
+              </Button>
+            </Hint>
           ))}
         </section>
       ) : null}
@@ -143,8 +148,6 @@ export default function NetworkingPage() {
         title={t("networking.title")}
         description={t("networking.description")}
         query={contacts}
-        ctaHref="/copilot"
-        ctaLabel={t("networking.draftWithCopilot")}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {/* The question 70.3 gave this route. It is the server's search, not a filter over the
@@ -165,36 +168,44 @@ export default function NetworkingPage() {
                   aria-hidden
                   className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
                 />
-                <Input
-                  value={word}
-                  onChange={(event) => setWord(event.target.value)}
-                  placeholder={t("networking.searchPlaceholder")}
-                  aria-label={t("networking.searchLabel")}
-                  autoComplete="off"
-                  className="w-40 pl-9 sm:w-60"
-                />
+                <Hint anchor="span" label={t("networking.hintSearchInput")}>
+                  <Input
+                    value={word}
+                    onChange={(event) => setWord(event.target.value)}
+                    placeholder={t("networking.searchPlaceholder")}
+                    aria-label={t("networking.searchLabel")}
+                    autoComplete="off"
+                    className="w-40 pl-9 sm:w-60"
+                  />
+                </Hint>
               </div>
-              <Button type="submit" size="sm" variant="outline">
-                {t("chrome.search")}
-              </Button>
-              {state.q ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setWord("");
-                    ask("");
-                  }}
-                >
-                  {t("networking.clearSearch")}
+              <Hint label={t("networking.hintSearch")}>
+                <Button type="submit" size="sm" variant="outline">
+                  {t("chrome.search")}
                 </Button>
+              </Hint>
+              {state.q ? (
+                <Hint label={t("networking.hintClearSearch")}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setWord("");
+                      ask("");
+                    }}
+                  >
+                    {t("networking.clearSearch")}
+                  </Button>
+                </Hint>
               ) : null}
             </form>
-            <Button variant="ai" size="sm" onClick={startCreate}>
-              <Users aria-hidden />
-              {t("networking.addContact")}
-            </Button>
+            <Hint label={t("networking.hintAddContact")}>
+              <Button variant="ai" size="sm" onClick={startCreate}>
+                <Users aria-hidden />
+                {t("networking.addContact")}
+              </Button>
+            </Hint>
           </div>
         }
         // Two different empties (49.2): a registry nobody has started, and a registry full of
@@ -208,21 +219,30 @@ export default function NetworkingPage() {
                   : t("networking.noMatch", { query: state.q ?? "" }),
                 description: t("networking.noMatchDescription"),
                 action: (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setWord("");
-                      setUrl({ q: undefined, relation: undefined, page: 0 });
-                    }}
-                  >
-                    {t("networking.clearSearch")}
-                  </Button>
+                  <Hint label={t("networking.hintClearFilters")}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setWord("");
+                        setUrl({ q: undefined, relation: undefined, page: 0 });
+                      }}
+                    >
+                      {t("networking.clearSearch")}
+                    </Button>
+                  </Hint>
                 ),
               }
             : {
                 title: t("networking.noContacts"),
                 description: t("networking.noContactsDescription"),
+                action: (
+                  <Hint label={t("networking.hintDraftWithCopilot")}>
+                    <Button variant="ai" size="sm" asChild>
+                      <Link href="/copilot">{t("networking.draftWithCopilot")}</Link>
+                    </Button>
+                  </Hint>
+                ),
               }
         }
         renderItem={(c) => (
@@ -231,45 +251,49 @@ export default function NetworkingPage() {
               <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                 <Users className="size-4.5" aria-hidden />
               </span>
-              <button
-                type="button"
-                onClick={() => startEdit(c)}
-                className="min-w-0 flex-1 text-left focus-visible:ring-[3px] focus-visible:ring-ring/35 rounded-sm"
-              >
-                <p className="truncate text-sm font-medium">
-                  {c.name}
-                  {c.company && (
-                    <span className="font-normal text-muted-foreground"> · {c.company}</span>
-                  )}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {[c.role, c.relation].filter(Boolean).join(" · ") || "—"}
-                  {c.lastTouchAt &&
-                    t("networking.lastTouchLine", { when: formatDate(c.lastTouchAt, locale) })}
-                </p>
-              </button>
+              <Hint label={t("networking.hintEditContact")}>
+                <button
+                  type="button"
+                  onClick={() => startEdit(c)}
+                  className="min-w-0 flex-1 text-left focus-visible:ring-[3px] focus-visible:ring-ring/35 rounded-sm"
+                >
+                  <p className="truncate text-sm font-medium">
+                    {c.name}
+                    {c.company && (
+                      <span className="font-normal text-muted-foreground"> · {c.company}</span>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {[c.role, c.relation].filter(Boolean).join(" · ") || "—"}
+                    {c.lastTouchAt &&
+                      t("networking.lastTouchLine", { when: formatDate(c.lastTouchAt, locale) })}
+                  </p>
+                </button>
+              </Hint>
               {c.relation && (
                 <Badge variant="secondary" className="shrink-0 capitalize">
                   {c.relation}
                 </Badge>
               )}
-              <Button
-                variant="outline"
-                size="xs"
-                className="shrink-0"
-                loading={draft.isPending && draftFor?.id === c.id}
-                onClick={() => {
-                  setDraftFor(c);
-                  draft.mutate({
-                    name: c.name,
-                    role: c.role ?? "",
-                    company: c.company ?? "",
-                    purpose: "referral",
-                  });
-                }}
-              >
-                {t("networking.draft")}
-              </Button>
+              <Hint anchor="span" label={t("networking.hintDraft")}>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="shrink-0"
+                  loading={draft.isPending && draftFor?.id === c.id}
+                  onClick={() => {
+                    setDraftFor(c);
+                    draft.mutate({
+                      name: c.name,
+                      role: c.role ?? "",
+                      company: c.company ?? "",
+                      purpose: "referral",
+                    });
+                  }}
+                >
+                  {t("networking.draft")}
+                </Button>
+              </Hint>
             </CardContent>
           </Card>
         )}
@@ -394,13 +418,15 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ct-relation">{t("networking.relation")}</Label>
-                <Input
-                  id="ct-relation"
-                  value={relation}
-                  onChange={(e) => setRelation(e.target.value)}
-                  placeholder={t("networking.relationPlaceholder")}
-                  autoComplete="off"
-                />
+                <Hint anchor="span" label={t("networking.hintRelationField")}>
+                  <Input
+                    id="ct-relation"
+                    value={relation}
+                    onChange={(e) => setRelation(e.target.value)}
+                    placeholder={t("networking.relationPlaceholder")}
+                    autoComplete="off"
+                  />
+                </Hint>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ct-email">{t("networking.email")}</Label>
@@ -409,7 +435,9 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ct-touch">{t("networking.lastTouch")}</Label>
-              <Input id="ct-touch" type="date" value={lastTouch} onChange={(e) => setLastTouch(e.target.value)} />
+              <Hint anchor="span" label={t("networking.hintLastTouch")}>
+                <Input id="ct-touch" type="date" value={lastTouch} onChange={(e) => setLastTouch(e.target.value)} />
+              </Hint>
             </div>
             <div className="space-y-2">
               <Label htmlFor="ct-notes">{t("networking.notes")}</Label>
@@ -423,21 +451,30 @@ function ContactDialog({ open, editing, onClose }: ContactDialogProps) {
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               {editing && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="text-destructive mr-auto"
-                  onClick={() => setConfirming(true)}
-                >
-                  {t("networking.delete")}
-                </Button>
+                <Hint label={t("networking.hintDeleteContact")}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-destructive mr-auto"
+                    onClick={() => setConfirming(true)}
+                  >
+                    {t("networking.delete")}
+                  </Button>
+                </Hint>
               )}
-              <Button type="button" variant="outline" onClick={onClose}>
-                {t("networking.cancel")}
-              </Button>
-              <Button type="submit" variant="ai" loading={pending} disabled={pending}>
-                {editing ? t("networking.save") : t("networking.add")}
-              </Button>
+              <Hint label={t("networking.hintCancelContact")}>
+                <Button type="button" variant="outline" onClick={onClose}>
+                  {t("networking.cancel")}
+                </Button>
+              </Hint>
+              <Hint
+                anchor="span"
+                label={t(editing ? "networking.hintSaveContact" : "networking.hintCreateContact")}
+              >
+                <Button type="submit" variant="ai" loading={pending} disabled={pending}>
+                  {editing ? t("networking.save") : t("networking.add")}
+                </Button>
+              </Hint>
             </DialogFooter>
           </form>
         </DialogContent>

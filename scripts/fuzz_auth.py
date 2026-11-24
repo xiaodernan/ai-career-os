@@ -24,6 +24,15 @@ import urllib.error
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
+# The fuzz cases deliberately carry control characters and non-ASCII bytes; printing
+# them with ensure_ascii=False on a Windows GBK console raises UnicodeEncodeError and
+# aborts the harness before its verdict. Force UTF-8 so the tool finishes everywhere.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except (AttributeError, ValueError):
+    pass  # non-CPython or already-UTF-8 stream — nothing to do
+
 BASE = "http://127.0.0.1:8080/api/v1"
 EMAIL = lambda local: f"{local}@example.com"
 PASS = "Str0ngPassphrase!23"

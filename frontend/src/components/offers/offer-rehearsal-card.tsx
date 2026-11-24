@@ -49,8 +49,9 @@ export function OfferRehearsalCard() {
   ));
   const [, setRevealed] = React.useState<Record<string, boolean>>({});
   const [step, setStep] = React.useState(0);
+  const [verdictOpen, setVerdictOpen] = React.useState(() => answered(state));
 
-  const done = answered(state);
+  const done = verdictOpen && answered(state);
   const current = REHEARSAL_PUSHES[step];
   const picked = current ? state.scores[current.id] : undefined;
   const total = totalScore(state);
@@ -77,9 +78,16 @@ export function OfferRehearsalCard() {
     setState({ scores: {}, sentence: "" });
     setRevealed({});
     setStep(0);
+    setVerdictOpen(false);
   };
 
-  const advance = () => setStep((currentStep) => Math.min(currentStep + 1, REHEARSAL_PUSHES.length - 1));
+  const advance = () => {
+    if (isLast) {
+      setVerdictOpen(true);
+      return;
+    }
+    setStep((currentStep) => Math.min(currentStep + 1, REHEARSAL_PUSHES.length - 1));
+  };
 
   return (
     <Card
@@ -95,10 +103,10 @@ export function OfferRehearsalCard() {
           <CardDescription>{t("offers.rehearsalDescription")}</CardDescription>
         </div>
         {Object.keys(state.scores).length > 0 && (
-                    <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.rehearsalReset")} title={t("offers.rehearsalReset")}>
-            <RotateCcw aria-hidden className="size-4" />
-          </Button>
+          <Hint side="left" label={t("offers.hintRehearsalReset")}>
+            <Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.rehearsalReset")} title={t("offers.rehearsalReset")}>
+              <RotateCcw aria-hidden className="size-4" />
+            </Button>
           </Hint>
         )}
       </CardHeader>
@@ -115,16 +123,17 @@ export function OfferRehearsalCard() {
             <div className="space-y-1.5">
               <Label htmlFor="rehearsal-keep">{t("offers.rehearsalKeepTitle")}</Label>
               <p className="text-2xs text-muted-foreground">{t("offers.rehearsalKeepDescription")}</p>
-              <Textarea
-                id="rehearsal-keep"
-                value={state.sentence}
-                onChange={setSentence}
-                placeholder={t("offers.rehearsalKeepPlaceholder")}
-                rows={2}
-                maxLength={2000}
-                className="text-sm leading-relaxed"
-              />
-              {state.sentence.trim() !== "" && (
+              <Hint label={t("offers.hintRehearsalKeep")}>
+                <Textarea
+                  id="rehearsal-keep"
+                  value={state.sentence}
+                  onChange={setSentence}
+                  placeholder={t("offers.rehearsalKeepPlaceholder")}
+                  rows={2}
+                  maxLength={2000}
+                  className="text-sm leading-relaxed"
+                />
+              </Hint>              {state.sentence.trim() !== "" && (
                 <p className="inline-flex items-center gap-1.5 text-2xs text-success">
                   <Check aria-hidden className="size-3" />
                   {t("offers.rehearsalKept")}
@@ -144,32 +153,35 @@ export function OfferRehearsalCard() {
                 const known = picked !== undefined;
                 const score = scoreOf(current.id, reply.id);
                 return (
-                  <button
-                    key={reply.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => pick(current.id, reply.id)}
-                    className={cn(
-                      "rounded-lg border border-border/60 p-3 text-left text-sm transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
-                      active && "border-warning/40 bg-warning/10",
-                      !active && "hover:border-border hover:bg-accent/30"
-                    )}
-                  >
-                    {t(`offers.rehearsalReply_${current.id}_${reply.id}`)}
-                    {known && active && (
-                      <span className="mt-2 block text-2xs font-medium text-muted-foreground">
-                        {score}/3 · {t(FEEDBACK_KEY(score))}
-                      </span>
-                    )}
-                  </button>
+              <Hint key={reply.id} label={t("offers.hintRehearsalReply")}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => pick(current.id, reply.id)}
+                  className={cn(
+                    "w-full rounded-lg border border-border/60 p-3 text-left text-sm transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
+                    active && "border-warning/40 bg-warning/10",
+                    !active && "hover:border-border hover:bg-accent/30"
+                  )}
+                >
+                  {t(`offers.rehearsalReply_${current.id}_${reply.id}`)}
+                  {known && active && (
+                    <span className="mt-2 block text-2xs font-medium text-muted-foreground">
+                      {score}/3 · {t(FEEDBACK_KEY(score))}
+                    </span>
+                  )}
+                </button>
+              </Hint>
                 );
               })}
             </div>
             {picked && (
-              <Button variant="ai" size="sm" onClick={advance} className="w-full">
-                {isLast ? t("offers.rehearsalSeeVerdict") : t("offers.rehearsalNext")}
-              </Button>
+              <Hint label={t(isLast ? "offers.hintRehearsalVerdict" : "offers.hintRehearsalNext")}>
+                <Button variant="ai" size="sm" onClick={advance} className="w-full">
+                  {isLast ? t("offers.rehearsalSeeVerdict") : t("offers.rehearsalNext")}
+                </Button>
+              </Hint>
             )}
           </div>
         )}

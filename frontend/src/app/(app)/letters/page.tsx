@@ -97,23 +97,29 @@ export default function LettersPage() {
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
-          <Input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={t("letters.searchPlaceholder")}
-            aria-label={t("letters.searchLabel")}
-            autoComplete="off"
-            className="pl-9"
-          />
+          <Hint label={t("letters.hintSearchInput")}>
+            <Input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={t("letters.searchPlaceholder")}
+              aria-label={t("letters.searchLabel")}
+              autoComplete="off"
+              className="pl-9"
+            />
+          </Hint>
         </div>
-        <Button type="submit" size="sm" variant="outline">
-          {t("letters.search")}
-        </Button>
-        {state.q ? (
-          <Button type="button" size="sm" variant="ghost" onClick={clear}>
-            <X aria-hidden className="size-4" />
-            {t("letters.clearSearch")}
+        <Hint label={t("letters.hintSearch")}>
+          <Button type="submit" size="sm" variant="outline">
+            {t("letters.search")}
           </Button>
+        </Hint>
+        {state.q ? (
+          <Hint label={t("letters.hintClearSearch")}>
+            <Button type="button" size="sm" variant="ghost" onClick={clear}>
+              <X aria-hidden className="size-4" />
+              {t("letters.clearSearch")}
+            </Button>
+          </Hint>
         ) : null}
       </form>
 
@@ -141,9 +147,11 @@ export default function LettersPage() {
           title={t("letters.emptyTitle")}
           description={t("letters.emptyDescription")}
           action={
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/applications">{t("letters.emptyAction")}</Link>
-            </Button>
+            <Hint label={t("letters.hintOpenTracker")}>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/applications">{t("letters.emptyAction")}</Link>
+              </Button>
+            </Hint>
           }
           proofs={[t("letters.proof1"), t("letters.proof2"), t("letters.proof3")]}
         />
@@ -154,9 +162,11 @@ export default function LettersPage() {
           title={t("letters.noMatch", { query: state.q ?? "" })}
           description={t("letters.noMatchDescription")}
           action={
-            <Button size="sm" variant="outline" onClick={clear}>
-              {t("letters.clearSearch")}
-            </Button>
+            <Hint label={t("letters.hintClearSearch")}>
+              <Button size="sm" variant="outline" onClick={clear}>
+                {t("letters.clearSearch")}
+              </Button>
+            </Hint>
           }
         />
       ) : (
@@ -223,12 +233,12 @@ function LetterCard({
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 print:hidden">
-            <Hint side="left" label={t("letters.copy")}>
+            <Hint side="left" label={t("letters.hintCopy")}>
               <Button variant="ghost" size="icon-sm" onClick={onCopy} aria-label={t("letters.copy")} title={t("letters.copy")}>
                 <Copy aria-hidden className="size-4" />
               </Button>
             </Hint>
-            <Hint side="left" label={t("letters.openApplication")}>
+            <Hint side="left" label={t("letters.hintOpenApplication")}>
               <Button variant="ghost" size="sm" asChild title={t("letters.openApplication")}>
                 <Link href={`/applications?application=${encodeURIComponent(letter.applicationId)}`}>
                   <Link2 aria-hidden className="size-4" />

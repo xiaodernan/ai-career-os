@@ -6,6 +6,7 @@ import { ModuleView } from "@/components/common/module-view";
 import { Pagination } from "@/components/common/pagination";
 import { lastPageOf } from "@/lib/page-window";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { useApplication, useApplications } from "@/lib/hooks/resources";
 import { useReorderApplication } from "@/lib/hooks/actions";
@@ -124,16 +125,18 @@ export default function ApplicationsPage() {
               title: t("applications.noMatch", { query: state.q }),
               description: t("applications.noMatchDescription"),
               action: (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setDraft("");
-                    ask("");
-                  }}
-                >
-                  {t("applications.clearSearch")}
-                </Button>
+                <Hint label={t("applications.hintClearSearch")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDraft("");
+                      ask("");
+                    }}
+                  >
+                    {t("applications.clearSearch")}
+                  </Button>
+                </Hint>
               ),
             }
           : {
@@ -146,9 +149,11 @@ export default function ApplicationsPage() {
                 t("applications.pipelineIsEmptyProof3"),
               ],
               action: (
-                <Button variant="ai" size="sm" onClick={openCreate}>
-                  {t("applications.addApplication")}
-                </Button>
+                <Hint label={t("applications.hintAdd")}>
+                  <Button variant="ai" size="sm" onClick={openCreate}>
+                    {t("applications.addApplication")}
+                  </Button>
+                </Hint>
               ),
             }
       }
@@ -181,27 +186,33 @@ export default function ApplicationsPage() {
                 className="w-40 pl-9 sm:w-60"
               />
             </div>
-            <Button type="submit" size="sm" variant="outline">
-              {t("chrome.search")}
-            </Button>
-            {state.q ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setDraft("");
-                  ask("");
-                }}
-              >
-                {t("applications.clearSearch")}
+            <Hint label={t("applications.hintSearch")}>
+              <Button type="submit" size="sm" variant="outline">
+                {t("chrome.search")}
               </Button>
+            </Hint>
+            {state.q ? (
+              <Hint label={t("applications.hintClearSearch")}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setDraft("");
+                    ask("");
+                  }}
+                >
+                  {t("applications.clearSearch")}
+                </Button>
+              </Hint>
             ) : null}
           </form>
-          <Button variant="outline" size="sm" onClick={openCreate}>
-            <Plus className="size-4 mr-2" aria-hidden />
-            {t("applications.add")}
-          </Button>
+          <Hint label={t("applications.hintAdd")}>
+            <Button variant="outline" size="sm" onClick={openCreate}>
+              <Plus className="size-4 mr-2" aria-hidden />
+              {t("applications.add")}
+            </Button>
+          </Hint>
         </div>
       }
     >

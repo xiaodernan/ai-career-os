@@ -4,6 +4,7 @@ import * as React from "react";
 import { Sparkles, WandSparkles } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { SectionHeading } from "@/components/common/export-buttons";
 import { useResumeImpression } from "@/lib/hooks/actions";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -44,20 +45,22 @@ export function ResumeImpressionCard({ resumeId, hasScore }: { resumeId: string;
         />
       </CardHeader>
       <CardContent className="space-y-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={run}
-          disabled={!hasScore || impression.isPending}
-          aria-label={t("resumes.detail.impressionAction")}
-          title={t("resumes.detail.impressionAction")}
-        >
-          <Sparkles aria-hidden className="size-4" />
-          {impression.isPending
-            ? t("resumes.detail.impressionWorking")
-            : t("resumes.detail.impressionAction")}
-        </Button>
+        <Hint anchor="span" label={t("resumes.detail.hintImpression")}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={run}
+            disabled={!hasScore || impression.isPending}
+            aria-label={t("resumes.detail.impressionAction")}
+            title={t("resumes.detail.impressionAction")}
+          >
+            <Sparkles aria-hidden className="size-4" />
+            {impression.isPending
+              ? t("resumes.detail.impressionWorking")
+              : t("resumes.detail.impressionAction")}
+          </Button>
+        </Hint>
         {impression.isPending && (
           <p className="text-xs text-muted-foreground">{t("resumes.detail.impressionWorking")}</p>
         )}

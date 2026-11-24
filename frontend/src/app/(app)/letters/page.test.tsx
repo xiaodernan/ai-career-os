@@ -29,7 +29,8 @@ vi.mock("@/lib/hooks/use-url-state", () => ({
 }));
 
 import LettersPage from "./page";
-import { LocaleProvider } from "@/lib/i18n/locale-context";
+import { LocaleProvider, lookup } from "@/lib/i18n/locale-context";
+import { translations } from "@/lib/i18n/translations";
 
 const ITEMS: LetterCatalogItem[] = [
   {
@@ -151,6 +152,41 @@ describe("the letters page", () => {
     expect(html).toContain("1 letters kept");
     expect(html).not.toContain("incident reviews");
     expect(html).toContain("registry and the edge");
+  });
+
+  it("teaches search, copy and application doors in both languages", () => {
+    state.letters = {
+      data: { items: ITEMS, total: 2 },
+      isPending: false,
+      isError: false,
+      error: null,
+      isFetching: false,
+      refetch: () => {},
+    };
+    const keys = ["hintSearchInput", "hintSearch", "hintClearSearch", "hintOpenTracker", "hintCopy", "hintOpenApplication"];
+    for (const locale of ["en", "zh"] as const) {
+      for (const key of keys) {
+        expect(lookup(translations[locale], `letters.${key}`), `${locale}: ${key}`).toBeTruthy();
+      }
+      const html = render(locale);
+      expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(6);
+      expect(html).toContain(locale === "en"
+        ? 'aria-label="Search the kept letters by body, application, company, tone or length"'
+        : 'aria-label="按正文、投递、公司、语气或长度搜索保留的信"');
+    }
+  });
+
+  it("teaches both ways to clear an empty filtered gallery", () => {
+    state.url = { q: "missing" };
+    state.letters = {
+      data: { items: ITEMS, total: 2 },
+      isPending: false,
+      isError: false,
+      error: null,
+      isFetching: false,
+      refetch: () => {},
+    };
+    expect(render("en").match(/data-slot="tooltip-trigger"/g)).toHaveLength(4);
   });
 
   it("waits honestly with an announced status while the letters load", () => {

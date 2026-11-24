@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { useLocale } from "@/lib/i18n/locale-context";
 
 /**
@@ -129,12 +130,16 @@ export function OfferCelebration({ open, role, company, onContinue, variant = "o
           className="mt-7 flex flex-wrap items-center justify-center gap-2 animate-fade-up"
           style={{ animationDelay: "310ms" }}
         >
-          <Button variant="ai" size="lg" asChild className="glow-on-hover">
-            <Link href={primaryHref} onClick={onContinue}>{primaryLabel}</Link>
-          </Button>
-          <Button variant="ghost" size="lg" onClick={onContinue} aria-label={t("common.continue")} title={t("common.continue")}>
-            {t("offers.celebrationContinue")}
-          </Button>
+          <Hint label={t("offers.hintCelebrationContinue")}>
+            <Button variant="ai" size="lg" asChild className="glow-on-hover">
+              <Link href={primaryHref} onClick={onContinue}>{primaryLabel}</Link>
+            </Button>
+          </Hint>
+          <Hint label={t("offers.hintCelebrationDismiss")}>
+            <Button variant="ghost" size="lg" onClick={onContinue} aria-label={t("common.continue")} title={t("common.continue")}>
+              {t("offers.celebrationContinue")}
+            </Button>
+          </Hint>
         </div>
       </div>
     </div>

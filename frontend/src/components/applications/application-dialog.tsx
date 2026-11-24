@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Hint } from "@/components/ui/hint";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -274,18 +275,20 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
 
           <div className="space-y-2">
             <Label htmlFor="app-stage">{t("applications.dialog.stage")}</Label>
-            <Select value={status} onValueChange={setStatus} disabled={pending}>
-              <SelectTrigger id="app-stage" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {pickerStages(status, t).map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Hint anchor="span" label={t("applications.dialog.hintStage")}>
+              <Select value={status} onValueChange={setStatus} disabled={pending}>
+                <SelectTrigger id="app-stage" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pickerStages(status, t).map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Hint>
             <p className="text-xs text-muted-foreground">{stageBlurb(t, status)}</p>
           </div>
 
@@ -310,15 +313,17 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                 onChange={(e) => setReminder(e.target.value)}
                 className="flex-1"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setReminder("")}
-                disabled={!reminder}
-              >
-                {t("applications.dialog.clear")}
-              </Button>
+              <Hint label={t("applications.dialog.hintClearReminder")}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReminder("")}
+                  disabled={!reminder}
+                >
+                  {t("applications.dialog.clear")}
+                </Button>
+              </Hint>
             </div>
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <CalendarClock className="size-3.5" aria-hidden />
@@ -421,19 +426,21 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
                   {t("applications.dialog.rehearseHint")}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                loading={startInterview.isPending}
-                disabled={startInterview.isPending}
-                onClick={startRehearsal}
-                aria-label={t("applications.dialog.rehearseAction")}
-                title={t("applications.dialog.rehearseAction")}
-              >
-                <MessagesSquare aria-hidden />
-                {t("applications.dialog.rehearseAction")}
-              </Button>
+              <Hint anchor="span" label={t("applications.dialog.hintStartRehearsal")}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={startInterview.isPending}
+                  disabled={startInterview.isPending}
+                  onClick={startRehearsal}
+                  aria-label={t("applications.dialog.rehearseAction")}
+                  title={t("applications.dialog.rehearseAction")}
+                >
+                  <MessagesSquare aria-hidden />
+                  {t("applications.dialog.rehearseAction")}
+                </Button>
+              </Hint>
             </section>
 
             {/* A letter is written on the job page, where the draft and the posting sit
@@ -461,37 +468,46 @@ export function ApplicationDialog({ application, open, onOpenChange }: Applicati
 
           <DialogFooter className="gap-2 sm:justify-between">
             {editing ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setConfirmingDelete(true)}
-                disabled={pending}
-              >
-                <Trash2 aria-hidden />
-                {t("applications.dialog.delete")}
-              </Button>
+              <Hint label={t("applications.dialog.hintDeleteApplication")}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmingDelete(true)}
+                  disabled={pending}
+                >
+                  <Trash2 aria-hidden />
+                  {t("applications.dialog.delete")}
+                </Button>
+              </Hint>
             ) : (
               <span />
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={pending}
+              <Hint label={t("applications.dialog.hintCancelApplication")}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={pending}
+                >
+                  {t("applications.dialog.cancel")}
+                </Button>
+              </Hint>
+              <Hint
+                anchor="span"
+                label={t(editing ? "applications.dialog.hintSaveApplication" : "applications.dialog.hintAddApplication")}
               >
-                {t("applications.dialog.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={save}
-                loading={pending}
-                disabled={!editing && !title.trim()}
-              >
-                {editing ? t("applications.dialog.saveChanges") : t("applications.dialog.addToPipeline")}
-              </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={save}
+                  loading={pending}
+                  disabled={!editing && !title.trim()}
+                >
+                  {editing ? t("applications.dialog.saveChanges") : t("applications.dialog.addToPipeline")}
+                </Button>
+              </Hint>
             </div>
           </DialogFooter>
         </DialogContent>

@@ -100,10 +100,10 @@ export function OfferDayOnePacket() {
           <CardDescription>{t("offers.dayOneDescription")}</CardDescription>
         </div>
         {checked > 0 && (
-                    <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.dayOneReset")}>
-            <RotateCcw aria-hidden className="size-4" />
-          </Button>
+          <Hint side="left" label={t("offers.hintDayOneReset")}>
+            <Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.dayOneReset")}>
+              <RotateCcw aria-hidden className="size-4" />
+            </Button>
           </Hint>
         )}
       </CardHeader>
@@ -130,33 +130,35 @@ export function OfferDayOnePacket() {
             const isDone = Boolean(done[step.id]);
             return (
               <li key={step.id}>
-                <button
-                  type="button"
-                  aria-pressed={isDone}
-                  onClick={() => toggle(step.id)}
-                  className="group flex w-full items-start gap-3 rounded-lg py-2.5 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40"
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border transition-all duration-200",
-                      isDone
-                        ? "border-success/60 bg-success text-success-foreground"
-                        : "border-border/70 bg-card group-hover:border-success/50",
-                    )}
+                <Hint label={t("offers.hintDayOneToggle")}>
+                  <button
+                    type="button"
+                    aria-pressed={isDone}
+                    onClick={() => toggle(step.id)}
+                    className="group flex w-full items-start gap-3 rounded-lg py-2.5 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:bg-muted/40"
                   >
-                    {isDone && <Check className="size-3" strokeWidth={3} />}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-sm leading-snug text-muted-foreground transition-colors",
-                      isDone && "text-muted-foreground/60 line-through decoration-muted-foreground/40",
-                      !isDone && "group-hover:text-foreground",
-                    )}
-                  >
-                    {t(`offers.${step.key}`)}
-                  </span>
-                </button>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border transition-all duration-200",
+                        isDone
+                          ? "border-success/60 bg-success text-success-foreground"
+                          : "border-border/70 bg-card group-hover:border-success/50",
+                      )}
+                    >
+                      {isDone && <Check className="size-3" strokeWidth={3} />}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-sm leading-snug text-muted-foreground transition-colors",
+                        isDone && "text-muted-foreground/60 line-through decoration-muted-foreground/40",
+                        !isDone && "group-hover:text-foreground",
+                      )}
+                    >
+                      {t(`offers.${step.key}`)}
+                    </span>
+                  </button>
+                </Hint>
               </li>
             );
           })}

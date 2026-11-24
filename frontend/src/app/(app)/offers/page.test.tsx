@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 
 /**
  * The offer-comparison block on the offers page.
@@ -83,9 +84,23 @@ describe("the offer comparison block", () => {
   });
 
   it("keeps the honest empty state when the comparison has no offers", () => {
-    // data present, zero offers → the empty state, not a blank card
     hookState.data = { ...COMPARISON, offers: [] };
     expect(render("en")).toContain("No offers to compare");
     hookState.data = COMPARISON;
+  });
+
+  it("attaches bilingual consequence hints without replacing input or loading state", () => {
+    for (const locale of ["en", "zh"] as const) {
+      const html = render(locale);
+      expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(10);
+      expect(html.match(/data-slot="input"/g)).toHaveLength(4);
+      expect(html).toContain('id="offer-role"');
+      expect(html).toContain('id="offer-labels"');
+    }
+    const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+    for (const key of ["hintRoleInput", "hintLocationInput", "hintOfferBaseInput", "hintMatchInput", "hintOfferLabelsInput", "hintBenchmark", "hintNegotiate", "hintCounter", "hintCompare"]) {
+      expect(source).toContain(`<Hint anchor="span" label={t("offers.${key}")}>`);
+    }
+    expect(source).toContain('<Hint label={t("offers.hintPrintPacket")}>');
   });
 });

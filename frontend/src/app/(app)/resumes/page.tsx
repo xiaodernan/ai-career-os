@@ -165,14 +165,16 @@ export default function ResumesPage() {
                           <FileText className="size-5" aria-hidden />
                         </span>
                         <div className="min-w-0 flex-1 basis-52">
-                          <Link
-                            href={`/resumes/${r.id}`}
-                            onMouseEnter={warm(`/resumes/${r.id}`)}
-                            onFocus={warm(`/resumes/${r.id}`)}
-                            className="truncate text-sm font-medium hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md"
-                          >
-                            {r.title}
-                          </Link>
+                          <Hint label={t("resumes.hintOpen")}>
+                            <Link
+                              href={`/resumes/${r.id}`}
+                              onMouseEnter={warm(`/resumes/${r.id}`)}
+                              onFocus={warm(`/resumes/${r.id}`)}
+                              className="truncate text-sm font-medium hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md"
+                            >
+                              {r.title}
+                            </Link>
+                          </Hint>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {r.currentVersionId
                               ? t("resumes.currentVersionSet")
@@ -186,25 +188,27 @@ export default function ResumesPage() {
                           {badge.label}
                         </Badge>
                         <div className="flex shrink-0 items-center gap-1.5">
-                          <Button variant="outline" size="sm" asChild>
-                            <Link
-                              href={`/resumes/${r.id}`}
-                              onMouseEnter={warm(`/resumes/${r.id}`)}
-                              onFocus={warm(`/resumes/${r.id}`)}
+                          <Hint label={t("resumes.hintOpen")}>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link
+                                href={`/resumes/${r.id}`}
+                                onMouseEnter={warm(`/resumes/${r.id}`)}
+                                onFocus={warm(`/resumes/${r.id}`)}
+                              >
+                                {t("resumes.open")}
+                                <Sparkles aria-hidden />
+                              </Link>
+                            </Button>
+                          </Hint>
+                          <Hint side="left" label={t("resumes.hintDelete")}>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={t("resumes.deleteAria", { title: r.title })}
+                              onClick={() => setPendingDelete(r)}
                             >
-                              {t("resumes.open")}
-                              <Sparkles aria-hidden />
-                            </Link>
-                          </Button>
-                                                    <Hint side="left" label={t("chrome.deleteHint")}>
-<Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={t("resumes.deleteAria", { title: r.title })}
-                            onClick={() => setPendingDelete(r)}
-                          >
-                            <Trash2 aria-hidden />
-                          </Button>
+                              <Trash2 aria-hidden />
+                            </Button>
                           </Hint>
                         </div>
                       </CardContent>
@@ -235,6 +239,8 @@ export default function ResumesPage() {
         title={t("resumes.deleteTitle", { title: pendingDelete?.title ?? "" })}
         description={t("resumes.deleteDescription")}
         confirmLabel={t("resumes.deleteResume")}
+        cancelHint={t("resumes.hintDeleteCancel")}
+        confirmHint={t("resumes.hintDeleteConfirm")}
         destructive
         loading={del.isPending}
         onConfirm={() =>

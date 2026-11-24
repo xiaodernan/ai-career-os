@@ -18,6 +18,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Hint } from "@/components/ui/hint";
 import type { TraceKind } from "@/lib/trace-kinds";
 import { traceKindWord } from "@/lib/status-words";
 
@@ -111,6 +112,41 @@ function TimelineRow({
         ? t("ai.agentTimeline.transportComplete")
         : transport;
 
+  const disclosure = (
+    <button
+      type="button"
+      disabled={!hasPayload}
+      aria-expanded={hasPayload ? open : undefined}
+      onClick={() => hasPayload && setOpen((o) => !o)}
+      className={cn(
+        "group flex h-7 w-full items-center gap-2 rounded-md text-left",
+        hasPayload ? "cursor-pointer hover:bg-accent/60" : "cursor-default"
+      )}
+    >
+      {hasPayload && (
+        <ChevronRight
+          className={cn("size-3 shrink-0 text-muted-foreground transition-transform duration-150", open && "rotate-90")}
+          aria-hidden
+        />
+      )}
+      <span className="truncate font-medium">{event.label}</span>
+      {transport ? (
+        <span className="shrink-0 rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+          {transportLabel}
+        </span>
+      ) : null}
+      <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
+        {traceKindWord(t, event.kind)}
+      </span>
+      <span className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
+        {event.status === "running" && <CircleDashed className="size-3.5 animate-spin text-muted-foreground" aria-label={t("ai.agentTimeline.running")} />}
+        {event.status === "ok" && <CheckCircle2 className="size-3.5 text-success" aria-label={t("ai.agentTimeline.completed")} />}
+        {event.status === "error" && <XCircle className="size-3.5 text-destructive" aria-label={t("ai.agentTimeline.failed")} />}
+        {duration && <span className="font-mono text-2xs text-muted-foreground tabular-nums">{duration}</span>}
+      </span>
+    </button>
+  );
+
   return (
     // Rows arrive in mount order with a 45ms stagger, capped at 8 rows worth of delay
     // so a long trace never holds content back. Transform/opacity only (compositor);
@@ -125,38 +161,9 @@ function TimelineRow({
       </span>
 
       <div className="min-w-0 flex-1">
-        <button
-          type="button"
-          disabled={!hasPayload}
-          aria-expanded={hasPayload ? open : undefined}
-          onClick={() => hasPayload && setOpen((o) => !o)}
-          className={cn(
-            "group flex h-7 w-full items-center gap-2 rounded-md text-left",
-            hasPayload ? "cursor-pointer hover:bg-accent/60" : "cursor-default"
-          )}
-        >
-          {hasPayload && (
-            <ChevronRight
-              className={cn("size-3 shrink-0 text-muted-foreground transition-transform duration-150", open && "rotate-90")}
-              aria-hidden
-            />
-          )}
-          <span className="truncate font-medium">{event.label}</span>
-          {transport ? (
-            <span className="shrink-0 rounded-md border border-border/60 bg-muted/60 px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
-              {transportLabel}
-            </span>
-          ) : null}
-          <span className="shrink-0 text-2xs font-medium tracking-wide text-muted-foreground uppercase">
-            {traceKindWord(t, event.kind)}
-          </span>
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 pr-1">
-            {event.status === "running" && <CircleDashed className="size-3.5 animate-spin text-muted-foreground" aria-label={t("ai.agentTimeline.running")} />}
-            {event.status === "ok" && <CheckCircle2 className="size-3.5 text-success" aria-label={t("ai.agentTimeline.completed")} />}
-            {event.status === "error" && <XCircle className="size-3.5 text-destructive" aria-label={t("ai.agentTimeline.failed")} />}
-            {duration && <span className="font-mono text-2xs text-muted-foreground tabular-nums">{duration}</span>}
-          </span>
-        </button>
+        {hasPayload ? (
+          <Hint label={t("ai.agentTimeline.hintPayload")}>{disclosure}</Hint>
+        ) : disclosure}
 
         {open && hasPayload && (
           <pre className="animate-fade-in mb-2 max-h-56 overflow-auto rounded-lg border border-border/70 bg-muted/50 p-2.5 font-mono text-xs leading-relaxed text-muted-foreground">

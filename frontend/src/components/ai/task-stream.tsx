@@ -13,6 +13,7 @@ import { AgentTimeline, type AgentTraceEvent } from "@/components/ai/agent-timel
 import { asTraceKind } from "@/lib/trace-kinds";
 import { foldTrace, settleTraceFold, emptyTraceFold, type TraceFold } from "@/lib/trace-fold";
 import { cn } from "@/lib/utils";
+import { Hint } from "@/components/ui/hint";
 import { ChevronRight } from "lucide-react";
 
 export { TRACE_KINDS, asTraceKind } from "@/lib/trace-kinds";
@@ -215,23 +216,25 @@ function TaskProgress({
 
       {showTimeline && traces.length > 0 && (
         <div className="rounded-lg border border-border/70 bg-muted/30">
-          <button
-            type="button"
-            onClick={() => setTimelineOpen((o) => !o)}
-            aria-expanded={timelineOpen}
-            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md"
-          >
-            <ChevronRight className={cn("size-3 transition-transform duration-150", timelineOpen && "rotate-90")} aria-hidden />
-            {t("ai.taskStream.agentTrace")}
-            <span className="ml-auto tabular-nums">
-              {t("ai.taskStream.steps", { count: traces.length })}
-              {tracesOmitted > 0 && (
-                <span className="ml-1.5 text-muted-foreground/80">
-                  · {t("ai.taskStream.foldedSteps", { count: tracesOmitted })}
-                </span>
-              )}
-            </span>
-          </button>
+          <Hint label={t("ai.taskStream.hintAgentTrace")}>
+            <button
+              type="button"
+              onClick={() => setTimelineOpen((o) => !o)}
+              aria-expanded={timelineOpen}
+              className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30 rounded-md"
+            >
+              <ChevronRight className={cn("size-3 transition-transform duration-150", timelineOpen && "rotate-90")} aria-hidden />
+              {t("ai.taskStream.agentTrace")}
+              <span className="ml-auto tabular-nums">
+                {t("ai.taskStream.steps", { count: traces.length })}
+                {tracesOmitted > 0 && (
+                  <span className="ml-1.5 text-muted-foreground/80">
+                    · {t("ai.taskStream.foldedSteps", { count: tracesOmitted })}
+                  </span>
+                )}
+              </span>
+            </button>
+          </Hint>
           {timelineOpen && (
             <div className="px-3 pb-3">
               <AgentTimeline events={traces} />

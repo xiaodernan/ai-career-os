@@ -355,16 +355,18 @@ export function SourceUploadCard() {
                 aria-label={t("knowledge.sources.chooseDocuments")}
                 onChange={(e) => submit(e.target.files)}
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => inputRef.current?.click()}
-                disabled={running}
-                loading={running}
-              >
-                <FileUp aria-hidden />
-                {running ? t("knowledge.sources.uploading") : t("knowledge.sources.chooseFiles")}
-              </Button>
+              <Hint anchor="span" label={t("knowledge.sources.hintChooseFiles")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => inputRef.current?.click()}
+                  disabled={running}
+                  loading={running}
+                >
+                  <FileUp aria-hidden />
+                  {running ? t("knowledge.sources.uploading") : t("knowledge.sources.chooseFiles")}
+                </Button>
+              </Hint>
               <span className="text-xs text-muted-foreground">
                 {MAX_DOCUMENT_BYTES / (1024 * 1024)} MB each, {ACCEPTED_EXTENSIONS.join(" / ")}
               </span>
@@ -372,20 +374,24 @@ export function SourceUploadCard() {
           </div>
           <div className="min-w-0 flex-1 basis-48 space-y-2">
             <Label htmlFor="kb-title">{t("knowledge.sources.titleLabel")}</Label>
-            <Input
-              id="kb-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("knowledge.sources.appliedToBatch")}
-              autoComplete="off"
-            />
+            <Hint anchor="span" label={t("knowledge.sources.hintTitle")}>
+              <Input
+                id="kb-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("knowledge.sources.appliedToBatch")}
+                autoComplete="off"
+              />
+            </Hint>
           </div>
           <div className="space-y-2">
             <Label htmlFor="kb-kind">{t("knowledge.sources.kind")}</Label>
             <Select value={kind} onValueChange={setKind}>
-              <SelectTrigger id="kb-kind" size="sm" className="w-44">
-                <SelectValue />
-              </SelectTrigger>
+              <Hint anchor="span" label={t("knowledge.sources.hintKind")}>
+                <SelectTrigger id="kb-kind" size="sm" className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+              </Hint>
               <SelectContent>
                 {SOURCE_KINDS.map((k) => (
                   <SelectItem key={k.value} value={k.value}>
@@ -428,9 +434,16 @@ export function SourceUploadCard() {
               ))}
             </ul>
             {!running && (
-              <Button variant="ghost" size="xs" onClick={reset} aria-label={t("sourceActions.reset")} title={t("sourceActions.resetTooltip")}>
-                {t("knowledge.sources.clearList")}
-              </Button>
+              <Hint label={t("knowledge.sources.hintClearBatch")}>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={reset}
+                  aria-label={t("sourceActions.reset")}
+                >
+                  {t("knowledge.sources.clearList")}
+                </Button>
+              </Hint>
             )}
           </div>
         )}
@@ -511,15 +524,15 @@ export function SourceDeleteButton({ id, title }: { id: string; title: string })
   const remove = useDeleteSource();
   return (
     <>
-            <Hint side="left" label={t("chrome.deleteHint")}>
-<Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label={t("knowledge.sources.deleteLabel", { title })}
-        onClick={() => setConfirming(true)}
-      >
-        <Trash2 aria-hidden />
-      </Button>
+      <Hint side="left" label={t("knowledge.sources.hintDelete")}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t("knowledge.sources.deleteLabel", { title })}
+          onClick={() => setConfirming(true)}
+        >
+          <Trash2 aria-hidden />
+        </Button>
       </Hint>
       <ConfirmDialog
         open={confirming}

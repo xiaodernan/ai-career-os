@@ -129,10 +129,10 @@ export function OfferFirstQuarter() {
           <CardDescription>{t("offers.quarterDescription")}</CardDescription>
         </div>
         {checked > 0 && (
-                    <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.quarterReset")} title={t("offers.quarterReset")}>
-            <RotateCcw aria-hidden className="size-4" />
-          </Button>
+          <Hint side="left" label={t("offers.hintQuarterReset")}>
+            <Button variant="ghost" size="icon-sm" onClick={reset} aria-label={t("offers.quarterReset")} title={t("offers.quarterReset")}>
+              <RotateCcw aria-hidden className="size-4" />
+            </Button>
           </Hint>
         )}
       </CardHeader>
@@ -174,30 +174,32 @@ export function OfferFirstQuarter() {
                     const isDone = Boolean(done[id]);
                     return (
                       <li key={id}>
-                        <button
-                          type="button"
-                          onClick={() => toggle(id)}
-                          aria-pressed={isDone}
-                          className={cn(
-                            "flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs leading-snug transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
-                            isDone ? "text-muted-foreground" : "text-foreground hover:bg-accent/40"
-                          )}
-                        >
-                          <span
-                            aria-hidden
+                        <Hint label={t("offers.hintQuarterToggle")}>
+                          <button
+                            type="button"
+                            onClick={() => toggle(id)}
+                            aria-pressed={isDone}
                             className={cn(
-                              "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
-                              isDone
-                                ? "border-success/50 bg-success/15 text-success"
-                                : "border-border/70"
+                              "flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs leading-snug transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-primary/30",
+                              isDone ? "text-muted-foreground" : "text-foreground hover:bg-accent/40"
                             )}
                           >
-                            {isDone ? <Check className="size-3" aria-hidden /> : null}
-                          </span>
-                          <span className={cn(isDone && "line-through decoration-muted-foreground/60")}>
-                            {t(`offers.${id}`)}
-                          </span>
-                        </button>
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+                                isDone
+                                  ? "border-success/50 bg-success/15 text-success"
+                                  : "border-border/70"
+                              )}
+                            >
+                              {isDone ? <Check className="size-3" aria-hidden /> : null}
+                            </span>
+                            <span className={cn(isDone && "line-through decoration-muted-foreground/60")}>
+                              {t(`offers.${id}`)}
+                            </span>
+                          </button>
+                        </Hint>
                       </li>
                     );
                   })}

@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { ApiError } from "@/lib/api/client";
 import { missingEndpointMessage } from "@/lib/api/missing-endpoint";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -84,16 +85,18 @@ export function ModuleView<T>({
         actions={
           <>
             {actions}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => query.refetch()}
-              loading={query.isFetching}
-              aria-label={t("chrome.refreshList")}
-            >
-              <RefreshCw aria-hidden />
-              {t("common.refresh")}
-            </Button>
+            <Hint anchor="span" label={t("common.hintRefreshList")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => query.refetch()}
+                loading={query.isFetching}
+                aria-label={t("chrome.refreshList")}
+              >
+                <RefreshCw aria-hidden />
+                {t("common.refresh")}
+              </Button>
+            </Hint>
           </>
         }
       />
@@ -113,10 +116,12 @@ export function ModuleView<T>({
                 title={t("common.notLiveTitle")}
                 description={missingEndpointMessage()}
                 action={
-                  <Button variant="outline" size="sm" onClick={() => query.refetch()} aria-label={t("common.refetch")} title={t("common.refetch")}>
-                    <RotateCcw aria-hidden />
-                    {t("common.checkAgain")}
-                  </Button>
+                  <Hint anchor="span" label={t("common.hintCheckAgain")}>
+                    <Button variant="outline" size="sm" onClick={() => query.refetch()} aria-label={t("common.refetch")} title={t("common.refetch")}>
+                      <RotateCcw aria-hidden />
+                      {t("common.checkAgain")}
+                    </Button>
+                  </Hint>
                 }
               />
             ) : (
@@ -136,9 +141,11 @@ export function ModuleView<T>({
               action={
                 emptyHint.action ??
                 (ctaHref ? (
-                  <Button variant="ai" size="sm" asChild>
-                    <Link href={ctaHref}>{ctaLabel ?? t("common.openCopilot")}</Link>
-                  </Button>
+                  <Hint label={t("common.hintOpenCopilot")}>
+                    <Button variant="ai" size="sm" asChild>
+                      <Link href={ctaHref}>{ctaLabel ?? t("common.openCopilot")}</Link>
+                    </Button>
+                  </Hint>
                 ) : undefined)
               }
             />

@@ -93,42 +93,46 @@ function CounterLetterBlock({
       {text ? (
         <>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-            onClick={() => void copy()}
-          >
-            {copied ? t("offers.counterLetterCopied") : t("offers.counterLetterCopy")}
-          </Button>
+          <Hint label={t("offers.hintCopyDraft")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => void copy()}
+            >
+              {copied ? t("offers.counterLetterCopied") : t("offers.counterLetterCopy")}
+            </Button>
+          </Hint>
         </>
       ) : silent ? (
         <p className="mt-1 text-xs text-muted-foreground">{t("offers.counterLetterSilent")}</p>
       ) : (
         <>
           <p className="mt-1 text-xs text-muted-foreground">{t("offers.counterLetterHint")}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            loading={letter.isPending}
-            onClick={() =>
-              letter.mutate(
-                { id: rowId, locale },
-                {
-                  onSuccess: (out) => {
-                    if (out.letter) {
-                      setText(out.letter);
-                    } else {
-                      setSilent(true);
-                    }
+          <Hint anchor="span" label={t("offers.hintCounterLetter")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              loading={letter.isPending}
+              onClick={() =>
+                letter.mutate(
+                  { id: rowId, locale },
+                  {
+                    onSuccess: (out) => {
+                      if (out.letter) {
+                        setText(out.letter);
+                      } else {
+                        setSilent(true);
+                      }
+                    },
                   },
-                },
-              )
-            }
-          >
-            {t("offers.counterLetterButton")}
-          </Button>
+                )
+              }
+            >
+              {t("offers.counterLetterButton")}
+            </Button>
+          </Hint>
         </>
       )}
     </div>
@@ -169,42 +173,46 @@ function FollowUpLetterBlock({
       {text ? (
         <>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-            onClick={() => void copy()}
-          >
-            {copied ? t("offers.followUpLetterCopied") : t("offers.followUpLetterCopy")}
-          </Button>
+          <Hint label={t("offers.hintCopyDraft")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => void copy()}
+            >
+              {copied ? t("offers.followUpLetterCopied") : t("offers.followUpLetterCopy")}
+            </Button>
+          </Hint>
         </>
       ) : silent ? (
         <p className="mt-1 text-xs text-muted-foreground">{t("offers.followUpLetterSilent")}</p>
       ) : (
         <>
           <p className="mt-1 text-xs text-muted-foreground">{t("offers.followUpLetterHint")}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            loading={letter.isPending}
-            onClick={() =>
-              letter.mutate(
-                { id: rowId, locale },
-                {
-                  onSuccess: (out) => {
-                    if (out.letter) {
-                      setText(out.letter);
-                    } else {
-                      setSilent(true);
-                    }
+          <Hint anchor="span" label={t("offers.hintFollowUpLetter")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              loading={letter.isPending}
+              onClick={() =>
+                letter.mutate(
+                  { id: rowId, locale },
+                  {
+                    onSuccess: (out) => {
+                      if (out.letter) {
+                        setText(out.letter);
+                      } else {
+                        setSilent(true);
+                      }
+                    },
                   },
-                },
-              )
-            }
-          >
-            {t("offers.followUpLetterButton")}
-          </Button>
+                )
+              }
+            >
+              {t("offers.followUpLetterButton")}
+            </Button>
+          </Hint>
         </>
       )}
     </div>
@@ -245,42 +253,46 @@ function DeclineLetterBlock({
       {text ? (
         <>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-            onClick={() => void copy()}
-          >
-            {copied ? t("offers.declineLetterCopied") : t("offers.declineLetterCopy")}
-          </Button>
+          <Hint label={t("offers.hintCopyDraft")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => void copy()}
+            >
+              {copied ? t("offers.declineLetterCopied") : t("offers.declineLetterCopy")}
+            </Button>
+          </Hint>
         </>
       ) : silent ? (
         <p className="mt-1 text-xs text-muted-foreground">{t("offers.declineLetterSilent")}</p>
       ) : (
         <>
           <p className="mt-1 text-xs text-muted-foreground">{t("offers.declineLetterHint")}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            loading={letter.isPending}
-            onClick={() =>
-              letter.mutate(
-                { id: rowId, locale },
-                {
-                  onSuccess: (out) => {
-                    if (out.letter) {
-                      setText(out.letter);
-                    } else {
-                      setSilent(true);
-                    }
+          <Hint anchor="span" label={t("offers.hintDeclineLetter")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              loading={letter.isPending}
+              onClick={() =>
+                letter.mutate(
+                  { id: rowId, locale },
+                  {
+                    onSuccess: (out) => {
+                      if (out.letter) {
+                        setText(out.letter);
+                      } else {
+                        setSilent(true);
+                      }
+                    },
                   },
-                },
-              )
-            }
-          >
-            {t("offers.declineLetterButton")}
-          </Button>
+                )
+              }
+            >
+              {t("offers.declineLetterButton")}
+            </Button>
+          </Hint>
         </>
       )}
     </div>
@@ -321,42 +333,46 @@ function AcceptancePlaybook({
       {text ? (
         <>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{text}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-2"
-            onClick={() => void copy()}
-          >
-            {copied ? t("offers.acceptancePlaybookCopied") : t("offers.acceptancePlaybookCopy")}
-          </Button>
+          <Hint label={t("offers.hintCopyDraft")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => void copy()}
+            >
+              {copied ? t("offers.acceptancePlaybookCopied") : t("offers.acceptancePlaybookCopy")}
+            </Button>
+          </Hint>
         </>
       ) : silent ? (
         <p className="mt-1 text-xs text-muted-foreground">{t("offers.acceptancePlaybookSilent")}</p>
       ) : (
         <>
           <p className="mt-1 text-xs text-muted-foreground">{t("offers.acceptancePlaybookHint")}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            loading={playbook.isPending}
-            onClick={() =>
-              playbook.mutate(
-                { id: rowId, locale },
-                {
-                  onSuccess: (out) => {
-                    if (out.playbook) {
-                      setText(out.playbook);
-                    } else {
-                      setSilent(true);
-                    }
+          <Hint anchor="span" label={t("offers.hintAcceptancePlaybook")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              loading={playbook.isPending}
+              onClick={() =>
+                playbook.mutate(
+                  { id: rowId, locale },
+                  {
+                    onSuccess: (out) => {
+                      if (out.playbook) {
+                        setText(out.playbook);
+                      } else {
+                        setSilent(true);
+                      }
+                    },
                   },
-                },
-              )
-            }
-          >
-            {t("offers.acceptancePlaybookButton")}
-          </Button>
+                )
+              }
+            >
+              {t("offers.acceptancePlaybookButton")}
+            </Button>
+          </Hint>
         </>
       )}
     </div>
@@ -387,28 +403,30 @@ function DecisionLetter({
       ) : (
         <>
           <p className="mt-1 text-xs text-muted-foreground">{t("offers.shelfLetterHint")}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            loading={letter.isPending}
-            onClick={() =>
-              letter.mutate(
-                { id: rowId, locale },
-                {
-                  onSuccess: (out) => {
-                    if (out.letter) {
-                      setText(out.letter);
-                    } else {
-                      setSilent(true);
-                    }
+          <Hint anchor="span" label={t("offers.hintShelfLetter")}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              loading={letter.isPending}
+              onClick={() =>
+                letter.mutate(
+                  { id: rowId, locale },
+                  {
+                    onSuccess: (out) => {
+                      if (out.letter) {
+                        setText(out.letter);
+                      } else {
+                        setSilent(true);
+                      }
+                    },
                   },
-                },
-              )
-            }
-          >
-            {t("offers.shelfLetterButton")}
-          </Button>
+                )
+              }
+            >
+              {t("offers.shelfLetterButton")}
+            </Button>
+          </Hint>
         </>
       )}
     </div>
@@ -566,42 +584,40 @@ export function OfferShelf() {
                       {(["pending", "accepted", "declined"] as const).map((state) => {
                         const active = (row.decision ?? "pending") === state;
                         return (
-                          <button
-                            key={state}
-                            type="button"
-                            aria-pressed={active}
-                            disabled={save.isPending}
-                            onClick={() => {
-                              const previous = row.decision ?? "pending";
-                              save.mutate({
-                                id: row.id,
-                                label: row.label,
-                                base: row.base,
-                                bonus: row.bonus,
-                                equity: row.equity,
-                                currency: row.currency,
-                                remoteType: row.remoteType,
-                                deadline: row.deadline ?? undefined,
-                                notes: row.notes ?? undefined,
-                                decision: state,
-                              });
-                              // The transition is the moment: an honest tap on "taking it"
-                              // from anywhere else deserves the finish line; re-tapping
-                              // an already-accepted row does not re-fire it.
-                              if (state === "accepted" && previous !== "accepted") {
-                                setCommitted(row.label);
-                              }
-                            }}
-                            className={cn(
-                              "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium transition-colors",
-                              active && state === "accepted" && "border-success/40 bg-success/15 text-success",
-                              active && state === "declined" && "border-destructive/40 bg-destructive/10 text-destructive",
-                              active && state === "pending" && "border-primary/40 bg-primary/10 text-primary",
-                              !active && "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
-                            )}
-                          >
-                            {t(`offers.shelfDecision_${state}`)}
-                          </button>
+                          <Hint key={state} label={t(`offers.hintShelfDecision_${state}`)}>
+                            <button
+                              type="button"
+                              aria-pressed={active}
+                              disabled={save.isPending}
+                              onClick={() => {
+                                const previous = row.decision ?? "pending";
+                                save.mutate({
+                                  id: row.id,
+                                  label: row.label,
+                                  base: row.base,
+                                  bonus: row.bonus,
+                                  equity: row.equity,
+                                  currency: row.currency,
+                                  remoteType: row.remoteType,
+                                  deadline: row.deadline ?? undefined,
+                                  notes: row.notes ?? undefined,
+                                  decision: state,
+                                });
+                                if (state === "accepted" && previous !== "accepted") {
+                                  setCommitted(row.label);
+                                }
+                              }}
+                              className={cn(
+                                "inline-flex h-7 items-center rounded-full border px-2.5 text-2xs font-medium transition-colors",
+                                active && state === "accepted" && "border-success/40 bg-success/15 text-success",
+                                active && state === "declined" && "border-destructive/40 bg-destructive/10 text-destructive",
+                                active && state === "pending" && "border-primary/40 bg-primary/10 text-primary",
+                                !active && "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
+                              )}
+                            >
+                              {t(`offers.shelfDecision_${state}`)}
+                            </button>
+                          </Hint>
                         );
                       })}
                     </div>
@@ -625,26 +641,26 @@ export function OfferShelf() {
                       <span className="text-base font-semibold tabular-nums">
                         {money(row.totalComp, row.currency, locale)}
                       </span>
-                                            <Hint side="left" label={t("chrome.editHint")}>
-<Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("offers.shelfEdit")}
-                        onClick={() => startEdit(row)}
-                      >
-                        <Pencil aria-hidden className="size-3.5" />
-                      </Button>
+                      <Hint side="left" label={t("offers.hintShelfEdit")}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("offers.shelfEdit")}
+                          onClick={() => startEdit(row)}
+                        >
+                          <Pencil aria-hidden className="size-3.5" />
+                        </Button>
                       </Hint>
-                                            <Hint side="left" label={t("chrome.deleteHint")}>
-<Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={t("offers.shelfDelete")}
-                        loading={remove.isPending && remove.variables === row.id}
-                        onClick={() => remove.mutate(row.id)}
-                      >
-                        <Trash2 aria-hidden className="size-3.5 text-destructive" />
-                      </Button>
+                      <Hint anchor="span" side="left" label={t("offers.hintShelfDelete")}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={t("offers.shelfDelete")}
+                          loading={remove.isPending && remove.variables === row.id}
+                          onClick={() => remove.mutate(row.id)}
+                        >
+                          <Trash2 aria-hidden className="size-3.5 text-destructive" />
+                        </Button>
                       </Hint>
                     </div>
                   </div>
@@ -675,45 +691,53 @@ export function OfferShelf() {
               <Label htmlFor="offer-shelf-label" className="text-2xs text-muted-foreground">
                 {t("offers.shelfLabel")}
               </Label>
-              <Input
-                id="offer-shelf-label"
-                value={draft.label}
-                onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-                placeholder={t("offers.shelfLabelPlaceholder")}
-              />
+              <Hint label={t("offers.hintShelfLabelInput")}>
+                <Input
+                  id="offer-shelf-label"
+                  value={draft.label}
+                  onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+                  placeholder={t("offers.shelfLabelPlaceholder")}
+                />
+              </Hint>
             </div>
             <div className="space-y-1">
               <Label htmlFor="offer-shelf-base" className="text-2xs text-muted-foreground">
                 {t("offers.shelfBase")}
               </Label>
-              <Input
-                id="offer-shelf-base"
-                inputMode="numeric"
-                value={draft.base}
-                onChange={(e) => setDraft({ ...draft, base: e.target.value })}
-              />
+              <Hint label={t("offers.hintShelfBaseInput")}>
+                <Input
+                  id="offer-shelf-base"
+                  inputMode="numeric"
+                  value={draft.base}
+                  onChange={(e) => setDraft({ ...draft, base: e.target.value })}
+                />
+              </Hint>
             </div>
             <div className="space-y-1">
               <Label htmlFor="offer-shelf-bonus" className="text-2xs text-muted-foreground">
                 {t("offers.shelfBonus")}
               </Label>
-              <Input
-                id="offer-shelf-bonus"
-                inputMode="numeric"
-                value={draft.bonus}
-                onChange={(e) => setDraft({ ...draft, bonus: e.target.value })}
-              />
+              <Hint label={t("offers.hintShelfBonusInput")}>
+                <Input
+                  id="offer-shelf-bonus"
+                  inputMode="numeric"
+                  value={draft.bonus}
+                  onChange={(e) => setDraft({ ...draft, bonus: e.target.value })}
+                />
+              </Hint>
             </div>
             <div className="space-y-1">
               <Label htmlFor="offer-shelf-equity" className="text-2xs text-muted-foreground">
                 {t("offers.shelfEquity")}
               </Label>
-              <Input
-                id="offer-shelf-equity"
-                inputMode="numeric"
-                value={draft.equity}
-                onChange={(e) => setDraft({ ...draft, equity: e.target.value })}
-              />
+              <Hint label={t("offers.hintShelfEquityInput")}>
+                <Input
+                  id="offer-shelf-equity"
+                  inputMode="numeric"
+                  value={draft.equity}
+                  onChange={(e) => setDraft({ ...draft, equity: e.target.value })}
+                />
+              </Hint>
             </div>
             <div className="space-y-1">
               <Label htmlFor="offer-shelf-remote" className="text-2xs text-muted-foreground">
@@ -725,9 +749,11 @@ export function OfferShelf() {
                   setDraft({ ...draft, remoteType: v as Draft["remoteType"] })
                 }
               >
-                <SelectTrigger id="offer-shelf-remote">
-                  <SelectValue />
-                </SelectTrigger>
+                <Hint anchor="span" label={t("offers.hintShelfRemote")}>
+                  <SelectTrigger id="offer-shelf-remote">
+                    <SelectValue />
+                  </SelectTrigger>
+                </Hint>
                 <SelectContent>
                   <SelectItem value="onsite">{remoteTypeWord(t, "onsite")}</SelectItem>
                   <SelectItem value="hybrid">{remoteTypeWord(t, "hybrid")}</SelectItem>
@@ -736,22 +762,24 @@ export function OfferShelf() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button
-                variant={editingId ? "outline" : "ai"}
-                size="sm"
-                loading={save.isPending}
-                disabled={!labelOk || !baseOk}
-                onClick={submit}
-              >
-                {editingId ? (
-                  t("offers.shelfUpdate")
-                ) : (
-                  <>
-                    <Plus aria-hidden className="size-4" />
-                    {t("offers.shelfAdd")}
-                  </>
-                )}
-              </Button>
+              <Hint anchor="span" label={t("offers.hintShelfSave")}>
+                <Button
+                  variant={editingId ? "outline" : "ai"}
+                  size="sm"
+                  loading={save.isPending}
+                  disabled={!labelOk || !baseOk}
+                  onClick={submit}
+                >
+                  {editingId ? (
+                    t("offers.shelfUpdate")
+                  ) : (
+                    <>
+                      <Plus aria-hidden className="size-4" />
+                      {t("offers.shelfAdd")}
+                    </>
+                  )}
+                </Button>
+              </Hint>
             </div>
           </div>
         </div>

@@ -33,6 +33,7 @@ import { INTERVIEW_MODES } from "@/lib/interview-modes";
 import { interviewModeHint, interviewModeName } from "@/lib/status-words";
 import { interviewApplicationHref } from "@/lib/interview-target";
 import { stageLabel } from "@/lib/pipeline";
+import { Hint } from "@/components/ui/hint";
 
 // The route's own default window: `GET /interview/sessions` binds `size` with
 // `defaultValue = "20"`, so this number asks for exactly what the server would have
@@ -188,49 +189,57 @@ export default function InterviewsPage() {
                   className="w-40 pl-9 sm:w-60"
                 />
               </div>
-              <Button type="submit" size="sm" variant="outline">
-                {t("chrome.search")}
-              </Button>
-              {state.q ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setWord("");
-                    ask("");
-                  }}
-                >
-                  {t("interviews.clearSearch")}
+              <Hint label={t("interviews.hintSearch")}>
+                <Button type="submit" size="sm" variant="outline">
+                  {t("chrome.search")}
                 </Button>
+              </Hint>
+              {state.q ? (
+                <Hint label={t("interviews.hintClearSearch")}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setWord("");
+                      ask("");
+                    }}
+                  >
+                    {t("interviews.clearSearch")}
+                  </Button>
+                </Hint>
               ) : null}
             </form>
             {applicationId && (
-              <Button
-                variant="outline"
-                onClick={() => setUrl({ page: 0, application: undefined })}
-              >
-                {t("interviews.detail.allInterviews")}
-              </Button>
+              <Hint label={t("interviews.hintAllInterviews")}>
+                <Button
+                  variant="outline"
+                  onClick={() => setUrl({ page: 0, application: undefined })}
+                >
+                  {t("interviews.detail.allInterviews")}
+                </Button>
+              </Hint>
             )}
             <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ai" className="glow-halo glow-on-hover" loading={create.isPending}>
-                <Plus aria-hidden />
-                {t("interviews.startInterview")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
-              <DropdownMenuLabel>{t("interviews.mode")}</DropdownMenuLabel>
-              {INTERVIEW_MODES.map((m) => (
-                <DropdownMenuItem key={m.value} onSelect={() => start(m.value)}>
-                  <span className="flex min-w-0 flex-col">
-                    <span>{interviewModeName(t, m.value)}</span>
-                    <span className="text-xs text-muted-foreground">{interviewModeHint(t, m.value)}</span>
-                  </span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
+              <Hint anchor="span" label={t("interviews.hintStartInterview")}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ai" className="glow-halo glow-on-hover" loading={create.isPending}>
+                    <Plus aria-hidden />
+                    {t("interviews.startInterview")}
+                  </Button>
+                </DropdownMenuTrigger>
+              </Hint>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>{t("interviews.mode")}</DropdownMenuLabel>
+                {INTERVIEW_MODES.map((m) => (
+                  <DropdownMenuItem key={m.value} onSelect={() => start(m.value)}>
+                    <span className="flex min-w-0 flex-col">
+                      <span>{interviewModeName(t, m.value)}</span>
+                      <span className="text-xs text-muted-foreground">{interviewModeHint(t, m.value)}</span>
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
           </div>
         }
@@ -244,11 +253,13 @@ export default function InterviewsPage() {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <Briefcase className="size-4 shrink-0" aria-hidden />
           <span>{t("interviews.filteredToApplication")}</span>
-          <Button variant="link" size="sm" className="h-auto p-0" asChild>
-            <Link href={interviewApplicationHref(applicationId) ?? "/applications"}>
-              {t("interviews.openApplication")}
-            </Link>
-          </Button>
+          <Hint label={t("interviews.hintOpenApplication")}>
+            <Button variant="link" size="sm" className="h-auto p-0" asChild>
+              <Link href={interviewApplicationHref(applicationId) ?? "/applications"}>
+                {t("interviews.openApplication")}
+              </Link>
+            </Button>
+          </Hint>
         </div>
       )}
 
@@ -267,16 +278,18 @@ export default function InterviewsPage() {
                 // The escape is the words, not a create form -- the reader was not trying to
                 // start a rehearsal, and a board of them is full.
                 action: (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setWord("");
-                      ask("");
-                    }}
-                  >
-                    {t("interviews.clearSearch")}
-                  </Button>
+                  <Hint label={t("interviews.hintClearSearch")}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setWord("");
+                        ask("");
+                      }}
+                    >
+                      {t("interviews.clearSearch")}
+                    </Button>
+                  </Hint>
                 ),
               }
             : {
@@ -288,17 +301,21 @@ export default function InterviewsPage() {
                   ? t("interviews.filteredToApplication")
                   : t("interviews.emptyDescription"),
                 action: applicationId ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setUrl({ page: 0, application: undefined })}
-                  >
-                    {t("interviews.detail.allInterviews")}
-                  </Button>
+                  <Hint label={t("interviews.hintAllInterviews")}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUrl({ page: 0, application: undefined })}
+                    >
+                      {t("interviews.detail.allInterviews")}
+                    </Button>
+                  </Hint>
                 ) : (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
-                  </Button>
+                  <Hint label={t("interviews.hintPickTargetJob")}>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href="/jobs">{t("interviews.pickATargetJob")}</Link>
+                    </Button>
+                  </Hint>
                 ),
               }),
         }}
@@ -360,19 +377,23 @@ export default function InterviewsPage() {
                         </Badge>
                       )}
                       {applicationHref && (
-                        <Button variant="ghost" size="sm" asChild className="shrink-0">
-                          <Link href={applicationHref}>
-                            <Briefcase aria-hidden />
-                            {t("interviews.openApplication")}
+                        <Hint label={t("interviews.hintOpenApplication")}>
+                          <Button variant="ghost" size="sm" asChild className="shrink-0">
+                            <Link href={applicationHref}>
+                              <Briefcase aria-hidden />
+                              {t("interviews.openApplication")}
+                            </Link>
+                          </Button>
+                        </Hint>
+                      )}
+                      <Hint label={t("interviews.hintOpenSession")}>
+                        <Button variant="outline" size="sm" asChild className="shrink-0">
+                          <Link href={done ? `/interviews/${s.id}/report` : `/interviews/${s.id}`}>
+                            {done ? t("interviews.reportAction") : t("interviews.continueAction")}
+                            <ArrowRight aria-hidden />
                           </Link>
                         </Button>
-                      )}
-                      <Button variant="outline" size="sm" asChild className="shrink-0">
-                        <Link href={done ? `/interviews/${s.id}/report` : `/interviews/${s.id}`}>
-                          {done ? t("interviews.reportAction") : t("interviews.continueAction")}
-                          <ArrowRight aria-hidden />
-                        </Link>
-                      </Button>
+                      </Hint>
                       <DeleteSessionButton id={s.id} />
                     </CardContent>
                   </Card>
@@ -410,15 +431,17 @@ function DeleteSessionButton({ id }: { id: string }) {
   const remove = useDeleteInterviewSession();
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="shrink-0"
-        aria-label={t("interviews.deleteAria")}
-        onClick={() => setOpen(true)}
-      >
-        <Trash2 aria-hidden />
-      </Button>
+      <Hint label={t("interviews.hintDelete")}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0"
+          aria-label={t("interviews.deleteAria")}
+          onClick={() => setOpen(true)}
+        >
+          <Trash2 aria-hidden />
+        </Button>
+      </Hint>
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}

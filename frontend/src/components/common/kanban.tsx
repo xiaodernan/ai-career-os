@@ -175,35 +175,37 @@ const KanbanCard = React.memo(function KanbanCard({
     >
       <div className="flex items-start gap-2">
         <Hint side="right" label={t("applications.dragHint")}>
-        <div
-          {...attributes}
-          {...listeners}
-          className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground",
-            "hover:bg-muted-foreground/20 active:bg-muted-foreground/30",
-            "cursor-grab active:cursor-grabbing",
-            // `touch-none` is what makes the board draggable on a phone: without it the
-            // browser claims a touch-drag as a scroll and dnd-kit's pointer sensor only ever
-            // sees a cancelled gesture. It is on the handle, not the card, so the column still
-            // scrolls when the reader drags anywhere else.
-            "touch-none",
-            isDragging && "bg-primary/10 text-primary"
-          )}
-          aria-label={t("applications.dragToReorder")}
-        >
-          <GripVertical className="size-4" aria-hidden />
-        </div>
+          <div
+            {...attributes}
+            {...listeners}
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground",
+              "hover:bg-muted-foreground/20 active:bg-muted-foreground/30",
+              "cursor-grab active:cursor-grabbing",
+              // `touch-none` is what makes the board draggable on a phone: without it the
+              // browser claims a touch-drag as a scroll and dnd-kit's pointer sensor only ever
+              // sees a cancelled gesture. It is on the handle, not the card, so the column still
+              // scrolls when the reader drags anywhere else.
+              "touch-none",
+              isDragging && "bg-primary/10 text-primary"
+            )}
+            aria-label={t("applications.dragToReorder")}
+          >
+            <GripVertical className="size-4" aria-hidden />
+          </div>
         </Hint>
         <div className="min-w-0 flex-1">
           {/* The card's own fields open the editor; the drag handle beside it stays the only
               drag activator, so a click here is never mistaken for a move. */}
-          <button
-            type="button"
-            onClick={() => onOpen(app)}
-            className="block max-w-full truncate text-left text-sm font-medium hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            {app.title}
-          </button>
+          <Hint label={t("applications.hintOpenCard")}>
+            <button
+              type="button"
+              onClick={() => onOpen(app)}
+              className="block max-w-full truncate text-left text-sm font-medium hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              {app.title}
+            </button>
+          </Hint>
           <p className="truncate text-xs text-muted-foreground">
             {app.company?.name ?? app.companyName}
             {app.reminderAt && (
@@ -224,12 +226,14 @@ const KanbanCard = React.memo(function KanbanCard({
           onValueChange={handleStatusChange}
           disabled={isPending}
         >
-          <SelectTrigger className={cn(
-            "w-fit min-w-0",
-            "data-[placeholder]:text-muted-foreground"
-          )}>
-            <SelectValue placeholder={short} />
-          </SelectTrigger>
+          <Hint side="left" anchor="span" label={t("applications.hintChangeStage")}>
+            <SelectTrigger className={cn(
+              "w-fit min-w-0",
+              "data-[placeholder]:text-muted-foreground"
+            )}>
+              <SelectValue placeholder={short} />
+            </SelectTrigger>
+          </Hint>
           <SelectContent position="popper">
             {pickerStages(app.status, t).map((s) => (
               <SelectItem key={s.value} value={s.value}>

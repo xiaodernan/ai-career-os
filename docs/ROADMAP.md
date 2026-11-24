@@ -8500,6 +8500,155 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **430** The kept letters and resumes teach every action without taking over control state (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". Added thirty-two bilingual
+  `Hint` sentences across the letters gallery, resume shelf, upload, resume detail,
+  shared retry/pagination/dialog controls, rejected-diff and agent-payload disclosures.
+  Search hints distinguish typing from local filtering; copy hints distinguish the
+  clipboard from sending; resume parse hints name the new stored version; deletion
+  hints name the versions and ingested citations that disappear with the resume.
+
+  Selects, loading actions and dialog controls use the boxless `anchor="span"` wrapper
+  so Tooltip state never replaces Button, Select or Dialog state. Seven regression tests
+  pin EN/ZH parity, conditional triggers, disclosure attachment, direct links and the
+  feature-specific deletion consequence. The shared dialog now accepts distinct cancel
+  and confirm explanations while keeping sensible generic defaults.
+
+  Verified offline: frontend **240 files / 1,876 tests passed**, `git diff --check`,
+  production build and bundle budget **42 routes under 230 kB** (resumes list 209.1 kB,
+  detail 203.8 kB, letters 172.0 kB gzip). A production-build Playwright sweep with
+  mocked API transport checked twenty hint types in each language, dialog cancellation,
+  rejected-proposal expansion, correct `<html lang>`, zero page errors and no document
+  overflow. The Chinese print tooltip was present and visible; the first failure was a
+  stale probe expectation ("已存版本" versus the shipped "已保存的版本"), not a product
+  defect. This was UI-composition verification, not real-stack E2E: Docker was
+  unavailable. No LLM or external API was called.
+
+- [x] **429** The offer journey teaches every choice without breaking control state (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". Added fifty-one bilingual
+  `Hint` sentences across the offers page, shelf, replies, decision ledger, first-day
+  checklist, first-quarter plan, negotiation prep, commitment card, rehearsal and
+  celebration. The copy distinguishes browser-local practice from server requests,
+  blank from a real zero score, clipboard copying from sending, and opening an email
+  draft from sending the reply. Reset hints name the stored progress they remove.
+
+  Inputs, Selects, loading generators and stateful decision controls use the boxless
+  `anchor="span"` wrapper so Tooltip's state never replaces the control's own state.
+  Regression tests pin EN/ZH parity, trigger attachment, conditional actions, stable
+  control slots and the ledger's blank-versus-zero semantics. The production browser
+  exposed the rehearsal's unreachable verdict: answering the third choice jumped
+  straight to the result. Verdict display now waits for an explicit action, while a
+  completed stored rehearsal still restores its result.
+
+  Verified offline: frontend **238 files / 1,867 tests passed**, focused offers tests,
+  tsc and ESLint clean, production budget **42 routes under 230 kB** (offers 218.7 kB
+  gzip). A production-build Playwright sweep with mocked API transport checked hints,
+  Select state, shelf create/accept, checklist reset, reply actions, score entry,
+  explicit rehearsal verdict, local commitment save/reset and celebration dismissal
+  in both languages, with zero page errors and no document overflow. This was
+  UI-composition verification, not real-stack E2E: Docker was unavailable. No LLM or
+  external API was called.
+
+- [x] **428** The networking registry teaches search, contact changes and coffee-chat choices (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". Added twenty-one bilingual `Hint`
+  sentences across the registry and first-coffee rehearsal: relation filters, local search
+  input, server search, the two different clear actions, adding/editing/deleting a contact,
+  drafting outreach, relation and last-touch fields, create/cancel/save, reply choice,
+  next moment, verdict, kept sentence and reset. The copy separates a submitted server query
+  from typing, a registry filter from a contact field, and browser-local practice from sending
+  a message. Clearing an optional field is taught as a real removal when an edit is saved.
+
+  Search, dialog fields and loading submit/draft controls use the boxless `anchor="span"`
+  wrapper so input, Select and Button state stay independent. Empty filtered results explain
+  that both filters clear; an untouched registry opens a locally hinted Copilot link. The
+  production browser exposed a dead verdict button: answering the third moment switched
+  straight to the result. Verdict display now waits for the explicit "See how it went"
+  action, while a previously completed local rehearsal still restores its result.
+
+  Verified offline: frontend **237 files / 1,861 tests passed**, focused networking tests
+  **22 passed**, tsc and ESLint clean, production budget **42 routes under 230 kB**
+  (networking 206.1 kB gzip). A production-build Playwright sweep with mocked API transport
+  checked all twenty-one hint types in both languages, combined search/relation requests,
+  PATCH/POST payloads, referral drafting, delete cancellation, explicit coffee verdict,
+  local reset, both empty states and the Copilot destination, with 13 page triggers per
+  locale, zero page errors and no document overflow. This was UI-composition verification,
+  not real-stack E2E: Docker was unavailable. No LLM or external API was called.
+
+- [x] **427** The knowledge base teaches uploads, grounded answers and notes (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". Added sixteen bilingual `Hint`
+  sentences across the knowledge page, source actions, grounded-question card and notes
+  panel: clearing citation focus, asking Copilot to ingest, choosing files, applying a batch
+  title and evidence kind, clearing upload progress, deleting a source, asking a question,
+  submitting it, saving a note, filtering by all or one tag, and editing, deleting, cancelling
+  or saving a note. The copy distinguishes progress rows from ingested sources, personal notes
+  from documents, and ready evidence from material still being ingested.
+
+  File, save and Select controls use the boxless `anchor="span"` wrapper so loading and
+  Radix state remain independent. Ten tests pin trigger attachment, EN/ZH parity, conditional
+  actions, source-key coverage and Select slot/state isolation. Blank batch titles are
+  described honestly: the server assigns a generic document title rather than preserving
+  each filename.
+
+  Verified offline: frontend **237 files / 1,853 tests passed**, focused knowledge tests
+  **29 passed**, tsc and ESLint clean, production budget **42 routes under 230 kB**
+  (knowledge 222.1 kB gzip). A production-build Playwright sweep with mocked API transport
+  checked all sixteen hint types in both languages, the Select's real open/close state,
+  upload/reset, grounded answer and citation, tag filtering, note editing, deletion
+  confirmation and both ways back from a citation-focused list, with 19 triggers per locale,
+  zero page errors and no document overflow. This was UI-composition verification, not
+  real-stack E2E: Docker was unavailable. No LLM or external API was called.
+
+- [x] **426** The rehearsal list teaches every door, including the destructive one (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". Added eight bilingual `Hint`
+  sentences to the interviews list: server search, clearing that search, widening an
+  application-filtered list, starting a rehearsal, returning to its application, opening
+  an active session or finished report, deleting a rehearsal, and choosing a target job.
+  The same explanations cover the normal header, both filtered doors and every empty-state
+  action. The delete hint names exactly what confirmation removes and what stays.
+
+  The start control owns three pieces of state: `Button` can report loading,
+  `DropdownMenuTrigger` reports open/closed, and `TooltipTrigger` reports its own hover
+  state. It now uses the boxless `anchor="span"` wrapper, so all three remain independent.
+  Five tests pin direct triggers, both row doors, icon deletion, all empty states, the
+  dropdown's slot/state isolation and EN/ZH key parity.
+
+  Verified offline: frontend **235 files / 1,843 tests passed**, tsc and ESLint clean,
+  production budget **42 routes under 230 kB** (interviews 216.4 kB gzip), copy census
+  **239**. A production-build Playwright sweep with mocked API transport checked all eight
+  hint types in both languages, both active/report row doors, the real dropdown
+  `data-state="open"`, delete confirmation, and filtered search/clear/all request state
+  with zero page errors. This was UI-composition verification, not real-stack E2E:
+  Docker was unavailable. No LLM or external API was called.
+
+- [x] **425** The application pipeline teaches its controls without losing state (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". Added five bilingual `Hint`
+  sentences to the applications board and Kanban: server search, clearing the URL query,
+  creating a role, opening a card, and moving a card between stages. The copy names the
+  consequence, not just the label: search changes cards and page count together; stage
+  movement is distinguished from within-stage drag ordering. Both empty-state actions
+  reuse the same explanations as the normal board.
+
+  The stage picker exposed the next Radix state collision. `TooltipTrigger asChild` owns
+  `data-state` and `data-slot`, just as `SelectTrigger` does; a stronger `<Select defaultOpen>`
+  test proves direct wrapping replaces the open Select state with the closed tooltip state.
+  The board now uses `Hint anchor="span"`, whose boxless `display:contents` wrapper owns the
+  tooltip state while the Select keeps its own. The jobs sort picker had the same unsafe
+  shape and was corrected in the same pass. Seven regression tests pin button attachment,
+  locale parity, source wiring and both Select compositions.
+
+  Verified offline: frontend **235 files / 1,838 tests passed**, tsc and ESLint clean,
+  production budget **42 routes under 230 kB** (applications 224.6 kB gzip), copy census
+  **239**. A production-build Playwright sweep with mocked API transport checked all ten
+  EN/ZH tooltip sentences, the Select's real `data-state="open"`, and search/clear request
+  round trips with zero page errors. This was UI-composition verification, not real-stack
+  E2E: Docker was unavailable. No LLM or external API was called.
+
 - [x] **424** The admin journey table stops presenting invented numbers as measured (2026-11-23).
 
   Brief IX: "不要全部是演示数据堆砌——用户会觉得虚假". The /admin ledger carried a
@@ -8515,7 +8664,7 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
 - [x] **423** The manual names every door — three new chapters taught (2026-11-23).
 
   Brief VII: "里面简明描述用户如何充分体验、使用项目的所有完整功能". The `/playbook`
-  manual's own contract (en.ts:4603) is that it describes every surface a reader can
+  manual's own contract (en.ts:4768) is that it describes every surface a reader can
   stand on, and its tests encode the same rule. Audit found three complete, mounted
   features the manual never taught: Career Chronicle (354), ask-your-evidence RAG
   answer (352), and the bounce/aimless lost-reader events (353). For 353 it was worse —

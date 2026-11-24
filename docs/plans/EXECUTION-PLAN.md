@@ -42,14 +42,14 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 | 23 | 简明说明书/小册子嵌入项目，不是文档 | DONE | `/playbook` + keepsake manual + epilogue (Epic 249); ten-minute start; the printed manual is one button away |
 | 24 | 游戏/新手教程/快速上手 | DONE | `/tour` (Epic 244), ten-minute start card, first-week game embedded with how-to-play, nine-quest dashboard |
 | 25 | 全内容中英文切换、无夹杂、英文也翻中文 | DONE (gated) | census + used-keys + copy-parity gates; the EN table holds no Chinese string (caught and fixed this session) |
-| 26 | 主界面各种按键附带教学说明 | DONE (2026-11-22, Epic 359) | hint system on chrome + main surfaces (245/247) + the growth panel's nine engines, each naming the question it answers and what it needs typed in; the run button swaps to "type the role first" while the field is short |
+| 26 | 主界面各种按键附带教学说明 | PARTIAL (rolling) | Epic 359 chrome/main/growth + Epic 420 jobs + Epic 425 applications/Kanban + Epic 426 interviews + Epic 427 knowledge + Epic 428 networking/coffee chat + Epic 429 offers + Epic 430 letters/resumes/shared controls; explanations name consequences, and boxless anchors preserve Select/dropdown/loading state. Continue through the shared application dialog, letters panel, packet and `ModuleView` |
 | 27 | 无尽开放世界感 + 防迷路引导 | PARTIAL | `/tour`, ⌘K palette, quest map, ten-minute start, eleven doors; the "continent" metaphor keeps growing per epic |
 | 28 | 鼠标引擎反了，修复 | DONE | Epic 255 — forced standard dialect ("往下滑就往下看"), migration from Epic 225's storage, settings switch rewritten EN+ZH |
 | 29 | 新章节/新模块/新玩法/新内容 | DONE (ongoing) | Epics 249–256 this arc; the ROADMAP is the till |
 | 30 | 项目体量大、细节密集 | DONE (ongoing) | 122 epics, 408 work items, 180 test files, per the regenerate-on-push showcase |
 | 31 | RSS 之类大模型缓存效率 | MEASURED | see row 18; prefix discipline already in every LLM call |
 | 32 | 个人展示页 https://xiaodernan.github.io/ 同步 | DONE | showcase.html auto-regenerates on every push; the portfolio card (project 06, Monday 13:30 UTC sync) was added after push access; `sync-career-os.yml` watches `main` and pushes `latest.json` weekly — the site load fetches it straight from raw.githubusercontent with `assets/career-os/latest.json` as the cached fallback. 433 crons run every week against the public URL and only the fallback moves; real routes are linked from the card |
-| 33 | 优化措施 / unclogging 前端 | DONE (2026-11-22) | Epic 358 paid the shared-table debt: every route shed ~152 kB gzip (knowledge 374.1 → 222.2) and the budget was TIGHTENED 366 → 230 rather than raised; rows 10–11 still await a browser |
+| 33 | 优化措施 / unclogging 前端 | DONE (2026-11-22) | Epic 358 paid the shared-table debt: every route shed ~152 kB gzip (knowledge 374.1 → 222.2) and the budget was TIGHTENED 366 → 230 rather than raised; the browser sweep below verifies both typography and occlusion |
 | 34 | 前端渲染验证/视觉巡检 | DONE (2026-11-22) | the browser reached the stack: overlap-audit (20 routes, zero overflow), occlusion-audit (20 routes, zero occlusion), avatar-probe (a real `object-contain` measurement) all ran against the running product |
 | 35 | 每次只动手做、不问 | DONE (process) | the plan drives; blockers are noted, never waited on |
 | 36 | 外围需求全部执行 | DONE/PARTIAL as above | nothing silently dropped — this ledger is the accounting |
@@ -59,8 +59,10 @@ the reason written · `USER STEP` blocked on the operator's own one-time action 
 1. ~~**The per-locale translations split**~~ — DONE (Epic 358, 2026-11-22). It was
    not a routing-level change after all: the table crosses into the RSC payload with the
    HTML, and the spare language is a chunk warmed on hover. -152 kB gzip per route.
-2. **Hint coverage of every primary control** — roll `components/ui/hint.tsx`
-   through dashboard/jobs/admin/kanban systematically.
+2. **Hint coverage of every primary control** — dashboard/jobs/applications/Kanban/interview/
+   knowledge/networking/offers/letters/resumes batches are done (Epics 359, 420, 425, 426, 427,
+   428, 429, 430). Continue `components/ui/hint.tsx` through the shared application dialog,
+   its letters/packet panels and `ModuleView` refresh/empty controls.
 3. **Render verification on a roomier host** — the visual sweep this ledger's
    row 34 cannot honestly complete here.
 4. **The next chapter** — the product keeps contradicting "finished"; the

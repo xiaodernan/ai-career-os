@@ -6,6 +6,7 @@ import { PlugZap, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { EmptyState, type EmptyStateProps } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { LoadingListSkeleton } from "@/components/common/loading-skeletons";
@@ -99,10 +100,12 @@ export function QueryBoundary<T>({
             {...notLive}
             description={notLive?.description ?? missingEndpointMessage()}
             action={
-              <Button variant="outline" size="sm" onClick={retry} aria-label={t("common.retry")} title={t("common.retry")}>
-                <RotateCcw aria-hidden />
-                {t("common.checkAgain")}
-              </Button>
+              <Hint anchor="span" label={t("common.hintCheckAgain")}>
+                <Button variant="outline" size="sm" onClick={retry} aria-label={t("common.retry")} title={t("common.retry")}>
+                  <RotateCcw aria-hidden />
+                  {t("common.checkAgain")}
+                </Button>
+              </Hint>
             }
           />
         );

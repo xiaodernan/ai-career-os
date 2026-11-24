@@ -4,6 +4,7 @@ import * as React from "react";
 import { BookOpenText, Search } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SectionHeading } from "@/components/common/export-buttons";
@@ -83,33 +84,36 @@ export function AskKnowledgeCard() {
       <CardContent className="space-y-3">
         <div className="space-y-2">
           <Label htmlFor="rag-query">{t("knowledge.ragAskLabel")}</Label>
-          <Textarea
-            id="rag-query"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("knowledge.ragAskPlaceholder")}
-            rows={2}
-            maxLength={4000}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-          />
+          <Hint anchor="span" label={t("knowledge.ragQueryHint")}>
+            <Textarea
+              id="rag-query"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("knowledge.ragAskPlaceholder")}
+              rows={2}
+              maxLength={4000}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+            />
+          </Hint>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="ai"
-          onClick={submit}
-          disabled={!query.trim() || rag.isPending}
-          aria-label={t("knowledge.ragAskAction")}
-          title={t("knowledge.ragAskAction")}
-        >
-          <Search aria-hidden className="size-4" />
-          {rag.isPending ? t("knowledge.ragAskWorking") : t("knowledge.ragAskAction")}
-        </Button>
+        <Hint anchor="span" label={t("knowledge.ragAskHint")}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ai"
+            onClick={submit}
+            disabled={!query.trim() || rag.isPending}
+            aria-label={t("knowledge.ragAskAction")}
+          >
+            <Search aria-hidden className="size-4" />
+            {rag.isPending ? t("knowledge.ragAskWorking") : t("knowledge.ragAskAction")}
+          </Button>
+        </Hint>
 
         {rag.isPending && (
           <p className="text-xs text-muted-foreground">{t("knowledge.ragAskWorking")}</p>

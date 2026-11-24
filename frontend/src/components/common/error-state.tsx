@@ -4,6 +4,7 @@ import * as React from "react";
 import { TriangleAlert, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { ApiError } from "@/lib/api/client";
 import { describe } from "@/lib/hooks/failure";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -55,10 +56,12 @@ function ErrorState({
       <h3 className="text-sm font-semibold">{heading}</h3>
       {detail && <p className="max-w-sm text-sm text-muted-foreground">{detail}</p>}
       {onRetry && (
-        <Button variant="outline" size="sm" className="mt-3" onClick={onRetry} loading={retrying} aria-label={t("common.retry")} title={t("common.retry")}>
-          <RotateCcw aria-hidden />
-          {t("common.tryAgain")}
-        </Button>
+        <Hint anchor="span" label={t("common.hintRetry")}>
+          <Button variant="outline" size="sm" className="mt-3" onClick={onRetry} loading={retrying} aria-label={t("common.retry")} title={t("common.retry")}>
+            <RotateCcw aria-hidden />
+            {t("common.tryAgain")}
+          </Button>
+        </Hint>
       )}
     </div>
   );

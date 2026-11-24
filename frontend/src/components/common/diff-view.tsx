@@ -5,6 +5,7 @@ import { ArrowRight, Check, Minus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { AIBadge } from "@/components/ai/ai-badge";
+import { Hint } from "@/components/ui/hint";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { diffStatWord } from "@/lib/status-words";
 import type { TailorChange } from "@/lib/api/types";
@@ -141,19 +142,21 @@ function DiffView({ accepted, rejected = [], notes, stats, className, ...props }
 
       {rejected.length > 0 && (
         <section className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setShowRejected((v) => !v)}
-            aria-expanded={showRejected}
-            className="flex w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-left text-xs font-semibold text-muted-foreground hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-primary/30"
-          >
-            <Minus className="size-3.5" aria-hidden />
-            {t("diffView.rejectedProposals")}
-            <span className="tabular-nums">{rejected.length}</span>
-            <span className="ml-auto text-2xs">
-              {showRejected ? t("diffView.hide") : t("diffView.showReasons")}
-            </span>
-          </button>
+          <Hint label={t("diffView.hintRejected")}>
+            <button
+              type="button"
+              onClick={() => setShowRejected((v) => !v)}
+              aria-expanded={showRejected}
+              className="flex w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-left text-xs font-semibold text-muted-foreground hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-primary/30"
+            >
+              <Minus className="size-3.5" aria-hidden />
+              {t("diffView.rejectedProposals")}
+              <span className="tabular-nums">{rejected.length}</span>
+              <span className="ml-auto text-2xs">
+                {showRejected ? t("diffView.hide") : t("diffView.showReasons")}
+              </span>
+            </button>
+          </Hint>
           {showRejected && (
             <ul className="space-y-2">
               {rejected.map((c) => (

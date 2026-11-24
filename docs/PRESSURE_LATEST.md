@@ -188,3 +188,20 @@ request, so 401/429 count there by definition. The script's own custom rate
 the stack answered every stuffing attempt with a refusal, never a crash. This is
 the 撞库 scenario the brief asked to simulate, now measured rather than assumed.
 
+# Adversarial register fuzz — 2026-11-24 (Block XI)
+
+`scripts/fuzz_auth.py` fires malformed-but-plausible payloads at the register door.
+Its first run this round aborted before the verdict with a `UnicodeEncodeError`:
+the deliberately injected control/non-ASCII bytes, printed with `ensure_ascii=False`,
+cannot be encoded by the Windows GBK console. That was a harness portability bug,
+not an app defect — fixed by reconfiguring stdout/stderr to UTF-8 at import. Re-run:
+
+- 69 adversarial payloads: **2xx=21, 4xx=48, 5xx=0** — `FUZZ OK · the door held`
+- wrong JSON shapes (array/bare string/number/null/nested/unicode-escape bomb) all
+  answered `MALFORMED_REQUEST` or `VALIDATION_FAILED`, never a 5xx
+- 12-way register burst on one email: exactly **1 created + 11 conflicts, 0 5xx**
+  — the Epic 226 race fix still holds under a simultaneous stampede
+
+Every malformed email/password/displayName was refused with a structured envelope;
+the validation and SQL layers never flinched. No LLM, no external API.
+

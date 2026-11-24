@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
@@ -108,9 +109,11 @@ export default function ResumeDetailPage() {
                 title={t("resumes.detail.notInWorkspace")}
                 description={t("resumes.detail.notInWorkspaceDescription")}
                 action={
-                  <Button variant="ai" size="sm" asChild>
-                    <Link href="/resumes">{t("resumes.detail.backToResumes")}</Link>
-                  </Button>
+                  <Hint label={t("resumes.detail.hintBack")}>
+                    <Button variant="ai" size="sm" asChild>
+                      <Link href="/resumes">{t("resumes.detail.backToResumes")}</Link>
+                    </Button>
+                  </Hint>
                 }
               />
             ) : (
@@ -150,37 +153,41 @@ export default function ResumeDetailPage() {
               {/* Live when the detail body carries sourceFileKey, which the backend produces from
                   the resume.source_file_key column and gates the download route. */}
               {r.sourceFileKey && (
+                <Hint anchor="span" label={t("resumes.detail.hintOriginalFile")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    loading={downloading}
+                    onClick={() =>
+                      downloadOriginal(r.id, () => {
+                        toast.success(t("resumes.detail.originalDownloaded"));
+                      })
+                    }
+                  >
+                    <Download aria-hidden />
+                    {t("resumes.detail.originalFile")}
+                  </Button>
+                </Hint>
+              )}
+              <Hint anchor="span" label={t(structured ? "resumes.detail.hintReParse" : "resumes.detail.hintParseNow")}>
                 <Button
-                  variant="outline"
+                  variant="ai"
                   size="sm"
-                  loading={downloading}
+                  loading={parse.isPending}
                   onClick={() =>
-                    downloadOriginal(r.id, () => {
-                      toast.success(t("resumes.detail.originalDownloaded"));
+                    parse.mutate(undefined, {
+                      onSuccess: (res) => {
+                        const task = str(res, "taskId", "task_id");
+                        if (task) setParseTask(task);
+                        else toast.success(t("resumes.detail.parsedToast"));
+                      },
                     })
                   }
                 >
-                  <Download aria-hidden />
-                  {t("resumes.detail.originalFile")}
+                  <ScanSearch aria-hidden />
+                  {structured ? t("resumes.detail.reParse") : t("resumes.detail.parseNow")}
                 </Button>
-              )}
-              <Button
-                variant="ai"
-                size="sm"
-                loading={parse.isPending}
-                onClick={() =>
-                  parse.mutate(undefined, {
-                    onSuccess: (res) => {
-                      const task = str(res, "taskId", "task_id");
-                      if (task) setParseTask(task);
-                      else toast.success(t("resumes.detail.parsedToast"));
-                    },
-                  })
-                }
-              >
-                <ScanSearch aria-hidden />
-                {structured ? t("resumes.detail.reParse") : t("resumes.detail.parseNow")}
-              </Button>
+              </Hint>
             </div>
           </div>
 
@@ -313,25 +320,29 @@ export default function ResumeDetailPage() {
                         )}
                         {/* Every version is printable, current or not: the reader picks the
                             version and the print layout is the same one the export uses. */}
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          aria-label={t("resumes.detail.print")}
-                          title={t("resumes.detail.print")}
-                          loading={print.isPending && print.variables === v.id}
-                          onClick={() => print.mutate(v.id)}
-                        >
-                          <Printer className="size-3.5" aria-hidden />
-                        </Button>
-                        {!isCurrent && (
+                        <Hint anchor="span" side="left" label={t("resumes.detail.hintPrint")}>
                           <Button
                             variant="ghost"
-                            size="xs"
-                            loading={setCurrent.isPending && setCurrent.variables === v.id}
-                            onClick={() => setCurrent.mutate(v.id)}
+                            size="icon-xs"
+                            aria-label={t("resumes.detail.print")}
+                            title={t("resumes.detail.print")}
+                            loading={print.isPending && print.variables === v.id}
+                            onClick={() => print.mutate(v.id)}
                           >
-                            {t("resumes.detail.setCurrent")}
+                            <Printer className="size-3.5" aria-hidden />
                           </Button>
+                        </Hint>
+                        {!isCurrent && (
+                          <Hint anchor="span" label={t("resumes.detail.hintSetCurrent")}>
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              loading={setCurrent.isPending && setCurrent.variables === v.id}
+                              onClick={() => setCurrent.mutate(v.id)}
+                            >
+                              {t("resumes.detail.setCurrent")}
+                            </Button>
+                          </Hint>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
@@ -376,9 +387,11 @@ export default function ResumeDetailPage() {
               </p>
               <p>
                 {t("resumes.detail.scoreFrom")}{" "}
-                <Link href="/knowledge" className="font-medium text-primary underline-offset-4 hover:underline">
-                  {t("resumes.detail.knowledge")}
-                </Link>
+                <Hint label={t("resumes.detail.hintKnowledge")}>
+                  <Link href="/knowledge" className="font-medium text-primary underline-offset-4 hover:underline">
+                    {t("resumes.detail.knowledge")}
+                  </Link>
+                </Hint>
                 .
               </p>
             </CardContent>
@@ -394,13 +407,15 @@ export default function ResumeDetailPage() {
 function BackLink() {
   const { t } = useLocale();
   return (
-    <Link
-      href="/resumes"
-      className="-ml-1 inline-flex w-fit items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30"
-    >
-      <ArrowLeft className="size-4" aria-hidden />
-      {t("resumes.detail.backToResumes")}
-    </Link>
+    <Hint label={t("resumes.detail.hintBack")}>
+      <Link
+        href="/resumes"
+        className="-ml-1 inline-flex w-fit items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-primary/30"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        {t("resumes.detail.backToResumes")}
+      </Link>
+    </Hint>
   );
 }
 
@@ -528,35 +543,38 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                   const href = safeHref(l);
                   if (href === undefined) return null;
                   return (
-                    <a
-                      key={i}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      <Link2 className="size-3" aria-hidden />
-                      {l.replace(/^https?:\/\//, "").slice(0, 28)}
-                    </a>
+                    <Hint key={i} label={t("resumes.detail.hintProfileLink")}>
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="flex items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        <Link2 className="size-3" aria-hidden />
+                        {l.replace(/^https?:\/\//, "").slice(0, 28)}
+                      </a>
+                    </Hint>
                   );
                 })}
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                downloadText(
-                  "resume-profile.json",
-                  JSON.stringify(structured, null, 2),
-                  "application/json"
-                );
-                toast.success(t("resumes.detail.profileExported"));
-              }}
-            >
-              <Download aria-hidden />
-              {t("resumes.detail.exportJson")}
-            </Button>
+            <Hint label={t("resumes.detail.hintExportJson")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  downloadText(
+                    "resume-profile.json",
+                    JSON.stringify(structured, null, 2),
+                    "application/json"
+                  );
+                  toast.success(t("resumes.detail.profileExported"));
+                }}
+              >
+                <Download aria-hidden />
+                {t("resumes.detail.exportJson")}
+              </Button>
+            </Hint>
           </div>
         </CardHeader>
         {structured.summary && (
@@ -619,15 +637,17 @@ function StructuredProfileView({ structured }: { structured: StructuredResume })
                   <p className="min-w-0 flex-1 text-sm font-semibold">{p.name}</p>
                   {p.period && <span className="text-xs text-muted-foreground">{p.period}</span>}
                   {safeHref(p.url) && (
-                    <a
-                      href={safeHref(p.url)}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      <ExternalLink className="size-3" aria-hidden />
-                      {t("resumes.detail.repo")}
-                    </a>
+                    <Hint label={t("resumes.detail.hintRepo")}>
+                      <a
+                        href={safeHref(p.url)}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        <ExternalLink className="size-3" aria-hidden />
+                        {t("resumes.detail.repo")}
+                      </a>
+                    </Hint>
                   )}
                 </div>
                 <BulletList items={p.bullets} />

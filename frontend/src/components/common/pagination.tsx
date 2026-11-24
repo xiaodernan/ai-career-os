@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { pageWindow } from "@/lib/page-window";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 
 /**
  * Pager — server-side page/size navigation with an honest row count.
@@ -52,29 +53,33 @@ export function Pagination({
         )}
       </p>
       <div className="flex items-center gap-1.5">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={view.page <= 0}
-          onClick={() => onPageChange(view.page - 1)}
-          aria-label={t("chrome.previousPage")}
-        >
-          <ChevronLeft aria-hidden />
-          {t("chrome.prev")}
-        </Button>
+        <Hint anchor="span" label={t("chrome.hintPreviousPage")}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={view.page <= 0}
+            onClick={() => onPageChange(view.page - 1)}
+            aria-label={t("chrome.previousPage")}
+          >
+            <ChevronLeft aria-hidden />
+            {t("chrome.prev")}
+          </Button>
+        </Hint>
         <span className="px-1 text-xs text-muted-foreground tabular-nums">
           {view.page + 1} / {view.pageCount}
         </span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={view.page + 1 >= view.pageCount}
-          onClick={() => onPageChange(view.page + 1)}
-          aria-label={t("chrome.nextPage")}
-        >
-          {t("chrome.next")}
-          <ChevronRight aria-hidden />
-        </Button>
+        <Hint anchor="span" label={t("chrome.hintNextPage")}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={view.page + 1 >= view.pageCount}
+            onClick={() => onPageChange(view.page + 1)}
+            aria-label={t("chrome.nextPage")}
+          >
+            {t("chrome.next")}
+            <ChevronRight aria-hidden />
+          </Button>
+        </Hint>
       </div>
     </nav>
   );

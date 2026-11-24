@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import type { Contact } from "@/lib/api/types";
 
 const state = vi.hoisted(() => ({
@@ -54,7 +55,27 @@ vi.mock("@/lib/hooks/use-url-state", () => ({
 }));
 
 import NetworkingPage from "./page";
-import { LocaleProvider } from "@/lib/i18n/locale-context";
+import { LocaleProvider, lookup } from "@/lib/i18n/locale-context";
+import { translations } from "@/lib/i18n/translations";
+
+const HINT_KEYS = [
+  "networking.hintRelationFilterAll",
+  "networking.hintRelationFilter",
+  "networking.hintSearchInput",
+  "networking.hintSearch",
+  "networking.hintClearSearch",
+  "networking.hintClearFilters",
+  "networking.hintAddContact",
+  "networking.hintEditContact",
+  "networking.hintDraft",
+  "networking.hintDraftWithCopilot",
+  "networking.hintRelationField",
+  "networking.hintLastTouch",
+  "networking.hintDeleteContact",
+  "networking.hintCancelContact",
+  "networking.hintCreateContact",
+  "networking.hintSaveContact",
+];
 
 /**
  * The registry is the browser's half of 70.3, and since 72.1 also of the server's window: the
@@ -301,5 +322,71 @@ describe("the contacts registry", () => {
     expect(html).toContain("“mentor”");
     expect(html).toContain("Clear search");
     expect(html).not.toContain("No contacts yet");
+  });
+});
+
+describe("networking teaching hints", () => {
+  it("defines every registry and dialog consequence in both languages", () => {
+    for (const locale of ["en", "zh"] as const) {
+      for (const key of HINT_KEYS) {
+        expect(lookup(translations[locale], key), `${locale}: ${key}`).toBeTruthy();
+      }
+    }
+  });
+
+  it("attaches hints to relation, search, add, edit and draft controls", () => {
+    state.url = { page: 0, q: "ada" };
+    withRelations([{ relation: "referrer", count: 1 }]);
+    withContacts(ITEMS, 2);
+    const html = render();
+
+    // The coffee-chat rehearsal card contributes its own hints (reset/reply/verdict);
+    // together with the registry's ten, the default populated view renders fourteen.
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(14);
+    expect(html).toContain('data-slot="input"');
+    const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+    for (const key of HINT_KEYS.slice(0, 10)) {
+      expect(source).toContain(`"${key}"`);
+    }
+  });
+
+  it("distinguishes clearing active filters from opening Copilot in an untouched registry", () => {
+    state.url = { page: 0, q: "ada", relation: "referrer" };
+    withContacts([], 0);
+    const filtered = render();
+    expect(filtered).not.toContain('href="/copilot"');
+    expect(filtered.match(/data-slot="tooltip-trigger"/g)).toHaveLength(9);
+
+    state.url = { page: 0 };
+    const untouched = render();
+    expect(untouched).toContain('href="/copilot"');
+    expect(untouched.match(/data-slot="tooltip-trigger"/g)).toHaveLength(8);
+    const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+    expect(source).toContain('label={t("networking.hintClearFilters")}');
+    expect(source).toContain('label={t("networking.hintDraftWithCopilot")}');
+  });
+
+  it("renders the registry consequences in Chinese", () => {
+    state.url = { page: 0, q: "ada" };
+    withRelations([{ relation: "mentor", count: 1 }]);
+    withContacts(ITEMS, 2);
+    const html = render("zh");
+
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(14);
+    expect(html).toContain("添加联系人");
+    expect(html).toContain('placeholder="搜索联系人"');
+    const source = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+    expect(source).toContain('label={t("networking.hintSearchInput")}');
+    expect(source).toContain('label={t("networking.hintDraft")}');
+    expect(source).toContain('label={t("networking.hintRelationFilter", { relation })}');
+  });
+
+  it("wires every dialog action and isolates the loading submit state", () => {
+    const page = readFileSync(new URL("./page.tsx", import.meta.url), "utf8");
+    for (const key of HINT_KEYS.slice(10)) {
+      expect(page).toContain(`networking.${key.split(".")[1]}`);
+    }
+    expect(page).toContain('t(editing ? "networking.hintSaveContact" : "networking.hintCreateContact")');
+    expect(page).toMatch(/<Hint\s+anchor="span"\s+label=\{t\(editing \? "networking\.hintSaveContact" : "networking\.hintCreateContact"\)\}\s*>\s*<Button type="submit"/);
   });
 });

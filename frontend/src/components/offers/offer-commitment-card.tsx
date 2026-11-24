@@ -63,10 +63,10 @@ export function OfferCommitmentCard() {
           <CardDescription>{t("offers.commitmentDescription")}</CardDescription>
         </div>
         {filled && (
-                    <Hint side="left" label={t("chrome.resetHint")}>
-<Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.commitmentReset")} title={t("offers.commitmentReset")}>
-            <RotateCcw aria-hidden className="size-4" />
-          </Button>
+          <Hint side="left" label={t("offers.hintCommitmentReset")}>
+            <Button variant="ghost" size="icon-sm" className="ml-auto shrink-0" onClick={reset} aria-label={t("offers.commitmentReset")} title={t("offers.commitmentReset")}>
+              <RotateCcw aria-hidden className="size-4" />
+            </Button>
           </Hint>
         )}
       </CardHeader>
@@ -80,27 +80,31 @@ export function OfferCommitmentCard() {
           <Label htmlFor="commitment-line">
             {t("offers.commitmentLabel", { week: state.week })}
           </Label>
-          <Textarea
-            id="commitment-line"
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              setSaved(false);
-            }}
-            placeholder={t("offers.commitmentPlaceholder")}
-            rows={2}
-            maxLength={COMMITMENT_MAX_LENGTH}
-            aria-describedby="commitment-count"
-          />
+          <Hint label={t("offers.hintCommitmentInput")}>
+            <Textarea
+              id="commitment-line"
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                setSaved(false);
+              }}
+              placeholder={t("offers.commitmentPlaceholder")}
+              rows={2}
+              maxLength={COMMITMENT_MAX_LENGTH}
+              aria-describedby="commitment-count"
+            />
+          </Hint>
           <div className="flex items-center justify-between gap-2 text-2xs text-muted-foreground">
             <span id="commitment-count" className="tabular-nums">
               {draft.length} / {COMMITMENT_MAX_LENGTH}
             </span>
             {saved && <span className="text-success">{t("offers.commitmentSaved")}</span>}
           </div>
-          <Button variant="ai" size="sm" onClick={save} disabled={!dirty || draft.trim().length === 0}>
-            {t("offers.commitmentSave")}
-          </Button>
+          <Hint label={t("offers.hintCommitmentSave")}>
+            <Button variant="ai" size="sm" onClick={save} disabled={!dirty || draft.trim().length === 0}>
+              {t("offers.commitmentSave")}
+            </Button>
+          </Hint>
         </div>
       </CardContent>
     </Card>

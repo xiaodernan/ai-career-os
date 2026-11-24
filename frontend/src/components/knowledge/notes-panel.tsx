@@ -111,10 +111,18 @@ export function NoteCreateCard() {
           />
         </div>
         <div className="flex justify-end">
-          <Button variant="ai" size="sm" loading={create.isPending} disabled={!saveable || create.isPending} onClick={submit}>
-            <StickyNote aria-hidden />
-            {t("knowledge.notes.saveNote")}
-          </Button>
+          <Hint anchor="span" label={t("knowledge.notes.hintSaveNote")}>
+            <Button
+              variant="ai"
+              size="sm"
+              loading={create.isPending}
+              disabled={!saveable || create.isPending}
+              onClick={submit}
+            >
+              <StickyNote aria-hidden />
+              {t("knowledge.notes.saveNote")}
+            </Button>
+          </Hint>
         </div>
       </CardContent>
     </Card>
@@ -175,20 +183,29 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
               autoComplete="off"
             />
             <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditing(false)}
-                disabled={update.isPending}
-                title={update.isPending ? t("knowledge.notes.saving") : undefined}
-              >
-                <X aria-hidden />
-                {t("knowledge.notes.cancel")}
-              </Button>
-              <Button variant="ai" size="sm" loading={update.isPending} disabled={!saveable || update.isPending} onClick={save}>
-                <Check aria-hidden />
-                {t("knowledge.notes.save")}
-              </Button>
+              <Hint label={t("knowledge.notes.hintCancelEdit")}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditing(false)}
+                  disabled={update.isPending}
+                >
+                  <X aria-hidden />
+                  {t("knowledge.notes.cancel")}
+                </Button>
+              </Hint>
+              <Hint anchor="span" label={t("knowledge.notes.hintSaveChanges")}>
+                <Button
+                  variant="ai"
+                  size="sm"
+                  loading={update.isPending}
+                  disabled={!saveable || update.isPending}
+                  onClick={save}
+                >
+                  <Check aria-hidden />
+                  {t("knowledge.notes.save")}
+                </Button>
+              </Hint>
             </div>
           </>
         ) : (
@@ -207,25 +224,25 @@ function NoteRow({ note }: { note: KnowledgeNote }) {
                     : null}
                 </p>
               </div>
-                            <Hint side="left" label={t("chrome.editHint")}>
-<Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("knowledge.notes.editNote", { title: displayTitle })}
-                onClick={start}
-              >
-                <Pencil aria-hidden />
-              </Button>
+              <Hint side="left" label={t("knowledge.notes.hintEditNote")}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("knowledge.notes.editNote", { title: displayTitle })}
+                  onClick={start}
+                >
+                  <Pencil aria-hidden />
+                </Button>
               </Hint>
-                            <Hint side="left" label={t("chrome.deleteHint")}>
-<Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("knowledge.notes.deleteNote", { title: displayTitle })}
-                onClick={() => setConfirming(true)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
+              <Hint side="left" label={t("knowledge.notes.hintDeleteNote")}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t("knowledge.notes.deleteNote", { title: displayTitle })}
+                  onClick={() => setConfirming(true)}
+                >
+                  <Trash2 aria-hidden />
+                </Button>
               </Hint>
             </div>
             {note.content && (
@@ -303,33 +320,36 @@ export function NotesPanel() {
         role="group"
         aria-label={t("knowledge.notes.tagFilter")}
       >
-        <Button
-          type="button"
-          size="sm"
-          variant={tag ? "ghost" : "secondary"}
-          onClick={() => setUrl({ npage: 0, ntag: undefined })}
-        >
-          {t("knowledge.notes.allTags")}
-        </Button>
+        <Hint label={t("knowledge.notes.hintAllTags")}>
+          <Button
+            type="button"
+            size="sm"
+            variant={tag ? "ghost" : "secondary"}
+            onClick={() => setUrl({ npage: 0, ntag: undefined })}
+          >
+            {t("knowledge.notes.allTags")}
+          </Button>
+        </Hint>
         {offered.map((each) => {
           const count = byTag.get(each);
           const inert = tagIsInert(count, each, tag);
           return (
-            <Button
-              key={each}
-              type="button"
-              size="sm"
-              variant={tag === each ? "secondary" : "ghost"}
-              aria-pressed={tag === each}
-              disabled={inert}
-              title={inert ? t("knowledge.notes.tagEmpty", { tag: each }) : undefined}
-              onClick={() => setUrl({ npage: 0, ntag: tag === each ? undefined : each })}
-            >
-              {each}
-              {count !== undefined && (
-                <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
-              )}
-            </Button>
+            <Hint key={each} label={t("knowledge.notes.hintTag", { tag: each })}>
+              <Button
+                type="button"
+                size="sm"
+                variant={tag === each ? "secondary" : "ghost"}
+                aria-pressed={tag === each}
+                disabled={inert}
+                title={inert ? t("knowledge.notes.tagEmpty", { tag: each }) : undefined}
+                onClick={() => setUrl({ npage: 0, ntag: tag === each ? undefined : each })}
+              >
+                {each}
+                {count !== undefined && (
+                  <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+                )}
+              </Button>
+            </Hint>
           );
         })}
       </div>

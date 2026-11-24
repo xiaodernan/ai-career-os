@@ -29,6 +29,7 @@ describe("OfferCelebration", () => {
     expect(html).toContain("[offers.celebrationSubtitle|Backend Engineer,Acme]");
     expect(html).toContain("/offers");
     expect(html).toContain("role=\"dialog\"");
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(2);
   });
 
   it("renders all confetti pieces in the markup — never hidden behind JS", () => {

@@ -259,7 +259,7 @@ export default function JobsPage() {
                   value={filters.sort || "auto"}
                   onValueChange={(v) => setFilters({ sort: v === "auto" ? "" : v, page: 0 })}
                 >
-                  <Hint side="bottom" label={t("jobs.hintSort")}>
+                  <Hint side="bottom" anchor="span" label={t("jobs.hintSort")}>
                     <SelectTrigger id="jobs-sort" size="sm" className="w-40">
                       <SelectValue />
                     </SelectTrigger>

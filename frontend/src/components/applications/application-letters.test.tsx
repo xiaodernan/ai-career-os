@@ -75,6 +75,23 @@ describe("ApplicationLettersPanel", () => {
 
     expect(html).toContain('href="/jobs/job-1#cover-letter"');
     expect(html).toContain("applications.dialog.lettersWriteOne");
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(1);
+  });
+
+  it("teaches the shelf link, disclosure, provenance and every kept-letter action", () => {
+    lettersState.value = {
+      data: [{ id: "letter-1", body: "Dear Acme.", resumeVersionId: "rv-1", tone: "formal" }],
+    };
+    versionState.value = {
+      data: { id: "rv-1", resumeId: "resume-1", label: "Tailored for Acme" },
+    };
+
+    const html = render({ jobId: "job-1" });
+
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(7);
+    expect(html).toMatch(/<summary[^>]*data-slot="tooltip-trigger"/);
+    expect(html).toContain('href="/resumes/resume-1"');
+    expect(html).toContain('href="/jobs/job-1?tone=formal#cover-letter"');
   });
 
   it("shows each kept letter's first line, dials and whole body", () => {
@@ -203,6 +220,8 @@ describe("LetterEditor", () => {
     expect(html).toContain("coverLetter.tone");
     expect(html).toContain("coverLetter.length");
     expect(html.match(/role="combobox"/g)).toHaveLength(2);
+    expect(html.match(/data-slot="select-trigger"/g)).toHaveLength(2);
+    expect(html.match(/data-slot="tooltip-trigger"/g)).toHaveLength(4);
   });
 
   it("will not save a correction that only removes the words", () => {

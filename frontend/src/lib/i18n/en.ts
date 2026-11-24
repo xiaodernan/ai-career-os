@@ -396,6 +396,12 @@ export const en = {
       proof2: "Copied is copied: the letter leaves this screen under your control, not the page's.",
       proof3: "The ledger is yours alone; nothing here is shared with anyone.",
       copy: "Copy this letter",
+      hintSearchInput: "Type words from the letter, application, company, tone or length; press Search to narrow the gallery.",
+      hintSearch: "Filters the kept letters locally by the words in the field; it does not send them to the server.",
+      hintClearSearch: "Clears the field and the URL filter so every kept letter is visible again.",
+      hintOpenTracker: "Opens the application tracker, where a cover letter can be generated and kept.",
+      hintCopy: "Copies the full saved letter to your clipboard; the saved letter itself is unchanged.",
+      hintOpenApplication: "Opens the application this letter was kept for, without changing the letter.",
       unnamedApplication: "A letter kept for an unnamed application",
       companyUnknown: "Unknown company",
       openApplication: "Open the application",
@@ -546,6 +552,13 @@ export const en = {
       retry: "Retry",
       tryAgain: "Try again",
       checkAgain: "Check again",
+      hintRetry: "Fetches this section again; anything already saved stays unchanged.",
+      hintRefreshList: "Fetches this list again from the server; anything already saved stays unchanged.",
+      hintOpenCopilot: "Opens Copilot; this button does not add or change a record.",
+      hintCheckAgain: "Checks whether the missing API route is available now; no local data is replaced until it answers.",
+      hintCloseDialog: "Closes this dialog without applying its pending change.",
+      hintCancelDialog: "Closes the dialog and leaves the pending action undone.",
+      hintConfirmDialog: "Applies the action described above; read the details before confirming.",
       somethingWentWrong: "Something went wrong",
       skipToContent: "Skip to content",
       backToDashboard: "Back to the dashboard",
@@ -673,6 +686,8 @@ export const en = {
       resultsStreamIn: "content results stream in as you type.",
       previousPage: "Previous page",
       nextPage: "Next page",
+      hintPreviousPage: "Loads the previous server page; the current page number stays in the URL.",
+      hintNextPage: "Loads the next server page; the current page number stays in the URL.",
       refreshList: "Refresh list",
       pagination: "Pagination ({label})",
       ofTotal: "{from}–{to} of {total} {label}",
@@ -697,6 +712,7 @@ export const en = {
      */
     upload: {
       ariaLabel: "Upload resume",
+      hintDropzone: "Choose or drop a PDF, DOCX or TXT file; type, size and emptiness are checked before it is uploaded to your workspace.",
       uploading: "Uploading…",
       dropHere: "Drop your resume here, or click to browse",
       accepted:
@@ -731,6 +747,7 @@ export const en = {
         waitingForAgent: "Waiting for the agent...",
         streamNotReported: "The run stream hasn't reported progress yet -- results appear as soon as it does.",
         agentTrace: "Agent trace",
+        hintAgentTrace: "Shows the steps this run actually reported; opening the trace does not restart or stop the task.",
         runError: "The run reported an error.",
         steps: "{count} steps",
         /** Appended after `steps` when the bounded trace window folded away older rows. */
@@ -741,6 +758,7 @@ export const en = {
       },
       agentTimeline: {
         trace: "Agent execution trace",
+        hintPayload: "Shows the payload reported for this step; it does not rerun the tool.",
         running: "Running",
         completed: "Completed",
         failed: "Failed",
@@ -801,6 +819,7 @@ export const en = {
         "The agent proposed no safe edits for this role — it will not rewrite experience it cannot evidence.",
       hide: "Hide",
       showReasons: "Show reasons",
+      hintRejected: "Shows proposed edits the agent did not apply, with reasons; your saved resume stays unchanged.",
     },
     /**
      * One piece of cited evidence, and the card it sits in.
@@ -1331,7 +1350,7 @@ export const en = {
       acceptancePlaybookCopied: "Copied",
       acceptancePlaybookSilent: "Nothing grounded enough to write — the offer itself stands as the whole truth.",
       negotiationPrepTitle: "Before the call",
-      negotiationPrepHint: "Twelve lines to walk in with — the anchor read, the number you own, the pause, the floor, and the graceful no.",
+      negotiationPrepHint: "Writes twelve private lines from this saved offer—the anchor read, the number you own, the pause, the floor and the graceful no; review them before the call, because nothing is sent.",
       negotiationPrepButton: "Write the prep sheet",
       negotiationPrepCopy: "Copy",
       negotiationPrepCopied: "Copied",
@@ -1553,6 +1572,57 @@ export const en = {
       commitmentSave: "Keep this line",
       commitmentSaved: "Kept in this browser.",
       commitmentReset: "Start a new line",
+      hintRoleInput: "Type the role you are pricing; benchmark, negotiation and comparison all use this same role.",
+      hintLocationInput: "Optionally narrow the market read to one city or region; leave it blank to search every location.",
+      hintOfferBaseInput: "Enter the annual base salary as a positive number before asking for negotiation or counter-offer help.",
+      hintMatchInput: "Optionally rate your fit from 0 to 100; it becomes context for the negotiation, not a market fact.",
+      hintOfferLabelsInput: "Put one offer name per line. Comparison gives every named offer the same base and zero bonus, so edit real offers on the shelf for a full comparison.",
+      hintBenchmark: "Reads salary percentiles from matching postings; it does not invent a market number when no posting matches.",
+      hintNegotiate: "Builds a negotiation plan from your role, offer and optional fit; review it before using any wording.",
+      hintCounter: "Drafts a counter-offer script and anchor for review; it does not contact the employer.",
+      hintCompare: "Ranks the named offers by total compensation against the same market read; it does not choose for you.",
+      hintPrintPacket: "Opens the browser print dialog for the shelf and local decision cards; the AI tools stay off the page.",
+      hintShelfDecision_pending: "Keeps this offer on hold without accepting or declining it; the saved numbers and deadline stay.",
+      hintShelfDecision_accepted: "Records this as your accepted offer and opens the day-one packet, first-quarter plan and acceptance letter.",
+      hintShelfDecision_declined: "Records this offer as declined and opens the private keep-letter and decline-email drafts.",
+      hintShelfLabelInput: "Name the company and role so you can tell this offer apart; use “Company — Role” when you want reply letters split cleanly.",
+      hintShelfBaseInput: "Enter annual base pay in the offer's currency; it must be greater than zero to save.",
+      hintShelfBonusInput: "Enter the annual bonus target; a blank value saves as zero and is added to total compensation.",
+      hintShelfEquityInput: "Enter annualized equity value, not a vesting schedule; blank saves as zero and is added to total compensation.",
+      hintShelfRemote: "Records onsite, hybrid or remote; it labels the offer but does not change the compensation math.",
+      hintShelfSave: "Saves this offer to your shelf; while editing, it replaces the editable fields with the values shown here.",
+      hintShelfEdit: "Loads this offer's saved fields into the form; nothing changes until you save.",
+      hintShelfDelete: "Removes this offer from the shelf after the server confirms; this does not message the company.",
+      hintCounterLetter: "Drafts a counter email from this saved offer for you to review and edit; it does not send anything.",
+      hintFollowUpLetter: "Drafts one polite follow-up from this saved offer; you still decide whether and when to send it.",
+      hintDeclineLetter: "Drafts a gracious decline from this saved offer; it does not send the email.",
+      hintAcceptancePlaybook: "Drafts a first-90-days plan from the accepted offer for review; it does not contact the employer.",
+      hintShelfLetter: "Drafts the private letter you keep about this declined offer; nothing is sent to the company.",
+      hintCopyDraft: "Copies the displayed draft to your clipboard; it does not send or publish the words.",
+      hintDayOneToggle: "Marks this step complete or unfinished for the accepted offer in this browser; it does not notify the company.",
+      hintDayOneReset: "Clears every day-one check for the accepted offer in this browser; it does not change the offer.",
+      hintQuarterToggle: "Marks this first-quarter step complete or unfinished for the accepted offer in this browser; nothing is sent to your team.",
+      hintQuarterReset: "Clears all eighteen first-quarter checks in this browser; it does not change the accepted offer.",
+      hintReplyRead: "Shows or hides this ready-written letter; reading it does not send anything.",
+      hintReplyCopy: "Copies this letter to your clipboard so you can review and change it before sending.",
+      hintReplyDownload: "Downloads this letter as a plain-text file named letter.txt; it does not email anyone.",
+      hintReplyMailto: "Opens your email app with the subject and body filled in; review the words there, then choose whether to send.",
+      hintLedgerWeight: "Sets how strongly this criterion counts, from zero to five; changing it recalculates every offer locally.",
+      hintLedgerScore: "Scores this offer from 0 to 5 for the criterion; blank means unscored, while zero is a real score.",
+      hintLedgerNewCriterion: "Names a criterion the starter list missed; it is added only when you press Add.",
+      hintLedgerAdd: "Adds this named criterion to your local ledger and gives every offer an unscored cell for it.",
+      hintLedgerReset: "Restores the six starter criteria, default weights and blank scores in this browser; saved offers stay unchanged.",
+      hintLedgerRemove: "Removes this criterion and all of its scores from the local ledger; it does not remove an offer.",
+      hintRehearsalReply: "Chooses a reply for this moment and shows its score; you can choose another reply before moving on.",
+      hintRehearsalNext: "Saves this choice in this browser and opens the next hiring-manager push.",
+      hintRehearsalVerdict: "Shows the score for all three saved choices; it does not send them anywhere.",
+      hintRehearsalKeep: "Keeps your own opening sentence in this browser for the real conversation; it is not sent anywhere.",
+      hintRehearsalReset: "Clears all three choices and the kept sentence from this browser, then returns to the first push.",
+      hintCommitmentInput: "Write the one line you will say out loud this week; typing alone does not save it.",
+      hintCommitmentSave: "Keeps this line under the current ISO week in this browser; next week starts with a new line.",
+      hintCommitmentReset: "Clears this week's saved line from this browser; it does not change earlier weeks.",
+      hintCelebrationContinue: "Closes the celebration and opens the next step; your saved offer stays unchanged.",
+      hintCelebrationDismiss: "Closes the celebration and leaves the saved offer and decision as they are.",
       packetPrint: "Print the packet",
       packetPrintHint:
         "Everything a salary conversation is actually about, kept on paper: the shelf, your day-one packet, the letters you kept, the ledger's call. The AI kitchen stays off the page.",
@@ -2072,6 +2142,10 @@ export const en = {
         "The print window was blocked — allow pop-ups for this site and try again.",
       yourVersions: "Your versions",
       open: "Open",
+      hintOpen: "Opens this resume's structured profile, versions and review score.",
+      hintDelete: "Opens a confirmation; confirming removes this resume and its versions and stops its knowledge chunks being cited.",
+      hintDeleteConfirm: "Permanently removes this resume and its versions; its ingested knowledge chunks stop being cited.",
+      hintDeleteCancel: "Closes the confirmation and keeps the resume, versions and knowledge chunks.",
       /**
        * The badge a resume's row wears, by the state the row is in.
        *
@@ -2150,6 +2224,17 @@ export const en = {
         knowledge: "Knowledge",
         gapsFound: "Gaps found",
         exportJson: "Export JSON",
+        hintBack: "Returns to the resume list without changing this resume.",
+        hintOriginalFile: "Downloads the original uploaded file; parsing and stored versions are unchanged.",
+        hintParseNow: "Reads the stored file and creates the structured profile and review score; it may store a new version.",
+        hintReParse: "Runs the parser again, updating the profile and score and storing another version.",
+        hintPrint: "Opens the print layout for this specific version; the saved version is unchanged.",
+        hintSetCurrent: "Makes this the version agents match against; all other versions stay stored.",
+        hintKnowledge: "Opens the knowledge chunks ingested from this resume.",
+        hintExportJson: "Downloads the structured profile as JSON; the resume and its versions stay unchanged.",
+        hintProfileLink: "Opens this external profile in a new tab; Career OS does not send your resume data there.",
+        hintRepo: "Opens this project's repository in a new tab; the stored resume stays unchanged.",
+        hintImpression: "Asks the reviewer for one grounded paragraph from this resume's parsed facts; it becomes available after a score exists.",
         achievements: "Achievements",
         current: "Current",
         overall: "Overall",
@@ -3185,6 +3270,38 @@ export const en = {
       company: "Company",
       relationFilter: "Narrow the registry by relation",
       relationFilterAll: "All relations",
+      hintRelationFilterAll:
+        "Removes the relation filter and returns to page one; the current search stays active.",
+      hintRelationFilter:
+        "Shows only contacts labeled “{relation}” and returns to page one; choose the same relation again to clear it without losing the search.",
+      hintSearchInput:
+        "Type a name, role, company or note, then press Enter or Search to ask the whole registry; typing alone does not send a request.",
+      hintSearch:
+        "Searches every page of the registry for the submitted words and returns to page one; the active relation filter still applies.",
+      hintClearSearch:
+        "Clears the submitted search and returns to page one; the active relation filter stays.",
+      hintClearFilters:
+        "Clears both the search and relation filter and returns to page one without deleting any contacts.",
+      hintAddContact:
+        "Opens a form for a new registry entry; only a name is required, and nothing is messaged or sent.",
+      hintEditContact:
+        "Opens this person's saved details for editing; nothing changes until you save the form.",
+      hintDraft:
+        "Uses this contact's saved name, role and company to draft a referral message for review; it does not contact anyone.",
+      hintDraftWithCopilot:
+        "Opens Copilot to draft an outreach message; review the words before sending them anywhere.",
+      hintRelationField:
+        "Adds your own relationship label to this contact; it appears on the card and becomes a registry filter.",
+      hintLastTouch:
+        "Records the date you choose as your last conversation, stored at local midnight; the app does not guess it from when you open the form.",
+      hintDeleteContact:
+        "Opens a confirmation before permanently removing this contact from the registry; cancellation keeps the contact.",
+      hintCancelContact:
+        "Closes the form and discards unsaved edits; the saved contact stays unchanged.",
+      hintCreateContact:
+        "Creates a new contact from this form; only the name is required, and no message is sent.",
+      hintSaveContact:
+        "Replaces this contact's editable fields with the form; clearing an optional field removes its saved value.",
       relation: "Relation",
       email: "Email",
       lastTouch: "Last touch",
@@ -3252,6 +3369,16 @@ export const en = {
         "Your own words, kept in this browser — the sentence you'd actually walk in with.",
       coffeeKeepPlaceholder: "e.g. “One question and fifteen minutes — that's the whole ask.”",
       coffeeReset: "Start over",
+      coffeeHintReply:
+        "Choose this reply to record its score and reveal feedback in this browser; you can choose another reply.",
+      coffeeHintNext:
+        "Moves to the next moment; your earlier choices stay saved in this browser.",
+      coffeeHintVerdict:
+        "Shows the verdict calculated from all three saved choices without sending them anywhere.",
+      coffeeHintKeep:
+        "Keeps your own opening sentence automatically in this browser; it is not sent anywhere.",
+      coffeeHintReset:
+        "Clears all three choices and the kept sentence from this browser, then returns to the first moment.",
       coffeeKept: "Kept in this browser.",
     },
     // Growth report
@@ -3334,6 +3461,10 @@ export const en = {
         "Everything the agents can cite: resumes, projects, notes, JDs, company research, feedback.",
       showingCitedSource: "Showing the source one of your citations points at.",
       showAllSources: "Show all sources",
+      hintShowAllSources:
+        "Clears the citation focus and returns to the full source list on the same page; uploads and notes remain available.",
+      hintAskCopilotToIngest:
+        "Opens Copilot, where you can describe a document to add; ingestion still has to finish before the source can be cited.",
       noSourceMatches: "No source matches that citation",
       noSourceMatchesDescription:
         "The document may have been deleted, or its ingestion never finished.",
@@ -3350,6 +3481,10 @@ export const en = {
         "One grounded answer from your own ready documents. Every [n] is a verified citation you can trace back to the exact quote.",
       ragAskLabel: "Your question",
       ragAskPlaceholder: "e.g. What evidence do I have for backend roles?",
+      ragQueryHint:
+        "Ask about your own material; Ctrl/⌘ + Enter sends the question without leaving this box.",
+      ragAskHint:
+        "Searches your ready documents for a grounded answer with verified [n] citations; a source that is still ingesting cannot support the answer.",
       ragAskAction: "Ask",
       ragAskWorking: "Reading your evidence…",
       ragAskEmpty: "Nothing grounded came back — add a source, or ask a narrower question.",
@@ -3366,8 +3501,18 @@ export const en = {
         tagsPlaceholder: "interview, study (comma separated)",
         tagFilter: "Filter notes by tag",
         allTags: "All",
+        hintAllTags: "Removes the tag filter and returns the notes list to page one.",
+        hintTag:
+          "Shows only notes tagged “{tag}” and returns to page one; select the same tag again to clear the filter.",
         tagEmpty: "No notes carry this tag yet",
         noNotesWithTag: "No notes tagged “{tag}”",
+        hintSaveNote:
+          "Saves this as a personal note in the knowledge base; content is required, while title and tags are optional.",
+        hintEditNote: "Reopens this note's title, content and tags for editing without creating another note.",
+        hintDeleteNote:
+          "Asks before removing this note permanently; its chunks stop being cited, and this cannot be undone.",
+        hintCancelEdit: "Discards the edits in this row and restores the last saved note.",
+        hintSaveChanges: "Saves the edited title, content and tags back to this same note.",
         saveNote: "Save note",
         untitled: "Untitled note",
         noteTitleLabel: "Note title",
@@ -3394,6 +3539,15 @@ export const en = {
         deleteFailed: "Couldn't delete the source.",
         deleted: "Source deleted — its chunks stop being cited.",
         chooseDocuments: "Choose documents to ingest",
+        hintChooseFiles:
+          "Opens a multi-file picker for PDF, DOCX or TXT files up to 20 MB each; picking files starts one upload batch.",
+        hintTitle:
+          "Gives every file in this batch the same display title; without one, the server uses a generic document title.",
+        hintKind: "Assigns one evidence category to every file in this batch without changing the file contents.",
+        hintClearBatch:
+          "Removes only these upload progress rows; documents already uploaded or ingested stay in the knowledge base.",
+        hintDelete:
+          "Asks before removing this source and its searchable chunks permanently; other sources and personal notes stay.",
         appliedToBatch: "Applied to every file in the batch",
         clearList: "Clear list",
         deleteDescription:
@@ -3626,6 +3780,11 @@ export const en = {
       boardColumn: "{stage} applications",
       dragToReorder: "Drag to reorder",
       dragHint: "Drag to reorder within this lane",
+      hintSearch: "Asks the server for roles, companies and notes; the cards and page count follow the same words.",
+      hintClearSearch: "Removes the words from the URL and returns to page one of the whole pipeline.",
+      hintAdd: "Opens a form for a role even without a posting link; company, notes and reminder can come later.",
+      hintOpenCard: "Opens this card to edit notes, reminders, outcome and its linked resume and analysis.",
+      hintChangeStage: "Moves this card to another stage now; use the handle at left to reorder within a stage.",
       reminderDue: "reminder due",
       noStep14d: "no step 14d+",
       reminderOn: "reminder {date}",
@@ -3695,6 +3854,10 @@ export const en = {
           untitledMatch: "Match recorded",
           matchScore: "{score}% match",
           open: "Open",
+          hintOpenResume: "Opens the resume that owns this version; the application's link stays attached.",
+          hintOpenJd: "Opens the posting behind this JD analysis; the analysis and application stay stored.",
+          hintOpenMatch: "Opens the posting behind this match; the saved score stays attached to this application.",
+          hintOpenRehearsals: "Opens this application's rehearsal history; it does not start a new session.",
           letterCount: "{count} kept",
           noLetters: "None kept yet",
           rehearsalCount: "{count} rehearsal{plural}",
@@ -3728,6 +3891,25 @@ export const en = {
         letterEdited: "Edited {when}",
         letterBody: "Letter text",
         letterDialUnset: "Not set",
+        hintStage: "Chooses the pipeline stage stored when you save; the description below explains what that stage means.",
+        hintClearReminder: "Clears the reminder in this form; the stored reminder stays until you save changes.",
+        hintStartRehearsal: "Creates an interview session from this application's posting and materials, then opens it; the application is unchanged.",
+        hintDeleteApplication: "Asks for confirmation before removing this application and its history; nothing is deleted until you confirm.",
+        hintCancelApplication: "Closes this form without saving its edits; the stored application stays as it was.",
+        hintSaveApplication: "Saves only the fields that changed and records those changes in this application's history.",
+        hintAddApplication: "Adds a new card in the stage you chose, with the role and optional details in this form.",
+        hintVersionLink: "Opens the resume that owns the version used for this letter; the letter and its provenance stay stored.",
+        hintWriteOne: "Opens this application's posting at the cover-letter draft; nothing is saved until you keep the draft.",
+        hintDisclosure: "Shows or hides the full saved letter without changing it.",
+        hintCopy: "Copies this letter's full text to your clipboard; the saved letter is unchanged.",
+        hintDownload: "Downloads this saved letter as Markdown; the application and letter stay unchanged.",
+        hintEdit: "Opens an in-place correction; the saved letter stays unchanged until you save the correction.",
+        hintRewrite: "Opens a new draft on the job page with this letter's tone and length; it does not overwrite the kept letter.",
+        hintRemove: "Starts confirmation for removing this kept letter; the letter stays until you confirm.",
+        hintTone: "Chooses the tone stored with this correction; choose Not set to clear the saved tone.",
+        hintLength: "Chooses the length stored with this correction; choose Not set to clear the saved length.",
+        hintCancelEdit: "Closes the correction without saving it; the kept letter stays as it was.",
+        hintSaveEdit: "Saves the corrected text and dials to this letter and updates its edited time.",
         notFound: "That application no longer exists.",
         saveFailed: "Couldn't save the application.",
         delete: "Delete",
@@ -3953,6 +4135,14 @@ export const en = {
       searchPlaceholder: "Search interviews",
       searchLabel: "Search interviews by company, role or mode",
       clearSearch: "Clear search",
+      hintSearch: "Asks the server for a company, role or mode; the list and total count follow the same word.",
+      hintClearSearch: "Removes the word from the URL and returns to page one, keeping any application filter.",
+      hintAllInterviews: "Drops the application filter and returns to page one across every role; any search word stays.",
+      hintStartInterview: "Choose a mode to create and open a new rehearsal now; a narrowed board passes its application into the session.",
+      hintOpenApplication: "Returns to the application card this rehearsal came from, where its notes and current stage live.",
+      hintOpenSession: "Opens this rehearsal to continue its questions, or to read the finished report when it is complete.",
+      hintDelete: "Asks before removing this rehearsal's questions, answers and report; the application card and saved notes stay.",
+      hintPickTargetJob: "Opens the jobs board so you can choose a target role before creating a rehearsal.",
       noMatch: "No interview matches “{query}”",
       noMatchDescription:
         "Try a shorter word, or clear the search to see every rehearsal.",
