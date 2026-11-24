@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T11:57:44.007491Z",
+  "generated_at": "2026-11-24T11:59:49.125547Z",
   "branch": "main",
-  "head": "e2d4ef4",
-  "total_commits": 1915,
+  "head": "12fa149",
+  "total_commits": 1916,
   "milestone": "Epic 444",
   "milestone_full": "the ledger of done epics (through 597 items), closed at Epic 444 — Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24)",
   "pushed_at": "2026-11-24",
