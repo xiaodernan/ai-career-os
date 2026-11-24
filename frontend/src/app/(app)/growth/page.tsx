@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Hint } from "@/components/ui/hint";
 import { EmptyState } from "@/components/common/empty-state";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
 import { GrowthEnginesPanel } from "@/components/growth/growth-engines-panel";
@@ -97,33 +98,39 @@ export default function GrowthPage() {
           <form className="flex flex-wrap items-end gap-3" onSubmit={submit}>
             <div className="min-w-0 flex-1 basis-64 space-y-2">
               <Label htmlFor="growth-role">{t("growth.targetRole")}</Label>
-              <Input
-                id="growth-role"
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                placeholder={t("growth.targetRolePlaceholder")}
-                autoComplete="off"
-              />
+              <Hint anchor="span" label={t("growth.hintTargetRole")}>
+                <Input
+                  id="growth-role"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  placeholder={t("growth.targetRolePlaceholder")}
+                  autoComplete="off"
+                />
+              </Hint>
             </div>
             <div className="min-w-0 flex-1 basis-44 space-y-2">
               <Label htmlFor="growth-location">{t("growth.location")}</Label>
-              <Input
-                id="growth-location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder={t("growth.locationPlaceholder")}
-                autoComplete="off"
-              />
+              <Hint anchor="span" label={t("growth.hintLocation")}>
+                <Input
+                  id="growth-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder={t("growth.locationPlaceholder")}
+                  autoComplete="off"
+                />
+              </Hint>
             </div>
-            <Button
-              type="submit"
-              variant="ai"
-              loading={build.isPending}
-              disabled={targetRole.trim().length < 10}
-            >
-              <ScanSearch aria-hidden />
-              {t("growth.analyze")}
-            </Button>
+            <Hint label={t("growth.hintAnalyze")}>
+              <Button
+                type="submit"
+                variant="ai"
+                loading={build.isPending}
+                disabled={targetRole.trim().length < 10}
+              >
+                <ScanSearch aria-hidden />
+                {t("growth.analyze")}
+              </Button>
+            </Hint>
           </form>
           {targetRole.trim().length > 0 && targetRole.trim().length < 10 && (
             <p className="mt-2 text-xs text-muted-foreground">

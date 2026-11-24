@@ -5,6 +5,7 @@ import { Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { useLocale } from "@/lib/i18n/locale-context";
 import {
   REVIEW_CARD_HEIGHT,
@@ -102,10 +103,12 @@ export function YearInReviewCard({ numbers }: { numbers: ReviewCardNumbers }) {
           </div>
         </div>
         <p className="sr-only">{t("ceremony.reviewAriaHint", { total: numbers.grandTotal, days: numbers.daysShowed })}</p>
-        <Button variant="ai" size="sm" onClick={download} aria-label={t("common.download")} title={t("common.download")}>
-          <Download aria-hidden className="size-4" />
-          {t("ceremony.reviewDownload")}
-        </Button>
+        <Hint label={t("ceremony.hintReviewDownload")}>
+          <Button variant="ai" size="sm" onClick={download} aria-label={t("common.download")} title={t("common.download")}>
+            <Download aria-hidden className="size-4" />
+            {t("ceremony.reviewDownload")}
+          </Button>
+        </Hint>
       </CardContent>
     </Card>
   );

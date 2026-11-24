@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Hint } from "@/components/ui/hint";
 import { relativeTime } from "@/lib/format";
 import { lastPageOf } from "@/lib/page-window";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -203,55 +204,63 @@ export function ScheduledFeedsPanel() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="feed-name">{t("ingestion.feedName")}</Label>
-                <Input
-                  id="feed-name"
-                  value={name}
-                  maxLength={120}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("ingestion.feedNamePlaceholder")}
-                  autoComplete="off"
-                />
+                <Hint anchor="span" label={t("ingestion.hintFeedName")}>
+                  <Input
+                    id="feed-name"
+                    value={name}
+                    maxLength={120}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t("ingestion.feedNamePlaceholder")}
+                    autoComplete="off"
+                  />
+                </Hint>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="feed-url">{t("ingestion.feedUrl")}</Label>
-                <Input
-                  id="feed-url"
-                  value={url}
-                  maxLength={2048}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder={t(SOURCE_PLACEHOLDER_KEY[source])}
-                  autoComplete="off"
-                />
+                <Hint anchor="span" label={t("ingestion.hintFeedUrl")}>
+                  <Input
+                    id="feed-url"
+                    value={url}
+                    maxLength={2048}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder={t(SOURCE_PLACEHOLDER_KEY[source])}
+                    autoComplete="off"
+                  />
+                </Hint>
               </div>
             </div>
             <div className="flex items-end gap-3">
               <div className="w-44 space-y-1.5">
                 <Label htmlFor="feed-source">{t("ingestion.feedSource")}</Label>
-                <Select
-                  value={source}
-                  onValueChange={(value) => setSource(value as FeedSource)}
-                >
-                  <SelectTrigger id="feed-source" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FEED_SOURCES.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {t(SOURCE_LABEL_KEY[value])}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Hint anchor="span" label={t("ingestion.hintFeedSource")}>
+                  <Select
+                    value={source}
+                    onValueChange={(value) => setSource(value as FeedSource)}
+                  >
+                    <SelectTrigger id="feed-source" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FEED_SOURCES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(SOURCE_LABEL_KEY[value])}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Hint>
               </div>
-              <Button
-                type="submit"
-                size="sm"
-                loading={create.isPending}
-                disabled={!name.trim() || !url.trim()}
-              >
-                <Plus aria-hidden />
-                {t("ingestion.addFeed")}
-              </Button>
+              <Hint label={t("ingestion.hintAddFeed")}>
+                <Button
+                  type="submit"
+                  size="sm"
+                  loading={create.isPending}
+                  disabled={!name.trim() || !url.trim()}
+                >
+                  <Plus aria-hidden />
+                  {t("ingestion.addFeed")}
+                </Button>
+              </Hint>
             </div>
             {source !== "feed" && (
               <p className="text-xs text-muted-foreground">{t("ingestion.boardNameNote")}</p>
@@ -269,28 +278,34 @@ export function ScheduledFeedsPanel() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <Badge variant="outline">{feedSourceWord(t, feed.source)}</Badge>
-                      <Switch
-                        checked={feed.enabled}
-                        aria-label={t("ingestion.toggleAria", { name: feed.name })}
-                        onCheckedChange={(enabled) => toggle.mutate({ id: feed.id, enabled })}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        loading={runNow.isPending && runNow.variables === feed.id}
-                        onClick={() => runNow.mutate(feed.id)}
-                      >
-                        <Play aria-hidden />
-                        {t("ingestion.runNow")}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label={t("ingestion.deleteFeedAria", { name: feed.name })}
-                        onClick={() => setPendingDelete(feed)}
-                      >
-                        <Trash2 aria-hidden />
-                      </Button>
+                      <Hint anchor="span" label={t("ingestion.hintToggleFeed")}>
+                        <Switch
+                          checked={feed.enabled}
+                          aria-label={t("ingestion.toggleAria", { name: feed.name })}
+                          onCheckedChange={(enabled) => toggle.mutate({ id: feed.id, enabled })}
+                        />
+                      </Hint>
+                      <Hint label={t("ingestion.hintRunNow")}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          loading={runNow.isPending && runNow.variables === feed.id}
+                          onClick={() => runNow.mutate(feed.id)}
+                        >
+                          <Play aria-hidden />
+                          {t("ingestion.runNow")}
+                        </Button>
+                      </Hint>
+                      <Hint label={t("ingestion.hintDeleteFeed")}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={t("ingestion.deleteFeedAria", { name: feed.name })}
+                          onClick={() => setPendingDelete(feed)}
+                        >
+                          <Trash2 aria-hidden />
+                        </Button>
+                      </Hint>
                     </div>
                   </div>
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -348,23 +363,27 @@ export function ScheduledFeedsPanel() {
                         </span>
                       )}
                       {run.status !== "failed" && !run.appliedAt && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setPendingApply(run)}
-                        >
-                          <Check aria-hidden />
-                          {t("ingestion.applyPlan")}
-                        </Button>
+                        <Hint label={t("ingestion.hintApplyPlan")}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPendingApply(run)}
+                          >
+                            <Check aria-hidden />
+                            {t("ingestion.applyPlan")}
+                          </Button>
+                        </Hint>
                       )}
                       {run.status !== "failed" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setOpenRun(openRun === run.id ? null : run.id)}
-                        >
-                          {openRun === run.id ? t("ingestion.hidePlan") : t("ingestion.viewPlan")}
-                        </Button>
+                        <Hint label={t("ingestion.hintViewPlan")}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setOpenRun(openRun === run.id ? null : run.id)}
+                          >
+                            {openRun === run.id ? t("ingestion.hidePlan") : t("ingestion.viewPlan")}
+                          </Button>
+                        </Hint>
                       )}
                     </div>
                   </div>

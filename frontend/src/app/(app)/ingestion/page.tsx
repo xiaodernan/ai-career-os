@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Hint } from "@/components/ui/hint";
 import { useDedupeJobs, useFreshnessSweep, useIngestPlan, useParseFeed } from "@/lib/hooks/ingestion";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { ScheduledFeedsPanel } from "@/components/ingestion/scheduled-feeds-panel";
@@ -119,36 +120,42 @@ export default function IngestionPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="feed">{t("ingestion.feedContent")}</Label>
-            <Textarea
-              id="feed"
-              value={feed}
-              onChange={(e) => setFeed(e.target.value)}
-              placeholder={"<rss>…</rss>  or  { \"jobs\": [ … ] }"}
-              rows={8}
-              className="font-mono text-xs"
-            />
+            <Hint anchor="span" label={t("ingestion.hintFeedContent")}>
+              <Textarea
+                id="feed"
+                value={feed}
+                onChange={(e) => setFeed(e.target.value)}
+                placeholder={"<rss>…</rss>  or  { \"jobs\": [ … ] }"}
+                rows={8}
+                className="font-mono text-xs"
+              />
+            </Hint>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ai"
-              size="sm"
-              loading={parseFeed.isPending}
-              disabled={!feed.trim()}
-              onClick={runParse}
-            >
-              <FileSearch aria-hidden />
-              {t("ingestion.parse")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={plan.isPending}
-              disabled={!feed.trim()}
-              onClick={runPlan}
-            >
-              <Layers aria-hidden />
-              {t("ingestion.buildThePlan")}
-            </Button>
+            <Hint label={t("ingestion.hintParse")}>
+              <Button
+                variant="ai"
+                size="sm"
+                loading={parseFeed.isPending}
+                disabled={!feed.trim()}
+                onClick={runParse}
+              >
+                <FileSearch aria-hidden />
+                {t("ingestion.parse")}
+              </Button>
+            </Hint>
+            <Hint label={t("ingestion.hintBuildPlan")}>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={plan.isPending}
+                disabled={!feed.trim()}
+                onClick={runPlan}
+              >
+                <Layers aria-hidden />
+                {t("ingestion.buildThePlan")}
+              </Button>
+            </Hint>
           </div>
         </CardContent>
       </Card>
@@ -181,24 +188,28 @@ export default function IngestionPage() {
             </ul>
             <Separator />
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                loading={dedupe.isPending}
-                onClick={runDedupe}
-              >
-                <Scissors aria-hidden />
-                {t("ingestion.deduplicate")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                loading={sweep.isPending}
-                onClick={runSweep}
-              >
-                <Radar aria-hidden />
-                {t("ingestion.freshnessSweep")}
-              </Button>
+              <Hint label={t("ingestion.hintDeduplicate")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={dedupe.isPending}
+                  onClick={runDedupe}
+                >
+                  <Scissors aria-hidden />
+                  {t("ingestion.deduplicate")}
+                </Button>
+              </Hint>
+              <Hint label={t("ingestion.hintFreshnessSweep")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={sweep.isPending}
+                  onClick={runSweep}
+                >
+                  <Radar aria-hidden />
+                  {t("ingestion.freshnessSweep")}
+                </Button>
+              </Hint>
             </div>
           </CardContent>
         </Card>

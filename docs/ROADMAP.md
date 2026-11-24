@@ -8500,6 +8500,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **435** Closed the last zero-teaching gaps on the main screens (2026-11-24).
+
+  Brief: an audit of reader-facing pages found one genuine front-door hole — the
+  ingestion page had fourteen interactive controls and zero teaching on any of them,
+  including three that mutate state irreversibly (delete feed, apply plan, toggle the
+  nightly sweep). Smaller gaps remained on monitoring, analysis, growth (page and
+  engines panel), ceremony, notifications and activity. Added 33 bilingual hints,
+  each naming the consequence of the action. Stateful and `asChild` controls use the
+  boxless `anchor="span"` so a tooltip never overwrites their own `data-state`.
+  `page.hints.test.ts` pins every key in source and in en/zh, including a language
+  purity check (no Han characters in English, no English sentence in Chinese).
+  Copy census stays at 239 — no new browser `.tsx`, only edits to existing files.
+  Verified: `tsc --noEmit` clean; 5 focused files 37/37 green.
+
 - [x] **434** A one-command unbind for the host, not just the stack (2026-11-24).
 
   Brief: the owner stopped using Clash Verge and kept hitting ECONNREFUSED from

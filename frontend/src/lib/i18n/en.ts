@@ -408,6 +408,9 @@ export const en = {
     },
     // The closing ceremony (Epic 212): the ledger of the whole loop, signed once.
     ceremony: {
+      hintReviewDownload:
+        "Saves this year-in-review card as an image you can keep or share; it reads only your own counts.",
+      hintLegacyOpen: "Opens the page this artifact points to; nothing in your own data is changed.",
       title: "The closing ceremony",
       eyebrow: "THIS SEARCH, YOU CLOSED IT",
       description:
@@ -1639,6 +1642,9 @@ export const en = {
     },
     // Analysis
     analysis: {
+      hintRefresh: "Re-reads your application history and recomputes this week's digest from the latest data.",
+      hintCompose:
+        "Writes a fresh weekly letter from your own history; the letters already kept stay in the archive.",
       title: "Analysis",
       description: "Pipeline analytics and insights from your application history.",
       totalApplications: "Total applications",
@@ -1696,6 +1702,7 @@ export const en = {
     },
     // Monitoring
     monitoring: {
+      hintRefresh: "Re-reads the health report and today's spend ledger; it does not start any model run.",
       title: "Monitoring",
       description: "Agent health, cost, and regression detection.",
       healthVerdict: "Health verdict",
@@ -2027,9 +2034,44 @@ export const en = {
       staleBadge: "{count} stale",
       expiredBadge: "{count} expired",
       undatedBadge: "{count} undated",
+      hintFeedContent:
+        "Paste an RSS feed or a JSON job list here; parsing reads this text only and changes nothing on the board.",
+      hintParse:
+        "Reads the feed into structured postings and shows them below — a preview, no jobs written.",
+      hintBuildPlan:
+        "Compares the feed against your corpus and drafts create/update/close proposals for review.",
+      hintDeduplicate:
+        "Collapses near-identical postings so one role is not counted twice in the corpus.",
+      hintFreshnessSweep:
+        "Marks each posting fresh, stale or expired by date so outdated jobs stop surfacing.",
+      hintFeedName: "A short label for this feed; it appears in the run history and notifications.",
+      hintFeedUrl: "The address that is pulled on schedule; a bad URL makes the run fail, not the app.",
+      hintFeedSource:
+        "Picks how the feed is read — an RSS document or a board-specific endpoint.",
+      hintAddFeed: "Saves this feed and schedules it; the first pull does not run until a run is triggered.",
+      hintToggleFeed:
+        "Pauses or resumes the scheduled pull; past runs and their history are kept either way.",
+      hintRunNow:
+        "Pulls this feed once now and files a run below; it records proposals but does not write jobs to the board.",
+      hintDeleteFeed:
+        "Removes this feed and stops its schedule permanently; past run history stays until cleared.",
+      hintApplyPlan:
+        "Writes this run's reviewed proposals to the board — creates, updates and closes take effect here.",
+      hintViewPlan: "Expands or hides the proposed changes in this run without applying them.",
     },
     // Notification center (19.3)
     notifications: {
+      hintMarkAllRead: "Marks every message here as read without dismissing any; the messages stay in the inbox.",
+      hintClearRead: "Deletes the already-read messages from this inbox; unread ones are untouched.",
+      hintFilterAll: "Shows every kind of signal again, including the ones you have already read.",
+      hintFilterKind: "Shows only this kind of signal; the number is how many of this kind you have.",
+      hintFilterUnread:
+        "Shows only messages you have not read; switching away does not mark them read.",
+      hintSnoozeReminder:
+        "Pushes this application's reminder to a later time; the application itself is unchanged.",
+      hintClearReminder:
+        "Removes this application's reminder entirely; the application and its stage stay as they are.",
+      hintOpen: "Opens the source record this message points to, so you can act on it there.",
       title: "Notifications",
       description:
         "Reminders that came due, applications that went quiet, pulls that need a look, saved searches the board answered, and recruiter replies — in the order they happened.",
@@ -2075,6 +2117,9 @@ export const en = {
     },
     // Growth engines
     growthEngines: {
+      hintTargetRole:
+        "The role title the engines read; without it the market and story engines cannot run.",
+      hintLocation: "An optional city that narrows the market read; leaving it out reads the whole market.",
       title: "Growth engines",
       priorities: {
         critical: "Critical",
@@ -3411,6 +3456,10 @@ export const en = {
     },
     // Growth report
     growth: {
+      hintTargetRole:
+        "The role you want a growth report for; at least ten characters so the report has something to aim at.",
+      hintLocation: "An optional city that shapes the market section of the report.",
+      hintAnalyze: "Builds a fresh growth report from your history; no archived report is overwritten.",
       milestonesTitle: "Milestones",
       milestonesDescription: "What you have already done, and the one the shelf is working on next.",
       milestonesUnavailable: "The milestone shelf could not be read.",
@@ -3721,6 +3770,7 @@ export const en = {
     },
     // Activity
     activity: {
+      hintTrace: "Opens the full trace of this run — every step, token count and cost from start to finish.",
       title: "AI Activity",
       runStatus: {
         running: "Running",

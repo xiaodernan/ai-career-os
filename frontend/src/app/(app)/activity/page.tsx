@@ -9,6 +9,7 @@ import { lastPageOf } from "@/lib/page-window";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { useActivityRuns } from "@/lib/hooks/resources";
 import { useUrlState } from "@/lib/hooks/use-url-state";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -77,9 +78,11 @@ function RunRow({ run }: { run: ActivityRun }) {
               {runStatusWord(t, run.status)}
             </Badge>
           )}
-          <Button variant="ghost" size="xs" asChild>
-            <Link href={`/activity/${run.id}`}>{t("activity.trace")}</Link>
-          </Button>
+          <Hint anchor="span" label={t("activity.hintTrace")}>
+            <Button variant="ghost" size="xs" asChild>
+              <Link href={`/activity/${run.id}`}>{t("activity.trace")}</Link>
+            </Button>
+          </Hint>
         </div>
       </CardContent>
     </Card>

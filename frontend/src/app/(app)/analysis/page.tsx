@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { Hint } from "@/components/ui/hint";
 import { MetricCard } from "@/components/common/metric-card";
 import { PageHeader } from "@/components/common/page-header";
 import { BarChart, ShareChart } from "@/components/common/bar-chart";
@@ -54,9 +55,11 @@ export default function AnalysisPage() {
         title={t("analysis.title")}
         description={t("analysis.description")}
         actions={
-          <Button variant="outline" size="sm" onClick={() => void digest.refetch()}>
-            {t("common.refresh")}
-          </Button>
+          <Hint label={t("analysis.hintRefresh")}>
+            <Button variant="outline" size="sm" onClick={() => void digest.refetch()}>
+              {t("common.refresh")}
+            </Button>
+          </Hint>
         }
       />
 
@@ -291,9 +294,11 @@ function WeeklyLetterCard({
           <CardTitle>{t("analysis.weeklyTitle")}</CardTitle>
           <CardDescription>{t("analysis.weeklyDescription")}</CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={onCompose} disabled={composing}>
-          {composing ? t("analysis.weeklyComposing") : t("analysis.weeklyCompose")}
-        </Button>
+        <Hint label={t("analysis.hintCompose")}>
+          <Button variant="outline" size="sm" onClick={onCompose} disabled={composing}>
+            {composing ? t("analysis.weeklyComposing") : t("analysis.weeklyCompose")}
+          </Button>
+        </Hint>
       </CardHeader>
       <CardContent>
         {pending ? (
@@ -394,9 +399,11 @@ function WeeklyLetterCard({
             title={t("analysis.weeklyEmpty")}
             description={t("analysis.weeklyEmptyDescription")}
             action={
-              <Button variant="outline" size="sm" onClick={onCompose}>
-                {t("analysis.weeklyCompose")}
-              </Button>
+              <Hint label={t("analysis.hintCompose")}>
+                <Button variant="outline" size="sm" onClick={onCompose}>
+                  {t("analysis.weeklyCompose")}
+                </Button>
+              </Hint>
             }
           />
         )}

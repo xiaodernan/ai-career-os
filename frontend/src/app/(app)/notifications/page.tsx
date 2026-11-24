@@ -238,27 +238,31 @@ export default function NotificationsPage() {
                       ? t("notifications.unreadBadge", { count: unread })
                       : t("notifications.allRead")}
                   </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="glow-on-hover"
-                    loading={markAll.isPending}
-                    disabled={unread === 0}
-                    onClick={() => markAll.mutate()}
-                  >
-                    <CheckCheck aria-hidden />
-                    {t("notifications.markAllRead")}
-                  </Button>
-                  {read > 0 ? (
+                  <Hint label={t("notifications.hintMarkAllRead")}>
                     <Button
                       size="sm"
-                      variant="ghost"
-                      loading={clearRead.isPending}
-                      onClick={() => clearRead.mutate()}
+                      variant="outline"
+                      className="glow-on-hover"
+                      loading={markAll.isPending}
+                      disabled={unread === 0}
+                      onClick={() => markAll.mutate()}
                     >
-                      {t("notifications.clearRead")}
-                      <span className="text-xs text-muted-foreground">{read}</span>
+                      <CheckCheck aria-hidden />
+                      {t("notifications.markAllRead")}
                     </Button>
+                  </Hint>
+                  {read > 0 ? (
+                    <Hint label={t("notifications.hintClearRead")}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={clearRead.isPending}
+                        onClick={() => clearRead.mutate()}
+                      >
+                        {t("notifications.clearRead")}
+                        <span className="text-xs text-muted-foreground">{read}</span>
+                      </Button>
+                    </Hint>
                   ) : null}
                 </div>
               ) : undefined
@@ -281,37 +285,42 @@ export default function NotificationsPage() {
                 role="group"
                 aria-label={t("notifications.filterByKind")}
               >
-                <Button
-                  size="sm"
-                  variant={kind === null && !unreadOnly ? "secondary" : "ghost"}
-                  aria-pressed={kind === null && !unreadOnly}
-                  onClick={() => setView({ kind: undefined, unread: undefined })}
-                >
-                  {t("notifications.filterAll")}
-                </Button>
-                {kindGroups.map((group) => (
+                <Hint anchor="span" label={t("notifications.hintFilterAll")}>
                   <Button
-                    key={group.kind}
                     size="sm"
-                    variant={kind === group.kind ? "secondary" : "ghost"}
-                    aria-pressed={kind === group.kind}
-                    onClick={() => setView({ kind: group.kind })}
+                    variant={kind === null && !unreadOnly ? "secondary" : "ghost"}
+                    aria-pressed={kind === null && !unreadOnly}
+                    onClick={() => setView({ kind: undefined, unread: undefined })}
                   >
-                    {t(kindKey(group.kind))}
-                    <span className="text-xs text-muted-foreground">{group.count}</span>
+                    {t("notifications.filterAll")}
                   </Button>
+                </Hint>
+                {kindGroups.map((group) => (
+                  <Hint key={group.kind} anchor="span" label={t("notifications.hintFilterKind")}>
+                    <Button
+                      size="sm"
+                      variant={kind === group.kind ? "secondary" : "ghost"}
+                      aria-pressed={kind === group.kind}
+                      onClick={() => setView({ kind: group.kind })}
+                    >
+                      {t(kindKey(group.kind))}
+                      <span className="text-xs text-muted-foreground">{group.count}</span>
+                    </Button>
+                  </Hint>
                 ))}
-                <Button
-                  size="sm"
-                  variant={unreadOnly ? "secondary" : "ghost"}
-                  aria-pressed={unreadOnly}
-                  disabled={unread === 0 && !unreadOnly}
-                  className="ml-auto"
-                  onClick={() => setView({ unread: !unreadOnly })}
-                >
-                  {t("notifications.filterUnread")}
-                  <span className="text-xs text-muted-foreground">{unread}</span>
-                </Button>
+                <Hint anchor="span" label={t("notifications.hintFilterUnread")}>
+                  <Button
+                    size="sm"
+                    variant={unreadOnly ? "secondary" : "ghost"}
+                    aria-pressed={unreadOnly}
+                    disabled={unread === 0 && !unreadOnly}
+                    className="ml-auto"
+                    onClick={() => setView({ unread: !unreadOnly })}
+                  >
+                    {t("notifications.filterUnread")}
+                    <span className="text-xs text-muted-foreground">{unread}</span>
+                  </Button>
+                </Hint>
               </div>
               {rows.length > 0 ? (
                 <ul className="space-y-2">
@@ -379,44 +388,50 @@ export default function NotificationsPage() {
                                 spelling of it. */}
                             {applicationId && (
                               <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    settleReminder.mutate({
-                                      id: applicationId,
-                                      patch: { reminderAt: snoozeReminder() },
-                                    })
-                                  }
-                                >
-                                  {t("notifications.snoozeReminder")}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    settleReminder.mutate({
-                                      id: applicationId,
-                                      patch: reminderPatch(item.at, ""),
-                                    })
-                                  }
-                                >
-                                  {t("notifications.clearReminder")}
-                                </Button>
+                                <Hint label={t("notifications.hintSnoozeReminder")}>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      settleReminder.mutate({
+                                        id: applicationId,
+                                        patch: { reminderAt: snoozeReminder() },
+                                      })
+                                    }
+                                  >
+                                    {t("notifications.snoozeReminder")}
+                                  </Button>
+                                </Hint>
+                                <Hint label={t("notifications.hintClearReminder")}>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      settleReminder.mutate({
+                                        id: applicationId,
+                                        patch: reminderPatch(item.at, ""),
+                                      })
+                                    }
+                                  >
+                                    {t("notifications.clearReminder")}
+                                  </Button>
+                                </Hint>
                               </>
                             )}
                             {item.link && (
-                              <Button asChild size="sm" variant="ghost">
-                                <Link
-                                  href={item.link}
-                                  aria-label={t("notifications.openAria", { title: name })}
-                                >
-                                  <ArrowUpRight aria-hidden />
-                                  {t("notifications.open")}
-                                </Link>
-                              </Button>
+                              <Hint anchor="span" label={t("notifications.hintOpen")}>
+                                <Button asChild size="sm" variant="ghost">
+                                  <Link
+                                    href={item.link}
+                                    aria-label={t("notifications.openAria", { title: name })}
+                                  >
+                                    <ArrowUpRight aria-hidden />
+                                    {t("notifications.open")}
+                                  </Link>
+                                </Button>
+                              </Hint>
                             )}
                             {!item.read && (
                               <Hint side="left" label={t("notifications.markReadAria", { title: name })}>

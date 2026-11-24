@@ -209,23 +209,27 @@ export function GrowthEnginesPanel() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="engine-role">{t("growthEngines.targetRole")}</Label>
-            <Input
-              id="engine-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder={t("growthEngines.targetRolePlaceholder")}
-              autoComplete="off"
-            />
+            <Hint anchor="span" label={t("growthEngines.hintTargetRole")}>
+              <Input
+                id="engine-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder={t("growthEngines.targetRolePlaceholder")}
+                autoComplete="off"
+              />
+            </Hint>
           </div>
           <div className="space-y-2">
             <Label htmlFor="engine-location">{t("growthEngines.locationOptional")}</Label>
-            <Input
-              id="engine-location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder={t("growthEngines.locationPlaceholder")}
-              autoComplete="off"
-            />
+            <Hint anchor="span" label={t("growthEngines.hintLocation")}>
+              <Input
+                id="engine-location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t("growthEngines.locationPlaceholder")}
+                autoComplete="off"
+              />
+            </Hint>
           </div>
         </div>
 

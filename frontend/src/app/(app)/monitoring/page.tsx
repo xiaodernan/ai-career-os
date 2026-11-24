@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/common/error-state";
+import { Hint } from "@/components/ui/hint";
 import { PageHeader } from "@/components/common/page-header";
 import { MetricCard } from "@/components/common/metric-card";
 import { BarChart } from "@/components/common/bar-chart";
@@ -45,9 +46,11 @@ export default function MonitoringPage() {
         title={t("monitoring.title")}
         description={t("monitoring.description")}
         actions={
-          <Button variant="outline" size="sm" onClick={() => { void report.refetch(); void spend.refetch(); }}>
-            {t("common.refresh")}
-          </Button>
+          <Hint label={t("monitoring.hintRefresh")}>
+            <Button variant="outline" size="sm" onClick={() => { void report.refetch(); void spend.refetch(); }}>
+              {t("common.refresh")}
+            </Button>
+          </Hint>
         }
       />
 

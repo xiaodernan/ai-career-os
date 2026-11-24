@@ -6,6 +6,7 @@ import { Library } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { legacyOf } from "@/lib/legacy";
 import type { LegacyInput } from "@/lib/legacy";
@@ -78,9 +79,11 @@ export function LegacyCard({ input }: { input: LegacyInput }) {
                     {t(row.bodyKey, { count: row.count })}
                   </p>
                 </div>
-                <Button asChild size="sm" variant="outline" className="shrink-0">
-                  <Link href={row.href}>{t("legacy.open")}</Link>
-                </Button>
+                <Hint anchor="span" label={t("ceremony.hintLegacyOpen")}>
+                  <Button asChild size="sm" variant="outline" className="shrink-0">
+                    <Link href={row.href}>{t("legacy.open")}</Link>
+                  </Button>
+                </Hint>
               </li>
             ))}
           </ul>

@@ -385,6 +385,8 @@ export const zh = {
     },
     // 求职的闭幕（Epic 212）：整个闭环的分量，封存一次。
     ceremony: {
+      hintReviewDownload: "把这张年度回顾卡片保存为图片，可留作纪念或分享；只读取你自己的统计。",
+      hintLegacyOpen: "打开该作品指向的页面，不会改动你自己的任何数据。",
       title: "收尾仪式",
       eyebrow: "这一程，你走完了",
       description:
@@ -1535,6 +1537,8 @@ export const zh = {
     },
     // Analysis
     analysis: {
+      hintRefresh: "重新读取你的申请历史，用最新数据重算本周摘要。",
+      hintCompose: "根据你的历史生成一封新的周报信；已经保存的旧信仍留在档案中。",
       title: "分析",
       description: "基于你的申请历史的数据分析和洞察。",
       totalApplications: "总申请数",
@@ -1587,6 +1591,7 @@ export const zh = {
     },
     // Monitoring
     monitoring: {
+      hintRefresh: "重新读取健康报告和今日用量账本；不会启动任何模型调用。",
       title: "监控",
       description: "代理健康度、成本和回归检测。",
       healthVerdict: "健康结论",
@@ -1893,9 +1898,31 @@ export const zh = {
       staleBadge: "{count} 个待复查",
       expiredBadge: "{count} 个已过期",
       undatedBadge: "{count} 个无日期",
+      hintFeedContent: "在此粘贴订阅源或职位列表；解析只读取这段文字，不会改动职位板。",
+      hintParse: "把订阅源解析成结构化职位并展示在下方，仅作预览，不写入职位。",
+      hintBuildPlan: "将订阅源与你的资料库比对，草拟新增、更新、关闭提案供你审阅。",
+      hintDeduplicate: "合并高度相似的职位，避免同一岗位在资料库中被重复统计。",
+      hintFreshnessSweep: "按日期把职位标记为新鲜、待复查或已过期，让过时岗位不再出现。",
+      hintFeedName: "该订阅的简短名称，会显示在运行记录和通知中。",
+      hintFeedUrl: "按计划拉取的地址；地址有误只会导致该次运行失败，不会让应用出错。",
+      hintFeedSource: "选择订阅的读取方式：文档订阅源或职位板专用接口。",
+      hintAddFeed: "保存该订阅并加入计划；首次拉取需手动触发运行。",
+      hintToggleFeed: "暂停或恢复该订阅的定时拉取；历史运行记录都会保留。",
+      hintRunNow: "立即拉取一次该订阅并在下方留下运行记录；只记录提案，不会向职位板写入职位。",
+      hintDeleteFeed: "永久删除该订阅并停止其计划；历史运行记录会保留至被清除。",
+      hintApplyPlan: "把本次运行审阅后的提案写入职位板——新增、更新、关闭在此生效。",
+      hintViewPlan: "展开或收起本次运行的提案，不会应用这些更改。",
     },
     // 通知中心（19.3）
     notifications: {
+      hintMarkAllRead: "把这里的消息全部标为已读，但不删除任何一条；消息仍留在收件箱。",
+      hintClearRead: "从收件箱删除已读消息；未读消息不受影响。",
+      hintFilterAll: "重新显示所有类型的消息，包括你已读的那些。",
+      hintFilterKind: "只显示这一类型的消息；数字是这类消息的数量。",
+      hintFilterUnread: "只显示未读消息；切换视图不会把它们标为已读。",
+      hintSnoozeReminder: "把该申请的提醒推迟到稍后；申请本身不变。",
+      hintClearReminder: "彻底移除该申请的提醒；申请及其阶段保持不变。",
+      hintOpen: "打开这条消息指向的原始记录，方便你在那里处理。",
       title: "通知",
       description:
         "已到期的提醒、久无动静的申请、需要看一眼的拉取、职位板回答的已保存搜索，以及招聘方的回复——按发生时间排列。",
@@ -1941,6 +1968,8 @@ export const zh = {
     },
     // Growth engines
     growthEngines: {
+      hintTargetRole: "引擎读取的目标职位名称；缺少它时市场与故事引擎无法运行。",
+      hintLocation: "可选城市，用于缩小市场读取范围；留空则读取整个市场。",
       title: "成长引擎",
       priorities: {
         critical: "关键",
@@ -3146,6 +3175,9 @@ export const zh = {
     },
     // Growth report
     growth: {
+      hintTargetRole: "你希望生成成长报告的职位；至少十个字，报告才有明确目标。",
+      hintLocation: "可选城市，会影响报告中的市场部分。",
+      hintAnalyze: "根据你的历史生成一份新的成长报告；不会覆盖已归档的报告。",
       milestonesTitle: "里程碑",
       milestonesDescription: "你已经做到的，以及架子正在推进的下一个。",
       milestonesUnavailable: "里程碑架子暂时读不到。",
@@ -3425,6 +3457,7 @@ export const zh = {
     },
     // Activity
     activity: {
+      hintTrace: "打开这次运行的完整轨迹——从开始到结束的每一步、词元用量和费用。",
       title: "AI 活动",
       runStatus: {
         running: "运行中",
