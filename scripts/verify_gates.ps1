@@ -93,6 +93,10 @@ $tests = @(
   "ai-service/tests/test_the_stack_has_no_clash_proxy_dependency.py"
 )
 
+Write-Host "== verify_gates: no host agent binds a Clash proxy port =="
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "scan-agent-proxy.ps1")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "== verify_gates: representative offline contract gates =="
 & $py -m pytest @tests -q --tb=short
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

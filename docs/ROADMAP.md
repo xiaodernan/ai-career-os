@@ -8500,6 +8500,22 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **441** Audited every local agent for Clash port bindings — all clean (2026-11-24).
+
+  Brief: the owner asked whether other agent software on the host (WorkBuddy, Trae,
+  Cursor, OpenCode, Claude) also had a Clash port bound, and to remove them all. A
+  full recursive scan of every agent config root found **zero real bindings**:
+  WorkBuddy's `settings.json` / `models.json` / `app-config.json` / `mcp-tool-list.json`,
+  Trae's and Cursor's `settings.json`, and OpenCode's config carry no `7897`/`7898`,
+  no mixed/socks port and no proxy env var. Every apparent hit was a false positive:
+  epoch timestamps (`1795357897940` contains "7897"), V8 bytecode checksums in
+  CodeCache files (`78970`, `47898`), a metrics handle (`...438767898`), and one npm
+  proxy library. No User/Machine proxy env var exists, and no proxy port is listening.
+  Added `scripts/scan-agent-proxy.ps1` — a read-only, repeatable audit that excludes
+  caches/history/logs from the verdict so a digit run in a timestamp can never again
+  be mistaken for a binding. Nothing needed unbinding; the earlier host unbind
+  (Epic 434) and stack unbind (Epic 433) already cover the real surfaces.
+
 - [x] **440** Admin: a landing-without-action measure from the real attention ledger (Block IX) (2026-11-24).
 
   Brief: the operator's local analyst already turned bounces, aimless clicks and search
