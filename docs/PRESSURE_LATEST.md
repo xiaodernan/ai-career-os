@@ -220,3 +220,20 @@ genuine measurements above (7,810 load-probe requests, 11,052 stuffing requests,
 To re-measure for real, launch the probe from a normal shell (Win+R → cmd) or
 the self-hosted runner, NOT from the harness tool shell.
 
+## In-process concurrency (Epic 439, 2026-11-24) — measurable without a socket
+
+`backend/src/test/java/com/careeros/ratelimit/RedisSlidingWindowConcurrencyTest.java`
+hammers the limiter's admission path with 200 callers released together through a
+16-thread pool. The fake template models the shipped Lua script atomically (one lock,
+unique members, trim/count/add), so the result describes the algorithm rather than
+the sandbox:
+
+| Scenario | Callers | Ceiling | Admitted | Result |
+|---|---|---|---|---|
+| simultaneous burst | 200 | 25 / minute | 25 exactly | pass |
+| clock advanced 2 minutes | 1 extra | 25 / minute | admitted | pass |
+
+This is a unit-level stress gate, not a replacement for the stack-level numbers
+above — it proves the admission ceiling holds under contention, not that the
+deployment survives a flood. No Redis, no Docker, no LLM.
+

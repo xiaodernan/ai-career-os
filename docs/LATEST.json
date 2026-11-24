@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T07:53:08.815212Z",
+  "generated_at": "2026-11-24T07:57:20.526911Z",
   "branch": "main",
-  "head": "ffc8554",
-  "total_commits": 1904,
-  "milestone": "Epic 438",
-  "milestone_full": "the ledger of done epics (through 591 items), closed at Epic 438 — An atlas of the search",
+  "head": "42939c2",
+  "total_commits": 1905,
+  "milestone": "Epic 439",
+  "milestone_full": "the ledger of done epics (through 592 items), closed at Epic 439 — In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24)",
   "pushed_at": "2026-11-24",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1889+",
   "test_files": 243,
-  "work_items": 591,
-  "epics": 304,
+  "work_items": 592,
+  "epics": 305,
   "feature_surface": [
+    "Epic 439 — In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24)",
     "Epic 438 — An atlas of the search",
     "Epic 437 — Reconciled four stale source-census ledgers (2026-11-24)",
     "Epic 436 — Per-service identity proof on the internal hop (Block III) (2026-11-24)",
     "Epic 435 — Closed the last zero-teaching gaps on the main screens (2026-11-24)",
-    "Epic 434 — A one-command unbind for the host, not just the stack (2026-11-24)",
-    "Epic 433 — Unbound from Clash Verge"
+    "Epic 434 — A one-command unbind for the host, not just the stack (2026-11-24)"
   ]
 }

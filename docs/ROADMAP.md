@@ -8500,6 +8500,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **439** In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24).
+
+  Brief: the harness sandbox blocks loopback HTTP, so a stack-level siege launched from
+  this session measures 100% refused connections and cannot say anything about the
+  limiter. Added `RedisSlidingWindowConcurrencyTest`: two hundred callers released by a
+  latch through sixteen threads, with a fake template whose `execute()` is atomic in the
+  same way the shipped Lua script is (one lock over trim/count/add/expiry, unique ZSET
+  members). The ceiling admits exactly 25 — no more (the replica race the script closes)
+  and no fewer (a limiter that refuses everyone is broken). A second test advances the
+  fake clock past the window and confirms the seats free up. A source pin keeps the fake
+  honest if the script's operations change. No Redis, no Docker, no model: 3/3 green.
+
 - [x] **438** An atlas of the search — a deterministic world map over real rows (Block VI) (2026-11-24).
 
   Brief: the timeline is a ledger and the chronicle is a story, but neither gives a
