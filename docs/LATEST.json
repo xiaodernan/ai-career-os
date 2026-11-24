@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T11:10:52.334579Z",
+  "generated_at": "2026-11-24T11:32:48.468958Z",
   "branch": "main",
-  "head": "d2d6213",
-  "total_commits": 1910,
+  "head": "f3e6978",
+  "total_commits": 1911,
   "milestone": "Epic 441",
   "milestone_full": "the ledger of done epics (through 594 items), closed at Epic 441 — Audited every local agent for Clash port bindings",
   "pushed_at": "2026-11-24",
