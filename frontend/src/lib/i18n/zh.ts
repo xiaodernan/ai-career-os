@@ -1730,6 +1730,16 @@ export const zh = {
       exportAnonymized: "匿名导出",
       downloadJson: "下载 JSON",
       downloadMarkdown: "下载 Markdown",
+      atlasTitle: "这次求职的地图",
+      atlasDescription:
+        "由你导出文件中的行数据绘出的七片疆域。寂静的疆域依然在图上，只是暂时还没有内容。",
+      atlasDraw: "绘制地图",
+      atlasDrawing: "绘制中…",
+      atlasTotal: "整张地图共 {count} 条证据",
+      atlasUnexplored: "尚未探索",
+      atlasHint:
+        "统计当前导出中的每一行，包括空白疆域；它不改动任何数据，也不会读取新的内容。",
+
       contentHash: "内容哈希",
       generated: "生成时间",
       redactBeforeSharing: "分享前删减",
@@ -5065,6 +5075,7 @@ export const zh = {
       resumeImpression: "没能为你读出这份简历。",
       careerNarrative: "没能讲出这段求职经历。",
       careerChronicle: "没能写出这段求职的编年史。",
+      searchAtlas: "没能绘出这次求职的地图。",
       nextStep: "没能读到助手需要的那一周。",
       replyDecode: "没能读这封信。",
       roleReadiness: "没能读到那个岗位的就绪度。",

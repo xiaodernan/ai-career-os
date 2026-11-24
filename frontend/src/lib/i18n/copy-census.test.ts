@@ -190,7 +190,9 @@ describe("the browser's copy", () => {
     // 237 with Epic 385: components/interviews/answer-echo-card.tsx.
     // 238 with Epic 386: app/(app)/calendar/page.tsx.
     // 239 with Epic 423: components/playbook/new-instruments-card.tsx.
-    expect(browserSources().length).toBe(239);
+    // 240 with Epic 438: components/data/search-atlas-card.tsx — the atlas's
+    // browser door, mounted on the existing data page (no new route or nav item).
+    expect(browserSources().length).toBe(240);
   });
 
   it("finds a sentence, however long it is", () => {

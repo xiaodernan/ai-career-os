@@ -1163,9 +1163,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # the coalescing replacement is a `ProbeSet` class (a latch and a mutable answer is not a
     # record), so the census loses the pair it gained at 228 rather than renaming it.
     # Epic 436 adds `ServiceIdentitySigner.Headers`, the triple of signed identity
-    # headers stamped on both internal hops — one more record the shared opener reads.
-    assert len(declared) == 256, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 256 measured"
+    # headers stamped on both internal hops; Epic 442 adds `TimelineController.AtlasRequest`,
+    # the body of the new atlas door — two more records the shared opener reads.
+    assert len(declared) == 257, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 257 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)

@@ -1854,6 +1854,15 @@ export const en = {
       exportAnonymized: "Export anonymized",
       downloadJson: "Download JSON",
       downloadMarkdown: "Download Markdown",
+      atlasTitle: "The map of this search",
+      atlasDescription:
+        "Seven territories drawn from the rows in your export. A quiet region is still on the map — it simply has nothing in it yet.",
+      atlasDraw: "Draw the map",
+      atlasDrawing: "Drawing…",
+      atlasTotal: "{count} pieces of evidence across the whole map",
+      atlasUnexplored: "Unexplored",
+      atlasHint:
+        "Counts every row in your current export, including empty territories; it changes nothing and reads nothing new.",
       contentHash: "Content hash",
       generated: "Generated",
       redactBeforeSharing: "Redact before sharing",
@@ -5426,6 +5435,7 @@ export const en = {
       resumeImpression: "Couldn't read this resume back to you.",
       careerNarrative: "Couldn't tell the story of this search.",
       careerChronicle: "Couldn't write the chronicle of this search.",
+      searchAtlas: "Couldn't draw the map of this search.",
       nextStep: "Couldn't read your week for the assistant.",
       replyDecode: "Couldn't read that letter.",
       roleReadiness: "Couldn't read that role's readiness.",

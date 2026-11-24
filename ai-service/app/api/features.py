@@ -50,6 +50,7 @@ from app.features import analytics as analytics_mod
 from app.features import career_timeline as career_timeline_mod
 from app.features import career_narrative as career_narrative_mod
 from app.features import career_chronicle as career_chronicle_mod
+from app.features import search_atlas as search_atlas_mod
 from app.features import ingestion as ingestion_mod
 from app.features import monitoring as monitoring_mod
 from app.features import import_plan as import_plan_mod
@@ -1334,6 +1335,29 @@ async def career_chronicle_ep(req: CareerChronicleReq, ctx: Ctx = Depends(requir
     return await career_chronicle_mod.career_chronicle(
         payload, locale=req.locale or "en",
         user_id=str(ctx.user_id) if ctx.user_id else None)
+
+
+class SearchAtlasReq(BaseModel):
+    """Epic 438 — the seven row lists the data page already holds in its export
+    bundle. All optional: a missing section is an unexplored region, not an error.
+    """
+    applications: list[dict] | None = None
+    jobs: list[dict] | None = None
+    interviews: list[dict] | None = None
+    letters: list[dict] | None = None
+    notes: list[dict] | None = None
+    contacts: list[dict] | None = None
+    offers: list[dict] | None = None
+    locale: str | None = None
+
+
+@router.post("/search-atlas")
+async def search_atlas_ep(req: SearchAtlasReq, ctx: Ctx = Depends(require_internal)):
+    """Epic 438 — a map over the rows the caller already holds. No run/usage row:
+    a pure read, like /health-report and /career-chronicle. Nothing inferred.
+    """
+    payload = {k: v for k, v in req.model_dump(exclude_none=True).items() if k != "locale"}
+    return search_atlas_mod.search_atlas(payload, locale=req.locale or "en")
 
 
 class ClassifyReplyReq(BaseModel):

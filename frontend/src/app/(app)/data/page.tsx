@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Download, FileJson, FileText, Shield, Upload } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { BundleFacts } from "@/components/data/bundle-facts";
+import { SearchAtlasCard } from "@/components/data/search-atlas-card";
 import { PocketCard } from "@/components/data/pocket-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -286,6 +287,9 @@ export default function DataPortabilityPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* A map drawn from the bundle above — Epic 438. No new read, no model. */}
+      {bundle && <SearchAtlasCard bundle={bundle} />}
 
       {/* The pocket: the server cannot see what the browser kept — Epic 223 */}
       <PocketCard />

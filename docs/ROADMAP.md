@@ -8500,6 +8500,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **442** The atlas gains a real UI door on the data page (Block VI) (2026-11-24).
+
+  Brief: Epic 438's engine was a forward surface — correct, tested, but reachable by no
+  reader. Added the smallest full chain: `POST /internal/features/search-atlas` (all
+  seven row lists optional, no run/usage row) → a thin `searchAtlas` method on
+  `HttpAiServiceClient` → `POST /api/v1/timeline/atlas` on `TimelineController` → a
+  `useSearchAtlas` mutation → a `SearchAtlasCard` mounted on the existing `/data` page.
+  The card builds its payload from the export bundle the page already holds — no new
+  DB read, no re-counting, no model. It deliberately does not add a route, nav item
+  or locale page block: only one census pin moved (browser `.tsx` 239 → 240). The
+  internal doc row describes the answer in words rather than an arrow so the doc's
+  response-claim positive control stays honest. Verified: 53 ai-service contract
+  gates + 638 offline gates + 54 targeted frontend + Java 28/28 all green.
+
 - [x] **441** Audited every local agent for Clash port bindings — all clean (2026-11-24).
 
   Brief: the owner asked whether other agent software on the host (WorkBuddy, Trae,

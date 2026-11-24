@@ -79,4 +79,38 @@ public class TimelineController {
     public record ChronicleRequest(List<Map<String, Object>> events,
                                    Map<String, Object> milestones, String locale) {
     }
+
+    /**
+     * Epic 438 — a deterministic map of the search, drawn from the seven row lists the
+     * data page already holds in its export bundle. No new read, no model, no inference:
+     * the engine counts only the rows this request carries.
+     */
+    @PostMapping("/api/v1/timeline/atlas")
+    public Map<String, Object> atlas(@CurrentUser AuthUser user,
+                                     @RequestBody(required = false) AtlasRequest request) {
+        if (request == null) {
+            return Map.of();
+        }
+        Map<String, Object> rows = new java.util.LinkedHashMap<>();
+        if (request.applications() != null) rows.put("applications", request.applications());
+        if (request.jobs() != null) rows.put("jobs", request.jobs());
+        if (request.interviews() != null) rows.put("interviews", request.interviews());
+        if (request.letters() != null) rows.put("letters", request.letters());
+        if (request.notes() != null) rows.put("notes", request.notes());
+        if (request.contacts() != null) rows.put("contacts", request.contacts());
+        if (request.offers() != null) rows.put("offers", request.offers());
+        Map<String, Object> out = ai.searchAtlas(user.id(), rows, request.locale());
+        return out == null ? Map.of() : out;
+    }
+
+    /** Epic 438 — body of the atlas: the caller's own row lists, already on the data page. */
+    public record AtlasRequest(List<Map<String, Object>> applications,
+                               List<Map<String, Object>> jobs,
+                               List<Map<String, Object>> interviews,
+                               List<Map<String, Object>> letters,
+                               List<Map<String, Object>> notes,
+                               List<Map<String, Object>> contacts,
+                               List<Map<String, Object>> offers,
+                               String locale) {
+    }
 }

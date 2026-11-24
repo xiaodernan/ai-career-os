@@ -980,6 +980,27 @@ public class HttpAiServiceClient implements AiServiceClient {
     }
 
     @Override
+    public Map<String, Object> searchAtlas(UUID userId, Map<String, Object> rows, String locale) {
+        // Literal keys on purpose: the source gate reads each literal body key and
+        // checks it against the Pydantic model. A caller-owned list is sent verbatim,
+        // never re-derived — re-counting here would be a second, false answer.
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (rows != null) {
+            if (rows.containsKey("applications")) body.put("applications", rows.get("applications"));
+            if (rows.containsKey("jobs")) body.put("jobs", rows.get("jobs"));
+            if (rows.containsKey("interviews")) body.put("interviews", rows.get("interviews"));
+            if (rows.containsKey("letters")) body.put("letters", rows.get("letters"));
+            if (rows.containsKey("notes")) body.put("notes", rows.get("notes"));
+            if (rows.containsKey("contacts")) body.put("contacts", rows.get("contacts"));
+            if (rows.containsKey("offers")) body.put("offers", rows.get("offers"));
+        }
+        if (locale != null && !locale.isBlank()) {
+            body.put("locale", locale);
+        }
+        return post("/internal/features/search-atlas", userId, body);
+    }
+
+    @Override
     public Map<String, Object> pipelineFunnel(UUID userId, List<Map<String, Object>> applications) {
         return post("/internal/features/pipeline-funnel", userId, Map.of("applications", applications));
     }

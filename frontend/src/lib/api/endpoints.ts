@@ -156,6 +156,8 @@ export const endpoints = {
   timelineNarrative: "/timeline/narrative",
   /** A grounded, chaptered epic over the reader's own search, unlocked by milestones. */
   timelineChronicle: "/timeline/chronicle",
+  /** Epic 438: a deterministic map over the row lists the data page already holds. */
+  timelineAtlas: "/timeline/atlas",
 
   /* ---------------- Activity / reports / search / chat history ----------- */
   activityRuns: "/activity/runs",

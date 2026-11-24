@@ -4,7 +4,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { fail } from "@/lib/hooks/failure";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { list, str } from "@/lib/api/normalize";
-import type { CareerChronicle, TimelineEntry } from "@/lib/api/types";
+import type { CareerChronicle, SearchAtlas, TimelineEntry } from "@/lib/api/types";
 
 /**
  * The timeline the loop already wrote (Epic 81): one ordered list of the dated
@@ -60,6 +60,29 @@ export function useCareerChronicle() {
         locale,
       })) ?? {},
     onError: fail("failures.careerChronicle"),
+  });
+}
+
+/**
+ * Epic 438 — send the seven row lists the data page already holds in its export
+ * bundle; no new DB read, no model. The engine counts them verbatim and draws
+ * every region, including the ones with nothing in them.
+ */
+export function useSearchAtlas() {
+  const { locale } = useLocale();
+  return useMutation({
+    mutationFn: async (rows: Record<string, unknown>): Promise<SearchAtlas> =>
+      (await api.create<SearchAtlas>(endpoints.timelineAtlas, {
+        applications: rows.applications ?? [],
+        jobs: rows.jobs ?? [],
+        interviews: rows.interviews ?? [],
+        letters: rows.letters ?? [],
+        notes: rows.notes ?? [],
+        contacts: rows.contacts ?? [],
+        offers: rows.offers ?? [],
+        locale,
+      })) ?? {},
+    onError: fail("failures.searchAtlas"),
   });
 }
 

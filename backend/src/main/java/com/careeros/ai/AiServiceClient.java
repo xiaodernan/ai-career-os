@@ -517,6 +517,14 @@ public interface AiServiceClient {
     }
 
     /**
+     * Epic 438 — a deterministic map over the seven row lists the data page already
+     * holds in its export bundle. Pure read: no run/usage row, no model, no new DB read.
+     */
+    default Map<String, Object> searchAtlas(UUID userId, Map<String, Object> rows, String locale) {
+        return Map.of();
+    }
+
+    /**
      * 15.1 — the pipeline funnel: how many applications reached each stage, and
      * where the leak is.
      */

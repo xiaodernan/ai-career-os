@@ -1947,6 +1947,26 @@ export interface CareerChronicle {
 }
 
 /* ------------------------------------------------------------------ */
+/* Search atlas (Epic 438)                                             */
+/* ------------------------------------------------------------------ */
+
+/** One region of the map: its own row count, never a guess or a demo number. */
+export interface AtlasRegion {
+  id: string;
+  title: string;
+  count: number;
+  explored: boolean;
+  note: string;
+}
+
+/** The engine's answer: every region drawn, even the quiet ones. */
+export interface SearchAtlas {
+  regions?: AtlasRegion[];
+  total_evidence?: number;
+  locale?: string;
+}
+
+/* ------------------------------------------------------------------ */
 /* Growth report                                                       */
 /* ------------------------------------------------------------------ */
 
