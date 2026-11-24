@@ -186,6 +186,10 @@ public class AppProperties {
 
     public static class Internal {
         private String token;
+        // Epic 436: a separate, opt-in key proves *which service* made the call.
+        // Blank (the default) leaves the legacy shared-token behaviour untouched.
+        private String signingKey = "";
+        private String serviceId = "career-os-backend";
 
         public String getToken() {
             return token;
@@ -193,6 +197,22 @@ public class AppProperties {
 
         public void setToken(String token) {
             this.token = token;
+        }
+
+        public String getSigningKey() {
+            return signingKey;
+        }
+
+        public void setSigningKey(String signingKey) {
+            this.signingKey = signingKey;
+        }
+
+        public String getServiceId() {
+            return serviceId;
+        }
+
+        public void setServiceId(String serviceId) {
+            this.serviceId = serviceId;
         }
     }
 

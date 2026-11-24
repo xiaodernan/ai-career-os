@@ -123,6 +123,27 @@ ai-service is internal-only and gated by `core/deps.require_internal`:
   reverse (`ai-service → backend`, e.g. `/api/internal/*` callbacks) is guarded by
   `auth/security/InternalApiFilter` on the backend side.
 
+### Per-service identity proof (Epic 436, opt-in)
+
+A leaked shared token used to be enough to impersonate any `X-User-Id` on any internal
+route, because the token never expired and said nothing about *which service* called.
+When `INTERNAL_SERVICE_SIGNING_KEY` is set to the same long random value on both sides,
+every backend→ai-service call also carries:
+
+| Header | Meaning |
+|---|---|
+| `X-Service-Id` | the calling service's id (`INTERNAL_SERVICE_ID`, default `career-os-backend`) |
+| `X-Service-Timestamp` | epoch milliseconds when the proof was minted |
+| `X-Service-Signature` | hex HMAC-SHA256 over `{timestamp}\n{METHOD}\n{path}\n{X-User-Id}` |
+
+The verifier is in `require_internal`, so all ~50 internal routes are covered by one
+check; it rejects a missing, foreign, stale (>5 minutes) or tampered proof with `401`.
+The key is separate from `INTERNAL_API_TOKEN`, so a leaked token alone cannot mint a
+proof, and a captured proof cannot be replayed on another route or user. With the key
+blank (the default) behaviour is unchanged — dev and offline gates need no secret.
+The anonymous `/health` probe deliberately carries no identity. This is an
+application-layer client identity, not a TLS client-certificate exchange.
+
 ## Data isolation
 
 Retrieval, matching, resume tools and every RAG query filter by the caller's

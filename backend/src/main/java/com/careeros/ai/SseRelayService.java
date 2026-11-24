@@ -111,6 +111,20 @@ public class SseRelayService {
                 .header("X-User-Id", userId.toString())
                 .header("Accept", "text/event-stream")
                 .GET();
+        // Epic 436: this is the one hop that does not go through the RestClient
+        // interceptor, so it has to stamp the same signed identity itself.
+        ServiceIdentitySigner.Headers identity = ServiceIdentitySigner.forRequest(
+                props.getInternal().getSigningKey(),
+                props.getInternal().getServiceId(),
+                "GET",
+                "/internal/stream/" + taskId,
+                userId.toString(),
+                java.time.Clock.systemUTC());
+        if (identity != null) {
+            upstream.header(ServiceIdentitySigner.HEADER_ID, identity.id());
+            upstream.header(ServiceIdentitySigner.HEADER_TIMESTAMP, identity.timestamp());
+            upstream.header(ServiceIdentitySigner.HEADER_SIGNATURE, identity.signature());
+        }
         String requestId = RequestIdFilter.currentId();
         if (requestId != null) {
             upstream.header(RequestIdFilter.HEADER, requestId);

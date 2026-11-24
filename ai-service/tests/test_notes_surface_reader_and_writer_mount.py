@@ -160,6 +160,8 @@ PATH_COINCIDENCES: dict[str, str] = {
         "names the panel's path as the caller of a page-window read",
     "frontend/src/app/(app)/knowledge/page.tsx":
         'imports the panel: "@/components/knowledge/notes-panel"',
+    "frontend/src/app/(app)/knowledge/page.test.tsx":
+        'mocks the panel: vi.mock("@/components/knowledge/notes-panel") — a path, not a route call',
 }
 
 
@@ -469,9 +471,10 @@ def test_the_files_that_speak_of_the_notes_route() -> None:
     assert not set(SPEAKERS) & set(PATH_COINCIDENCES), (
         f"a file cannot both speak of the route and only carry its characters in a path: "
         f"{sorted(set(SPEAKERS) & set(PATH_COINCIDENCES))}")
-    assert len(PATH_COINCIDENCES) == 4, (
+    assert len(PATH_COINCIDENCES) == 5, (
         f"the panel-path coincidence ledger holds {len(PATH_COINCIDENCES)} files; it exists to prove the "
-        "boundary rule removes exactly the four that name notes-panel.tsx and nothing else")
+        "boundary rule removes exactly the five that name notes-panel.tsx and nothing else — the fifth "
+        "is the knowledge page's own test, which mocks the panel rather than speaking of the route")
     assert 'knowledgeNotes: "%s"' % NOTE_ROUTE in read(ENDPOINTS), \
         "the client's endpoint map no longer spells the route this census searched for, so its hits are not the client's"
 
@@ -492,7 +495,9 @@ def test_the_knowledge_screen_keeps_one_page_hook_and_the_notes_reader_lives_in_
     components = sorted(p.relative_to(ROOT).as_posix() for p in (ROOT / "frontend" / "src" / "components" / "knowledge").rglob("*.tsx")
                         if re.search(r"\bKnowledgeNote\b|endpoints\.knowledgeNotes\b",
                                      p.read_text(encoding="utf-8", errors="replace")))
-    assert components == [NOTES_PANEL], \
+    # The panel's own hint test imports the KnowledgeNote type and renders the
+    # panel, so it names the reader too — it is not a second reader of the route.
+    assert components == ["frontend/src/components/knowledge/hints.test.tsx", NOTES_PANEL], \
         f"the notes reader moved or gained a sibling knowledge component: {components}"
 
 

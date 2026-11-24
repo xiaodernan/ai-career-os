@@ -192,6 +192,9 @@ CALLERS = {
     "useKnowledgeNotes": ["app/(app)/calendar/page.test.tsx", "app/(app)/calendar/page.tsx",
                           "app/(app)/ceremony/page.test.tsx", "app/(app)/ceremony/page.tsx",
                           "app/(app)/timeline/page.test.tsx",
+                          # The panel's hint test mocks this hook to render the panel;
+                          # it names the hook without mounting a second screen.
+                          "components/knowledge/hints.test.tsx",
                           "components/knowledge/notes-panel.tsx",
                           "components/timeline/time-capsule-card.test.tsx",
                           "components/timeline/time-capsule-card.tsx"],

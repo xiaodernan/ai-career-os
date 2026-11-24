@@ -683,6 +683,9 @@ def test_the_applications_board_asks_for_exactly_the_ceiling_and_pages_the_rest(
                        "app/(app)/knowledge/page.tsx", "app/(app)/networking/page.tsx",
                        "app/(app)/replies/page.tsx",
                        "app/(app)/resumes/page.tsx",
+                       # The shared-hint test quotes "<Pagination" in its source
+                       # walk, so it is a mention, not a board that mounts a pager.
+                       "components/common/teaching-hints.test.tsx",
                        "components/ingestion/scheduled-feeds-panel.tsx",
                        "components/knowledge/notes-panel.tsx",
                        "components/monitoring/nightly-history.tsx"], \

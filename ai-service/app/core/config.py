@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     internal_api_token: str = "shared-secret-between-backend-and-ai-service"
     backend_base_url: str = "http://localhost:8080"
 
+    # Epic 436: opt-in per-service identity proof on the internal door. Blank key
+    # means the legacy shared-token model; when set, every /internal/* route also
+    # requires a signed, time-bound proof of which service called. The key is
+    # deliberately separate from internal_api_token — a leaked shared token must
+    # not be enough to mint a proof.
+    service_signing_key: str = ""
+    internal_client_id: str = "career-os-backend"
+    service_signature_skew_s: int = 300
+
     # LLM
     llm_provider: str = "openai_compat"  # openai_compat | anthropic | ollama | mock
     llm_model: str = "gpt-4o-mini"

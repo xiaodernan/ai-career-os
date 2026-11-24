@@ -1162,8 +1162,10 @@ def test_the_java_probe_reads_every_record_the_backend_declares():
     # 255 with Epic 415: `CachedReport` left with the two-second burst cache it existed for, and
     # the coalescing replacement is a `ProbeSet` class (a latch and a mutable answer is not a
     # record), so the census loses the pair it gained at 228 rather than renaming it.
-    assert len(declared) == 255, \
-        f"{len(declared)} records carry a declaration the shared opener reads, not the 255 measured"
+    # Epic 436 adds `ServiceIdentitySigner.Headers`, the triple of signed identity
+    # headers stamped on both internal hops — one more record the shared opener reads.
+    assert len(declared) == 256, \
+        f"{len(declared)} records carry a declaration the shared opener reads, not the 256 measured"
     problems, renamed = [], []
     for relative, record in declared:
         names = _record_components_at(relative, record)
@@ -3292,9 +3294,10 @@ def test_the_heartbeat_interval_has_one_definer_and_every_shipped_claim_names_it
         "twelve Java files behind those seventeen mentions are the other clocks that share the "
         "word, kept here so a thirteenth clock is a red, not a silent join")
     assert [(row["file"], row["line"]) for row in spans["trailing"]] == [
-        # 86.1's door walk grew `consume` by the retry loop, so the parser's trailing
-        # comment moved 136 -> 155; the sentence itself did not change.
-        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 155),
+        # 86.1's door walk grew `consume` by the retry loop (136 -> 155); Epic 436's
+        # signed identity stamping grew `open` by fourteen lines (155 -> 169). The
+        # sentence itself did not change — only its address in the file did.
+        ("backend/src/main/java/com/careeros/ai/SseRelayService.java", 169),
         ("frontend/src/lib/sse/use-sse.ts", 253),
     ], ("the other spelling -- a comment after code, which a span scan cannot see -- and neither states "
         "an interval: both say a line beginning with `:` is a keep-alive the parser skips, so the "
@@ -3565,9 +3568,11 @@ def test_both_frame_parsers_default_a_nameless_frame_to_the_same_event_name():
          "name -- the relay forwards to the browser, so a default that differs on one side is a frame "
          "that reaches the client as an event its router has never heard of")
     assert [(row["file"], row["line"], row["language"], row["default"]) for row in rows] == [
-        # Both Java sites moved with 86.1's door walk: 129 -> 148 and 149 -> 168.
-        ("SseRelayService.java", 148, "java", "message"),
-        ("SseRelayService.java", 168, "java", "message"),
+        # Both Java sites moved with 86.1's door walk (129 -> 148, 149 -> 168), then
+        # Epic 436's signed identity stamping in `open` shifted them +14. The two
+        # defaults themselves are unchanged; only their addresses in the file moved.
+        ("SseRelayService.java", 162, "java", "message"),
+        ("SseRelayService.java", 182, "java", "message"),
         ("use-sse.ts", 250, "ts", "message"),
     ], ("where each parser invents the name: the Java pair is the in-stream frame and the stream's tail, "
         "and losing either half means one of the two exit paths stops defaulting")

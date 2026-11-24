@@ -79,6 +79,21 @@ unset keeps dev behavior. `ConfigServerTokenGateTest` proves refusal, admission,
 and anonymous health probe (suite 9/9 green). Honest scope: a single opaque shared token (sufficient
 for a single-node native server), not mTLS; mTLS and per-service client identity remain next-horizon.
 
+### Epic 436 — per-service identity proof on the internal hop **DONE (2026-11-24)**
+
+The backend→ai-service door now has an opt-in, mTLS-shaped client identity carried in headers:
+`X-Service-Id`, `X-Service-Timestamp`, `X-Service-Signature`. The HMAC-SHA256 covers
+`timestamp \n METHOD \n path \n X-User-Id`, with a 5-minute skew window, verified in the
+single `require_internal` dependency that all ~50 internal routes share. The key is separate
+from the shared `INTERNAL_API_TOKEN`, so a leaked token alone cannot mint a proof, and a
+captured proof cannot be replayed on another route, user or after five minutes. Blank key
+keeps the legacy behaviour byte-for-byte. The signed canonical string is pinned by a fixed
+cross-language vector in both `ServiceIdentitySignerTest.java` and
+`test_service_identity_proof.py`, so the Java signer and Python verifier cannot drift apart
+without a red gate. Both the RestClient interceptor and the SSE relay stamp it; the anonymous
+health probe deliberately does not. Full TLS client certificates remain a deployment-level
+step — this is application-layer proof, not a certificate exchange.
+
 ## Epic 165 — the dev edge and its registry tell the same story, gated (2026-11-13)
 
 The dev `docker-compose.yml` forced the gateway onto the `eureka` profile to match

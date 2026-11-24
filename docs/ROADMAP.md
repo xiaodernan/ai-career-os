@@ -8500,6 +8500,35 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **437** Reconciled four stale source-census ledgers (2026-11-24).
+
+  Brief: the full offline pytest run (3,075 cases) found six red gates. Two were the
+  `app.*` configuration census, which pins the leaf set (40 → 42), the field count
+  (29 → 31) and the interpolated/literal split (37/3 → 39/3) — all moved by Epic 436's
+  two opt-in identity knobs, now each with a binder and a measured reader. The other
+  four were older ledgers that never counted the hint tests added in the 425–432
+  rollout: `components/knowledge/hints.test.tsx` mocks `useKnowledgeNotes` and renders
+  the panel, and `components/common/teaching-hints.test.tsx` quotes `<Pagination` in a
+  source-string assertion. A gate that walks source text counts those as carriers and
+  speakers; the ledgers now name them with the reason instead of letting a new test
+  turn a green suite red. The panel-path coincidence ledger grew 4 → 5 for the
+  knowledge page's own test (it mocks the panel, it does not call the route).
+  Verified: the four affected gates 37/37 green; full suite re-run below.
+
+- [x] **436** Per-service identity proof on the internal hop (Block III) (2026-11-24).
+
+  Brief: the ~50 `/internal/*` routes were guarded by one static bearer token whose dev
+  literal is published in `.env.example` and source. Anyone holding it could forge any
+  `X-User-Id` and read or write any tenant's rows, and nothing said *which service* called
+  or expired. Added an opt-in HMAC proof (`X-Service-Id` / `-Timestamp` / `-Signature`)
+  over `timestamp \n METHOD \n path \n X-User-Id`, with a 5-minute skew window and a
+  signing key deliberately separate from the shared token. Stamped at the one RestClient
+  interceptor and the one SSE relay; the anonymous health probe stays unsigned. Verified in
+  `require_internal`, so every internal route is covered at once. A fixed cross-language
+  vector pins the canonical string in Java and Python, so the two halves cannot drift.
+  Blank key = legacy behaviour, so dev/offline gates are unchanged. Offline-only: no
+  model call, no DB, no Docker network. Gates registered in both verify_gates registries.
+
 - [x] **435** Closed the last zero-teaching gaps on the main screens (2026-11-24).
 
   Brief: an audit of reader-facing pages found one genuine front-door hole — the

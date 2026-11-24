@@ -153,6 +153,10 @@ app:
     refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:30}
   internal:
     token: ${INTERNAL_API_TOKEN:shared-secret-between-backend-and-ai-service}
+    # Epic 436: opt-in per-service identity proof. Blank by default — the AI side
+    # verifies only when its own signing key is set too, so dev/offline is unchanged.
+    service-id: ${INTERNAL_SERVICE_ID:career-os-backend}
+    signing-key: ${INTERNAL_SERVICE_SIGNING_KEY:}
   storage:
     endpoint: ${MINIO_ENDPOINT:http://localhost:19000}
     # The shipped secret is published, so a prod boot refuses it; the shipped user

@@ -58,6 +58,9 @@ public class HttpAiServiceClient implements AiServiceClient {
 
     private final RestClient restClient;
     private final String internalToken;
+    // Epic 436: opt-in signed service identity on the same hop. Blank key = legacy.
+    private final String serviceSigningKey;
+    private final String serviceId;
     private final HttpClient healthClient;
     private final AiServiceCircuitBreaker guard;
     private final AiServiceRouter router;
@@ -76,6 +79,8 @@ public class HttpAiServiceClient implements AiServiceClient {
         this.router = router;
         this.discovery = discovery;
         this.internalToken = props.getInternal().getToken();
+        this.serviceSigningKey = props.getInternal().getSigningKey();
+        this.serviceId = props.getInternal().getServiceId();
         this.healthClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(HEALTH_TIMEOUT)
@@ -117,6 +122,21 @@ public class HttpAiServiceClient implements AiServiceClient {
                     Long deadline = DeadlineFilter.current();
                     if (deadline != null) {
                         request.getHeaders().set(DeadlineFilter.HEADER, String.valueOf(deadline));
+                    }
+                    // Epic 436: prove which service called, bound to this method, path and
+                    // user. Signed here — the single choke point for every RestClient call —
+                    // so no call site can forget it, and never on the anonymous health probe.
+                    ServiceIdentitySigner.Headers identity = ServiceIdentitySigner.forRequest(
+                            serviceSigningKey,
+                            serviceId,
+                            request.getMethod().name(),
+                            request.getURI().getRawPath(),
+                            request.getHeaders().getFirst("X-User-Id"),
+                            java.time.Clock.systemUTC());
+                    if (identity != null) {
+                        request.getHeaders().set(ServiceIdentitySigner.HEADER_ID, identity.id());
+                        request.getHeaders().set(ServiceIdentitySigner.HEADER_TIMESTAMP, identity.timestamp());
+                        request.getHeaders().set(ServiceIdentitySigner.HEADER_SIGNATURE, identity.signature());
                     }
                     return execution.execute(request, body);
                 })

@@ -88,7 +88,9 @@ FE_COPY = ROOT / "frontend" / "src" / "lib" / "i18n" / "en.ts"
 
 APP_LEAVES = frozenset({
     "cors.allowed-origins", "web.base-url", "jwt.secret", "jwt.access-ttl-minutes", "jwt.refresh-ttl-days",
-    "internal.token", "storage.endpoint", "storage.access-key", "storage.secret-key", "storage.bucket",
+    # Epic 436 adds the two opt-in service-identity knobs beside the shared token.
+    "internal.token", "internal.signing-key", "internal.service-id",
+    "storage.endpoint", "storage.access-key", "storage.secret-key", "storage.bucket",
     "ai-service.base-url", "ai-service.instances",
     "ratelimit.enabled", "ratelimit.auth-per-minute", "ratelimit.ai-per-minute",
     "ratelimit.mail-per-minute",
@@ -129,6 +131,12 @@ READERS = {
     "internal.token": ("Internal", "token", "getToken",
                        ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java", "auth/security/InternalApiFilter.java",
                         "config/ProductionGuard.java")),
+    # Epic 436: the signed identity is stamped at the two internal hops — the
+    # RestClient interceptor (read in the constructor) and the SSE relay.
+    "internal.signing-key": ("Internal", "signingKey", "getSigningKey",
+                             ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java")),
+    "internal.service-id": ("Internal", "serviceId", "getServiceId",
+                            ("ai/HttpAiServiceClient.java", "ai/SseRelayService.java")),
     # Since 39.3 the boot line names the object store's host and bucket: it reads the
     # endpoint to keep the host and drops the rest of the URL. The store still signs
     # against the whole thing, so the two readers are one decision each.
@@ -485,7 +493,7 @@ def test_the_app_block_writes_forty_leaves_and_each_binds_by_one_of_three_mechan
         f"the `app:` block parsed to {len(leaves)} leaves, below the 15 the shipped file writes -- the parser "
         f"stopped following the indentation, so every number below is a reading of nothing")
     assert frozenset(leaves) == APP_LEAVES, (
-        f"`app:`'s leaves are not the forty pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
+        f"`app:`'s leaves are not the forty-two pinned here: extra={sorted(frozenset(leaves) - APP_LEAVES)} "
         f"missing={sorted(APP_LEAVES - frozenset(leaves))} -- a new key needs a binder and a reader before it "
         f"is a configuration rather than a comment")
 
@@ -499,8 +507,8 @@ def test_the_app_block_writes_forty_leaves_and_each_binds_by_one_of_three_mechan
         f"{sorted(holders)} -- the leaf walk follows the declarations and the key derivation follows the "
         f"fields, so a name in only one list is a holder the census reads but the walk never fills, or one "
         f"the walk fills but nothing can name its keys")
-    assert len(fields) == 29, (
-        f"AppProperties declares {len(fields)} leaf fields, want the 29 whose readers are censused here -- the "
+    assert len(fields) == 31, (
+        f"AppProperties declares {len(fields)} leaf fields, want the 31 whose readers are censused here -- the "
         f"population moved, so 'every field has a reader or a ledger entry' is a claim about a different file")
 
     values, conds = value_bindings(), conditions()
@@ -774,8 +782,8 @@ def test_thirty_seven_leaves_reach_the_environment_and_the_three_that_do_not_are
     for key, value in leaves.items():
         match = ENV_INTERP.match(value)
         (interpolated if match else literal)[key] = (match["var"] if match else value)
-    assert len(interpolated) == 37 and len(literal) == 3, (
-        f"{len(interpolated)} of the forty leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
+    assert len(interpolated) == 39 and len(literal) == 3, (
+        f"{len(interpolated)} of the forty-two leaves interpolate an `${{ENV}}` and {len(literal)} are literals; "
         f"the split is what makes a knob deployable, so a pair that moved needs this carrier list rewritten")
     assert frozenset(literal) == FILE_ONLY_LEAVES, (
         f"the file-only leaves are {sorted(literal)}: ratelimit.enabled is a shipped default an operator edits in "
