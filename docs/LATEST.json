@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T19:21:35.072843Z",
+  "generated_at": "2026-11-24T19:22:55.968959Z",
   "branch": "main",
-  "head": "419c39e",
-  "total_commits": 1922,
+  "head": "168a820",
+  "total_commits": 1924,
   "milestone": "Epic 447",
   "milestone_full": "the ledger of done epics (through 600 items), closed at Epic 447 — Credential-stuffing burst gate at the auth door (Block XI) (2026-11-25)",
   "pushed_at": "2026-11-25",
