@@ -205,3 +205,18 @@ not an app defect — fixed by reconfiguring stdout/stderr to UTF-8 at import. R
 Every malformed email/password/displayName was refused with a structured envelope;
 the validation and SQL layers never flinched. No LLM, no external API.
 
+## Harness-network caveat (2026-11-24) — read before re-running localhost probes
+
+After this date, outbound HTTP from the AI-harness shell to the host's loopback
+ports (8080/3000) is intercepted by the harness network layer: TCP connects in
+~6ms but ZERO response bytes arrive — curl reports `000`, k6 reports
+`http_req_failed 100%` with `data_received 0 B`. The backend's own logs show it
+answering `GET /api/v1/health 200` to the CI runner at the same moment. So a
+`000`/100%-failed result from a localhost probe launched INSIDE this harness is
+NOT a stack regression and NOT a Clash issue — it is the harness sandbox. The
+genuine measurements above (7,810 load-probe requests, 11,052 stuffing requests,
+69 fuzz payloads) stand; do not replace them with sandbox-poisoned numbers.
+
+To re-measure for real, launch the probe from a normal shell (Win+R → cmd) or
+the self-hosted runner, NOT from the harness tool shell.
+
