@@ -275,7 +275,7 @@ jobs:
         run: .\.venv\Scripts\python.exe -m app.ops.embed_jobs --force
       - name: Build vector index (types column + HNSW)
         id: index
-        run: Get-Content ai-service/ops/vector_index.sql | docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -f -
+        run: Get-Content ai-service/ops/vector_index.sql | docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -v dim=1536 -f -
       - name: Seed the eval corpus
         id: eval-corpus
         working-directory: ai-service
@@ -311,7 +311,26 @@ jobs:
           $startedAt = Get-Content $env:RUNNER_TEMP/night-start.txt
           $commit = "${{ github.sha }}"
           $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          .\.venv\Scripts\python.exe -m app.ops.nightly_report --started-at "$startedAt" --commit "$commit" --run-url "$runUrl" --eval-report-dir evals/reports --step "infra=${{ steps.infra.outcome }}" --step "schema=${{ steps.schema.outcome }}" --step "seed-jobs=${{ steps.seed-jobs.outcome }}" --step "backend-it=${{ steps.backend-it.outcome }}" --step "ai-install=${{ steps.ai-install.outcome }}" --step "vectors=${{ steps.vectors.outcome }}" --step "index=${{ steps.index.outcome }}" --step "eval-corpus=${{ steps.eval-corpus.outcome }}" --step "eval=${{ steps.eval.outcome }}" --step "export=${{ steps.export.outcome }}" --url "$env:OPS_URL" --token "$env:OPS_TOKEN"
+          $reportArgs = @(
+            '--started-at', $startedAt, '--commit', $commit, '--run-url', $runUrl,
+            '--eval-report-dir', 'evals/reports',
+            '--step', 'infra=${{ steps.infra.outcome }}',
+            '--step', 'schema=${{ steps.schema.outcome }}',
+            '--step', 'seed-jobs=${{ steps.seed-jobs.outcome }}',
+            '--step', 'backend-it=${{ steps.backend-it.outcome }}',
+            '--step', 'ai-install=${{ steps.ai-install.outcome }}',
+            '--step', 'vectors=${{ steps.vectors.outcome }}',
+            '--step', 'index=${{ steps.index.outcome }}',
+            '--step', 'eval-corpus=${{ steps.eval-corpus.outcome }}',
+            '--step', 'eval=${{ steps.eval.outcome }}',
+            '--step', 'export=${{ steps.export.outcome }}'
+          )
+          # The recorder treats an absent --url as "build the payload but don't send it".
+          # Passing an empty PowerShell variable used to drop the value and make argparse
+          # fail, so the pair is appended only when the vars/secret are actually set.
+          if ($env:OPS_URL) { $reportArgs += @('--url', $env:OPS_URL) }
+          if ($env:OPS_TOKEN) { $reportArgs += @('--token', $env:OPS_TOKEN) }
+          .\.venv\Scripts\python.exe -m app.ops.nightly_report @reportArgs
       - name: Tear down infra
         if: always()
         run: docker compose down -v

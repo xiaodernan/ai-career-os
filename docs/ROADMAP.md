@@ -8500,6 +8500,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **450** Fixed the nightly job's vector-index and recorder steps (2026-11-25).
+
+  Brief: with the IT flake gone, the nightly run reached two more genuine CI bugs.
+  The vector-index step piped `vector(:dim)` SQL without passing `-v dim`, so psql
+  raised `syntax error at or near ":"`; it now passes `-v dim=1536`, the documented
+  default that matches `EMBEDDING_DIM`. The recorder step passed `--url "$env:OPS_URL"`
+  with an unset repo variable, so PowerShell dropped the value and argparse failed
+  with `expected one argument`; it now builds an argument array and appends the
+  `--url`/`--token` pair only when those values are set (the recorder treats an
+  absent URL as "build the payload, do not send"). Verified YAML and both step
+  bodies through the PowerShell parser — PARSE OK; the nightly backend ITs had
+  already passed 144/144 with Epic 449.
+
 - [x] **449** Made the consumer-group IT assert its real contract (2026-11-25).
 
   Brief: with the PowerShell fix in, the nightly full-stack job reached the backend
