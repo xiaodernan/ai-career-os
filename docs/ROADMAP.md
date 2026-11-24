@@ -8500,6 +8500,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **452** Made the nightly schema step create its database explicitly (2026-11-25).
+
+  Brief: the remaining nightly failure was `database "career_os" does not exist` —
+  on a self-hosted runner a postgres container can survive from an earlier run with
+  its volume but without `POSTGRES_DB` having been applied, and the migrations
+  assumed the database was already there. Added an idempotent `CREATE DATABASE`
+  against the `postgres` maintenance DB before the probe; without `ON_ERROR_STOP`
+  an "already exists" notice is harmless. Verified YAML and the PowerShell step
+  body parse cleanly under the runner's 5.1 parser.
+
 - [x] **451** Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25).
 
   Brief: the brief names the score as `CET-6 546`; both personal surfaces rendered

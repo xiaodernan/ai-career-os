@@ -240,6 +240,11 @@ jobs:
         run: |
           # Windows PowerShell 5.1 on this runner has no `||` / `&&` operators (those are
           # PowerShell 7 only), so the retry is an explicit if on the native exit code.
+          # On a self-hosted runner a postgres container can survive from an earlier
+          # run with its data volume but without POSTGRES_DB applied, so make the
+          # database's existence explicit before the migrations assume it. Without
+          # ON_ERROR_STOP a "database already exists" notice is harmless and exits 0.
+          docker compose exec -T postgres psql -U career_os -d postgres -c "CREATE DATABASE career_os"
           docker compose exec -T postgres psql -U career_os -d career_os -v ON_ERROR_STOP=1 -c "SELECT 1"
           if (-not $?) {
             docker compose restart postgres
