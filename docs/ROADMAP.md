@@ -8500,6 +8500,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **440** Admin: a landing-without-action measure from the real attention ledger (Block IX) (2026-11-24).
+
+  Brief: the operator's local analyst already turned bounces, aimless clicks and search
+  misses into measures, but a reader who arrives and simply *does nothing* was invisible.
+  Added a rule over the attention snapshot's own `landings` and `acts`: with at least 50
+  landings and fewer than 20% as many recorded actions, it names the shallow landing,
+  shows the real per-landing rate, and points to `/tour` — a door that teaches the next
+  step rather than another screen to read. It stays silent on a small sample, on a busy
+  landing, and when `acts` was never measured. Title and body are bilingual, and the
+  test asserts both keys resolve in both tables (a measure with a missing key is a blank
+  card on one locale). 15/15 admin-forecast tests green; tsc clean.
+
 - [x] **439** In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24).
 
   Brief: the harness sandbox blocks loopback HTTP, so a stack-level siege launched from

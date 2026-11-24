@@ -104,6 +104,8 @@ export function detectAnomalies(
 export interface LocalMeasureAttention {
   days?: number;
   landings?: number;
+  /** 440: recorded actions on the landing surface — a landing with no action is a shallow read. */
+  acts?: number;
   bounces?: number;
   bounceRatePct?: number;
   aimless?: number;
@@ -255,6 +257,23 @@ export function deriveLocalMeasures(input: LocalMeasureInput): LocalMeasure[] {
         vars: { days, aimless, landings },
         href: "/playbook",
         severity: 74,
+      });
+    }
+
+    // Epic 440 — a landing is not a visit: a reader who arrives and acts on
+    // nothing has read the first screen and left. This is a different shape from
+    // a bounce (an immediate close) and from an aimless click (a wandering read),
+    // so it has its own rule, its own number and its own door.
+    const acts = isNum(attention.acts) ? attention.acts : null;
+    if (acts !== null && landings >= 50 && acts < landings * 0.2) {
+      const perLanding = Math.round((100 * acts) / landings) / 100;
+      out.push({
+        id: "local-shallow-landing",
+        titleKey: "admin.localShallowLandingTitle",
+        bodyKey: "admin.localShallowLandingBody",
+        vars: { days, landings, acts, perLanding },
+        href: "/tour",
+        severity: 78,
       });
     }
   }

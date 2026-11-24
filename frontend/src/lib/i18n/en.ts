@@ -5320,6 +5320,9 @@ export const en = {
       localAimlessTitle: "Readers wander without settling",
       localAimlessBody:
         "The ledger recorded {aimless} clicks with no settled read in the last {days} days, against {landings} landings. Put the manual and the next-step hint closer to those paths, and give every empty state one action.",
+      localShallowLandingTitle: "Visitors arrive but do not act",
+      localShallowLandingBody:
+        "In the last {days} days there were {landings} landings but only {acts} recorded actions ({perLanding} per landing). The first screen is being read and then left: name one next step in plain words above the fold, and put the tour where that step points.",
       optimizationsLede:
         "These aren't invented ideas — they're rules reading this page's own wires at the moment you opened it. A rule that cannot see its input stays silent; pick the top item that smells hardest and start there.",
       counselFunnelTitle: "The hand-off is bleeding",

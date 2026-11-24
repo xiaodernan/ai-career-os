@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { deriveLocalMeasures, detectAnomalies, forecast } from "./admin-forecast";
+import { lookup } from "@/lib/i18n/locale-context";
+import { translations } from "@/lib/i18n/translations";
 
 describe("forecast", () => {
   it("projects a clean rising window exactly and names the direction", () => {
@@ -132,5 +134,29 @@ describe("deriveLocalMeasures", () => {
     });
     expect(out.map((m) => m.id)).toContain("local-attention-aimless");
     expect(deriveLocalMeasures({ attention: { landings: 10, aimless: 40 } })).toEqual([]);
+  });
+
+  it("names a shallow landing only when real actions are rare against a real crowd", () => {
+    const out = deriveLocalMeasures({
+      attention: { days: 14, landings: 300, acts: 12, bounceRatePct: 0, aimless: 0 },
+    });
+    const measure = out.find((m) => m.id === "local-shallow-landing")!;
+    expect(measure).toBeTruthy();
+    expect(measure.vars).toEqual({ days: 14, landings: 300, acts: 12, perLanding: 0.04 });
+    expect(measure.href).toBe("/tour");
+    // The measure's copy must exist in both languages — a measure whose keys
+    // are missing renders as a blank card on one locale.
+    for (const locale of ["en", "zh"] as const) {
+      expect(lookup(translations[locale], measure.titleKey), `${locale} title`).toBeTruthy();
+      expect(lookup(translations[locale], measure.bodyKey), `${locale} body`).toBeTruthy();
+    }
+    // A busy landing is not shallow, and an unmeasured one is not a finding.
+    expect(
+      deriveLocalMeasures({ attention: { landings: 300, acts: 120, bounceRatePct: 0 } })
+        .map((m) => m.id),
+    ).not.toContain("local-shallow-landing");
+    expect(
+      deriveLocalMeasures({ attention: { landings: 300, bounceRatePct: 0 } }).map((m) => m.id),
+    ).not.toContain("local-shallow-landing");
   });
 });

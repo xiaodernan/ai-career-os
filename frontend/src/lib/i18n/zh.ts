@@ -4959,6 +4959,9 @@ export const zh = {
       localAimlessTitle: "有人在页面之间来回走，却始终没有停下来",
       localAimlessBody:
         "过去 {days} 天里记录了 {aimless} 次没有落点的点击（对照 {landings} 次落地）。让说明书和下一步提示在这些路径上更显眼，让每个空状态都指向一个可做的动作。",
+      localShallowLandingTitle: "访客来了，却没有动手",
+      localShallowLandingBody:
+        "过去 {days} 天有 {landings} 次落地，却只记录了 {acts} 次操作（每次落地 {perLanding} 次）。首屏被读完就离开了：在显眼处用明白的话写出一个下一步，并让新手引导指向那里。",
       optimizationsLede:
         "这些不是编出来的建议——它们是这一页自己的数据线在你打开它那一刻跑出来的规则。看不到输入的规则保持沉默；从最难闻的那一条开工。",
       counselFunnelTitle: "交接处正在出血",

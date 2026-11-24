@@ -250,6 +250,9 @@ export default function AdminPage() {
       ...Object.fromEntries(Object.entries(trends.series).map(([k, v]) => [k, v ?? []])),
     } : undefined,
     attention: attention ? {
+      // Epic 440: `acts` is the denominator of the shallow-landing rule — the
+      // snapshot the local analyst reads must carry the same row the page does.
+      days: attention.days,
       landings: attention.landings, dwells: attention.dwells, acts: attention.acts,
       signedLandings: attention.signedLandings, anonymousLandings: attention.anonymousLandings,
       dwellPerLandingMs: attention.dwellPerLandingMs,
