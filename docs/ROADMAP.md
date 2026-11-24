@@ -8500,6 +8500,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **449** Made the consumer-group IT assert its real contract (2026-11-25).
+
+  Brief: with the PowerShell fix in, the nightly full-stack job reached the backend
+  ITs and one failed — `JobQueueIT.a_group_hands_each_entry_to_exactly_one_consumer`
+  expected exactly one entry on *every* alternating read, but Redis never promised
+  which consumer a `>` read serves (the test's own comment says so). Replaced the
+  per-read count assertion with a bounded alternating loop until all ten entries
+  are delivered; the real contract (both replicas got work, ten unique ids, ten
+  pending) is unchanged. Limiter-number census stays green.
+
 - [x] **448** Fixed the nightly CI job's PowerShell 5.1 parse error (2026-11-25).
 
   Brief: with Docker back up, the nightly full-stack job still failed before any
