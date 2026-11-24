@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T23:09:48.943172Z",
+  "generated_at": "2026-11-24T23:11:30.283981Z",
   "branch": "main",
-  "head": "6ae8fcf",
-  "total_commits": 1932,
+  "head": "083b0f1",
+  "total_commits": 1933,
   "milestone": "Epic 455",
   "milestone_full": "the ledger of done epics (through 608 items), closed at Epic 455 — Bulk-payload shock gate",
   "pushed_at": "2026-11-25",
