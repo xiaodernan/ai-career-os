@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T22:12:02.922147Z",
+  "generated_at": "2026-11-24T23:00:59.970960Z",
   "branch": "main",
-  "head": "1c2464a",
-  "total_commits": 1930,
-  "milestone": "Epic 453",
-  "milestone_full": "the ledger of done epics (through 606 items), closed at Epic 453 — Updated the nightly-record gate for the PowerShell argument array (2026-11-25)",
+  "head": "6bba62b",
+  "total_commits": 1931,
+  "milestone": "Epic 454",
+  "milestone_full": "the ledger of done epics (through 607 items), closed at Epic 454 — Full CI green, including the nightly full-stack job (2026-11-25)",
   "pushed_at": "2026-11-25",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1895+",
   "test_files": 244,
-  "work_items": 606,
-  "epics": 319,
+  "work_items": 607,
+  "epics": 320,
   "feature_surface": [
+    "Epic 454 — Full CI green, including the nightly full-stack job (2026-11-25)",
     "Epic 453 — Updated the nightly-record gate for the PowerShell argument array (2026-11-25)",
     "Epic 452 — Made the nightly schema step create its database explicitly (2026-11-25)",
     "Epic 451 — Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25)",
     "Epic 450 — Fixed the nightly job's vector-index and recorder steps (2026-11-25)",
-    "Epic 449 — Made the consumer-group IT assert its real contract (2026-11-25)",
-    "Epic 448 — Fixed the nightly CI job's PowerShell 5"
+    "Epic 449 — Made the consumer-group IT assert its real contract (2026-11-25)"
   ]
 }

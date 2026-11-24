@@ -8500,6 +8500,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **454** Full CI green, including the nightly full-stack job (2026-11-25).
+
+  Brief: the dispatch run on `6bba62b` finished with zero failing jobs — including
+  `nightly full-stack + evals`, which had exposed and then been fixed through
+  Epics 448/449/450/452/453. The nightly ran 144 backend integration tests, the
+  ai-service pytest suite, the vector backfill and index build, the eval corpus and
+  harnesses, and the portable-export check. The environment collision with a local
+  Docker stack was resolved by making the schema step create `career_os` explicitly
+  (idempotently) rather than assuming a fresh container.
+
 - [x] **453** Updated the nightly-record gate for the PowerShell argument array (2026-11-25).
 
   Brief: the full ai-service suite in CI went red on
