@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T12:09:46.181857Z",
+  "generated_at": "2026-11-24T12:15:10.955018Z",
   "branch": "main",
-  "head": "610b860",
-  "total_commits": 1918,
+  "head": "bccc91c",
+  "total_commits": 1919,
   "milestone": "Epic 445",
   "milestone_full": "the ledger of done epics (through 598 items), closed at Epic 445 — Fixed the one-click language switch",
   "pushed_at": "2026-11-24",
