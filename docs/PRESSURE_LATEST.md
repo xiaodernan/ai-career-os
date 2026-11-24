@@ -220,6 +220,24 @@ genuine measurements above (7,810 load-probe requests, 11,052 stuffing requests,
 To re-measure for real, launch the probe from a normal shell (Win+R → cmd) or
 the self-hosted runner, NOT from the harness tool shell.
 
+## In-process credential stuffing (Epic 447, 2026-11-25) — the auth door under a burst
+
+`backend/src/test/java/com/careeros/ratelimit/AuthLoginCredentialStuffingTest.java`
+drives the real filter → limiter → `AuthController.login` path with 200 simultaneous
+wrong-password POSTs from one IP through 16 threads. The limiter's fake template
+models the shipped Lua script atomically; no socket, Redis, Docker or model is used.
+
+| Scenario | Result |
+|---|---|
+| 200 concurrent wrong passwords from one IP | exactly 10 reach the password check (401, the auth-per-minute ceiling); the other 190 are refused (429) before any auth work — `verify(authService, times(10))` proves the short-circuit |
+| 5xx / successful logins | 0 / 0 |
+| different IP, same moment | 401 — admitted to the password check, not caught in the attacker's bucket (the ceiling is per IP, not an account lockout) |
+| limiter metrics | denied bucket = 190 |
+
+This is a unit-level stress gate: it proves the ceiling holds under contention at
+the auth door, not that the deployment survives a network flood. Same honesty caveat
+as the Epic 439 row above.
+
 ## In-process concurrency (Epic 439, 2026-11-24) — measurable without a socket
 
 `backend/src/test/java/com/careeros/ratelimit/RedisSlidingWindowConcurrencyTest.java`

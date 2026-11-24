@@ -8500,6 +8500,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **447** Credential-stuffing burst gate at the auth door (Block XI) (2026-11-25).
+
+  Brief: the user named 撞库 (credential stuffing) explicitly among the stress
+  scenarios. Added `AuthLoginCredentialStuffingTest`: 200 wrong-password POSTs released
+  together through 16 threads against the real `RateLimitFilter` → limiter →
+  `AuthController.login` path, with an atomic fake script (no Redis/Docker/socket/LLM).
+  Asserts exactly the configured per-IP ceiling (10) reaches the password check, the
+  other 190 are 429 before any auth work (`verify(authService, times(ceiling))`), zero
+  5xx, zero successful logins, the metrics tally agrees, and a different IP is not
+  locked out. Reads the ceiling from properties rather than hard-coding a number, so
+  the limiter-number census stays green. 1/1 targeted + 635 offline gates green.
+
 - [x] **446** Fixed the atlas row's API doc contract (2026-11-24).
 
   Brief: the full backend suite (1621 tests) exposed two red gates in
