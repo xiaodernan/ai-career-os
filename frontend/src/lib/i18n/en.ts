@@ -3169,7 +3169,7 @@ export const en = {
       stat1Label: "Agent tools, wired and counted",
       stat2Label: "AI agents on call",
       stat3Label: "Languages — EN + ZH, entire product",
-      tourLink: "See the ten-minute tour →",
+      tourLink: "See the ten-minute tour",
       arcEyebrow: "THE WHOLE ARC",
       arcTitle: "Nine moves, from hello to thank-you",
       arcDescription:

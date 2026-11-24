@@ -2932,7 +2932,7 @@ export const zh = {
       stat1Label: "已接入的代理工具",
       stat2Label: "随时待命的 AI 代理",
       stat3Label: "两种语言——全产品中英切换",
-      tourLink: "看看十分钟入门 →",
+      tourLink: "看看十分钟入门",
       arcEyebrow: "整条路线",
       arcTitle: "九个时刻，从开口到道谢",
       arcDescription: "每个时刻在应用里都有自己的房间——这就是整场求职的全景图。",

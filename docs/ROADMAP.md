@@ -8500,6 +8500,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **444** Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24).
+
+  Brief: a real-browser pass over the running app (in-app browser, `localhost:3000`)
+  showed the homepage healthy — fonts, spacing, no overlap, no NaN, no console errors,
+  no failed requests — but the "See the ten-minute tour" button rendered two arrows:
+  a `→` inside the translated copy plus a separate `ArrowRight` icon from the
+  component. Removed the character from both locale tables so the icon is the one
+  arrow. Verified in-source via the a11y tree and 31/31 i18n/copy gates plus tsc.
+
 - [x] **443** The embedded manual teaches the new data-page map (Block VII) (2026-11-24).
 
   Brief: Epic 442 added a second map to the product — the quiet, deterministic one

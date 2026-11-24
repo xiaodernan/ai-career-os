@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T11:47:12.263106Z",
+  "generated_at": "2026-11-24T11:57:44.007491Z",
   "branch": "main",
-  "head": "563df77",
-  "total_commits": 1914,
-  "milestone": "Epic 443",
-  "milestone_full": "the ledger of done epics (through 596 items), closed at Epic 443 — The embedded manual teaches the new data-page map (Block VII) (2026-11-24)",
+  "head": "e2d4ef4",
+  "total_commits": 1915,
+  "milestone": "Epic 444",
+  "milestone_full": "the ledger of done epics (through 597 items), closed at Epic 444 — Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24)",
   "pushed_at": "2026-11-24",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1894+",
   "test_files": 244,
-  "work_items": 596,
-  "epics": 309,
+  "work_items": 597,
+  "epics": 310,
   "feature_surface": [
+    "Epic 444 — Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24)",
     "Epic 443 — The embedded manual teaches the new data-page map (Block VII) (2026-11-24)",
     "Epic 442 — The atlas gains a real UI door on the data page (Block VI) (2026-11-24)",
     "Epic 441 — Audited every local agent for Clash port bindings",
     "Epic 440 — Admin: a landing-without-action measure from the real attention ledger (Block IX) (2026-11-24)",
-    "Epic 439 — In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24)",
-    "Epic 438 — An atlas of the search"
+    "Epic 439 — In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24)"
   ]
 }
