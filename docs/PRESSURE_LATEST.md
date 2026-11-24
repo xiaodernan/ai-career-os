@@ -220,6 +220,22 @@ genuine measurements above (7,810 load-probe requests, 11,052 stuffing requests,
 To re-measure for real, launch the probe from a normal shell (Win+R → cmd) or
 the self-hosted runner, NOT from the harness tool shell.
 
+## Bulk payload shock (Epic 455, 2026-11-25) — one caller, megabytes at once
+
+`ai-service/tests/test_the_bulk_payload_shock_gate.py` covers the other half of the
+stress brief: not 200 callers, but ONE request carrying a corpus far larger than
+the shipped ceiling. The bounds are exercised as shipped, no production change.
+
+| Scenario | Result |
+|---|---|
+| ~6 MB board (> the 5 MB feed cap) | `INGEST_BOARD_TOO_LARGE`, status 400, fixed sentence; the size check precedes `json.loads`, so the call refuses in bounded time with no partial rows |
+| 60,000-row corpus into `fit_json` | truncated to the shipped input budget, `dropped > 0`, `truncated` true, and the kept text is a verbatim prefix of the caller's own JSON — no fabricated data |
+| 50,000 evidence chunks into `evidence_block` | bounded block, real chunk metadata present, invented marker absent |
+
+All three complete in milliseconds; no DB, Redis, Docker, LLM or socket. This is
+a unit-level bulk gate: it proves the size/budget doors hold under a single large
+input, not that the deployment survives a network flood.
+
 ## In-process credential stuffing (Epic 447, 2026-11-25) — the auth door under a burst
 
 `backend/src/test/java/com/careeros/ratelimit/AuthLoginCredentialStuffingTest.java`

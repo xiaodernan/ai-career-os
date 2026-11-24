@@ -8500,6 +8500,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **455** Bulk-payload shock gate — one caller, megabytes at once (Block XI) (2026-11-25).
+
+  Brief: the 200-caller gates answer concurrency; this one answers the "瞬间大
+  数据量冲击" half of the stress brief. `test_the_bulk_payload_shock_gate.py`
+  sends ONE ~6 MB board (above the shipped 5 MB feed cap) and asserts a structured
+  `INGEST_BOARD_TOO_LARGE` refusal before parsing; feeds a 60k-row corpus through
+  `fit_json` and asserts a budget-bounded verbatim prefix with honest dropped/
+  truncated accounting; and pushes 50k evidence chunks through `evidence_block`
+  and asserts a bounded block of real rows. No production change — the shipped
+  doors are exercised. 3/3 targeted + 70 bound-suite + 638 offline gates green.
+
 - [x] **454** Full CI green, including the nightly full-stack job (2026-11-25).
 
   Brief: the dispatch run on `6bba62b` finished with zero failing jobs — including

@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T23:00:59.970960Z",
+  "generated_at": "2026-11-24T23:09:48.943172Z",
   "branch": "main",
-  "head": "6bba62b",
-  "total_commits": 1931,
-  "milestone": "Epic 454",
-  "milestone_full": "the ledger of done epics (through 607 items), closed at Epic 454 — Full CI green, including the nightly full-stack job (2026-11-25)",
+  "head": "6ae8fcf",
+  "total_commits": 1932,
+  "milestone": "Epic 455",
+  "milestone_full": "the ledger of done epics (through 608 items), closed at Epic 455 — Bulk-payload shock gate",
   "pushed_at": "2026-11-25",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1895+",
   "test_files": 244,
-  "work_items": 607,
-  "epics": 320,
+  "work_items": 608,
+  "epics": 321,
   "feature_surface": [
+    "Epic 455 — Bulk-payload shock gate",
     "Epic 454 — Full CI green, including the nightly full-stack job (2026-11-25)",
     "Epic 453 — Updated the nightly-record gate for the PowerShell argument array (2026-11-25)",
     "Epic 452 — Made the nightly schema step create its database explicitly (2026-11-25)",
     "Epic 451 — Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25)",
-    "Epic 450 — Fixed the nightly job's vector-index and recorder steps (2026-11-25)",
-    "Epic 449 — Made the consumer-group IT assert its real contract (2026-11-25)"
+    "Epic 450 — Fixed the nightly job's vector-index and recorder steps (2026-11-25)"
   ]
 }
