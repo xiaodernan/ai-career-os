@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T23:13:27.035220Z",
+  "generated_at": "2026-11-24T23:13:59.825012Z",
   "branch": "main",
-  "head": "083b0f1",
-  "total_commits": 1933,
+  "head": "220bb4a",
+  "total_commits": 1935,
   "milestone": "Epic 456",
   "milestone_full": "the ledger of done epics (through 609 items), closed at Epic 456 — The personal site refuses to repaint NaN language bars (Block V/X) (2026-11-25)",
   "pushed_at": "2026-11-25",
