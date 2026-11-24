@@ -8500,6 +8500,18 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **446** Fixed the atlas row's API doc contract (2026-11-24).
+
+  Brief: the full backend suite (1621 tests) exposed two red gates in
+  `ApiDocParamContractTest`: my Epic 442 public row for `POST /timeline/atlas`
+  had no `→`, so the Java parser read the first `{...}` — which was the ANSWER's
+  `{regions[{id,title,count,explored,note}], ...}` — as the body field list
+  (phantom `id/title/count/explored/note`) while missing all eight real body
+  fields. Rewrote the row in the established `accepts {...} → answers {...}`
+  shape: the eight bound fields before the arrow, the three answer keys after
+  it (which the parser deliberately ignores). Verified: ApiDocParamContractTest
+  green, 68 Python doc/response gates green, full backend suite re-running.
+
 - [x] **445** Fixed the one-click language switch — it now repaints at once (Block VIII) (2026-11-24).
 
   Brief: a real-browser pass caught a genuine Block VIII failure: pressing the
