@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T03:27:59.045059Z",
+  "generated_at": "2026-11-24T03:36:46.561006Z",
   "branch": "main",
-  "head": "7bad537",
+  "head": "d740262",
   "total_commits": 1895,
-  "milestone": "Epic 430",
-  "milestone_full": "the ledger of done epics (through 583 items), closed at Epic 430 — The kept letters and resumes teach every action without taking over control state (2026-11-24)",
+  "milestone": "Epic 431",
+  "milestone_full": "the ledger of done epics (through 584 items), closed at Epic 431 — Match Studio teaches all five controls (2026-11-24)",
   "pushed_at": "2026-11-24",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1882+",
   "test_files": 241,
-  "work_items": 583,
-  "epics": 296,
+  "work_items": 584,
+  "epics": 297,
   "feature_surface": [
+    "Epic 431 — Match Studio teaches all five controls (2026-11-24)",
     "Epic 430 — The kept letters and resumes teach every action without taking over control state (2026-11-24)",
     "Epic 429 — The offer journey teaches every choice without breaking control state (2026-11-24)",
     "Epic 428 — The networking registry teaches search, contact changes and coffee-chat choices (2026-11-24)",
     "Epic 427 — The knowledge base teaches uploads, grounded answers and notes (2026-11-24)",
-    "Epic 426 — The rehearsal list teaches every door, including the destructive one (2026-11-24)",
-    "Epic 425 — The application pipeline teaches its controls without losing state (2026-11-24)"
+    "Epic 426 — The rehearsal list teaches every door, including the destructive one (2026-11-24)"
   ]
 }

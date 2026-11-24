@@ -8500,6 +8500,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **431** Match Studio teaches all five controls (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". An audit of every reader page
+  found Match Studio — "the page a candidate opens the moment a posting lands" — had
+  five interactive controls (JD box, resume-version id, Analyze, Tailor, Copy) and
+  ZERO teaching hints, and none of its child components carried any either. Added
+  bilingual hints naming each control's consequence: the JD box reads only what is
+  pasted, a version id pins the match, Analyze runs two grounded steps, Tailor uses
+  only confirmed evidence, Copy does not save a new version. The two stateful inputs
+  use the boxless `anchor="span"` so the tooltip never writes data-state over them.
+  Source-contract test pins all five keys and the span anchors. Verified offline:
+  tsc clean, i18n + copy census green, zero LLM/API calls.
+
 - [x] **430** The kept letters and resumes teach every action without taking over control state (2026-11-24).
 
   Brief V: "主界面给各种按键和操作加上附带的教学说明". Added thirty-two bilingual

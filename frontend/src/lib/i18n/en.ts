@@ -497,6 +497,16 @@ export const en = {
       copied: "Copied",
       readingPosting: "Reading the posting…",
       scoringFit: "Scoring your fit…",
+      hintJdInput:
+        "Paste the full posting — title, requirements, responsibilities. The analyst reads only what you put here, so the more of it that is present, the more the fit can trace back to real text.",
+      hintResumeVersion:
+        "Leave blank to match against your latest resume. A version id pins the match to one stored version, so a later upload does not change what this report means.",
+      hintAnalyze:
+        "Runs two grounded steps: the posting is read into structured requirements, then scored against the chosen resume. Nothing is sent until the posting box has text.",
+      hintTailor:
+        "Rewrites the resume to the posting's own vocabulary using only evidence the match confirmed — no new skills or claims. The result appears below for you to copy.",
+      hintCopy:
+        "Copies the tailored text to your clipboard. It does not save a new resume version — paste it into the resume editor if you want to keep it.",
     },
     // Common actions
     common: {

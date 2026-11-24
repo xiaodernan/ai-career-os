@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/i18n/locale-context";
 import { Copy, Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { FitBreakdown } from "@/components/ai/fit-breakdown";
@@ -119,13 +120,15 @@ export default function StudioPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Textarea
-            value={jd}
-            onChange={(e) => setJd(e.target.value)}
-            placeholder={t("studio.jdPlaceholder")}
-            className="min-h-44 resize-y text-sm leading-relaxed"
-            aria-label={t("studio.jdLabel")}
-          />
+          <Hint anchor="span" label={t("studio.hintJdInput")}>
+            <Textarea
+              value={jd}
+              onChange={(e) => setJd(e.target.value)}
+              placeholder={t("studio.jdPlaceholder")}
+              className="min-h-44 resize-y text-sm leading-relaxed"
+              aria-label={t("studio.jdLabel")}
+            />
+          </Hint>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-1.5">
               <label
@@ -134,24 +137,28 @@ export default function StudioPage() {
               >
                 {t("studio.resumeVersionLabel")}
               </label>
-              <Input
-                id="rvid"
-                value={resumeVersionId}
-                onChange={(e) => setResumeVersionId(e.target.value)}
-                placeholder={t("studio.resumeVersionDefault")}
-                className="text-sm"
-              />
+              <Hint anchor="span" label={t("studio.hintResumeVersion")}>
+                <Input
+                  id="rvid"
+                  value={resumeVersionId}
+                  onChange={(e) => setResumeVersionId(e.target.value)}
+                  placeholder={t("studio.resumeVersionDefault")}
+                  className="text-sm"
+                />
+              </Hint>
             </div>
-            <Button onClick={onAnalyze} disabled={busy || !jd.trim()} className="sm:w-40">
-              {busy ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                  {phase === "matching" ? t("studio.matching") : t("studio.analyzing")}
-                </>
-              ) : (
-                t("studio.analyze")
-              )}
-            </Button>
+            <Hint side="bottom" label={t("studio.hintAnalyze")}>
+              <Button onClick={onAnalyze} disabled={busy || !jd.trim()} className="sm:w-40">
+                {busy ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    {phase === "matching" ? t("studio.matching") : t("studio.analyzing")}
+                  </>
+                ) : (
+                  t("studio.analyze")
+                )}
+              </Button>
+            </Hint>
           </div>
         </CardContent>
       </Card>
@@ -185,26 +192,30 @@ export default function StudioPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" onClick={onTailor} disabled={busy}>
-              {phase === "tailoring" ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                  {t("studio.tailoring")}
-                </>
-              ) : (
-                t("studio.tailorAction")
-              )}
-            </Button>
+            <Hint side="bottom" label={t("studio.hintTailor")}>
+              <Button variant="outline" onClick={onTailor} disabled={busy}>
+                {phase === "tailoring" ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    {t("studio.tailoring")}
+                  </>
+                ) : (
+                  t("studio.tailorAction")
+                )}
+              </Button>
+            </Hint>
             {tailored ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     <span>{t("studio.tailorTitle")}</span>
                   </span>
-                  <Button variant="ghost" size="sm" onClick={onCopy} className="text-xs">
-                    <Copy className="size-3.5" aria-hidden />
-                    {copied ? t("studio.copied") : t("common.copy")}
-                  </Button>
+                  <Hint side="left" label={t("studio.hintCopy")}>
+                    <Button variant="ghost" size="sm" onClick={onCopy} className="text-xs">
+                      <Copy className="size-3.5" aria-hidden />
+                      {copied ? t("studio.copied") : t("common.copy")}
+                    </Button>
+                  </Hint>
                 </div>
                 <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-lg border border-border/70 bg-muted/30 p-4 text-xs leading-relaxed">
                   {tailored}
