@@ -8500,6 +8500,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **448** Fixed the nightly CI job's PowerShell 5.1 parse error (2026-11-25).
+
+  Brief: with Docker back up, the nightly full-stack job still failed before any
+  test ran — `ParserError: InvalidEndOfLine` on line 241 of `ci.yml`. The schema
+  step used `cmd || (fallback)`, but `||`/`&&` are PowerShell **7** operators and this
+  self-hosted runner ships Windows PowerShell 5.1 (the same constraint already
+  documented for the sync workflow). Replaced it with an explicit `if (-not $?)`
+  on the native exit code. Verified the parsed YAML and ran the step body through
+  `[System.Management.Automation.Language.Parser]` — PARSE OK. The only other
+  `||`/`&&` in the file are GitHub Actions `if:` expressions, which are not shell.
+
 - [x] **447** Credential-stuffing burst gate at the auth door (Block XI) (2026-11-25).
 
   Brief: the user named 撞库 (credential stuffing) explicitly among the stress

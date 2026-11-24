@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T19:22:55.968959Z",
+  "generated_at": "2026-11-24T19:30:22.037107Z",
   "branch": "main",
-  "head": "168a820",
-  "total_commits": 1924,
-  "milestone": "Epic 447",
-  "milestone_full": "the ledger of done epics (through 600 items), closed at Epic 447 — Credential-stuffing burst gate at the auth door (Block XI) (2026-11-25)",
+  "head": "c54495c",
+  "total_commits": 1925,
+  "milestone": "Epic 448",
+  "milestone_full": "the ledger of done epics (through 601 items), closed at Epic 448 — Fixed the nightly CI job's PowerShell 5",
   "pushed_at": "2026-11-25",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1895+",
   "test_files": 244,
-  "work_items": 600,
-  "epics": 313,
+  "work_items": 601,
+  "epics": 314,
   "feature_surface": [
+    "Epic 448 — Fixed the nightly CI job's PowerShell 5",
     "Epic 447 — Credential-stuffing burst gate at the auth door (Block XI) (2026-11-25)",
     "Epic 446 — Fixed the atlas row's API doc contract (2026-11-24)",
     "Epic 445 — Fixed the one-click language switch",
     "Epic 444 — Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24)",
-    "Epic 443 — The embedded manual teaches the new data-page map (Block VII) (2026-11-24)",
-    "Epic 442 — The atlas gains a real UI door on the data page (Block VI) (2026-11-24)"
+    "Epic 443 — The embedded manual teaches the new data-page map (Block VII) (2026-11-24)"
   ]
 }
