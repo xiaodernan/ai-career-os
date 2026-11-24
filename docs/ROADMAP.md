@@ -8500,6 +8500,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **438** An atlas of the search — a deterministic world map over real rows (Block VI) (2026-11-24).
+
+  Brief: the timeline is a ledger and the chronicle is a story, but neither gives a
+  reader a *map* of the territories the search actually has. Added `search_atlas.py`:
+  seven regions (board, desk, rooms, letters, notebook, people, table), each always
+  drawn, with its population counted only from the rows the caller hands in. An
+  empty region is reported as `explored: false` with an honest sentence — silence
+  is a fact about the reader's data, not a gap to paper over. Titles and field notes
+  come from one vocabulary per locale with no mixing, and the engine makes no model
+  call, database read or inference. `test_search_atlas.py` pins the full region set,
+  exact counts, paged envelopes, malformed input, bilingual purity and determinism
+  (6/6 green). This is an engine without a UI door yet; the bridge is the next cut.
+
 - [x] **437** Reconciled four stale source-census ledgers (2026-11-24).
 
   Brief: the full offline pytest run (3,075 cases) found six red gates. Two were the

@@ -26,6 +26,7 @@ fi
 
 TESTS=(
   ai-service/tests/test_service_identity_proof.py
+  ai-service/tests/test_search_atlas.py
   ai-service/tests/test_every_internal_route_requires_internal_auth.py
   ai-service/tests/test_every_internal_route_refuses_unauthenticated.py
   ai-service/tests/test_every_internal_route_requires_user_id.py
