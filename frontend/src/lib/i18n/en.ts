@@ -4905,6 +4905,10 @@ export const en = {
       atlasNothingBody:
         "It never invents a place. No dot exists without a row behind it, no region without a fact, no frontier without a screen that would fill it. An empty ledger gets an uncharted-map sentence and five working doors — not a decorated map of nowhere.",
       atlasCta: "Open the timeline and look at your own world →",
+      dataAtlasTitle: "A second, quieter map — on the data page",
+      dataAtlasBody:
+        "The export page also draws a map, but from the bundle already in your hands: seven regions, counted from your applications, saved jobs, interviews, letters, notes, contacts and offers. It makes no dots and walks no route — it simply says which rooms hold something and which are still quiet. Press Draw after an export; it never changes the file or reads anything new.",
+      dataAtlasCta: "Open your data and draw the map →",
 
       ledgerCounselTitle: "The advice written by arithmetic",
       ledgerCounselBody:

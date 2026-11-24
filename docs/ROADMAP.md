@@ -8500,6 +8500,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **443** The embedded manual teaches the new data-page map (Block VII) (2026-11-24).
+
+  Brief: Epic 442 added a second map to the product — the quiet, deterministic one
+  on `/data` drawn from the export bundle — but the in-app playbook still described
+  only the timeline's original Career Atlas. A feature the manual does not name is
+  a feature a reader will not find. Added a distinct subsection to the existing
+  atlas chapter: what the second map is (seven regions over the export), how it
+  differs (no dots, no route, no new reads), and a working link to `/data`. Title,
+  body and link are bilingual and pass the locale parity and language-purity gates
+  (38/38 targeted frontend; tsc clean). No new page, route or census pin moved.
+
 - [x] **442** The atlas gains a real UI door on the data page (Block VI) (2026-11-24).
 
   Brief: Epic 438's engine was a forward surface — correct, tested, but reachable by no

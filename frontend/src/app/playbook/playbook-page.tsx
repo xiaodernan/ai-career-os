@@ -563,6 +563,19 @@ export default function PlaybookPage() {
             <p className="text-2xs font-semibold uppercase tracking-widest text-muted-foreground">{t("playbook.atlasNothingTitle")}</p>
             <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.atlasNothingBody")}</p>
           </div>
+          {/* Epic 442 — the quieter map on the data page: same evidence discipline,
+              drawn from the export bundle rather than the live timeline. */}
+          <div className="rounded-2xl border border-border/60 bg-card/60 p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+              {t("playbook.dataAtlasTitle")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/90">{t("playbook.dataAtlasBody")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              <Link href="/data" className="font-medium text-primary underline-offset-4 hover:underline">
+                {t("playbook.dataAtlasCta")}
+              </Link>
+            </p>
+          </div>
           <p className="text-sm text-muted-foreground">
             <Link href="/timeline" className="font-medium text-primary underline-offset-4 hover:underline">
               {t("playbook.atlasCta")}
