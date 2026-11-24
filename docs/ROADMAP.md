@@ -8500,6 +8500,37 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **433** Unbound from Clash Verge — the stack uses the normal network (2026-11-24).
+
+  The owner stopped using Clash Verge, but the ai-service container still had
+  `HTTP_PROXY/HTTPS_PROXY=${...:-http://host.docker.internal:7897}`. Worse, those
+  interpolated the AMBIENT host shell vars: a shell carrying the harness-injected
+  `HTTP_PROXY=http://127.0.0.1:7897` put that HOST-LOCAL value into the container,
+  where 127.0.0.1 is the container itself — every outbound call died with
+  ECONNREFUSED even with Clash running. Fixed: the container's proxy knobs are now
+  separate, empty-by-default `AI_HTTP_PROXY/AI_HTTPS_PROXY` (opt-in only), so the
+  stack goes out on the normal network with zero Clash dependency; the internal
+  fleet NO_PROXY stays pinned. Updated .env.example; made the Windows PowerShell
+  profile clear the dead 127.0.0.1:7897 vars unconditionally on interactive shells.
+  Verified direct network (github/api.github/npmjs all 200 without proxy) and an
+  offline source gate pins that no Clash port or ambient proxy leaks back into the
+  stack. Note: the harness process injects its own proxy at launch (outside the
+  repo), so per-session tool calls may still carry it until the app is relaunched
+  with a clean env — this is environmental, not a repo binding.
+
+- [x] **432** The data door teaches every export, redact and restore control (2026-11-24).
+
+  Brief V: "主界面给各种按键和操作加上附带的教学说明". The data page — export,
+  redact and restore of everything the reader owns — had eight high-consequence
+  buttons and ZERO teaching hints. Added nine bilingual hints: the full export
+  stays in-browser until download, the anonymized one strips identity for sharing,
+  download/print/Markdown each say what they produce, redact recomputes the hash,
+  the import box is preview-only, Build-plan reads before Apply-restore writes.
+  The import textarea uses the boxless `anchor="span"` so the tooltip never
+  clobbers its state. Source-contract test pins all nine keys, the span anchor,
+  and the preview-before-apply ordering. Verified offline: tsc clean, data+i18n
+  tests 71 passed, copy census unchanged, zero LLM/API calls.
+
 - [x] **431** Match Studio teaches all five controls (2026-11-24).
 
   Brief V: "主界面给各种按键和操作加上附带的教学说明". An audit of every reader page

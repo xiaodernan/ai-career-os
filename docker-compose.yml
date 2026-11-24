@@ -141,20 +141,20 @@ services:
       #   LLM_PROVIDER=mock EMBEDDING_PROVIDER=hash docker-compose --profile app up -d
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-}
-      # The relay is reachable from this host only through Clash Verge (host-side
-      # 127.0.0.1:7897). host.docker.internal is Docker Desktop's DNS for the host
-      # gateway, so the same egress door holds inside the container. Without these,
-      # every live relay call from inside compose is refused at the door -- the
-      # backend then serves a 500 that has nothing to do with the model.
-      # HTTP_PROXY of the dev stack is NOT set elsewhere; NO_PROXY keeps the internal
-      # fleet off the proxy path entirely.
-      HTTPS_PROXY: ${HTTPS_PROXY:-http://host.docker.internal:7897}
-      HTTP_PROXY: ${HTTP_PROXY:-http://host.docker.internal:7897}
-      # NO_PROXY is deliberately NOT shell-extensible: the dev machine already exports
-      # NO_PROXY for its own processes (127.0.0.1,localhost,::1), and `${NO_PROXY:-...}`
-      # would silently drop the fleet hosts from the bypass, sending ai→backend/minio/
-      # redis over Clash Verge and failing every internal call with 502. Pin the fleet
-      # bypass; a deployment that needs a different door overrides both proxy knobs.
+      # Outbound proxy is OPT-IN and empty by default: this install goes out on the
+      # normal network with no Clash Verge dependency. Set AI_HTTP_PROXY / AI_HTTPS_PROXY
+      # in your shell ONLY if a relay genuinely needs a proxy on this host.
+      #
+      # Critical: these deliberately do NOT read the ambient ${HTTP_PROXY}/${HTTPS_PROXY}.
+      # A host shell that exports HTTP_PROXY=http://127.0.0.1:7897 (Clash) would have that
+      # host-local value interpolated into the container, where 127.0.0.1 is the container
+      # itself -- every outbound call then dies with ECONNREFUSED even with Clash running.
+      # The separate AI_* names keep the container's egress independent of the host shell.
+      HTTPS_PROXY: ${AI_HTTPS_PROXY:-}
+      HTTP_PROXY: ${AI_HTTP_PROXY:-}
+      # NO_PROXY is deliberately pinned (not shell-extensible): the fleet hosts must
+      # always bypass any outbound proxy so ai→backend/minio/redis stay on the internal
+      # network. A deployment that needs a proxy overrides AI_HTTP_PROXY/AI_HTTPS_PROXY.
       # The pinned value spells IPv6 bare (`::1`, not `[::1]`) on purpose: httpx reads the
       # list at client construction, and app/core/envnet.py (Epic 419) now strips the
       # bracketed form an operator's shell writes -- the compose file stays inside the

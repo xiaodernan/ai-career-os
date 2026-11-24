@@ -1869,6 +1869,24 @@ export const en = {
       notJson: "That is not valid JSON.",
       printView: "Print view",
       popupBlocked: "Your browser blocked the print window.",
+      hintExportEverything:
+        "Builds a full, versioned bundle of your own rows with a content hash. Nothing leaves the browser until you press Download JSON.",
+      hintExportAnonymized:
+        "Builds the same bundle with your personal fields stripped — profile names, links and identity removed. Use this one when the file is going to somebody else.",
+      hintDownloadJson:
+        "Saves the bundle built above to your device as a JSON file. Keep it somewhere you control — it contains everything the export included.",
+      hintPrintView:
+        "Opens a clean, printable copy of the bundle in a new window. It is a view only; printing does not change or export anything.",
+      hintDownloadMarkdown:
+        "Saves a readable Markdown version of the bundle — the same facts as the JSON, for a person to read rather than a program to restore.",
+      hintRedactSelected:
+        "Removes every checked section from the bundle and recomputes its hash. The file stays valid; the removed rows are gone from future downloads.",
+      hintImportBundle:
+        "Paste a bundle's JSON here. Nothing is written yet — Build the plan only previews what a restore would do.",
+      hintBuildPlan:
+        "Compares the pasted bundle with your workspace and shows how many rows it would create, update, skip or delete. A preview, not a write.",
+      hintApplyRestore:
+        "Writes the plan for real. Only rows the bundle owns are touched; a mismatch in a section that cannot be matched is skipped rather than overwritten.",
       opCreate: "Create",
       opUpdate: "Update",
       opDelete: "Delete",

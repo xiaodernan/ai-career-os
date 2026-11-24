@@ -8,6 +8,7 @@ import { BundleFacts } from "@/components/data/bundle-facts";
 import { PocketCard } from "@/components/data/pocket-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -210,51 +211,61 @@ export default function DataPortabilityPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ai"
-              size="sm"
-              loading={exportBundle.isPending}
-              onClick={() => runExport(false)}
-            >
-              <FileJson aria-hidden />
-              {t("data.exportEverything")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={exportBundle.isPending}
-              onClick={() => runExport(true)}
-            >
-              <Shield aria-hidden />
-              {t("data.exportAnonymized")}
-            </Button>
-            {bundle && (
-              <Button variant="outline" size="sm" onClick={download}>
-                <Download aria-hidden />
-                {t("data.downloadJson")}
+            <Hint side="bottom" label={t("data.hintExportEverything")}>
+              <Button
+                variant="ai"
+                size="sm"
+                loading={exportBundle.isPending}
+                onClick={() => runExport(false)}
+              >
+                <FileJson aria-hidden />
+                {t("data.exportEverything")}
               </Button>
-            )}
-            {bundle && (
+            </Hint>
+            <Hint side="bottom" label={t("data.hintExportAnonymized")}>
               <Button
                 variant="outline"
                 size="sm"
-                loading={renderBundle.isPending}
-                onClick={runRender}
+                loading={exportBundle.isPending}
+                onClick={() => runExport(true)}
               >
-                <FileText aria-hidden />
-                {t("data.printView")}
+                <Shield aria-hidden />
+                {t("data.exportAnonymized")}
               </Button>
+            </Hint>
+            {bundle && (
+              <Hint side="bottom" label={t("data.hintDownloadJson")}>
+                <Button variant="outline" size="sm" onClick={download}>
+                  <Download aria-hidden />
+                  {t("data.downloadJson")}
+                </Button>
+              </Hint>
             )}
             {bundle && (
-              <Button
-                variant="outline"
-                size="sm"
-                loading={renderBundle.isPending}
-                onClick={downloadMarkdown}
-              >
-                <FileText aria-hidden />
-                {t("data.downloadMarkdown")}
-              </Button>
+              <Hint side="bottom" label={t("data.hintPrintView")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={renderBundle.isPending}
+                  onClick={runRender}
+                >
+                  <FileText aria-hidden />
+                  {t("data.printView")}
+                </Button>
+              </Hint>
+            )}
+            {bundle && (
+              <Hint side="bottom" label={t("data.hintDownloadMarkdown")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={renderBundle.isPending}
+                  onClick={downloadMarkdown}
+                >
+                  <FileText aria-hidden />
+                  {t("data.downloadMarkdown")}
+                </Button>
+              </Hint>
             )}
           </div>
 
@@ -302,15 +313,17 @@ export default function DataPortabilityPage() {
                 </li>
               ))}
             </ul>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={redactBundle.isPending}
-              disabled={dropped.length === 0}
-              onClick={runRedact}
-            >
-              {t("data.redactSelected")}
-            </Button>
+            <Hint side="bottom" label={t("data.hintRedactSelected")}>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={redactBundle.isPending}
+                disabled={dropped.length === 0}
+                onClick={runRedact}
+              >
+                {t("data.redactSelected")}
+              </Button>
+            </Hint>
             {bundle.manifest?.redacted_sections?.length ? (
               <p className="text-xs text-muted-foreground">
                 {t("data.removedSoFar")} {bundle.manifest.redacted_sections.join(", ")}.
@@ -329,25 +342,29 @@ export default function DataPortabilityPage() {
         <CardContent className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="import-bundle">{t("data.bundleJson")}</Label>
-            <Textarea
-              id="import-bundle"
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              placeholder='{ "schema_version": "1.0.0", "manifest": { … }, "data": { … } }'
-              rows={6}
-              className="font-mono text-xs"
-            />
+            <Hint anchor="span" label={t("data.hintImportBundle")}>
+              <Textarea
+                id="import-bundle"
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder='{ "schema_version": "1.0.0", "manifest": { … }, "data": { … } }'
+                rows={6}
+                className="font-mono text-xs"
+              />
+            </Hint>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            loading={importPlan.isPending}
-            disabled={!importText.trim()}
-            onClick={runPlan}
-          >
-            <Upload aria-hidden />
-            {t("data.buildThePlan")}
-          </Button>
+          <Hint side="bottom" label={t("data.hintBuildPlan")}>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={importPlan.isPending}
+              disabled={!importText.trim()}
+              onClick={runPlan}
+            >
+              <Upload aria-hidden />
+              {t("data.buildThePlan")}
+            </Button>
+          </Hint>
 
           {importPlan.data && (
             <div className="space-y-2 rounded-lg border border-border/60 p-3">
@@ -397,16 +414,18 @@ export default function DataPortabilityPage() {
               {/* The plan is a preview; the apply is the write. They are two
                   buttons because a restore that half-applied would be worse
                   than one the user could read first. */}
-              <Button
-                variant="ai"
-                size="sm"
-                loading={applyImport.isPending}
-                disabled={!importText.trim()}
-                onClick={runApply}
-              >
-                <Upload aria-hidden />
-                {t("data.applyTheRestore")}
-              </Button>
+              <Hint side="bottom" label={t("data.hintApplyRestore")}>
+                <Button
+                  variant="ai"
+                  size="sm"
+                  loading={applyImport.isPending}
+                  disabled={!importText.trim()}
+                  onClick={runApply}
+                >
+                  <Upload aria-hidden />
+                  {t("data.applyTheRestore")}
+                </Button>
+              </Hint>
             </div>
           )}
 

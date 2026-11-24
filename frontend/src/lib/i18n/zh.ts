@@ -1745,6 +1745,24 @@ export const zh = {
       notJson: "这不是合法的 JSON。",
       printView: "打印视图",
       popupBlocked: "浏览器拦截了打印窗口。",
+      hintExportEverything:
+        "构建一个包含你自己所有行的完整版本化数据包，并附内容哈希。在你按下「下载 JSON」之前，什么都不会离开浏览器。",
+      hintExportAnonymized:
+        "构建同样的数据包，但抹掉你的个人字段——姓名、链接和身份信息。文件要交给别人时，请用这一个。",
+      hintDownloadJson:
+        "把上面构建好的数据包以 JSON 文件保存到你的设备。请放在你自己能控制的地方——它包含这次导出的一切。",
+      hintPrintView:
+        "在新窗口打开一份干净的、可打印的数据包副本。只是视图；打印不会修改或导出任何东西。",
+      hintDownloadMarkdown:
+        "把数据包保存为可读的 Markdown 版本——和 JSON 是同样的事实，供人阅读而非程序恢复。",
+      hintRedactSelected:
+        "从数据包中移除所有勾选的段落，并重新计算哈希。文件依然有效；被移除的行在之后的下载中不再出现。",
+      hintImportBundle:
+        "把数据包的 JSON 粘贴到这里。此时还不会写入任何东西——「构建计划」只预览恢复会做什么。",
+      hintBuildPlan:
+        "把粘贴的数据包与你的工作台对比，显示会新增、更新、跳过或删除多少行。只是预览，不是写入。",
+      hintApplyRestore:
+        "真正执行这份计划。只有数据包拥有的行会被触碰；无法匹配的段落里的差异会被跳过，而不是覆盖。",
       opCreate: "新增",
       opUpdate: "更新",
       opDelete: "删除",
