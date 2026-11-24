@@ -113,7 +113,10 @@ describe("the sentences themselves", () => {
     // The table is the whole vocabulary: a key added to the copy and never wired
     // here would be a sentence no reader ever sees.
     const wired = PANEL.match(/growthEngines\.hint(\w+)/g) ?? [];
-    expect(new Set(wired).size).toBe(HINT_KEYS.length + 1); // + hintNeedsRole
+    // + hintNeedsRole (the run button swaps while the role is short), and
+    // + the two field hints added in Epic 435 (the role and location inputs
+    //   were the last controls on this panel with no teaching at all).
+    expect(new Set(wired).size).toBe(HINT_KEYS.length + 3);
   });
 
   it("swaps the run button's hint while the role is too short to run", () => {
@@ -144,7 +147,12 @@ describe("the copy is in both tables", () => {
       fileURLToPath(new URL("../../lib/i18n/zh.ts", import.meta.url)),
       "utf8",
     );
-    for (const key of [...HINT_KEYS, "hintNeedsRole"]) {
+    for (const key of [
+      ...HINT_KEYS,
+      "hintNeedsRole",
+      "hintTargetRole",
+      "hintLocation",
+    ]) {
       expect(en, key).toContain(key + ":");
       expect(zh, key).toContain(key + ":");
     }
