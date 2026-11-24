@@ -8500,6 +8500,15 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **451** Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25).
+
+  Brief: the brief names the score as `CET-6 546`; both personal surfaces rendered
+  `CET6 546`. Normalised all nine occurrences in `xiaodernan.github.io/index.html`
+  and the README, badge SVG, banner SVG and the `profile-guard` required-fact list
+  in `xiaodernan-profile`. The guard passes (12 public surfaces reconciled), both
+  repos pushed clean, and the published source has 9× `CET-6 546` / 0× `CET6 546`.
+  GitHub Pages serves a cached copy for a short while after a push.
+
 - [x] **450** Fixed the nightly job's vector-index and recorder steps (2026-11-25).
 
   Brief: with the IT flake gone, the nightly run reached two more genuine CI bugs.

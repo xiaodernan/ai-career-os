@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T20:43:09.084663Z",
+  "generated_at": "2026-11-24T21:29:22.969006Z",
   "branch": "main",
-  "head": "ead5cf8",
-  "total_commits": 1927,
-  "milestone": "Epic 450",
-  "milestone_full": "the ledger of done epics (through 603 items), closed at Epic 450 — Fixed the nightly job's vector-index and recorder steps (2026-11-25)",
+  "head": "b96e1f9",
+  "total_commits": 1928,
+  "milestone": "Epic 451",
+  "milestone_full": "the ledger of done epics (through 604 items), closed at Epic 451 — Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25)",
   "pushed_at": "2026-11-25",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1895+",
   "test_files": 244,
-  "work_items": 603,
-  "epics": 316,
+  "work_items": 604,
+  "epics": 317,
   "feature_surface": [
+    "Epic 451 — Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25)",
     "Epic 450 — Fixed the nightly job's vector-index and recorder steps (2026-11-25)",
     "Epic 449 — Made the consumer-group IT assert its real contract (2026-11-25)",
     "Epic 448 — Fixed the nightly CI job's PowerShell 5",
     "Epic 447 — Credential-stuffing burst gate at the auth door (Block XI) (2026-11-25)",
-    "Epic 446 — Fixed the atlas row's API doc contract (2026-11-24)",
-    "Epic 445 — Fixed the one-click language switch"
+    "Epic 446 — Fixed the atlas row's API doc contract (2026-11-24)"
   ]
 }
