@@ -1,9 +1,9 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T12:34:39.132986Z",
+  "generated_at": "2026-11-24T12:35:19.843649Z",
   "branch": "main",
-  "head": "bccc91c",
-  "total_commits": 1919,
+  "head": "d74e0bc",
+  "total_commits": 1921,
   "milestone": "Epic 446",
   "milestone_full": "the ledger of done epics (through 599 items), closed at Epic 446 — Fixed the atlas row's API doc contract (2026-11-24)",
   "pushed_at": "2026-11-24",
