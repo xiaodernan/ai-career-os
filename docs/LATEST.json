@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T11:59:49.125547Z",
+  "generated_at": "2026-11-24T12:08:59.328769Z",
   "branch": "main",
   "head": "12fa149",
   "total_commits": 1916,
-  "milestone": "Epic 444",
-  "milestone_full": "the ledger of done epics (through 597 items), closed at Epic 444 — Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24)",
+  "milestone": "Epic 445",
+  "milestone_full": "the ledger of done epics (through 598 items), closed at Epic 445 — Fixed the one-click language switch",
   "pushed_at": "2026-11-24",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1894+",
+  "tests": "1895+",
   "test_files": 244,
-  "work_items": 597,
-  "epics": 310,
+  "work_items": 598,
+  "epics": 311,
   "feature_surface": [
+    "Epic 445 — Fixed the one-click language switch",
     "Epic 444 — Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24)",
     "Epic 443 — The embedded manual teaches the new data-page map (Block VII) (2026-11-24)",
     "Epic 442 — The atlas gains a real UI door on the data page (Block VI) (2026-11-24)",
     "Epic 441 — Audited every local agent for Clash port bindings",
-    "Epic 440 — Admin: a landing-without-action measure from the real attention ledger (Block IX) (2026-11-24)",
-    "Epic 439 — In-process high-concurrency gate for the sliding-window limiter (Block XI) (2026-11-24)"
+    "Epic 440 — Admin: a landing-without-action measure from the real attention ledger (Block IX) (2026-11-24)"
   ]
 }

@@ -53,10 +53,18 @@ const LocaleContext = React.createContext<LocaleContextValue | null>(null);
 
 const STORAGE_KEY = "careeros.locale";
 
-/** The other language's module, as the chunk webpack splits it into. */
-const otherModule = (locale: Locale) => (locale === "zh" ? import("./en") : import("./zh"));
-const otherTable = (locale: Locale, mod: { en: LocaleTable; zh: LocaleTable }) =>
-  locale === "zh" ? mod.en : mod.zh;
+/**
+ * The module/table for a TARGET locale, as the chunk webpack splits it into.
+ *
+ * Named for the locale being loaded, not the one being left. An earlier version
+ * took the *current* locale and returned the other one, but `loadSpare` hands it
+ * the target — so switching to English imported the Chinese chunk and the reader
+ * saw the old language until a reload. The one-click switch only works when the
+ * table that lands is the one that was asked for.
+ */
+const moduleFor = (target: Locale) => (target === "zh" ? import("./zh") : import("./en"));
+const tableFor = (target: Locale, mod: { en: LocaleTable; zh: LocaleTable }) =>
+  target === "zh" ? mod.zh : mod.en;
 
 /**
  * The table the last render used, for the readers that are outside React.
@@ -217,8 +225,8 @@ export function LocaleProvider({
       if (next === first) return Promise.resolve(served);
       const have = spare[next];
       if (have) return Promise.resolve(have);
-      return otherModule(next).then((mod) => {
-        const value = otherTable(next, mod as { en: LocaleTable; zh: LocaleTable });
+      return moduleFor(next).then((mod) => {
+        const value = tableFor(next, mod as { en: LocaleTable; zh: LocaleTable });
         setSpare((prev) => (prev[next] ? prev : { ...prev, [next]: value }));
         return value;
       });

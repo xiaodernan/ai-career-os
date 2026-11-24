@@ -8500,6 +8500,20 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **445** Fixed the one-click language switch — it now repaints at once (Block VIII) (2026-11-24).
+
+  Brief: a real-browser pass caught a genuine Block VIII failure: pressing the
+  language switch changed the locale state, the cookie and `<html lang>`, but the
+  words on screen stayed in the old language until a reload. Root cause:
+  `loadSpare(next)` handed the TARGET locale to `otherModule`/`otherTable`, which
+  were defined to take the CURRENT locale and return the OTHER one — so switching
+  to English imported the Chinese chunk and the active table stayed the served
+  one. Renamed the helpers to `moduleFor(target)` / `tableFor(target, mod)` with
+  target-first semantics and passed `next` through both. Verified live on a fresh
+  dev server from current source in BOTH directions (en→zh and zh→en): the headline
+  flips immediately, no reload. Added a source-level wiring gate so a future
+  refactor cannot silently invert the mapping again. 40/40 targeted tests, tsc clean.
+
 - [x] **444** Removed a doubled arrow on the landing page's tour link (Block V) (2026-11-24).
 
   Brief: a real-browser pass over the running app (in-app browser, `localhost:3000`)

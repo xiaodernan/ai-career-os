@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as React from "react";
@@ -91,6 +92,23 @@ describe("useLocale", () => {
       </LocaleProvider>
     );
     expect(html).toContain("zh|仪表盘");
+  });
+});
+
+describe("the other language's chunk", () => {
+  const SOURCE = readFileSync(new URL("./locale-context.tsx", import.meta.url), "utf8");
+
+  it("loads the table for the TARGET locale, not the one being left", () => {
+    // A switch changed the locale state, the cookie and <html lang> but left the
+    // words on screen in the old language until a reload: `loadSpare(next)` asked
+    // a helper that took the CURRENT locale for "the other one", so switching to
+    // English imported Chinese. The helpers are now target-named and the wiring
+    // has to pass the target through both of them.
+    expect(SOURCE).toContain('const moduleFor = (target: Locale) => (target === "zh" ? import("./zh") : import("./en"))');
+    expect(SOURCE).toContain('target === "zh" ? mod.zh : mod.en');
+    expect(SOURCE).toContain("moduleFor(next)");
+    expect(SOURCE).toContain("tableFor(next,");
+    expect(SOURCE).not.toMatch(/otherModule|otherTable/);
   });
 });
 
