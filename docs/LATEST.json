@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T06:15:46.535980Z",
+  "generated_at": "2026-11-24T06:38:26.096674Z",
   "branch": "main",
-  "head": "dcbbec1",
-  "total_commits": 1896,
-  "milestone": "Epic 433",
-  "milestone_full": "the ledger of done epics (through 586 items), closed at Epic 433 — Unbound from Clash Verge",
+  "head": "96cc0cd",
+  "total_commits": 1897,
+  "milestone": "Epic 434",
+  "milestone_full": "the ledger of done epics (through 587 items), closed at Epic 434 — A one-command unbind for the host, not just the stack (2026-11-24)",
   "pushed_at": "2026-11-24",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
-  "tests": "1882+",
-  "test_files": 241,
-  "work_items": 586,
-  "epics": 299,
+  "tests": "1885+",
+  "test_files": 242,
+  "work_items": 587,
+  "epics": 300,
   "feature_surface": [
+    "Epic 434 — A one-command unbind for the host, not just the stack (2026-11-24)",
     "Epic 433 — Unbound from Clash Verge",
     "Epic 432 — The data door teaches every export, redact and restore control (2026-11-24)",
     "Epic 431 — Match Studio teaches all five controls (2026-11-24)",
     "Epic 430 — The kept letters and resumes teach every action without taking over control state (2026-11-24)",
-    "Epic 429 — The offer journey teaches every choice without breaking control state (2026-11-24)",
-    "Epic 428 — The networking registry teaches search, contact changes and coffee-chat choices (2026-11-24)"
+    "Epic 429 — The offer journey teaches every choice without breaking control state (2026-11-24)"
   ]
 }

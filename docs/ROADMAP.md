@@ -8500,6 +8500,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **434** A one-command unbind for the host, not just the stack (2026-11-24).
+
+  Brief: the owner stopped using Clash Verge and kept hitting ECONNREFUSED from
+  ambient 127.0.0.1:7897 proxy bindings. Epic 433 unbound the Docker stack and the
+  PowerShell profile, but the host's User/Machine env, WinHTTP/IE proxy, git/npm
+  config and Clash Verge's own system-proxy/TUN switches are separate binding
+  points. Added `scripts/unbind-clash.ps1`: one idempotent command clears all of
+  them and verifies direct connectivity. Ran it here: github/api.github/npmjs all
+  200 with `--noproxy '*'` → SUCCESS. Machine scope needs admin (script skips and
+  says so). Committed so the owner can re-run it any time after a Clash reinstall.
+
 - [x] **433** Unbound from Clash Verge — the stack uses the normal network (2026-11-24).
 
   The owner stopped using Clash Verge, but the ai-service container still had
