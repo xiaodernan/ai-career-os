@@ -200,7 +200,12 @@ def test_the_nightly_job_records_itself_even_when_it_fails():
     # dropped out of the payload is a suite that silently stops reporting.
     assert ids <= referenced, f"tracked steps missing from the record: {sorted(ids - referenced)}"
 
-    pairs = re.findall(r'--step "([\w-]+)=\$\{\{ steps\.([\w-]+)\.outcome \}\}"', run)
+    # The step pairs may be written as `--step "name=${{ steps.id.outcome }}"` on one
+    # line, or as a PowerShell argument array `'-step', 'name=${{ steps.id.outcome }}'`
+    # (Epic 450 rewrote the record step so an unset $env:OPS_URL no longer drops the
+    # --url value and breaks argparse). Either shape carries the same claim: every
+    # outcome the recorder reads is named in the payload.
+    pairs = re.findall(r'([\w-]+)=\$\{\{ steps\.([\w-]+)\.outcome \}\}', run)
     assert {sid for _, sid in pairs} == referenced, \
         "every outcome the recorder reads must become a named step in the payload"
     assert ("eval", "eval") in pairs, "the eval harness's numbers belong to the eval step"
@@ -210,7 +215,11 @@ def test_the_nightly_job_records_itself_even_when_it_fails():
     # pwsh reads the configured variable as $env:OPS_URL; the old bash form is $OPS_URL.
     # Both forms are accepted so the assertion checks *that the endpoint is configured*,
     # not which shell the runner speaks.
-    assert '--url "$OPS_URL' in run or '--url "$env:OPS_URL' in run, \
+    # The endpoint and token come from the configured variables. They may be passed
+    # inline (`--url "$env:OPS_URL"`) or appended to an argument array only when set
+    # (Epic 450); both spellings read the same variables, and an unset variable must
+    # not leave a bare `--url` for argparse to reject.
+    assert '--url' in run and ('$env:OPS_URL' in run or '$OPS_URL' in run), \
         "the endpoint comes from the configured variable"
-    assert '--token "$OPS_TOKEN' in run or '--token "$env:OPS_TOKEN' in run, \
+    assert '--token' in run and ('$env:OPS_TOKEN' in run or '$OPS_TOKEN' in run), \
         "the internal token comes from a secret"

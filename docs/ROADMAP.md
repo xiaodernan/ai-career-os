@@ -8500,6 +8500,19 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **453** Updated the nightly-record gate for the PowerShell argument array (2026-11-25).
+
+  Brief: the full ai-service suite in CI went red on
+  `test_the_nightly_job_records_itself_even_when_it_fails` — the gate's regex only
+  understood the old single-line `--step "name=${{ steps.id.outcome }}"` spelling
+  and the inline `--url "$env:OPS_URL"`, while Epic 450 had moved both into a
+  PowerShell argument array so an unset variable could no longer break argparse.
+  Relaxed the regexes to match the step-name/outcome pairs in either shape and to
+  accept the configured URL/token variables in either spelling, without weakening
+  the guarantees (every referenced outcome still has to be named, eval still has
+  to be recorded, both variables still have to be read). 18 targeted + 638 offline
+  gates green.
+
 - [x] **452** Made the nightly schema step create its database explicitly (2026-11-25).
 
   Brief: the remaining nightly failure was `database "career_os" does not exist` —
