@@ -8500,6 +8500,16 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **456** The personal site refuses to repaint NaN language bars (Block V/X) (2026-11-25).
+
+  Brief: a browser pass found the "MOST USED LANGUAGES" panel now shows real
+  percentages, but its generator divided every bar by `bars[0].pct` — a zero or
+  non-finite byte count (empty/rate-limited GitHub response) would write `NaN%`
+  into the page, the exact stale figure the brief called out. Added finite/
+  non-negative and non-zero-base guards to `gh-stats-core.mjs` so a bad response
+  is refused rather than painted, and a case to the offline `gh-stats-check.mjs`
+  proving both zero and NaN bases are rejected. Gate OK; the io repo pushed clean.
+
 - [x] **455** Bulk-payload shock gate — one caller, megabytes at once (Block XI) (2026-11-25).
 
   Brief: the 200-caller gates answer concurrency; this one answers the "瞬间大

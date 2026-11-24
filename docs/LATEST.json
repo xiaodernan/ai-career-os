@@ -1,25 +1,25 @@
 {
   "schema_version": "career-os.latest.v1",
-  "generated_at": "2026-11-24T23:11:30.283981Z",
+  "generated_at": "2026-11-24T23:13:27.035220Z",
   "branch": "main",
   "head": "083b0f1",
   "total_commits": 1933,
-  "milestone": "Epic 455",
-  "milestone_full": "the ledger of done epics (through 608 items), closed at Epic 455 — Bulk-payload shock gate",
+  "milestone": "Epic 456",
+  "milestone_full": "the ledger of done epics (through 609 items), closed at Epic 456 — The personal site refuses to repaint NaN language bars (Block V/X) (2026-11-25)",
   "pushed_at": "2026-11-25",
   "locales": 2,
   "page_routes": 41,
   "nav_routes": 26,
   "tests": "1895+",
   "test_files": 244,
-  "work_items": 608,
-  "epics": 321,
+  "work_items": 609,
+  "epics": 322,
   "feature_surface": [
+    "Epic 456 — The personal site refuses to repaint NaN language bars (Block V/X) (2026-11-25)",
     "Epic 455 — Bulk-payload shock gate",
     "Epic 454 — Full CI green, including the nightly full-stack job (2026-11-25)",
     "Epic 453 — Updated the nightly-record gate for the PowerShell argument array (2026-11-25)",
     "Epic 452 — Made the nightly schema step create its database explicitly (2026-11-25)",
-    "Epic 451 — Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25)",
-    "Epic 450 — Fixed the nightly job's vector-index and recorder steps (2026-11-25)"
+    "Epic 451 — Exact `CET-6 546` wording on the personal site and GitHub profile (Block X) (2026-11-25)"
   ]
 }
