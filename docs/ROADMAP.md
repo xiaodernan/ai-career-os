@@ -8500,6 +8500,17 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **460** A distributed burst — many sources, each inside its own ceiling (Block XI) (2026-11-25).
+
+  Brief: the credential-stuffing gate answers one loud source, and the sliding-window tests
+  answer one key under concurrent callers; a botnet is a third shape. Added
+  `DistributedBurstIsolationTest`: 120 distinct source keys × 20 simultaneous attempts each
+  (2,400 admissions through the same atomic Lua-model path) assert exactly the ceiling
+  admitted per key, the surplus refused per key, zero exceptions, a full refusal on the next
+  attempt at every key, and an untouched source still holding its whole budget. No Redis,
+  socket, Docker or live API. Targeted run **1/1** green; the shape pins per-key isolation
+  rather than another single-key ceiling.
+
 - [x] **459** A Chinese page that stops borrowing English words, and a host stack
   that actually runs the current build (Blocks VIII/X) (2026-11-25).
 
