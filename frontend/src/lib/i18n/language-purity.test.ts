@@ -32,6 +32,15 @@ const BORROWED = [
   "verify",
   "retrieve",
   "render",
+  // Epic 459 — abbreviations and product names a Chinese reader should not
+  // meet mid-sentence. Each has a plain Chinese word ("职位描述", "招聘方",
+  // "编号", "词元", "列表式", "副驾驶") already in common use.
+  "jd",
+  "hr",
+  "id",
+  "token",
+  "linear",
+  "copilot",
 ];
 
 function withoutComments(source: string): string {
@@ -51,7 +60,12 @@ describe("the Chinese table", () => {
     for (const value of valuesOf("zh.ts")) {
       if (!/[\u4e00-\u9fff]/.test(value)) continue;
       // `{count}` and `{title}` are placeholders, not prose the reader sees.
-      const prose = value.replace(/\{[^}]*\}/g, " ");
+      // Route paths (/copilot) and wire identifiers (jd_analyze) are names,
+      // not borrowed prose, so they are stripped before the word scan.
+      const prose = value
+        .replace(/\{[^}]*\}/g, " ")
+        .replace(/\/[\w\[\]-]+/g, " ")
+        .replace(/\b[a-z]+(?:_[a-z]+)+\b/g, " ");
       for (const word of BORROWED) {
         if (new RegExp(`\\b${word}\\b`, "i").test(prose)) {
           offenses.push(`${word} :: ${value.slice(0, 90)}`);

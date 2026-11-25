@@ -8500,6 +8500,31 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **459** A Chinese page that stops borrowing English words, and a host stack
+  that actually runs the current build (Blocks VIII/X) (2026-11-25).
+
+  Brief: opening the front door in the running app showed a landing page whose Chinese
+  copy still carried `JD`, `HR`, `token`, `ID`, `Linear` and `Copilot` mid-sentence —
+  the exact "不要中英文夹杂" failure the brief names — and a one-click locale switch
+  that changed `<html lang>` but left the words on screen until a reload. The latter
+  was the **stale image**, not the source: the running `career-os-frontend` was built
+  three days before the current head, while the repo already carried the Epic 445
+  repaint fix. The stack itself was also short two services: `careeros-postgres` and
+  `careeros-redis` were absent, so the backend's Flyway migration never ran and
+  `POST /api/v1/auth/register` failed with `relation "users" does not exist`.
+  Bringing both services up and recreating the backend applied all 41 migrations;
+  the smoke walk then completed end-to-end (the AI steps answer `AI_SERVICE_UNAVAILABLE`
+  because the hosted API is closed, as the operator stated — no live probe was made).
+  The vocabulary fix is value-only: 54 strings in `zh.ts` now say 职位描述, 招聘方,
+  词元, 编号, 列表式 and 副驾驶; no key was renamed. `language-purity.test.ts` now
+  refuses those six words in Chinese prose (placeholders, route paths and wire
+  identifiers like `jd_analyze` are stripped first, since they are names, not prose),
+  and the redundant "一块看板，和该提醒的提醒" became "到期提醒不再漏掉". A browser
+  sweep of the public playbook also found the typo "收拾乾净", now "收拾干净".
+  Measured: i18n 9 files / 69 tests green; full frontend **244 files / 1895 tests**
+  green; tsc clean; copy key parity intact. The four stale app images are being
+  rebuilt from the current head before the browser re-check.
+
 - [x] **458** Fault-tolerance gate: two dependency failures at once (Block XI) (2026-11-25).
 
   Brief: the HA requirement ("高可用、容灾、鲁棒性") was covered for single-source
