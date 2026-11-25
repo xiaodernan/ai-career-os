@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -375,6 +376,12 @@ export default function AdminPage() {
     return (
       <div className="relative grid min-h-dvh place-items-center overflow-hidden bg-background px-4">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_14%,transparent),transparent)]" />
+        {/* Block VIII: the gate is reachable without a session and has no app shell,
+            so it needs its own switch — a reader who cannot read the current
+            language must be able to reach the one they can before signing in. */}
+        <div className="absolute right-4 top-4 z-10 sm:right-8 sm:top-6">
+          <LocaleSwitcher />
+        </div>
         <form
           onSubmit={(event) => {
             event.preventDefault();

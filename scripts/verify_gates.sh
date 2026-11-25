@@ -25,6 +25,7 @@ elif [[ -x "$ROOT/ai-service/.venv/Scripts/python.exe" ]]; then
 fi
 
 TESTS=(
+  ai-service/tests/test_the_suppression_union_fails_open_honestly.py
   ai-service/tests/test_the_bulk_payload_shock_gate.py
   ai-service/tests/test_service_identity_proof.py
   ai-service/tests/test_search_atlas.py

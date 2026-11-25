@@ -8500,6 +8500,26 @@ Expose built-in Spring Cloud/Resilience4j actuator endpoints for operators while
   are data inside gates that already counted them, so no Python test joined the
   run.
 
+- [x] **458** Fault-tolerance gate: two dependency failures at once (Block XI) (2026-11-25).
+
+  Brief: the HA requirement ("高可用、容灾、鲁棒性") was covered for single-source
+  collections but the `_suppressed` union — which merges the dead-letter guard and
+  the backoff queue — had no test for BOTH sources failing. Added
+  `test_the_suppression_union_fails_open_honestly.py`: two tiny fake objects raise
+  from `active()` and `parked_ids()`, and the test asserts no exception escapes,
+  the result is the empty set (never an invented id list), the healthy source's
+  ids survive when only the other fails, and both failures are logged with
+  tracebacks under `ops.embed_workers`. No DB, Redis, Docker, LLM or socket.
+  2/2 targeted + 640 offline gates green.
+
+- [x] **457** The admin gate now has a language switch (Block VIII) (2026-11-25).
+
+  Brief: the password-123 admin gate is reachable without a session and has no app
+  shell, so it had no locale switch — a reader who could not read the current
+  language was stuck before they could even unlock. Added `LocaleSwitcher` to the
+  gate card (same component as the auth pages), with a comment naming why shell-less
+  surfaces need their own. tsc clean, 33/33 targeted tests green.
+
 - [x] **456** The personal site refuses to repaint NaN language bars (Block V/X) (2026-11-25).
 
   Brief: a browser pass found the "MOST USED LANGUAGES" panel now shows real

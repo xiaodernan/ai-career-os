@@ -25,6 +25,7 @@ Remove-Item Env:NO_PROXY -ErrorAction SilentlyContinue
 Remove-Item Env:no_proxy -ErrorAction SilentlyContinue
 
 $tests = @(
+  "ai-service/tests/test_the_suppression_union_fails_open_honestly.py",
   "ai-service/tests/test_the_bulk_payload_shock_gate.py",
   "ai-service/tests/test_service_identity_proof.py",
   "ai-service/tests/test_search_atlas.py",
